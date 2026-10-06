@@ -1,0 +1,27 @@
+{
+  "name": "magnific-video-dashboard",
+  "version": "1.0.0",
+  "description": "Brief -> scene scripts (Claude) -> Magnific flow render, with run-then-poll.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@astryxdesign/cli": "^0.6.5",
+    "@astryxdesign/core": "^0.6.5",
+    "@astryxdesign/theme-neutral": "^0.6.5",
+    "@stylexjs/stylex": "^0.19.1",
+    "adm-zip": "^0.5.16",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "lucide-react": "^1.52.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.3"
+  }
+}

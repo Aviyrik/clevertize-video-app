@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Video Brief Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-stone-100 font-sans text-stone-900">
+<div class="mx-auto max-w-6xl px-4 py-6">
+  <div class="mb-6 flex flex-col gap-4 border-b border-stone-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <div class="font-mono text-[11px] uppercase tracking-[0.25em] text-amber-600">video pipeline</div>
+      <h1 class="mt-1 text-2xl font-semibold tracking-tight">Brief → scenes → render</h1>
+      <p class="mt-1 text-sm text-stone-500">Generate, edit if needed, then send to Magnific.</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="genBtn" class="rounded-md bg-stone-800 px-5 py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-stone-900 disabled:cursor-not-allowed disabled:bg-stone-400">Generate</button>
+      <button id="sendBtn" class="hidden rounded-md bg-amber-600 px-5 py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-stone-400">Send to Magnific</button>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <!-- brief -->
+    <div class="space-y-5 rounded-xl border border-stone-200 bg-white p-5">
+      <div class="font-mono text-[11px] uppercase tracking-widest text-stone-400">your video</div>
+
+      <div>
+        <div class="mb-1 flex items-center justify-between">
+          <label class="lbl mb-0">Brief <span class="req">*</span></label>
+          <button type="button" id="micBtn" class="hidden items-center gap-1.5 rounded-md border border-stone-300 px-2.5 py-1 text-[11px] font-medium text-stone-600 transition hover:bg-stone-50">
+            <svg id="micIcon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+            <span id="micLabel">Speak</span>
+          </button>
+        </div>
+        <textarea id="brief" rows="4" placeholder="Describe your video idea — e.g. Need a video for a sweet shop for Diwali, promoting 50% off." class="inp"></textarea>
+        <div id="micHint" class="mt-1 hidden text-[11px] text-stone-500"></div>
+      </div>
+
+      <div>
+        <label class="lbl">Brand / shop name <span class="opt">(Optional)</span></label>
+        <input id="brandName" placeholder="e.g. Kanti Sweets" class="inp" />
+        <div class="mt-1 text-[11px] text-stone-500">Your business name — it will be spoken in the video's dialogue.</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Language <span class="req">*</span></label>
+          <select id="language" class="inp">
+            <option value="">Select…</option>
+            <option>English</option><option>Hindi</option>
+          </select></div>
+        <div><label class="lbl">Duration <span class="req">*</span></label>
+          <select id="duration" class="inp">
+            <option value="">Select…</option>
+            <option>10s</option><option>15s</option><option>20s</option><option>25s</option>
+          </select></div>
+        <div><label class="lbl">Resolution</label>
+          <select id="resolution" class="inp">
+            <option selected>1080p</option><option>720p</option><option>480p</option>
+          </select></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Business location <span class="opt">(Optional)</span></label>
+          <input id="businessLocation" placeholder="e.g. Bengaluru, Mumbai" class="inp" /></div>
+        <div><label class="lbl">Target customers <span class="opt">(Optional)</span></label>
+          <select id="targetCustomers" class="inp">
+            <option value="">Select…</option>
+            <option>New Customers</option><option>Existing Customers</option>
+          </select></div>
+      </div>
+
+      <div>
+        <label class="lbl">Website URL <span class="opt">(Optional)</span></label>
+        <input id="websiteUrl" placeholder="e.g. yourbrand.com" class="inp" />
+        <div class="mt-1 text-[11px] text-stone-500">We analyse your site's colours, tone and style, and use them in your video's scripts.</div>
+      </div>
+
+      <div>
+        <label class="lbl">Photo of your shop <span class="opt">(Optional)</span></label>
+        <input type="file" id="shopPhoto" accept="image/*" capture="environment" class="text-xs text-stone-600" />
+        <div id="shopPhotoName" class="mt-1 font-mono text-[11px] text-teal-700"></div>
+        <div class="mt-1 text-[11px] text-stone-500">Click a photo of your shop or signboard — we pick up your name, colours and style from it.</div>
+      </div>
+
+      <div>
+        <label class="lbl">Product photo <span class="opt">(Optional)</span></label>
+        <input type="file" id="productImage" accept="image/*" class="text-xs text-stone-600" />
+        <div id="productImageName" class="mt-1 font-mono text-[11px] text-teal-700"></div>
+        <div class="mt-1 text-[11px] text-stone-500">Upload your product — it will appear in the video.</div>
+      </div>
+
+      <!-- advanced -->
+      <div class="border-t border-stone-200 pt-4">
+        <button type="button" id="advToggle" class="flex w-full items-center justify-between text-left">
+          <span class="font-mono text-[11px] uppercase tracking-widest text-stone-400">Advanced features</span>
+          <span id="advChev" class="text-stone-400 transition-transform">▾</span>
+        </button>
+        <div id="advBox" class="mt-4 hidden space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">CTA <span class="opt">(Optional)</span></label>
+              <input id="cta" placeholder="e.g. Visit us today" class="inp" /></div>
+            <div><label class="lbl">Objective <span class="opt">(Optional)</span></label>
+              <select id="objective" class="inp"><option value="">Select…</option><option>Awareness</option><option>Engagement</option><option>Performance</option></select></div>
+            <div><label class="lbl">Geo <span class="opt">(Optional)</span></label>
+              <select id="geo" class="inp"><option value="">Select…</option><option>Metro</option><option>Tier 1</option><option>Tier 2 &amp; Tier 3</option></select></div>
+            <div><label class="lbl">Platform <span class="opt">(Optional)</span></label>
+              <select id="platform" class="inp"><option value="">Select…</option><option>Instagram</option><option>YouTube Shorts</option><option>LinkedIn</option></select></div>
+          </div>
+          <div>
+            <label class="lbl">Brand guidelines <span class="opt">(Optional)</span></label>
+            <input type="file" id="brandFile" accept=".pdf,.doc,.docx" class="text-xs text-stone-600" />
+            <div id="brandFileName" class="mt-1 font-mono text-[11px] text-teal-700"></div>
+            <div class="mt-1 text-[11px] text-stone-500">PDF or DOC — Claude reads it and follows the guidelines.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- progress + results -->
+    <div class="space-y-4">
+      <div class="rounded-xl border border-stone-200 bg-white p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <div class="font-mono text-[11px] uppercase tracking-widest text-stone-400">progress</div>
+          <span id="timer" class="hidden font-mono text-[11px] text-amber-600"></span>
+        </div>
+        <div class="space-y-3.5">
+          <div class="stage flex items-center gap-3" data-stage="write">
+            <span class="ic"></span>
+            <div><div class="label text-sm font-medium text-stone-400">Writing scripts &amp; characters</div><div class="sub text-xs text-stone-500"></div></div>
+          </div>
+          <div class="stage flex items-center gap-3" data-stage="render">
+            <span class="ic"></span>
+            <div><div class="label text-sm font-medium text-stone-400">Rendering video</div><div class="sub text-xs text-stone-500"></div></div>
+          </div>
+          <div class="stage flex items-center gap-3" data-stage="done">
+            <span class="ic"></span>
+            <div><div class="label text-sm font-medium text-stone-400">Video ready</div><div class="sub text-xs text-stone-500"></div></div>
+          </div>
+        </div>
+        <div id="errBox" class="mt-3 hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"></div>
+      </div>
+
+      <div id="editNote" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+        Edit anything below if needed, then click <span class="font-semibold">Send to Magnific</span>.
+      </div>
+
+      <div id="videoBox" class="hidden rounded-xl border border-stone-200 bg-white p-4">
+        <div class="mb-2 flex items-center justify-between">
+          <div class="font-mono text-[11px] uppercase tracking-widest text-stone-400">video</div>
+          <button id="dlBtn" class="rounded bg-amber-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-amber-700">Download</button>
+        </div>
+        <video id="video" controls playsinline class="w-full rounded-md bg-black"></video>
+      </div>
+
+      <div id="assetsBox" class="hidden space-y-3">
+        <div class="rounded-xl border border-teal-200 bg-teal-50 p-4">
+          <div class="mb-1 font-mono text-[11px] uppercase tracking-widest text-teal-700">character 1</div>
+          <textarea id="char1Text" rows="3" class="edit"></textarea>
+        </div>
+        <div class="rounded-xl border border-teal-200 bg-teal-50 p-4">
+          <div class="mb-1 font-mono text-[11px] uppercase tracking-widest text-teal-700">character 2</div>
+          <textarea id="char2Text" rows="3" class="edit"></textarea>
+        </div>
+        <div class="rounded-xl border border-teal-200 bg-teal-50 p-4">
+          <div class="mb-1 font-mono text-[11px] uppercase tracking-widest text-teal-700">setting</div>
+          <textarea id="settingText" rows="3" class="edit"></textarea>
+        </div>
+      </div>
+
+      <div id="scenesBox" class="hidden space-y-3"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .lbl{display:block;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#78716c;margin-bottom:4px}
+  .lbl.mb-0{margin-bottom:0}
+  .inp{width:100%;border:1px solid #d6d3d1;border-radius:6px;background:#fff;padding:8px 12px;font-size:14px;color:#1c1917}
+  .inp:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 1px #f59e0b}
+  .edit{width:100%;background:#fff;border:1px solid #99f6e4;border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.5;color:#134e4a;resize:vertical}
+  .edit:focus{outline:none;border-color:#14b8a6;box-shadow:0 0 0 1px #14b8a6}
+  .scene-edit{width:100%;background:#fff;border:1px solid #e7e5e4;border-radius:6px;padding:10px;font-size:13px;line-height:1.55;color:#292524;resize:vertical;font-family:ui-sans-serif,system-ui,sans-serif}
+  .scene-edit:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 1px #f59e0b}
+  .req{color:#dc2626;font-weight:700}
+  .opt{color:#a8a29e;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px}
+</style>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---- staged progress ----
+function stageIcon(state) {
+  if (state === "active") return '<svg class="h-6 w-6 animate-spin text-amber-500" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-20"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+  if (state === "done") return '<span class="flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-[13px] text-white">✓</span>';
+  if (state === "error") return '<span class="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[13px] text-white">✕</span>';
+  return '<span class="block h-6 w-6 rounded-full border-2 border-stone-300"></span>';
+}
+function setStage(name, state, sub) {
+  const row = document.querySelector('.stage[data-stage="' + name + '"]');
+  if (!row) return;
+  row.querySelector(".ic").innerHTML = stageIcon(state);
+  row.querySelector(".label").className = "label text-sm font-medium " + (state === "pending" ? "text-stone-400" : state === "error" ? "text-red-700" : "text-stone-900");
+  const subEl = row.querySelector(".sub");
+  subEl.textContent = sub || "";
+  subEl.className = "sub text-xs " + (state === "error" ? "text-red-600" : "text-stone-500");
+}
+function resetStages() { ["write", "render", "done"].forEach((n) => setStage(n, "pending", "")); hideErr(); }
+function showErr(msg) { const e = $("errBox"); e.textContent = msg; e.classList.remove("hidden"); }
+function hideErr() { $("errBox").classList.add("hidden"); }
+
+let t0 = 0, timerInt = null;
+function startTimer() { t0 = Date.now(); $("timer").classList.remove("hidden"); timerInt = setInterval(() => {
+  const s = Math.floor((Date.now() - t0) / 1000);
+  $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}, 1000); }
+function stopTimer() { clearInterval(timerInt); }
+
+// advanced features toggle
+$("advToggle").onclick = () => {
+  const box = $("advBox");
+  box.classList.toggle("hidden");
+  $("advChev").style.transform = box.classList.contains("hidden") ? "rotate(-90deg)" : "rotate(0)";
+};
+
+// brand guidelines file -> base64
+let brandFile = null;
+$("brandFile").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) { brandFile = null; $("brandFileName").textContent = ""; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    brandFile = { name: file.name, mime: file.type, data: reader.result.split(",")[1] };
+    $("brandFileName").textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+};
+
+// shop photo -> base64
+let shopPhoto = null;
+$("shopPhoto").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) { shopPhoto = null; $("shopPhotoName").textContent = ""; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    shopPhoto = { name: file.name, mime: file.type, data: reader.result.split(",")[1] };
+    $("shopPhotoName").textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+};
+
+// product photo -> base64
+let productImage = null;
+$("productImage").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) { productImage = null; $("productImageName").textContent = ""; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    productImage = { name: file.name, mime: file.type, data: reader.result.split(",")[1] };
+    $("productImageName").textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+};
+
+function readForm() {
+  return {
+    brief: $("brief").value.trim(),
+    brandName: $("brandName").value.trim(),
+    language: $("language").value.trim(),
+    duration: $("duration").value,
+    resolution: $("resolution").value,
+    businessLocation: $("businessLocation").value.trim(),
+    targetCustomers: $("targetCustomers").value,
+    cta: $("cta").value.trim(),
+    objective: $("objective").value,
+    geo: $("geo").value,
+    platform: $("platform").value,
+    websiteUrl: $("websiteUrl").value.trim(),
+    brandFile,
+    shopPhoto,
+    productImage,
+  };
+}
+
+function showScenes(scenes) {
+  const box = $("scenesBox");
+  box.innerHTML = "";
+  scenes.forEach((s, i) => {
+    const rows = Math.min(20, Math.max(8, s.split("\n").length + 1));
+    const div = document.createElement("div");
+    div.className = "rounded-xl border border-stone-200 bg-white p-4";
+    div.innerHTML = '<div class="mb-2 font-mono text-[11px] uppercase tracking-widest text-stone-400">scene ' + (i + 1) + ' (editable)</div><textarea class="scene-edit" data-scene="' + i + '" rows="' + rows + '"></textarea>';
+    div.querySelector("textarea").value = s;
+    box.appendChild(div);
+  });
+  box.classList.remove("hidden");
+}
+
+function collectEdited() {
+  const scenes = Array.from(document.querySelectorAll(".scene-edit")).map((t) => t.value.trim()).filter(Boolean);
+  return {
+    scenes,
+    character1: $("char1Text").value.trim(),
+    character2: $("char2Text").value.trim(),
+    setting: $("settingText").value.trim(),
+    productImage,
+  };
+}
+
+async function poll(runId) {
+  const maxAttempts = 160; // ~40 min at 15s
+  for (let i = 1; i <= maxAttempts; i++) {
+    await sleep(15000);
+    try {
+      const r = await fetch("/api/status/" + runId);
+      const d = await r.json();
+      if (d.error) continue;
+      if (d.videoUrl) {
+        stopTimer();
+        setStage("render", "done", "");
+        setStage("done", "done", "your video is ready");
+        $("video").src = d.videoUrl;
+        $("videoBox").classList.remove("hidden");
+        $("dlBtn").onclick = () => window.open("/api/download?url=" + encodeURIComponent(d.videoUrl), "_blank");
+        $("videoBox").scrollIntoView({ behavior: "smooth", block: "center" });
+        alert("🎬 Your video has been generated!");
+        return;
+      }
+      if (d.failed) { stopTimer(); setStage("render", "error", "render failed"); showErr("Render failed: " + d.status); return; }
+      // honest sub-status: show whatever Magnific reports, else generic
+      const nice = (d.status && !/run|process|pending|queue/i.test(d.status)) ? d.status : "this can take a few minutes…";
+      setStage("render", "active", nice);
+    } catch (e) { /* keep waiting quietly */ }
+  }
+  stopTimer();
+  setStage("render", "active", "still rendering — you can check your Magnific space");
+}
+
+// BUTTON 1 — generate (no send)
+$("genBtn").onclick = async () => {
+  const f = readForm();
+  const missing = [];
+  if (!f.brief) missing.push("Brief");
+  if (!f.language) missing.push("Language");
+  if (!f.duration) missing.push("Duration");
+  if (missing.length) { alert("Please fill in: " + missing.join(", ")); return; }
+
+  $("genBtn").disabled = true;
+  $("sendBtn").classList.add("hidden");
+  $("editNote").classList.add("hidden");
+  $("videoBox").classList.add("hidden");
+  $("assetsBox").classList.add("hidden");
+  $("scenesBox").classList.add("hidden");
+  resetStages();
+  setStage("write", "active", "writing scripts, characters and setting…");
+
+  try {
+    const gr = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+    const g = await gr.json();
+    if (g.error) throw new Error(g.error);
+
+    $("char1Text").value = g.character1 || "";
+    $("char2Text").value = g.character2 || "";
+    $("settingText").value = g.setting || "";
+    $("assetsBox").classList.remove("hidden");
+    showScenes(g.scenes || []);
+    setStage("write", "done", g.scenes.length + " scenes + characters + setting ready");
+    $("editNote").classList.remove("hidden");
+    $("sendBtn").classList.remove("hidden");
+  } catch (e) {
+    setStage("write", "error", "could not generate");
+    showErr(e.message);
+  } finally {
+    checkRequired();
+  }
+};
+
+// BUTTON 2 — send (edited) to Magnific
+$("sendBtn").onclick = async () => {
+  const data = collectEdited();
+  if (!data.scenes.length) { alert("No scenes to send."); return; }
+
+  $("sendBtn").disabled = true;
+  $("genBtn").disabled = true;
+  $("videoBox").classList.add("hidden");
+  hideErr();
+  setStage("write", "done", "");
+  setStage("render", "active", "starting render…");
+  setStage("done", "pending", "");
+  startTimer();
+
+  try {
+    const rr = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const rd = await rr.json();
+    if (rd.error) throw new Error(rd.error);
+    setStage("render", "active", "this can take a few minutes…");
+    await poll(rd.runId);
+  } catch (e) {
+    stopTimer();
+    setStage("render", "error", "could not start render");
+    showErr(e.message);
+  } finally {
+    $("sendBtn").disabled = false;
+    checkRequired();
+  }
+};
+
+// ---- voice input for the Brief (browser speech recognition, Indian English) ----
+(function setupMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $("micBtn"), label = $("micLabel"), icon = $("micIcon"), hint = $("micHint"), brief = $("brief");
+  if (!SR) return; // unsupported browser (e.g. Firefox) — button stays hidden
+
+  btn.classList.remove("hidden");
+  btn.classList.add("flex");
+
+  const rec = new SR();
+  rec.lang = "en-IN";          // Indian English
+  rec.continuous = true;        // keep listening while they talk
+  rec.interimResults = true;    // show words as they speak
+  let listening = false, baseText = "";
+
+  const setIdle = () => {
+    listening = false;
+    label.textContent = "Speak";
+    btn.className = "flex items-center gap-1.5 rounded-md border border-stone-300 px-2.5 py-1 text-[11px] font-medium text-stone-600 transition hover:bg-stone-50";
+    icon.classList.remove("animate-pulse");
+    hint.classList.add("hidden");
+  };
+  const setListening = () => {
+    listening = true;
+    label.textContent = "Stop";
+    btn.className = "flex items-center gap-1.5 rounded-md border border-red-300 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700 transition";
+    icon.classList.add("animate-pulse");
+    hint.textContent = "Listening… speak your idea, then click Stop.";
+    hint.classList.remove("hidden");
+  };
+
+  btn.onclick = () => {
+    if (listening) { rec.stop(); return; }
+    baseText = brief.value.trim();
+    try { rec.start(); } catch { /* already started */ }
+  };
+
+  rec.onstart = setListening;
+  rec.onend = () => { setIdle(); checkRequired(); };
+
+  rec.onresult = (e) => {
+    let finalText = "", interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    if (finalText) baseText = (baseText ? baseText + " " : "") + finalText.trim();
+    brief.value = (baseText + (interim ? " " + interim : "")).trim();
+    checkRequired();
+  };
+
+  rec.onerror = (e) => {
+    setIdle();
+    hint.classList.remove("hidden");
+    hint.textContent = e.error === "not-allowed"
+      ? "Microphone blocked — allow mic access in your browser to use this."
+      : e.error === "no-speech"
+        ? "Didn't catch anything — try again."
+        : "Voice input didn't work. You can type your brief instead.";
+  };
+})();
+
+// live required-field gating
+function checkRequired() {
+  const ok = $("brief").value.trim() && $("language").value.trim() && $("duration").value;
+  $("genBtn").disabled = !ok;
+  $("genBtn").title = ok ? "" : "Fill in Brief, Language and Duration first";
+}
+["brief", "language", "duration"].forEach((id) => {
+  $(id).addEventListener("input", checkRequired);
+  $(id).addEventListener("change", checkRequired);
+});
+checkRequired();
+
+resetStages();
+</script>
+</body>
+</html>
