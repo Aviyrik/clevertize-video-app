@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18132A" />
+      <stop offset="100%" stop-color="#0A0814" />
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" />
+      <stop offset="50%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C084FC" />
+      <stop offset="40%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#22D3EE" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle Container -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bgGrad)" />
+  <rect x="2" y="2" width="60" height="60" rx="16" stroke="url(#borderGrad)" stroke-width="2.5" />
+
+  <!-- Inner Soft Glow Circle -->
+  <circle cx="32" cy="32" r="18" fill="#8B5CF6" opacity="0.18" filter="url(#glow)" />
+
+  <!-- Modern Dynamic Clevertize Symbol: Stylized C arc embracing glowing Play triangle -->
+  <g transform="translate(32, 32)">
+    <!-- Sleek Arc representing "C" for Clevertize & Film reel -->
+    <path d="M 4 -15 A 17 17 0 1 0 14 8" 
+          stroke="url(#accentGrad)" 
+          stroke-width="4.5" 
+          stroke-linecap="round" 
+          fill="none" />
+
+    <!-- Play Triangle centered with cinematic poise -->
+    <path d="M -4 -8 L 11 0 L -4 8 Z" 
+          fill="url(#accentGrad)" />
+
+    <!-- AI Sparkle Star -->
+    <path d="M 12 -12 L 13 -16 L 14 -12 L 18 -11 L 14 -10 L 13 -6 L 12 -10 L 8 -11 Z" 
+          fill="#38BDF8" 
+          filter="url(#glow)" />
+  </g>
+</svg>
