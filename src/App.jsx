@@ -96,6 +96,76 @@ const BUSINESS_TYPE_PRESETS = [
   'Other',
 ];
 
+// Production Platform Options
+const PLATFORM_PRESETS = [
+  { id: 'Instagram Reels / 9:16', label: 'Instagram Reels', sub: '9:16 Vertical' },
+  { id: 'YouTube Shorts / 9:16', label: 'YouTube Shorts', sub: '9:16 Vertical' },
+  { id: 'WhatsApp Status / 9:16', label: 'WhatsApp', sub: '9:16 Status' },
+  { id: 'Facebook Video', label: 'Facebook', sub: 'Social Feed' },
+  { id: 'Multi-platform', label: 'Multi-platform', sub: 'Universal' },
+];
+
+// Creative Format & Style Options
+const CREATIVE_STYLE_PRESETS = [
+  {
+    id: 'UGC / Creator-style',
+    label: 'UGC / Creator-style',
+    desc: 'Relatable phone camera, conversational spoken hook & authentic reactions',
+  },
+  {
+    id: 'Storytelling',
+    label: 'Storytelling',
+    desc: 'Engaging mini-drama with everyday dilemma, conflict & emotional resolution',
+  },
+  {
+    id: 'Product-focused',
+    label: 'Product-focused',
+    desc: 'Sensory close-ups, craftsmanship, textures & fresh quality proof',
+  },
+  {
+    id: 'Offer / Promotion',
+    label: 'Offer / Promotion',
+    desc: 'High-urgency festive discount, value proposition & clear store CTA',
+  },
+];
+
+// Non-Technical Fast Generation Pipeline Stages
+const FAST_PIPELINE_STAGES = [
+  {
+    phase: 'STEP 1 · BRAND & BRIEF',
+    title: 'Understanding your brief…',
+    detail: 'Analyzing brand personality, target audience tension, and local market voice.',
+  },
+  {
+    phase: 'STEP 2 · CREATIVE DIRECTION',
+    title: 'Developing the creative…',
+    detail: 'Synthesizing viral creator hook patterns, emotional tension, and narrative arc.',
+  },
+  {
+    phase: 'STEP 3 · SCENE CHOREOGRAPHY',
+    title: 'Building the scenes…',
+    detail: 'Structuring camera cuts, character continuity, and 18-point Section 8 Quality Gate.',
+  },
+  {
+    phase: 'STEP 4 · NEURAL RENDERING',
+    title: 'Generating your video…',
+    detail: 'Synthesizing broadcast-quality neural video frames with physics and motion continuity.',
+  },
+  {
+    phase: 'STEP 5 · MASTERING & END CARD',
+    title: 'Your video is ready.',
+    detail: 'Compositing clean branded end card, audio layers, and 1080p master MP4.',
+  },
+];
+
+const FAST_PIPELINE_TIPS = [
+  'Product Spine Rule M16: Relatable human problems create instant scroll-stopping retention.',
+  'Product Spine Rule M13: Locked single-room environments maintain stable visual and character continuity.',
+  'Intentional 9:16 Framing: Subjects fill the vertical mobile frame naturally, never appearing distant.',
+  'Physics & Movement: Decoupling static world from motion produces clean, natural cinematic gestures.',
+  'End Card Compositing: Brand name, offer, and contact details are composited deterministically without AI text distortion.',
+];
+
 // Rich Multi-Stage Pipelines for Each Checkpoint Transition
 const CHECKPOINT_PIPELINES = {
   direction: {
@@ -326,13 +396,7 @@ export default function App() {
 
   // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
   const [userContext, setUserContext] = useState(() => {
-    try {
-      const saved = localStorage.getItem('clevertize_user_context');
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // fallback
-    }
-    return {
+    let base = {
       businessName: '',
       businessType: 'Sweet shop / bakery',
       customBusinessType: '',
@@ -349,6 +413,8 @@ export default function App() {
       environment: '',
       websiteUrl: '',
       duration: '15s',
+      platform: 'Instagram Reels / 9:16',
+      creativeStyle: 'UGC / Creator-style',
       language: 'Hindi',
       scriptMode: 'devanagari',
       selectedGoalId: 'offer',
@@ -357,6 +423,16 @@ export default function App() {
       logo: null,
       brandFile: null,
     };
+    try {
+      const saved = localStorage.getItem('clevertize_user_context');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        base = { ...base, ...parsed };
+      }
+    } catch {
+      // fallback
+    }
+    return base;
   });
 
   const updateUserContext = (key, val) => {
@@ -372,6 +448,13 @@ export default function App() {
       return next;
     });
   };
+
+  // Fast Creation Pipeline State
+  const [shotSpec, setShotSpec] = useState(null);
+  const [fastStageIndex, setFastStageIndex] = useState(0);
+  const [isScriptExpanded, setIsScriptExpanded] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isEditingBrandInline, setIsEditingBrandInline] = useState(false);
 
   // Workflow Stages:
   // 'input' -> Stage 1 form
@@ -620,6 +703,28 @@ export default function App() {
     };
   }, [isRendering]);
 
+  // Dynamic Ticker during Fast Pipeline Generation
+  useEffect(() => {
+    let fastStageTimer = null;
+    let tipTimer = null;
+
+    if (currentStep === 'generating') {
+      setFastStageIndex(0);
+      fastStageTimer = setInterval(() => {
+        setFastStageIndex((prev) => (prev < 3 ? prev + 1 : prev));
+      }, 4500);
+
+      tipTimer = setInterval(() => {
+        setBusyTipIndex((prev) => (prev + 1) % FAST_PIPELINE_TIPS.length);
+      }, 4000);
+    }
+
+    return () => {
+      if (fastStageTimer) clearInterval(fastStageTimer);
+      if (tipTimer) clearInterval(tipTimer);
+    };
+  }, [currentStep]);
+
   // File Upload Helper
   const handleFileUpload = (file, key) => {
     if (!file) {
@@ -638,7 +743,7 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  // Build the Form Payload for POST /api/session
+  // Build the Form Payload for POST /api/session & /api/pipeline/generate
   const buildSessionPayload = () => {
     const activeGoal = AD_GOAL_PRESETS.find((g) => g.id === userContext.selectedGoalId) || AD_GOAL_PRESETS[0];
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
@@ -654,7 +759,10 @@ export default function App() {
       userContext.specialty?.trim(),
       userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
+      `Platform: ${userContext.platform || 'Instagram Reels / 9:16'}`,
+      `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
       `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
+      userContext.offer?.trim() ? `Offer/USP: ${userContext.offer.trim()}` : null,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
       userContext.supportingCharacter?.trim() ? `Supporting Character: ${userContext.supportingCharacter.trim()}` : null,
       userContext.environment?.trim() ? `Setting/Environment: ${userContext.environment.trim()}` : null,
@@ -667,6 +775,8 @@ export default function App() {
       town: userContext.town.trim() || 'Metro',
       language: userContext.language || 'Hindi',
       duration: targetDur,
+      platform: userContext.platform || 'Instagram Reels / 9:16',
+      creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
       area: userContext.area?.trim() || '',
       specialty: specialtyParts.join(' | '),
       offer: userContext.offer?.trim() || '',
@@ -676,6 +786,7 @@ export default function App() {
       scriptMode: userContext.scriptMode === 'roman' ? 'roman' : 'devanagari',
       shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
+      logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
     };
   };
 
@@ -940,6 +1051,98 @@ export default function App() {
     }
   };
 
+  // FAST SINGLE-CLICK PIPELINE: Brand -> Brief -> Options -> Direct GPU Video Render in ~20s
+  const handleGenerateVideo = async (options = { previewOnly: false }) => {
+    if (!userContext.businessName.trim()) {
+      setValidationError('Please enter your business or brand name.');
+      return;
+    }
+    if (!userContext.town.trim()) {
+      setValidationError('Please enter your town or city (e.g. Bangalore, Indore, Mumbai).');
+      return;
+    }
+    if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
+      setValidationError('Please tell us what you want this video to communicate.');
+      return;
+    }
+
+    setValidationError('');
+    setErrorMessage('');
+    setQualityFailures([]);
+    setIsBusy(true);
+    setFastStageIndex(0);
+    startTimer();
+    setCurrentStep('generating');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const payload = buildSessionPayload();
+
+    try {
+      // 1. Run the entire automated Creative Intelligence pipeline
+      const pipelineRes = await fetch('/api/pipeline/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const pipeData = await pipelineRes.json();
+
+      if (!pipelineRes.ok || pipeData.error) {
+        if (pipelineRes.status === 422 && pipeData.failures) {
+          setQualityFailures(pipeData.failures);
+        }
+        throw new Error(pipeData.error || 'Failed to complete creative intelligence generation.');
+      }
+
+      setSessionId(pipeData.sessionId);
+      setScriptPayloadData(pipeData.script || pipeData);
+      setCharacter1(pipeData.character1 || '');
+      setCharacter2(pipeData.character2 || '');
+      setSetting(pipeData.setting || '');
+      setScenes(pipeData.scenes || []);
+      setShotSpec(pipeData.shotSpec || null);
+
+      if (options.previewOnly) {
+        stopTimer();
+        setIsBusy(false);
+        setCurrentStep('storyboard');
+        return;
+      }
+
+      // 2. Transition straight to video GPU rendering with compiled Shot Specification!
+      setFastStageIndex(3); // Generating your video...
+      const runPayload = {
+        scenes: (pipeData.scenes || []).map((s) => s.trim()).filter(Boolean),
+        character1: (pipeData.character1 || '').trim(),
+        character2: (pipeData.character2 || '').trim(),
+        setting: (pipeData.setting || '').trim(),
+        duration: userContext.duration || '15s',
+        platform: userContext.platform || 'Instagram Reels / 9:16',
+        productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
+        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        shotSpec: pipeData.shotSpec || null,
+      };
+
+      const runRes = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(runPayload),
+      });
+      const runData = await runRes.json();
+
+      if (!runRes.ok || runData.error) {
+        throw new Error(runData.error || 'Failed to dispatch render job to Magnific.');
+      }
+
+      // 3. Poll Magnific status
+      await pollRenderStatus(runData.runId);
+    } catch (err) {
+      stopTimer();
+      setIsBusy(false);
+      setCurrentStep('input');
+      setErrorMessage(err.message || 'Error occurred while generating video.');
+    }
+  };
+
   // STAGE 2 APPROVE SCRIPT -> POST /api/session/:id/approve & POST /api/run -> STAGE 3 RENDER
   const handleApproveScriptAndRender = async () => {
     if (!scenes.length) {
@@ -963,15 +1166,17 @@ export default function App() {
         }).catch((e) => console.warn('Approve save call failed:', e));
       }
 
-      // 2. Start Magnific Run with stripped edit notes and consistent characters
+      // 2. Start Magnific Run with compiled shot specification & consistent characters
       const runPayload = {
         scenes: scenes.map((s) => s.trim()).filter(Boolean),
         character1: character1.trim(),
         character2: character2.trim(),
         setting: setting.trim(),
         duration: userContext.duration || '15s',
+        platform: userContext.platform || 'Instagram Reels / 9:16',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        shotSpec: shotSpec || null,
       };
 
       const res = await fetch('/api/run', {
@@ -1008,12 +1213,17 @@ export default function App() {
           stopTimer();
           setVideoUrl(data.videoUrl);
           setIsRendering(false);
+          setIsBusy(false);
+          setFastStageIndex(4);
+          setCurrentStep('render');
           return;
         }
 
         if (data.failed) {
           stopTimer();
           setIsRendering(false);
+          setIsBusy(false);
+          setCurrentStep('input');
           setErrorMessage(`Rendering failed: ${data.status}`);
           return;
         }
@@ -1028,6 +1238,8 @@ export default function App() {
     }
     stopTimer();
     setIsRendering(false);
+    setIsBusy(false);
+    setCurrentStep('input');
     setErrorMessage('Render taking longer than expected. Please verify your Magnific workspace.');
   };
 
@@ -1424,12 +1636,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* WORKSPACE BREADCRUMB / CHECKPOINT PROGRESS TRACKER */}
+      {/* WORKSPACE BREADCRUMB / FAST PROGRESS TRACKER */}
       <div style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', padding: '10px 24px' }}>
         <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, overflowX: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* Contextual Back Button */}
-            {(currentStep !== 'input' || brandFlowState !== 'setup') && (
+            {currentStep !== 'input' && (
               <button
                 type="button"
                 onClick={handleGoBack}
@@ -1458,107 +1670,65 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, whiteSpace: 'nowrap' }}>
               <span
                 onClick={() => {
-                  if (currentStep !== 'input') {
+                  if (currentStep !== 'input' && currentStep !== 'generating') {
                     setCurrentStep('input');
-                    setBrandFlowState('create');
                     setErrorMessage('');
                   }
                 }}
                 style={{
                   fontWeight: currentStep === 'input' ? 700 : 500,
-                  color: currentStep === 'input' ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                  cursor: currentStep !== 'input' ? 'pointer' : 'default',
-                  textDecoration: currentStep !== 'input' ? 'underline' : 'none',
+                  color: currentStep === 'input' ? 'var(--accent-primary)' : videoUrl ? 'var(--success)' : 'var(--text-secondary)',
+                  cursor: currentStep !== 'input' && currentStep !== 'generating' ? 'pointer' : 'default',
+                  textDecoration: currentStep !== 'input' && currentStep !== 'generating' ? 'underline' : 'none',
                   textUnderlineOffset: 3,
                 }}
-                title="Click to view Brief form"
+                title="Click to view Creation Brief"
               >
-                1. Brief
+                1. Create Ad Film
               </span>
               <span style={{ color: 'var(--border-strong)' }}>→</span>
               <span
-                onClick={() => {
-                  if (directionData && currentStep !== 'cp1_direction') {
-                    setCurrentStep('cp1_direction');
-                    setErrorMessage('');
-                  }
-                }}
                 style={{
-                  fontWeight: currentStep === 'cp1_direction' ? 700 : 500,
-                  color: currentStep === 'cp1_direction' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Direction') ? 'var(--success)' : 'var(--text-tertiary)',
-                  cursor: directionData && currentStep !== 'cp1_direction' ? 'pointer' : 'default',
-                  textDecoration: directionData && currentStep !== 'cp1_direction' ? 'underline' : 'none',
-                  textUnderlineOffset: 3,
+                  fontWeight: currentStep === 'generating' ? 700 : 500,
+                  color: currentStep === 'generating' ? 'var(--accent-primary)' : videoUrl ? 'var(--success)' : 'var(--text-tertiary)',
                 }}
-                title={directionData ? 'Click to view Checkpoint 1' : ''}
               >
-                2. Direction
+                2. AI Video Production
               </span>
               <span style={{ color: 'var(--border-strong)' }}>→</span>
               <span
-                onClick={() => {
-                  if (plotData && currentStep !== 'cp2_plot') {
-                    setCurrentStep('cp2_plot');
-                    setErrorMessage('');
-                  }
-                }}
                 style={{
-                  fontWeight: currentStep === 'cp2_plot' ? 700 : 500,
-                  color: currentStep === 'cp2_plot' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Plot') ? 'var(--success)' : 'var(--text-tertiary)',
-                  cursor: plotData && currentStep !== 'cp2_plot' ? 'pointer' : 'default',
-                  textDecoration: plotData && currentStep !== 'cp2_plot' ? 'underline' : 'none',
-                  textUnderlineOffset: 3,
+                  fontWeight: currentStep === 'render' ? 700 : 500,
+                  color: currentStep === 'render' ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                 }}
-                title={plotData ? 'Click to view Checkpoint 2' : ''}
               >
-                3. Plot Line
+                3. Final Video
               </span>
-              <span style={{ color: 'var(--border-strong)' }}>→</span>
-              <span
-                onClick={() => {
-                  if (storyData && currentStep !== 'cp3_story') {
-                    setCurrentStep('cp3_story');
-                    setErrorMessage('');
-                  }
-                }}
-                style={{
-                  fontWeight: currentStep === 'cp3_story' ? 700 : 500,
-                  color: currentStep === 'cp3_story' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Story') ? 'var(--success)' : 'var(--text-tertiary)',
-                  cursor: storyData && currentStep !== 'cp3_story' ? 'pointer' : 'default',
-                  textDecoration: storyData && currentStep !== 'cp3_story' ? 'underline' : 'none',
-                  textUnderlineOffset: 3,
-                }}
-                title={storyData ? 'Click to view Checkpoint 3' : ''}
-              >
-                4. Story Arc
-              </span>
-              <span style={{ color: 'var(--border-strong)' }}>→</span>
-              <span
-                onClick={() => {
-                  if (scenes.length && currentStep !== 'storyboard') {
-                    setCurrentStep('storyboard');
-                    setErrorMessage('');
-                  }
-                }}
-                style={{
-                  fontWeight: currentStep === 'storyboard' ? 700 : 500,
-                  color: currentStep === 'storyboard' ? 'var(--accent-primary)' : scenes.length ? 'var(--success)' : 'var(--text-tertiary)',
-                  cursor: scenes.length && currentStep !== 'storyboard' ? 'pointer' : 'default',
-                  textDecoration: scenes.length && currentStep !== 'storyboard' ? 'underline' : 'none',
-                  textUnderlineOffset: 3,
-                }}
-                title={scenes.length ? 'Click to view Storyboard' : ''}
-              >
-                5. Storyboard
-              </span>
-              <span style={{ color: 'var(--border-strong)' }}>→</span>
-              <span style={{ fontWeight: currentStep === 'render' ? 700 : 500, color: currentStep === 'render' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
-                6. Render
-              </span>
+              {scenes.length > 0 && (
+                <>
+                  <span style={{ color: 'var(--border-strong)', margin: '0 4px' }}>|</span>
+                  <span
+                    onClick={() => {
+                      setCurrentStep('storyboard');
+                      setErrorMessage('');
+                    }}
+                    style={{
+                      fontWeight: currentStep === 'storyboard' ? 700 : 500,
+                      color: currentStep === 'storyboard' ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      textUnderlineOffset: 3,
+                    }}
+                    title="View generated script & storyboard breakdown"
+                  >
+                    Storyboard View
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
-          {elapsedTime !== '00:00' && isBusy && (
+          {elapsedTime !== '00:00' && (isBusy || currentStep === 'generating' || isRendering) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'var(--accent-primary)' }}>
               <Clock size={12} />
               <span>{elapsedTime}</span>
@@ -1888,8 +2058,212 @@ export default function App() {
           </div>
         )}
 
-        {/* DEDICATED FULL-SCREEN GENERATION WORKSPACE DURING CHECKPOINT TRANSITIONS */}
-        {isBusy ? (
+        {/* DEDICATED FULL-SCREEN GENERATION WORKSPACE DURING FAST PIPELINE OR CHECKPOINT TRANSITIONS */}
+        {currentStep === 'generating' ? (
+          <div
+            style={{
+              maxWidth: 620,
+              margin: '36px auto',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 14,
+              padding: '36px 32px',
+              textAlign: 'center',
+              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            {/* Spinning icon */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-subtle)',
+                  color: 'var(--accent-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 18px var(--accent-glow)',
+                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                }}
+              >
+                <Sparkles size={26} className="icon-spinner" />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <div
+                style={{
+                  display: 'inline-block',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-primary)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  backgroundColor: 'var(--bg-elevated)',
+                  padding: '4px 14px',
+                  borderRadius: 12,
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                {FAST_PIPELINE_STAGES[fastStageIndex]?.phase || 'STEP 1'}
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+              {FAST_PIPELINE_STAGES[fastStageIndex]?.title || 'Understanding your brief…'}
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
+              {FAST_PIPELINE_STAGES[fastStageIndex]?.detail || 'Evaluating customer tensions, narrative options, and local market voice.'}
+            </p>
+
+            {/* Multi-step progress bar */}
+            <div style={{ marginBottom: 24 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${FAST_PIPELINE_STAGES.length}, 1fr)`,
+                  gap: 6,
+                  marginBottom: 8,
+                }}
+              >
+                {FAST_PIPELINE_STAGES.map((st, i) => {
+                  const isDone = i < fastStageIndex;
+                  const isCurrent = i === fastStageIndex;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: isDone
+                          ? 'var(--success)'
+                          : isCurrent
+                          ? 'var(--accent-primary)'
+                          : 'var(--bg-elevated)',
+                        transition: 'all 0.3s ease',
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Live Pipeline Checklist */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                marginBottom: 20,
+                textAlign: 'left',
+              }}
+            >
+              {FAST_PIPELINE_STAGES.map((st, i) => {
+                const isDone = i < fastStageIndex;
+                const isCurrent = i === fastStageIndex;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: 12,
+                      color: isCurrent
+                        ? 'var(--text-primary)'
+                        : isDone
+                        ? 'var(--text-secondary)'
+                        : 'var(--text-tertiary)',
+                      fontWeight: isCurrent ? 600 : 400,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          backgroundColor: isDone
+                            ? 'rgba(34, 197, 94, 0.15)'
+                            : isCurrent
+                            ? 'var(--accent-subtle)'
+                            : 'var(--bg-surface)',
+                          color: isDone
+                            ? 'var(--success)'
+                            : isCurrent
+                            ? 'var(--accent-primary)'
+                            : 'var(--text-tertiary)',
+                          border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                        }}
+                      >
+                        {isDone ? '✓' : i + 1}
+                      </span>
+                      <span>{st.title.replace('…', '')}</span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: isDone ? 'var(--success)' : isCurrent ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                      }}
+                    >
+                      {isDone ? 'Complete' : isCurrent ? 'In Progress' : 'Queued'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Creative Intelligence Insight Tip */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px dashed var(--border-default)',
+                borderRadius: 8,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                textAlign: 'left',
+              }}
+            >
+              <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-tertiary)',
+                    marginBottom: 2,
+                  }}
+                >
+                  Creative Intelligence Insight
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {FAST_PIPELINE_TIPS[busyTipIndex] || FAST_PIPELINE_TIPS[0]}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+              Elapsed Time: {elapsedTime}
+            </div>
+          </div>
+        ) : isBusy ? (
           <div
             style={{
               maxWidth: 620,
@@ -2095,631 +2469,220 @@ export default function App() {
         ) : (
           <>
             {/* ========================================================
-                STEP 1: BRAND SETUP -> CONFIRMATION -> VIDEO BRIEF WORKSPACE
+                STREAMLINED CREATION WORKSPACE (~20s Brand -> Brief -> Options -> Generate)
                 ======================================================== */}
             {currentStep === 'input' && (
-          <div>
-            {/* 1A. BRAND SETUP SCREEN (First-time or Switch Brand) */}
-            {brandFlowState === 'setup' && (
-              <div
-                style={{
-                  maxWidth: 580,
-                  margin: '24px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 12,
-                  padding: '32px 36px',
-                }}
-              >
-                <div style={{ marginBottom: 24, textAlign: 'center' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      padding: 12,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Building2 size={24} />
-                  </div>
-                  <h1
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      color: 'var(--text-primary)',
-                      margin: '0 0 6px',
-                    }}
-                  >
-                    Set up your brand
-                  </h1>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    Tell us a little about your business. We'll use this context to create more consistent videos.
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label
-                      htmlFor="setupBrandName"
-                      style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                    >
-                      Brand / Business Name <span style={{ color: 'var(--error)' }}>*</span>
-                    </label>
-                    <input
-                      id="setupBrandName"
-                      type="text"
-                      autoFocus
-                      value={userContext.businessName}
-                      onChange={(e) => {
-                        updateUserContext('businessName', e.target.value);
-                        setValidationError('');
-                      }}
-                      placeholder="e.g. Kanti Sweets, Sharma General Store"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: 13,
-                        backgroundColor: 'var(--bg-elevated)',
-                        borderColor: validationError && !userContext.businessName.trim() ? 'var(--error)' : 'var(--border-default)',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="setupWebsite"
-                      style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                    >
-                      Website <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                    </label>
-                    <input
-                      id="setupWebsite"
-                      type="text"
-                      value={userContext.websiteUrl}
-                      onChange={(e) => updateUserContext('websiteUrl', e.target.value)}
-                      placeholder="e.g. kantisweets.com"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: 13,
-                        backgroundColor: 'var(--bg-elevated)',
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                    <div>
-                      <label
-                        htmlFor="setupTown"
-                        style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                      >
-                        Town / City <span style={{ color: 'var(--error)' }}>*</span>
-                      </label>
-                      <input
-                        id="setupTown"
-                        type="text"
-                        value={userContext.town}
-                        onChange={(e) => {
-                          updateUserContext('town', e.target.value);
-                          setValidationError('');
-                        }}
-                        placeholder="e.g. Bangalore, Indore, Mumbai"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          fontSize: 13,
-                          backgroundColor: 'var(--bg-elevated)',
-                          borderColor: validationError && !userContext.town.trim() ? 'var(--error)' : 'var(--border-default)',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="setupArea"
-                        style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}
-                      >
-                        Area / Neighborhood <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                      </label>
-                      <input
-                        id="setupArea"
-                        type="text"
-                        value={userContext.area}
-                        onChange={(e) => updateUserContext('area', e.target.value)}
-                        placeholder="e.g. Indiranagar, Palasia"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          fontSize: 13,
-                          backgroundColor: 'var(--bg-elevated)',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="setupBusinessType"
-                      style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                    >
-                      Business Category <span style={{ color: 'var(--error)' }}>*</span>
-                    </label>
-                    <select
-                      id="setupBusinessType"
-                      value={userContext.businessType}
-                      onChange={(e) => updateUserContext('businessType', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: 13,
-                        backgroundColor: 'var(--bg-elevated)',
-                      }}
-                    >
-                      {BUSINESS_TYPE_PRESETS.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {userContext.businessType === 'Other' && (
-                    <div>
-                      <label
-                        style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                      >
-                        Specify Business Category <span style={{ color: 'var(--error)' }}>*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.customBusinessType}
-                        onChange={(e) => updateUserContext('customBusinessType', e.target.value)}
-                        placeholder="e.g. Luxury Handloom Store"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          fontSize: 13,
-                          backgroundColor: 'var(--bg-elevated)',
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-tertiary)',
-                        marginBottom: 10,
-                        marginTop: 4,
-                      }}
-                    >
-                      Brand Assets <span style={{ fontSize: 10, fontWeight: 400 }}>(Optional)</span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <UploadTile
-                        id="setupBrandDoc"
-                        label="Brand Guidelines"
-                        hint="PDF or DOCX document"
-                        accept=".pdf,.doc,.docx"
-                        file={userContext.brandFile}
-                        onChange={(f) => handleFileUpload(f, 'brandFile')}
-                        icon={FileText}
-                      />
-                      <UploadTile
-                        id="setupShopPhoto"
-                        label="Business / Store Photos"
-                        hint="Storefront, signboard, or interior"
-                        accept="image/*"
-                        capture="environment"
-                        file={userContext.shopPhoto}
-                        onChange={(f) => handleFileUpload(f, 'shopPhoto')}
-                        icon={ImageIcon}
-                      />
-                      <UploadTile
-                        id="setupLogo"
-                        label="Brand Logo"
-                        hint="High-resolution PNG or JPG"
-                        accept="image/*"
-                        file={userContext.logo}
-                        onChange={(f) => handleFileUpload(f, 'logo')}
-                        icon={Building2}
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && (
-                    <div
-                      role="alert"
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: 'var(--error-subtle)',
-                        border: '1px solid var(--error)',
-                        borderRadius: 6,
-                        color: 'var(--error)',
-                        fontSize: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <AlertCircle size={14} />
-                      <span>{validationError}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!userContext.businessName.trim()) {
-                          setValidationError('Please enter your brand or business name.');
-                          return;
-                        }
-                        if (!userContext.town.trim()) {
-                          setValidationError('Please enter your town or city.');
-                          return;
-                        }
-                        setValidationError('');
-                        setBrandFlowState('confirmation');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 20px',
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        boxShadow: '0 2px 8px var(--accent-glow)',
-                      }}
-                    >
-                      <span>Continue</span>
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValidationError('');
-                        setBrandFlowState('create');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        fontSize: 12,
-                        color: 'var(--text-tertiary)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                      }}
-                    >
-                      Skip brand setup for now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 1B. BRAND CONFIRMATION SUMMARY */}
-            {brandFlowState === 'confirmation' && (
-              <div
-                style={{
-                  maxWidth: 540,
-                  margin: '32px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 12,
-                  padding: '32px 36px',
-                }}
-              >
-                <div style={{ marginBottom: 24, textAlign: 'center' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      padding: 12,
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      color: 'var(--success)',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Check size={24} strokeWidth={2.5} />
-                  </div>
-                  <h1
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      color: 'var(--text-primary)',
-                      margin: '0 0 6px',
-                    }}
-                  >
-                    Brand setup complete
-                  </h1>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    Your business context is saved and ready for commercial video production.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-elevated)',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-subtle)',
-                    padding: 16,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                    marginBottom: 24,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Brand Name</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{userContext.businessName}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Category</span>
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {userContext.businessType === 'Other' && userContext.customBusinessType ? userContext.customBusinessType : userContext.businessType}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Location</span>
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {userContext.town}{userContext.area ? `, ${userContext.area}` : ''}
-                    </span>
-                  </div>
-                  {userContext.websiteUrl && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Website</span>
-                      <span style={{ color: 'var(--text-primary)' }}>{userContext.websiteUrl}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Brand Guidelines</span>
-                    <span style={{ color: userContext.brandFile ? 'var(--success)' : 'var(--text-tertiary)', fontWeight: userContext.brandFile ? 600 : 400 }}>
-                      {userContext.brandFile ? `✓ Added (${userContext.brandFile.name})` : 'Not added'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Business Photos</span>
-                    <span style={{ color: userContext.shopPhoto ? 'var(--success)' : 'var(--text-tertiary)', fontWeight: userContext.shopPhoto ? 600 : 400 }}>
-                      {userContext.shopPhoto ? `✓ Added (${userContext.shopPhoto.name})` : 'Not added'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Brand Logo</span>
-                    <span style={{ color: userContext.logo ? 'var(--success)' : 'var(--text-tertiary)', fontWeight: userContext.logo ? 600 : 400 }}>
-                      {userContext.logo ? `✓ Added (${userContext.logo.name})` : 'Not added'}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBrandFlowState('setup');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Edit Brand
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBrandFlowState('create');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    style={{
-                      flex: 2,
-                      padding: '12px 20px',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      boxShadow: '0 2px 8px var(--accent-glow)',
-                    }}
-                  >
-                    <span>Create Video</span>
-                    <ArrowRight size={15} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 1C. STREAMLINED VIDEO BRIEF WORKSPACE */}
-            {brandFlowState === 'create' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {/* Brand Context Banner */}
-                {userContext.businessName ? (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: 10,
-                      padding: '14px 18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, flex: 1 }}>
-                      <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 8,
-                          backgroundColor: 'var(--accent-subtle)',
-                          color: 'var(--accent-primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Store size={20} />
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            Creating for: {userContext.businessName}
-                          </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            · {userContext.town}{userContext.area ? `, ${userContext.area}` : ''}
-                          </span>
-                          {userContext.websiteUrl && (
-                            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                              · {userContext.websiteUrl}
+                {/* Title */}
+                <div>
+                  <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                    Create Your Ad Film
+                  </h1>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                    Tell Clevertize your video idea. Our creative intelligence engine designs the story, locks scene continuity, and produces the video in seconds.
+                  </p>
+                </div>
+
+                {/* ========================================================
+                    SECTION A: ABOUT YOUR BRAND
+                    ======================================================== */}
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 22 }}>
+                  {/* If brand already configured & not in inline-edit mode: Show sleek summary card */}
+                  {userContext.businessName && !isEditingBrandInline ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 8,
+                            backgroundColor: 'var(--accent-subtle)',
+                            color: 'var(--accent-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Store size={20} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {userContext.businessName}
                             </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                          <span>
-                            Guidelines: {userContext.brandFile ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'Not added'}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            Photos: {userContext.shopPhoto ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'Not added'}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            Logo: {userContext.logo ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'Not added'}
-                          </span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                              · {userContext.town}{userContext.area ? `, ${userContext.area}` : ''}
+                            </span>
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)' }}>
+                              {userContext.businessType === 'Other' && userContext.customBusinessType ? userContext.customBusinessType : userContext.businessType}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                            {userContext.websiteUrl && <span>Website: {userContext.websiteUrl} · </span>}
+                            {userContext.offer && <span>USP: {userContext.offer} · </span>}
+                            <span>Logo: {userContext.logo ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'None'}</span>
+                            <span>·</span>
+                            <span>Photo: {userContext.productPhoto || userContext.shopPhoto ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'None'}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBrandFlowState('setup');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 500,
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <Edit3 size={13} />
-                      <span>Edit Brand</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px dashed var(--accent-primary)',
-                      borderRadius: 10,
-                      padding: '14px 18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, flex: 1 }}>
-                      <div
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingBrandInline(true)}
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          backgroundColor: 'var(--accent-subtle)',
-                          color: 'var(--accent-primary)',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
+                          gap: 6,
                         }}
                       >
-                        <Building2 size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          Brand setup skipped (Generic Commercial)
+                        <Edit3 size={13} />
+                        <span>Edit Brand</span>
+                      </button>
+                    </div>
+                  ) : (
+                    /* Brand Form Fields (First-time setup or editing) */
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Building2 size={14} style={{ color: 'var(--accent-primary)' }} />
+                          <span>A. About Your Brand</span>
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                          Want your business name spoken in dialogue and styled with your storefront colors?
+                        {isEditingBrandInline && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingBrandInline(false)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: 'var(--accent-primary)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Done
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                            Brand / Business Name <span style={{ color: 'var(--error)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.businessName}
+                            onChange={(e) => {
+                              updateUserContext('businessName', e.target.value);
+                              setValidationError('');
+                            }}
+                            placeholder="e.g. Kanti Sweets, Studio Kitchens"
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                            Town / City <span style={{ color: 'var(--error)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.town}
+                            onChange={(e) => {
+                              updateUserContext('town', e.target.value);
+                              setValidationError('');
+                            }}
+                            placeholder="e.g. Bangalore, Indore, Mumbai"
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                            Product / Service Category <span style={{ color: 'var(--error)' }}>*</span>
+                          </label>
+                          <select
+                            value={userContext.businessType}
+                            onChange={(e) => updateUserContext('businessType', e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          >
+                            {BUSINESS_TYPE_PRESETS.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            Area / Neighborhood <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.area}
+                            onChange={(e) => updateUserContext('area', e.target.value)}
+                            placeholder="e.g. Indiranagar, Palasia"
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            Website <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.websiteUrl}
+                            onChange={(e) => updateUserContext('websiteUrl', e.target.value)}
+                            placeholder="e.g. kantisweets.com"
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            Key Offer / USP <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.offer}
+                            onChange={(e) => updateUserContext('offer', e.target.value)}
+                            placeholder="e.g. 50% festive discount or 20-min delivery"
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                          />
                         </div>
                       </div>
                     </div>
+                  )}
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBrandFlowState('setup');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#ffffff',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        boxShadow: '0 1px 4px var(--accent-glow)',
-                      }}
-                    >
-                      <Building2 size={13} />
-                      <span>Set Up Brand Now</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* 1. Video Idea / Campaign Brief Card */}
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <label htmlFor="briefInput" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>
-                      1. Video Idea / Campaign Brief <span style={{ color: 'var(--error)' }}>*</span>
-                    </label>
+                {/* ========================================================
+                    SECTION B: YOUR BRIEF (Hero Prominence)
+                    ======================================================== */}
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--accent-primary)', borderRadius: 12, padding: 24, boxShadow: '0 4px 20px rgba(99, 102, 241, 0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <label htmlFor="briefInput" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        What do you want this video to communicate? <span style={{ color: 'var(--error)' }}>*</span>
+                      </label>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                        Write naturally. Describe your campaign goal, special offer, hero product, or customer problem.
+                      </p>
+                    </div>
 
                     {micSupported && (
                       <button
@@ -2729,25 +2692,53 @@ export default function App() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 6,
-                          padding: '4px 10px',
+                          padding: '6px 12px',
                           borderRadius: 6,
                           fontSize: 12,
-                          fontWeight: 500,
+                          fontWeight: 600,
                           cursor: 'pointer',
                           border: isListening ? '1px solid var(--error)' : '1px solid var(--border-default)',
                           backgroundColor: isListening ? 'var(--error-subtle)' : 'var(--bg-elevated)',
                           color: isListening ? 'var(--error)' : 'var(--text-secondary)',
                         }}
                       >
-                        {isListening ? <MicOff size={13} /> : <Mic size={13} />}
+                        {isListening ? <MicOff size={14} /> : <Mic size={14} />}
                         <span>{isListening ? 'Stop' : 'Dictate'}</span>
                       </button>
                     )}
                   </div>
 
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 10px' }}>
-                    Describe your promotion, hero product, festive offer, or relatable customer situation.
-                  </p>
+                  {/* Inspiring Example Chips */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '10px 0 12px' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>Try an example:</span>
+                    {[
+                      'Show why our modular kitchens are perfect for small Bangalore homes',
+                      'Create a funny Diwali offer video with 50% discount on sweets',
+                      'Convince people to book a free dental consultation',
+                      'Launch our new premium skincare product with authentic glow',
+                    ].map((sample, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => {
+                          updateUserContext('brief', sample);
+                          setValidationError('');
+                        }}
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          borderRadius: 4,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        "{sample.slice(0, 36)}…"
+                      </button>
+                    ))}
+                  </div>
 
                   {micHint && (
                     <div style={{ fontSize: 12, color: 'var(--accent-primary)', padding: '6px 10px', backgroundColor: 'var(--bg-elevated)', borderRadius: 6, marginBottom: 10 }}>
@@ -2763,260 +2754,342 @@ export default function App() {
                       updateUserContext('brief', e.target.value);
                       setValidationError('');
                     }}
-                    placeholder="e.g. Announce a festive Diwali gift sweet box with 50% discount and assorted dry fruits. Highlight fresh quality over boring generic gift boxes..."
-                    style={{ width: '100%', padding: '12px 14px', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }}
+                    placeholder="e.g. Show why our modular kitchens are perfect for small Bangalore homes. Highlight smart storage, modern aesthetic, and hassle-free 48-hour installation..."
+                    style={{ width: '100%', padding: '14px 16px', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }}
                   />
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
                     {userContext.brief.length} characters
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 14 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        Special Offer / Discount <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.offer}
-                        onChange={(e) => updateUserContext('offer', e.target.value)}
-                        placeholder="e.g. 50% off on gift boxes till Sunday"
-                        style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        Specific Occasion / Festival <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.occasion}
-                        onChange={(e) => updateUserContext('occasion', e.target.value)}
-                        placeholder="e.g. Diwali (leave blank to auto-detect calendar)"
-                        style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                {/* 2. Ad Focus & Angle Presets */}
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>
-                      2. Commercial Angle & CTA Focus
-                    </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                      Shapes narrative arc & final voiceover line
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-                    {AD_GOAL_PRESETS.map((preset) => {
-                      const Icon = preset.icon;
-                      const isSelected = userContext.selectedGoalId === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => updateUserContext('selectedGoalId', preset.id)}
-                          style={{
-                            padding: '12px 10px',
-                            borderRadius: 8,
-                            border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                            backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: 6,
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Icon size={16} style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-tertiary)' }} />
-                          <span style={{ fontSize: 12, fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                            {preset.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. Hero Product Photo */}
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 8 }}>
-                    3. Hero Product Photo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Recommended)</span>
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
-                    Upload a clear photo of the specific product being showcased. It will directly guide neural video generation and end frames.
-                  </p>
-
-                  <UploadTile
-                    id="productPhotoInput"
-                    label="Hero Product Photo"
-                    hint="Attached to video render and Claude vision"
-                    accept="image/*"
-                    file={userContext.productPhoto}
-                    onChange={(f) => handleFileUpload(f, 'productPhoto')}
-                    icon={ImageIcon}
-                  />
-                </div>
-
-                {/* 4. Creative Casting & Setting Preferences */}
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 6 }}>
-                    4. Creative Casting & Setting Preferences <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
-                    Specify characters or locations to guide the story. The AI ensures strict visual continuity across all scenes.
-                  </p>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        Lead Character / Speaker
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.leadCharacter}
-                        onChange={(e) => updateUserContext('leadCharacter', e.target.value)}
-                        placeholder="e.g. Young female architect in her 30s"
-                        style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        Supporting Character
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.supportingCharacter}
-                        onChange={(e) => updateUserContext('supportingCharacter', e.target.value)}
-                        placeholder="e.g. Her husband, or smiling shop owner"
-                        style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        Storefront / Interior Setting
-                      </label>
-                      <input
-                        type="text"
-                        value={userContext.environment}
-                        onChange={(e) => updateUserContext('environment', e.target.value)}
-                        placeholder="e.g. Bright contemporary sweet boutique counter"
-                        style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Video Duration & Dialogue Language */}
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+                {/* ========================================================
+                    SECTION C: PRODUCTION OPTIONS
+                    ======================================================== */}
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 22 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 16 }}>
-                    5. Video Duration & Dialogue Language
+                    C. Production Options
                   </div>
 
-                  {/* Row 1: Target Video Duration */}
-                  <div style={{ marginBottom: 18 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        Target Video Duration
-                      </label>
-                      <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
-                        4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
-                      </span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {[
-                        { id: '10s', label: '10s', sub: 'Snappy' },
-                        { id: '15s', label: '15s', sub: 'Standard' },
-                        { id: '20s', label: '20s', sub: 'Extended' },
-                        { id: '25s', label: '25s', sub: 'Story' },
-                      ].map((d) => {
-                        const isSelected = (userContext.duration || '15s') === d.id;
-                        return (
-                          <button
-                            key={d.id}
-                            type="button"
-                            onClick={() => updateUserContext('duration', d.id)}
-                            style={{
-                              padding: '10px 8px',
-                              borderRadius: 8,
-                              border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                              backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                              color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 2,
-                              transition: 'all 0.15s ease',
-                              boxShadow: isSelected ? '0 2px 8px var(--accent-glow)' : 'none',
-                            }}
-                          >
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
-                            <span style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>({d.sub})</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {/* Row 1: Platform & Duration */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                      {/* Platform */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                          Platform
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6 }}>
+                          {PLATFORM_PRESETS.map((p) => {
+                            const isSelected = (userContext.platform || 'Instagram Reels / 9:16') === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => updateUserContext('platform', p.id)}
+                                style={{
+                                  padding: '8px 10px',
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? 700 : 500,
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                                  cursor: 'pointer',
+                                  textAlign: 'center',
+                                }}
+                              >
+                                <div>{p.label}</div>
+                                <div style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>{p.sub}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                  {/* Row 2: Dialogue Language & Script Mode */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-                    {/* Dialogue Language */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        Dialogue Language
-                      </label>
-                      <div className="tab-group" style={{ width: '100%' }}>
-                        {['Hindi', 'Hinglish', 'English', 'Marathi'].map((lang) => (
-                          <button
-                            key={lang}
-                            type="button"
-                            onClick={() => updateUserContext('language', lang)}
-                            className={`tab-pill ${userContext.language === lang ? 'active-accent' : ''}`}
-                            style={{ fontSize: 12, padding: '8px 10px' }}
-                          >
-                            {lang}
-                          </button>
-                        ))}
+                      {/* Duration */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 4 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            Duration
+                          </label>
+                          <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                            4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                          {[
+                            { id: '10s', label: '10 sec', sub: 'Snappy' },
+                            { id: '15s', label: '15 sec', sub: 'Standard' },
+                            { id: '20s', label: '20 sec', sub: 'Extended' },
+                            { id: '25s', label: '25 sec', sub: 'Story' },
+                          ].map((d) => {
+                            const isSelected = (userContext.duration || '15s') === d.id;
+                            return (
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => updateUserContext('duration', d.id)}
+                                style={{
+                                  padding: '8px 6px',
+                                  borderRadius: 6,
+                                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  textAlign: 'center',
+                                }}
+                              >
+                                <div style={{ fontSize: 12, fontWeight: 700 }}>{d.label}</div>
+                                <div style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>({d.sub})</div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Dialogue Script Mode */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        Dialogue Script Mode
-                      </label>
-                      <div className="tab-group" style={{ width: '100%' }}>
-                        <button
-                          type="button"
-                          onClick={() => updateUserContext('scriptMode', 'devanagari')}
-                          className={`tab-pill ${userContext.scriptMode === 'devanagari' ? 'active-accent' : ''}`}
-                          style={{ fontSize: 12, padding: '8px 10px' }}
-                        >
-                          Devanagari (Standard)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateUserContext('scriptMode', 'roman')}
-                          className={`tab-pill ${userContext.scriptMode === 'roman' ? 'active-accent' : ''}`}
-                          style={{ fontSize: 12, padding: '8px 10px' }}
-                        >
-                          Romanized (Test)
-                        </button>
+                    {/* Row 2: Language & Creative Style */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+                      {/* Language */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                          Language
+                        </label>
+                        <div className="tab-group" style={{ width: '100%' }}>
+                          {['Hindi', 'Hinglish', 'English', 'Marathi'].map((lang) => (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => updateUserContext('language', lang)}
+                              className={`tab-pill ${userContext.language === lang ? 'active-accent' : ''}`}
+                              style={{ fontSize: 12, padding: '8px 10px' }}
+                            >
+                              {lang}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Creative Format / Style */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                          Creative Style / Format
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+                          {CREATIVE_STYLE_PRESETS.map((st) => {
+                            const isSelected = (userContext.creativeStyle || 'UGC / Creator-style') === st.id;
+                            return (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => updateUserContext('creativeStyle', st.id)}
+                                style={{
+                                  padding: '8px 10px',
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? 700 : 500,
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                }}
+                                title={st.desc}
+                              >
+                                {st.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Launch CTA */}
+                {/* ========================================================
+                    SECTION D: ASSETS (Optional)
+                    ======================================================== */}
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 22 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 4 }}>
+                    D. Brand & Product Assets <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
+                    Uploaded assets guide neural video generation and end frame compositing.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12 }}>
+                    <UploadTile
+                      id="productPhotoInput"
+                      label="Hero Product Photo"
+                      hint="Guides neural video product appearance"
+                      accept="image/*"
+                      file={userContext.productPhoto}
+                      onChange={(f) => handleFileUpload(f, 'productPhoto')}
+                      icon={ImageIcon}
+                    />
+                    <UploadTile
+                      id="brandLogoInput"
+                      label="Brand Logo"
+                      hint="PNG or JPG for end frame card"
+                      accept="image/*"
+                      file={userContext.logo}
+                      onChange={(f) => handleFileUpload(f, 'logo')}
+                      icon={Building2}
+                    />
+                    <UploadTile
+                      id="shopPhotoInput"
+                      label="Business / Store Photos"
+                      hint="Signboard, interior, storefront"
+                      accept="image/*"
+                      capture="environment"
+                      file={userContext.shopPhoto}
+                      onChange={(f) => handleFileUpload(f, 'shopPhoto')}
+                      icon={Store}
+                    />
+                  </div>
+                </div>
+
+                {/* ========================================================
+                    SECTION E: ADVANCED OPTIONS (Collapsible)
+                    ======================================================== */}
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                    style={{
+                      width: '100%',
+                      padding: '16px 22px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        E. Advanced Creative Options <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                        Casting characters, single-room setting, commercial angle, and script dialect.
+                      </div>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)' }}>
+                      {isAdvancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                  </button>
+
+                  {isAdvancedOpen && (
+                    <div style={{ padding: '0 22px 22px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+                      {/* Casting & Location */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Lead Character / Speaker
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.leadCharacter}
+                            onChange={(e) => updateUserContext('leadCharacter', e.target.value)}
+                            placeholder="e.g. Relatable working mother in her 30s"
+                            style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Supporting Character
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.supportingCharacter}
+                            onChange={(e) => updateUserContext('supportingCharacter', e.target.value)}
+                            placeholder="e.g. Smiling shop assistant, or spouse"
+                            style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Setting / Environment
+                          </label>
+                          <input
+                            type="text"
+                            value={userContext.environment}
+                            onChange={(e) => updateUserContext('environment', e.target.value)}
+                            placeholder="e.g. Modern kitchen with warm daylight"
+                            style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Ad Focus Goal & Script Mode */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            Commercial Goal & CTA Angle
+                          </label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+                            {AD_GOAL_PRESETS.map((g) => {
+                              const isSelected = userContext.selectedGoalId === g.id;
+                              return (
+                                <button
+                                  key={g.id}
+                                  type="button"
+                                  onClick={() => updateUserContext('selectedGoalId', g.id)}
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: 6,
+                                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                                    backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? 700 : 500,
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  {g.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            Dialogue Script Mode
+                          </label>
+                          <div className="tab-group" style={{ width: '100%' }}>
+                            <button
+                              type="button"
+                              onClick={() => updateUserContext('scriptMode', 'devanagari')}
+                              className={`tab-pill ${userContext.scriptMode === 'devanagari' ? 'active-accent' : ''}`}
+                              style={{ fontSize: 11, padding: '6px 8px' }}
+                            >
+                              Devanagari (Standard)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateUserContext('scriptMode', 'roman')}
+                              className={`tab-pill ${userContext.scriptMode === 'roman' ? 'active-accent' : ''}`}
+                              style={{ fontSize: 11, padding: '6px 8px' }}
+                            >
+                              Romanized (Test)
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ========================================================
+                    SECTION F: PRIMARY ACTION — GENERATE VIDEO (~20s)
+                    ======================================================== */}
                 {validationError && (
                   <div style={{ padding: '10px 14px', backgroundColor: 'var(--error-subtle)', border: '1px solid var(--error)', borderRadius: 8, color: 'var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <AlertCircle size={15} />
@@ -3024,34 +3097,58 @@ export default function App() {
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  disabled={isBusy}
-                  onClick={handleStartCreativeEngine}
-                  style={{
-                    width: '100%',
-                    padding: '16px 24px',
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    cursor: isBusy ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    boxShadow: '0 2px 10px var(--accent-glow)',
-                  }}
-                >
-                  <span>Explore Creative Directions & Hooks</span>
-                  <Sparkles size={18} />
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => handleGenerateVideo({ previewOnly: false })}
+                    style={{
+                      width: '100%',
+                      padding: '18px 28px',
+                      background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 10,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      cursor: isBusy ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 10,
+                      boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Sparkles size={20} />
+                    <span>Generate Video</span>
+                    <ArrowRight size={18} />
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', flexWrap: 'wrap', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      ~20-second setup · Complete planning, script, Section 8 gate & video render happen behind the scenes
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateVideo({ previewOnly: true })}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: 12,
+                        color: 'var(--accent-primary)',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      Preview Script & Storyboard First
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
-        )}
 
         {/* ========================================================
             CHECKPOINT 1: CREATIVE DIRECTION & CUSTOMER TENSIONS
@@ -4206,6 +4303,103 @@ export default function App() {
                     <span>Create New Video</span>
                   </button>
                 </div>
+
+                {/* Optional Script & Scene Breakdown Accordion */}
+                {scenes.length > 0 && (
+                  <div style={{ maxWidth: 720, width: '100%', margin: '20px auto 0', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, overflow: 'hidden' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsScriptExpanded(!isScriptExpanded)}
+                      style={{
+                        width: '100%',
+                        padding: '14px 18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileText size={16} style={{ color: 'var(--accent-primary)' }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          View Script & Storyboard Breakdown ({scenes.length} Scenes)
+                        </span>
+                      </div>
+                      <div style={{ color: 'var(--text-secondary)' }}>
+                        {isScriptExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </div>
+                    </button>
+
+                    {isScriptExpanded && (
+                      <div style={{ padding: '0 18px 18px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 14 }}>
+                        {/* Cast & Setting summary */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, fontSize: 12 }}>
+                          {character1 && (
+                            <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: 6 }}>
+                              <strong style={{ color: 'var(--accent-primary)' }}>Character 1:</strong> {character1}
+                            </div>
+                          )}
+                          {character2 && (
+                            <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: 6 }}>
+                              <strong style={{ color: 'var(--accent-primary)' }}>Character 2:</strong> {character2}
+                            </div>
+                          )}
+                          {setting && (
+                            <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: 6, gridColumn: '1 / -1' }}>
+                              <strong style={{ color: 'var(--accent-primary)' }}>Setting:</strong> {setting}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Scenes list */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {scenes.map((rawSc, sIdx) => {
+                            const sc = parseScene(rawSc, sIdx);
+                            return (
+                              <div key={sIdx} style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                                    {sc.title} · {sc.purpose}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 6 }}>
+                                  <strong>Visual:</strong> {sc.visual}
+                                </div>
+                                {sc.dialogue && (
+                                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontStyle: 'italic', marginBottom: 4 }}>
+                                    <strong>Dialogue:</strong> "{sc.dialogue}"
+                                  </div>
+                                )}
+                                {sc.camera && (
+                                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                                    <strong>Camera:</strong> {sc.camera}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* End frame preview */}
+                        {scriptPayloadData?.endFrame && (
+                          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 4 }}>
+                              Composited End Frame
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                              <strong>{scriptPayloadData.endFrame.businessName}</strong>
+                              {scriptPayloadData.endFrame.address && <span> · {scriptPayloadData.endFrame.address}</span>}
+                              {scriptPayloadData.endFrame.offer && <span style={{ color: 'var(--accent-primary)' }}> · {scriptPayloadData.endFrame.offer}</span>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
           </div>

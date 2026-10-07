@@ -11,6 +11,7 @@ const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
+const { compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,8 @@ function validateForm(b) {
     contact: s(b.contact),
     ownerName: s(b.ownerName),
     duration: s(b.duration) || "15s",
+    platform: s(b.platform) || "Instagram Reels / 9:16",
+    creativeStyle: s(b.creativeStyle) || "UGC / Creator-style",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",
   };
   const missing = [["businessName", "Business name"], ["businessType", "Business type"], ["town", "Town"]]
@@ -62,6 +65,7 @@ function validateForm(b) {
   if (missing.length) throw Object.assign(new Error(`Please fill in: ${missing.join(", ")}`), { status: 400 });
   f.shopPhoto = cleanImage(b.shopPhoto, "Shop photo");
   f.productPhoto = cleanImage(b.productPhoto, "Product photo");
+  f.logo = cleanImage(b.logo, "Brand logo");
   return f;
 }
 
@@ -223,6 +227,66 @@ app.post("/api/session", async (req, res) => {
   } catch (e) { sendErr(res, e, "session"); }
 });
 
+// FAST SINGLE-CLICK PIPELINE (Phase 4):
+// Runs Brand understanding → Direction → Plot → Story → Script Quality Gate → Shot Specs automatically
+app.post("/api/pipeline/generate", async (req, res) => {
+  try {
+    const form = validateForm(req.body || {});
+    const fest = await getFestivals();
+    const s = {
+      id: crypto.randomUUID(),
+      touched: Date.now(),
+      form,
+      fest,
+      today: todayIST(),
+      previous: store.previousFor(form.businessName, form.town),
+      system: buildSystem(form.scriptMode),
+    };
+    sessions.set(s.id, s);
+
+    // 1. Creative Direction / Customer Tension
+    console.log(`[pipeline:${s.id}] 1/4 Formulating customer tension & creative direction...`);
+    await produce(s, "direction");
+    s.direction.choice = 0; // Select best scoring tension
+
+    // 2. Plot Line & Viral Hook
+    console.log(`[pipeline:${s.id}] 2/4 Selecting viral plot & hook pattern...`);
+    await produce(s, "plot");
+    s.plot.choice = 0; // Select top-ranked creator plot
+
+    // 3. Story Arc & Single Location
+    console.log(`[pipeline:${s.id}] 3/4 Structuring story progression & single-location anchors...`);
+    await produce(s, "story");
+    s.story.approved = true;
+
+    // 4. Production Script & Section 8 Quality Gate (with repair loop)
+    console.log(`[pipeline:${s.id}] 4/4 Writing production script and validating Section 8 Gate...`);
+    const scriptRes = await produce(s, "script");
+
+    // Automatically record approved script
+    store.save(s.form.businessName, s.form.town, s.script.record, s.script.parsed.header);
+    s.script.saved = true;
+
+    // 5. Compile structured Shot Specifications (Separating STATIC WORLD from MOTION)
+    const shotSpec = compileShotSpecification(s.script.parsed, form);
+
+    res.json({
+      sessionId: s.id,
+      script: scriptRes.data,
+      shotSpec,
+      header: s.script.parsed.header,
+      character1: s.script.parsed.character1,
+      character2: s.script.parsed.character2,
+      setting: s.script.parsed.setting,
+      scenes: s.script.parsed.scenes,
+      endFrame: endFrame(s.form),
+      record: s.script.record,
+    });
+  } catch (e) {
+    sendErr(res, e, "pipeline:generate");
+  }
+});
+
 // approve a checkpoint (with the chosen option) → run the next stage
 app.post("/api/session/:id/next", async (req, res) => {
   try {
@@ -279,20 +343,34 @@ app.post("/api/session/:id/approve", (req, res) => {
 // ---- 2) start the Magnific flow ----
 app.post("/api/run", async (req, res) => {
   try {
-    const { scenes, character1, character2, setting, productPhoto, logo, duration } = req.body || {};
+    const { scenes, character1, character2, setting, productPhoto, logo, duration, shotSpec } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
+
+    // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
+    let processedScenes;
+    if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
+      processedScenes = shotSpec.shots.map((sh) =>
+        compileShotPrompt(sh, shotSpec.staticWorld || { setting, characters: [character1, character2].filter(Boolean).join(" | ") }, {
+          duration: duration || "15s",
+          shotCount: scenes.length,
+        })
+      );
+    } else {
+      // Robust fallback to continuous scene compilation
+      processedScenes = scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration }));
+    }
+
     const runId = await magnific.startRun({
-      // strip music mood note + Editing Notes, and lock the same setting + characters into every scene
-      scenes: scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration })),
+      scenes: processedScenes,
       character1,
       character2,
       setting,
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
     });
-    res.json({ runId });
+    res.json({ runId, shotCount: processedScenes.length });
   } catch (e) {
     console.error("[run]", e.message);
     res.status(500).json({ error: e.message });
