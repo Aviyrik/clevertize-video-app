@@ -83,6 +83,11 @@ function sceneForGeneration(scene, ctx = {}) {
   }
   lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person (only a UGC owner speaking to the viewer looks into the lens).");
   lock.push("CAMERA: follow this scene's camera direction exactly (shot size, angle, movement) — smooth, motivated movement only, no whip pans or fast cuts.");
+  if (ctx.duration) {
+    const totalSec = parseInt(ctx.duration, 10) || 15;
+    const perScene = (totalSec / 4).toFixed(1);
+    lock.push(`PACING & DURATION: Total video target duration is ${ctx.duration} across 4 scenes (~${perScene}s per scene). Ensure fast, snappy pacing calibrated to ~${perScene} seconds.`);
+  }
   return `${lock.join("\n")}\n\n${body}`;
 }
 

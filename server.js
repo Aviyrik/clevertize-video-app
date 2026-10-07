@@ -54,6 +54,7 @@ function validateForm(b) {
     occasion: s(b.occasion),
     contact: s(b.contact),
     ownerName: s(b.ownerName),
+    duration: s(b.duration) || "15s",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",
   };
   const missing = [["businessName", "Business name"], ["businessType", "Business type"], ["town", "Town"]]
@@ -278,13 +279,13 @@ app.post("/api/session/:id/approve", (req, res) => {
 // ---- 2) start the Magnific flow ----
 app.post("/api/run", async (req, res) => {
   try {
-    const { scenes, character1, character2, setting, productPhoto, logo } = req.body || {};
+    const { scenes, character1, character2, setting, productPhoto, logo, duration } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
     const runId = await magnific.startRun({
       // strip music mood note + Editing Notes, and lock the same setting + characters into every scene
-      scenes: scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2 })),
+      scenes: scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration })),
       character1,
       character2,
       setting,

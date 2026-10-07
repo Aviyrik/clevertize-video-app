@@ -348,6 +348,7 @@ export default function App() {
       supportingCharacter: '',
       environment: '',
       websiteUrl: '',
+      duration: '15s',
       language: 'Hindi',
       scriptMode: 'devanagari',
       selectedGoalId: 'offer',
@@ -645,10 +646,15 @@ export default function App() {
       : userContext.businessType;
 
     // Enrich specialty with all user inputs so Claude receives the entire creative brief
+    const targetDur = userContext.duration || '15s';
+    const durNum = parseInt(targetDur, 10) || 15;
+    const perSceneSec = (durNum / 4).toFixed(1);
+
     const specialtyParts = [
       userContext.specialty?.trim(),
       userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
+      `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
       userContext.supportingCharacter?.trim() ? `Supporting Character: ${userContext.supportingCharacter.trim()}` : null,
       userContext.environment?.trim() ? `Setting/Environment: ${userContext.environment.trim()}` : null,
@@ -660,6 +666,7 @@ export default function App() {
       businessType: bType || 'Retail Store',
       town: userContext.town.trim() || 'Metro',
       language: userContext.language || 'Hindi',
+      duration: targetDur,
       area: userContext.area?.trim() || '',
       specialty: specialtyParts.join(' | '),
       offer: userContext.offer?.trim() || '',
@@ -851,7 +858,7 @@ export default function App() {
       setActiveSceneIndex(0);
       setCheckpointSeconds(data.seconds);
 
-      const storyTag = `${storyData?.format || 'Film'} · 4 Scenes`;
+      const storyTag = `${storyData?.format || 'Film'} · ${userContext.duration || '15s'} · 4 Scenes`;
       setApprovedSummary((prev) => [
         ...prev.filter((item) => item.stage !== 'Story'),
         { stage: 'Story', text: storyTag },
@@ -962,6 +969,7 @@ export default function App() {
         character1: character1.trim(),
         character2: character2.trim(),
         setting: setting.trim(),
+        duration: userContext.duration || '15s',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
       };
@@ -2679,13 +2687,48 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 5. Dialogue Language & Script Mode */}
+                {/* 5. Video Duration & Dialogue Language */}
                 <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 14 }}>
-                    5. Dialogue Language & Mode
+                    5. Video Duration & Dialogue Language
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                    {/* Video Duration Selector */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                          Target Video Duration
+                        </label>
+                        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                          4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
+                        </span>
+                      </div>
+                      <div className="tab-group">
+                        {[
+                          { id: '10s', label: '10s', sub: 'Snappy' },
+                          { id: '15s', label: '15s', sub: 'Standard' },
+                          { id: '20s', label: '20s', sub: 'Extended' },
+                          { id: '25s', label: '25s', sub: 'Story' },
+                        ].map((d) => {
+                          const isSelected = (userContext.duration || '15s') === d.id;
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => updateUserContext('duration', d.id)}
+                              className={`tab-pill ${isSelected ? 'active-accent' : ''}`}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                            >
+                              <span style={{ fontWeight: 700 }}>{d.label}</span>
+                              <span style={{ fontSize: 9, opacity: 0.75 }}>({d.sub})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Dialogue Language */}
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                         Dialogue Language
@@ -2704,6 +2747,7 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Dialogue Script Mode */}
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                         Dialogue Script Mode
@@ -3103,6 +3147,9 @@ export default function App() {
                   <span style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Check size={12} /> Direction & Plot Approved
                   </span>
+                  <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', padding: '2px 8px', borderRadius: 4, color: 'var(--text-secondary)' }}>
+                    ⏱ {userContext.duration || '15s'} (~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s/scene)
+                  </span>
                 </div>
                 <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                   Review 4-Scene Story Progression
@@ -3310,6 +3357,9 @@ export default function App() {
                   >
                     <ShieldCheck size={12} />
                     Section 8 Quality Gate Passed {scriptPayloadData?.meta?.attempts > 1 ? `(${scriptPayloadData.meta.attempts} passes)` : ''}
+                  </span>
+                  <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', padding: '2px 8px', borderRadius: 4, color: 'var(--text-secondary)' }}>
+                    ⏱ {userContext.duration || '15s'} · {scenes.length || 4} Scenes (~{(parseInt(userContext.duration || '15', 10) / (scenes.length || 4)).toFixed(1)}s/scene)
                   </span>
                 </div>
                 <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
@@ -3733,7 +3783,7 @@ export default function App() {
                     Your Commercial Video is Ready!
                   </h1>
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-                    Mastered in broadcast-ready 1080p resolution, optimized for 9:16 mobile feeds.
+                    Mastered in broadcast-ready 1080p resolution ({userContext.duration || '15s'} duration), optimized for 9:16 mobile feeds.
                   </p>
                 </div>
 
