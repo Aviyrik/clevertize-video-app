@@ -2916,57 +2916,72 @@ export default function App() {
 
                 {/* 5. Video Duration & Dialogue Language */}
                 <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 16 }}>
                     5. Video Duration & Dialogue Language
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-                    {/* Video Duration Selector */}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                          Target Video Duration
-                        </label>
-                        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                          4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
-                        </span>
-                      </div>
-                      <div className="tab-group">
-                        {[
-                          { id: '10s', label: '10s', sub: 'Snappy' },
-                          { id: '15s', label: '15s', sub: 'Standard' },
-                          { id: '20s', label: '20s', sub: 'Extended' },
-                          { id: '25s', label: '25s', sub: 'Story' },
-                        ].map((d) => {
-                          const isSelected = (userContext.duration || '15s') === d.id;
-                          return (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => updateUserContext('duration', d.id)}
-                              className={`tab-pill ${isSelected ? 'active-accent' : ''}`}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                            >
-                              <span style={{ fontWeight: 700 }}>{d.label}</span>
-                              <span style={{ fontSize: 9, opacity: 0.75 }}>({d.sub})</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {/* Row 1: Target Video Duration */}
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        Target Video Duration
+                      </label>
+                      <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
+                      </span>
                     </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {[
+                        { id: '10s', label: '10s', sub: 'Snappy' },
+                        { id: '15s', label: '15s', sub: 'Standard' },
+                        { id: '20s', label: '20s', sub: 'Extended' },
+                        { id: '25s', label: '25s', sub: 'Story' },
+                      ].map((d) => {
+                        const isSelected = (userContext.duration || '15s') === d.id;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => updateUserContext('duration', d.id)}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: 8,
+                              border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                              backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                              color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 2,
+                              transition: 'all 0.15s ease',
+                              boxShadow: isSelected ? '0 2px 8px var(--accent-glow)' : 'none',
+                            }}
+                          >
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
+                            <span style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>({d.sub})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
+                  {/* Row 2: Dialogue Language & Script Mode */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
                     {/* Dialogue Language */}
                     <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
                         Dialogue Language
                       </label>
-                      <div className="tab-group">
+                      <div className="tab-group" style={{ width: '100%' }}>
                         {['Hindi', 'Hinglish', 'English', 'Marathi'].map((lang) => (
                           <button
                             key={lang}
                             type="button"
                             onClick={() => updateUserContext('language', lang)}
                             className={`tab-pill ${userContext.language === lang ? 'active-accent' : ''}`}
+                            style={{ fontSize: 12, padding: '8px 10px' }}
                           >
                             {lang}
                           </button>
@@ -2976,14 +2991,15 @@ export default function App() {
 
                     {/* Dialogue Script Mode */}
                     <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
                         Dialogue Script Mode
                       </label>
-                      <div className="tab-group">
+                      <div className="tab-group" style={{ width: '100%' }}>
                         <button
                           type="button"
                           onClick={() => updateUserContext('scriptMode', 'devanagari')}
                           className={`tab-pill ${userContext.scriptMode === 'devanagari' ? 'active-accent' : ''}`}
+                          style={{ fontSize: 12, padding: '8px 10px' }}
                         >
                           Devanagari (Standard)
                         </button>
@@ -2991,6 +3007,7 @@ export default function App() {
                           type="button"
                           onClick={() => updateUserContext('scriptMode', 'roman')}
                           className={`tab-pill ${userContext.scriptMode === 'roman' ? 'active-accent' : ''}`}
+                          style={{ fontSize: 12, padding: '8px 10px' }}
                         >
                           Romanized (Test)
                         </button>
