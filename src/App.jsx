@@ -1078,6 +1078,54 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Safe Back Navigation to Previous Stage
+  const handleGoBack = () => {
+    setErrorMessage('');
+    setQualityFailures([]);
+    setIsChangeOpen(false);
+
+    if (currentStep === 'render') {
+      setCurrentStep('storyboard');
+    } else if (currentStep === 'storyboard') {
+      if (storyData) {
+        setCurrentStep('cp3_story');
+      } else if (plotData) {
+        setCurrentStep('cp2_plot');
+      } else if (directionData) {
+        setCurrentStep('cp1_direction');
+      } else {
+        setCurrentStep('input');
+        setBrandFlowState('create');
+      }
+    } else if (currentStep === 'cp3_story') {
+      if (plotData) {
+        setCurrentStep('cp2_plot');
+      } else if (directionData) {
+        setCurrentStep('cp1_direction');
+      } else {
+        setCurrentStep('input');
+        setBrandFlowState('create');
+      }
+    } else if (currentStep === 'cp2_plot') {
+      if (directionData) {
+        setCurrentStep('cp1_direction');
+      } else {
+        setCurrentStep('input');
+        setBrandFlowState('create');
+      }
+    } else if (currentStep === 'cp1_direction') {
+      setCurrentStep('input');
+      setBrandFlowState('create');
+    } else if (currentStep === 'input') {
+      if (brandFlowState === 'create') {
+        setBrandFlowState('confirmation');
+      } else if (brandFlowState === 'confirmation') {
+        setBrandFlowState('setup');
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Full Brand Reset (Allows Adding a Brand New Business)
   const handleResetBrandProfile = () => {
     try {
@@ -1379,30 +1427,135 @@ export default function App() {
       {/* WORKSPACE BREADCRUMB / CHECKPOINT PROGRESS TRACKER */}
       <div style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', padding: '10px 24px' }}>
         <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, overflowX: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            <span style={{ fontWeight: currentStep === 'input' ? 700 : 500, color: currentStep === 'input' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
-              1. Brief & Context
-            </span>
-            <span style={{ color: 'var(--border-strong)' }}>→</span>
-            <span style={{ fontWeight: currentStep === 'cp1_direction' ? 700 : 500, color: currentStep === 'cp1_direction' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Direction') ? 'var(--success)' : 'var(--text-tertiary)' }}>
-              2. Direction
-            </span>
-            <span style={{ color: 'var(--border-strong)' }}>→</span>
-            <span style={{ fontWeight: currentStep === 'cp2_plot' ? 700 : 500, color: currentStep === 'cp2_plot' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Plot') ? 'var(--success)' : 'var(--text-tertiary)' }}>
-              3. Plot Line
-            </span>
-            <span style={{ color: 'var(--border-strong)' }}>→</span>
-            <span style={{ fontWeight: currentStep === 'cp3_story' ? 700 : 500, color: currentStep === 'cp3_story' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Story') ? 'var(--success)' : 'var(--text-tertiary)' }}>
-              4. Story Arc
-            </span>
-            <span style={{ color: 'var(--border-strong)' }}>→</span>
-            <span style={{ fontWeight: currentStep === 'storyboard' ? 700 : 500, color: currentStep === 'storyboard' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
-              5. Storyboard & Quality Gate
-            </span>
-            <span style={{ color: 'var(--border-strong)' }}>→</span>
-            <span style={{ fontWeight: currentStep === 'render' ? 700 : 500, color: currentStep === 'render' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
-              6. Video Render
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Contextual Back Button */}
+            {(currentStep !== 'input' || brandFlowState !== 'setup') && (
+              <button
+                type="button"
+                onClick={handleGoBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '5px 11px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Go back to previous stage"
+              >
+                <ArrowLeft size={13} />
+                <span>Back</span>
+              </button>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, whiteSpace: 'nowrap' }}>
+              <span
+                onClick={() => {
+                  if (currentStep !== 'input') {
+                    setCurrentStep('input');
+                    setBrandFlowState('create');
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'input' ? 700 : 500,
+                  color: currentStep === 'input' ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  cursor: currentStep !== 'input' ? 'pointer' : 'default',
+                  textDecoration: currentStep !== 'input' ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title="Click to view Brief form"
+              >
+                1. Brief
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+              <span
+                onClick={() => {
+                  if (directionData && currentStep !== 'cp1_direction') {
+                    setCurrentStep('cp1_direction');
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'cp1_direction' ? 700 : 500,
+                  color: currentStep === 'cp1_direction' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Direction') ? 'var(--success)' : 'var(--text-tertiary)',
+                  cursor: directionData && currentStep !== 'cp1_direction' ? 'pointer' : 'default',
+                  textDecoration: directionData && currentStep !== 'cp1_direction' ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title={directionData ? 'Click to view Checkpoint 1' : ''}
+              >
+                2. Direction
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+              <span
+                onClick={() => {
+                  if (plotData && currentStep !== 'cp2_plot') {
+                    setCurrentStep('cp2_plot');
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'cp2_plot' ? 700 : 500,
+                  color: currentStep === 'cp2_plot' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Plot') ? 'var(--success)' : 'var(--text-tertiary)',
+                  cursor: plotData && currentStep !== 'cp2_plot' ? 'pointer' : 'default',
+                  textDecoration: plotData && currentStep !== 'cp2_plot' ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title={plotData ? 'Click to view Checkpoint 2' : ''}
+              >
+                3. Plot Line
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+              <span
+                onClick={() => {
+                  if (storyData && currentStep !== 'cp3_story') {
+                    setCurrentStep('cp3_story');
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'cp3_story' ? 700 : 500,
+                  color: currentStep === 'cp3_story' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Story') ? 'var(--success)' : 'var(--text-tertiary)',
+                  cursor: storyData && currentStep !== 'cp3_story' ? 'pointer' : 'default',
+                  textDecoration: storyData && currentStep !== 'cp3_story' ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title={storyData ? 'Click to view Checkpoint 3' : ''}
+              >
+                4. Story Arc
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+              <span
+                onClick={() => {
+                  if (scenes.length && currentStep !== 'storyboard') {
+                    setCurrentStep('storyboard');
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'storyboard' ? 700 : 500,
+                  color: currentStep === 'storyboard' ? 'var(--accent-primary)' : scenes.length ? 'var(--success)' : 'var(--text-tertiary)',
+                  cursor: scenes.length && currentStep !== 'storyboard' ? 'pointer' : 'default',
+                  textDecoration: scenes.length && currentStep !== 'storyboard' ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title={scenes.length ? 'Click to view Storyboard' : ''}
+              >
+                5. Storyboard
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+              <span style={{ fontWeight: currentStep === 'render' ? 700 : 500, color: currentStep === 'render' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+                6. Render
+              </span>
+            </div>
           </div>
 
           {elapsedTime !== '00:00' && isBusy && (
@@ -1641,7 +1794,7 @@ export default function App() {
           <div
             role="alert"
             style={{
-              padding: '12px 16px',
+              padding: '14px 18px',
               backgroundColor: 'var(--error-subtle)',
               border: '1px solid var(--error)',
               borderRadius: 8,
@@ -1649,13 +1802,13 @@ export default function App() {
               fontSize: 13,
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 10,
+              gap: 12,
               marginBottom: 20,
             }}
           >
-            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+            <AlertCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600 }}>{errorMessage}</div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{errorMessage}</div>
               {qualityFailures.length > 0 && (
                 <ul style={{ margin: '8px 0 0', paddingLeft: 16, fontSize: 12, lineHeight: 1.5 }}>
                   {qualityFailures.map((f, i) => (
@@ -1663,6 +1816,74 @@ export default function App() {
                   ))}
                 </ul>
               )}
+              {/* Quick Recovery Actions */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep('input');
+                    setBrandFlowState('create');
+                    setErrorMessage('');
+                    setQualityFailures([]);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    borderRadius: 6,
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={13} />
+                  <span>Return to Video Brief</span>
+                </button>
+                {currentStep !== 'input' && (
+                  <button
+                    type="button"
+                    onClick={handleGoBack}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-default)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span>Previous Screen</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    setQualityFailures([]);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-tertiary)',
+                    border: 'none',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -2962,8 +3183,29 @@ export default function App() {
               )}
             </div>
 
-            {/* Confirm & Next Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            {/* Navigation Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleGoBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 20px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Brief</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleApproveDirection}
@@ -3112,8 +3354,29 @@ export default function App() {
               )}
             </div>
 
-            {/* Confirm & Next Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            {/* Navigation Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleGoBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 20px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Direction</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleApprovePlot}
@@ -3310,8 +3573,29 @@ export default function App() {
               )}
             </div>
 
-            {/* Confirm & Next Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            {/* Navigation Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleGoBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 20px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Plot</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleApproveStory}
@@ -3670,7 +3954,28 @@ export default function App() {
             </div>
 
             {/* APPROVE SCRIPT & SEND TO PRODUCTION BUTTON */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleGoBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 20px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Story Arc</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleApproveScriptAndRender}
