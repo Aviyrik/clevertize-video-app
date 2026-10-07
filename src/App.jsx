@@ -1681,39 +1681,45 @@ export default function App() {
               boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
             }}
           >
-            {/* Header with spinning icon and active phase badge */}
+            {/* Header with spinning icon on top and active phase badge below */}
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  padding: 14,
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent-subtle)',
-                  color: 'var(--accent-primary)',
-                  marginBottom: 16,
-                  position: 'relative',
-                }}
-              >
-                <Sparkles size={24} className="progress-indeterminate" />
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-subtle)',
+                    color: 'var(--accent-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 16px var(--accent-glow)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                  }}
+                >
+                  <Sparkles size={24} className="icon-spinner" />
+                </div>
               </div>
 
-              <div
-                style={{
-                  display: 'inline-block',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-primary)',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  backgroundColor: 'var(--bg-elevated)',
-                  padding: '3px 10px',
-                  borderRadius: 12,
-                  border: '1px solid var(--border-subtle)',
-                  marginBottom: 10,
-                }}
-              >
-                {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).badge} · Phase {busyStep + 1} of {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.length}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: 'inline-block',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-primary)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    backgroundColor: 'var(--bg-elevated)',
+                    padding: '4px 12px',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).badge} · Phase {busyStep + 1} of {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.length}
+                </div>
               </div>
 
               <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
@@ -3709,17 +3715,23 @@ export default function App() {
                   boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
                 }}
               >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    padding: 14,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--accent-subtle)',
-                    color: 'var(--accent-primary)',
-                    marginBottom: 16,
-                  }}
-                >
-                  <Film size={26} className="progress-indeterminate" />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                  <div
+                    style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-subtle)',
+                      color: 'var(--accent-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 16px var(--accent-glow)',
+                      border: '1px solid rgba(99, 102, 241, 0.25)',
+                    }}
+                  >
+                    <Film size={26} className="icon-spinner" />
+                  </div>
                 </div>
 
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
