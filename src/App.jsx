@@ -96,38 +96,117 @@ const BUSINESS_TYPE_PRESETS = [
   'Other',
 ];
 
-// Pipeline Checklist for Checkpoint 4 Script Generation & Section 8 Quality Gate
-const SCRIPT_GEN_STAGES = [
-  {
-    phase: 'STORY ARC COMPOSITION',
-    title: 'Writing 4-scene narrative arc…',
-    detail: 'Translating approved plot and hook into Hook → Build → Turn → Resolution scenes.',
+// Rich Multi-Stage Pipelines for Each Checkpoint Transition
+const CHECKPOINT_PIPELINES = {
+  direction: {
+    badge: 'Checkpoint 1 · Creative Direction & Tensions',
+    stages: [
+      {
+        phase: 'INSIGHT ENGINE',
+        title: 'Scanning customer tension & desire lenses…',
+        detail: 'Evaluating 8 authentic psychological lenses to uncover relatable local consumer frictions.',
+      },
+      {
+        phase: 'FESTIVAL & OCCASION INTELLIGENCE',
+        title: 'Evaluating calendar moments & local atmosphere…',
+        detail: 'Cross-referencing upcoming festivals and neighborhood consumer context for authentic relevance.',
+      },
+      {
+        phase: 'CREATIVE FORMULATION',
+        title: 'Synthesizing 3 distinct creative tension angles…',
+        detail: 'Formulating ranked customer tensions rooted in everyday emotional life for your selection.',
+      },
+    ],
+    tips: [
+      'Product Spine Principle: The customer tension is the engine of the story. Without real friction, there is no ad.',
+      'Festival moments connect best when woven naturally into the dilemma, never as forced holiday greetings.',
+      'Local neighborhood grounding creates instant relatability and emotional resonance.',
+      'Rule M16: Focus on relatable human problems first—the product is introduced as the earned relief.',
+    ],
   },
-  {
-    phase: 'CHARACTER & LOCATION CONTINUITY',
-    title: 'Locking visual anchors & eye-lines…',
-    detail: 'Enforcing single-location setting, 2-character casting, and dynamic camera angles.',
+  plot: {
+    badge: 'Checkpoint 2 · Plot Line & Viral Hooks',
+    stages: [
+      {
+        phase: 'VIRAL HOOK PATTERNS',
+        title: 'Querying high-retention creator hook patterns…',
+        detail: 'Cross-referencing Indian Instagram creator formats and scroll-stopping pattern interrupts.',
+      },
+      {
+        phase: 'MINI-STORY ARCS',
+        title: 'Drafting 3 distinct narrative plot lines…',
+        detail: 'Constructing relatable problem-to-relief arcs around your brand and featured products.',
+      },
+      {
+        phase: 'COMMERCIAL FRAMING',
+        title: 'Balancing comedic/emotional hook with brand payoff…',
+        detail: 'Ensuring the plot builds towards an earned, organic brand reveal without feeling like an ad.',
+      },
+    ],
+    tips: [
+      'Product Spine Rule M16: Borrow hook patterns and psychological triggers, never copy generic lines.',
+      'The first 3 seconds require physical action and a clear spoken line to stop the scroll.',
+      'Everyday crisis hooks connect immediately by showing relatable household urgency.',
+      'A great plot gives both characters something clear to want or solve.',
+    ],
   },
-  {
-    phase: 'DIALOGUE & SCRIPT VALIDATION',
-    title: 'Crafting natural spoken dialogue…',
-    detail: 'Writing authentic lines in target language without superlatives or ad-speak.',
+  story: {
+    badge: 'Checkpoint 3 · Story Arc & Production Format',
+    stages: [
+      {
+        phase: 'PRODUCTION FORMAT',
+        title: 'Selecting optimal storytelling format…',
+        detail: 'Evaluating UGC creator style, conversational dialogue, or dramatic slice-of-life.',
+      },
+      {
+        phase: '4-SCENE PACING',
+        title: 'Choreographing 4-scene narrative beats…',
+        detail: 'Structuring Hook (Scene 1) → Build (Scene 2) → Turn (Scene 3) → Resolution (Scene 4).',
+      },
+      {
+        phase: 'VISUAL ANCHORS',
+        title: 'Locking characters & single-room environment…',
+        detail: 'Enforcing continuous room lighting, camera eye-lines, and casting constraints for AI video stability.',
+      },
+    ],
+    tips: [
+      'Product Spine Rule M13: All 4 scenes share the same room so video models maintain perfect visual continuity.',
+      'Product Spine Rule M28: Physical gestures, reactions, and eye contact create authentic commercial chemistry.',
+      'Clear environmental lighting notes keep consecutive scenes looking like they belong in the same film shoot.',
+      'Rule M8: No on-screen text or artificial UI overlays—visual and spoken storytelling only.',
+    ],
   },
-  {
-    phase: 'QUALITY GATE & REPAIR PASS',
-    title: 'Running Product Spine Section 8 Quality Gate…',
-    detail: 'Verifying 18+ strict rules, claim bounds, and zero on-screen text/UI.',
+  script: {
+    badge: 'Checkpoint 4 · Script Writing & Section 8 Gate',
+    stages: [
+      {
+        phase: 'DIALOGUE WRITING',
+        title: 'Writing natural spoken dialogue in native tongue…',
+        detail: 'Composing authentic lines with strict 2-line maximum per character per scene to prevent audio drift.',
+      },
+      {
+        phase: 'QUALITY GATE VERIFICATION',
+        title: 'Running 18-point Section 8 Quality Gate…',
+        detail: 'Validating single location, zero on-screen text, Devanagari script, and strict claim boundaries.',
+      },
+      {
+        phase: 'AUTO-REPAIR PASS',
+        title: 'Finalizing production camera prompts & sound cues…',
+        detail: 'Locking camera cuts, eye-line continuity, and audio notes ready for Storyboard Studio review.',
+      },
+    ],
+    tips: [
+      'Product Spine Rule M10: Maximum 2 dialogue lines per character per scene avoids audio drift.',
+      'Product Spine Rule M4: Dialogue lines are rendered in Devanagari script for flawless speech pronunciation.',
+      'Product Spine Rule M8: On-screen text, phone UIs, and background music are strictly excluded from generation.',
+      'Section 8 Gate ensures continuity across characters, wardrobe, lighting, and audio.',
+    ],
   },
-];
+};
 
-// Dynamic Creative Insights during Script Generation
-const SCRIPT_GEN_TIPS = [
-  'Product Spine Rule M13: All 4 scenes share the same room and lighting so neural video models maintain continuity.',
-  'Product Spine Rule M10: Maximum 2 dialogue lines per character per scene avoids audio drift.',
-  'Product Spine Rule M4: Dialogue lines are rendered in Devanagari script for flawless speech pronunciation.',
-  'Product Spine Rule M8: On-screen text, phone UIs, and background music are strictly excluded from generation.',
-  'Product Spine Rule M28: Physical gestures, reactions, and eye contact create authentic commercial chemistry.',
-];
+// Fallback arrays for backward compatibility
+const SCRIPT_GEN_STAGES = CHECKPOINT_PIPELINES.script.stages;
+const SCRIPT_GEN_TIPS = CHECKPOINT_PIPELINES.script.tips;
 
 // Pipeline Stages for Video GPU Rendering
 const RENDER_STAGES = [
@@ -325,7 +404,9 @@ export default function App() {
   // Backend Checkpoint Session State
   const [sessionId, setSessionId] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [activeCheckpointName, setActiveCheckpointName] = useState('');
+  const [activeCheckpointKey, setActiveCheckpointKey] = useState('direction');
+  const [busyStep, setBusyStep] = useState(0);
+  const [busyTipIndex, setBusyTipIndex] = useState(0);
   const [checkpointSeconds, setCheckpointSeconds] = useState(null);
 
   // Checkpoint Data from Backend
@@ -480,31 +561,37 @@ export default function App() {
     }
   };
 
-  // Ticker during Script Generation & Quality Gate Repair Loop
+  // Dynamic Progress Ticker during all Checkpoint Generation Transitions
   useEffect(() => {
     let stepTimer = null;
     let tipTimer = null;
 
-    if (isBusy && currentStep === 'cp3_story') {
-      setScriptGenStep(0);
-      setScriptTipIndex(Math.floor(Math.random() * SCRIPT_GEN_TIPS.length));
+    if (isBusy) {
+      setBusyStep(0);
+      const pipeline = CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction;
+      const totalSteps = pipeline.stages.length;
+      const totalTips = pipeline.tips.length;
 
+      setBusyTipIndex(Math.floor(Math.random() * totalTips));
+
+      // Advance through sub-stages every 2.8 seconds
       stepTimer = setInterval(() => {
-        setScriptGenStep((prev) => (prev < SCRIPT_GEN_STAGES.length - 1 ? prev + 1 : prev));
-      }, 3500);
+        setBusyStep((prev) => (prev < totalSteps - 1 ? prev + 1 : prev));
+      }, 2800);
 
+      // Rotate engaging filmmaker tips every 3.8 seconds
       tipTimer = setInterval(() => {
-        setScriptTipIndex((prev) => (prev + 1) % SCRIPT_GEN_TIPS.length);
-      }, 4500);
+        setBusyTipIndex((prev) => (prev + 1) % totalTips);
+      }, 3800);
     } else {
-      setScriptGenStep(0);
+      setBusyStep(0);
     }
 
     return () => {
       if (stepTimer) clearInterval(stepTimer);
       if (tipTimer) clearInterval(tipTimer);
     };
-  }, [isBusy, currentStep]);
+  }, [isBusy, activeCheckpointKey]);
 
   // Ticker during GPU Video Render
   useEffect(() => {
@@ -603,8 +690,8 @@ export default function App() {
     setValidationError('');
     setErrorMessage('');
     setQualityFailures([]);
+    setActiveCheckpointKey('direction');
     setIsBusy(true);
-    setActiveCheckpointName('Checkpoint 1 · Creative Direction & Tensions');
     startTimer();
 
     const payload = buildSessionPayload();
@@ -640,9 +727,9 @@ export default function App() {
   // APPROVE CHECKPOINT 1 -> POST /api/session/:id/next -> CHECKPOINT 2 (PLOT)
   const handleApproveDirection = async () => {
     if (!sessionId) return;
+    setActiveCheckpointKey('plot');
     setIsBusy(true);
     setErrorMessage('');
-    setActiveCheckpointName('Checkpoint 2 · Plot Line & Viral Hooks');
     startTimer();
 
     const chosenTension = directionData?.tensions?.[selectedDirectionIdx]?.owner || 'Approved Direction';
@@ -686,9 +773,9 @@ export default function App() {
   // APPROVE CHECKPOINT 2 -> POST /api/session/:id/next -> CHECKPOINT 3 (STORY & FORMAT)
   const handleApprovePlot = async () => {
     if (!sessionId) return;
+    setActiveCheckpointKey('story');
     setIsBusy(true);
     setErrorMessage('');
-    setActiveCheckpointName('Checkpoint 3 · Story Arc & Production Format');
     startTimer();
 
     const chosenPlot = plotData?.plots?.[selectedPlotIdx]?.owner || 'Approved Plot';
@@ -730,10 +817,10 @@ export default function App() {
   // APPROVE CHECKPOINT 3 -> POST /api/session/:id/next -> CHECKPOINT 4 (SCRIPT + QUALITY GATE)
   const handleApproveStory = async () => {
     if (!sessionId) return;
+    setActiveCheckpointKey('script');
     setIsBusy(true);
     setErrorMessage('');
     setQualityFailures([]);
-    setActiveCheckpointName('Checkpoint 4 · Script Writing & Section 8 Quality Gate');
     startTimer();
 
     try {
@@ -792,6 +879,7 @@ export default function App() {
     }
 
     setChangeError('');
+    setActiveCheckpointKey(targetCheckpoint);
     setIsBusy(true);
     setErrorMessage('');
     startTimer();
@@ -1539,7 +1627,7 @@ export default function App() {
       )}
 
       {/* MAIN VIEW CONTAINER */}
-      <main style={{ flex: 1, maxWidth: currentStep === 'storyboard' ? 1240 : 860, width: '100%', margin: '0 auto', padding: '32px 20px 80px' }}>
+      <main style={{ flex: 1, maxWidth: currentStep === 'storyboard' && !isBusy ? 1240 : 860, width: '100%', margin: '0 auto', padding: '32px 20px 80px' }}>
         {/* GLOBAL ERROR BANNER */}
         {errorMessage && (
           <div
@@ -1571,10 +1659,210 @@ export default function App() {
           </div>
         )}
 
-        {/* ========================================================
-            STEP 1: BRAND SETUP -> CONFIRMATION -> VIDEO BRIEF WORKSPACE
-            ======================================================== */}
-        {currentStep === 'input' && (
+        {/* DEDICATED FULL-SCREEN GENERATION WORKSPACE DURING CHECKPOINT TRANSITIONS */}
+        {isBusy ? (
+          <div
+            style={{
+              maxWidth: 620,
+              margin: '36px auto',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 14,
+              padding: '36px 32px',
+              textAlign: 'center',
+              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            {/* Header with spinning icon and active phase badge */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  padding: 14,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-subtle)',
+                  color: 'var(--accent-primary)',
+                  marginBottom: 16,
+                  position: 'relative',
+                }}
+              >
+                <Sparkles size={24} className="progress-indeterminate" />
+              </div>
+
+              <div
+                style={{
+                  display: 'inline-block',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-primary)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  backgroundColor: 'var(--bg-elevated)',
+                  padding: '3px 10px',
+                  borderRadius: 12,
+                  border: '1px solid var(--border-subtle)',
+                  marginBottom: 10,
+                }}
+              >
+                {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).badge} · Phase {busyStep + 1} of {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.length}
+              </div>
+
+              <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+                {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages[busyStep]?.title || 'Formulating Creative Intelligence…'}
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages[busyStep]?.detail || 'Evaluating customer tensions, narrative options, and local market voice.'}
+              </p>
+            </div>
+
+            {/* Multi-step progress bar */}
+            <div style={{ marginBottom: 24 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.length}, 1fr)`,
+                  gap: 6,
+                  marginBottom: 8,
+                }}
+              >
+                {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.map((st, i) => {
+                  const isDone = i < busyStep;
+                  const isCurrent = i === busyStep;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: isDone
+                          ? 'var(--success)'
+                          : isCurrent
+                          ? 'var(--accent-primary)'
+                          : 'var(--bg-elevated)',
+                        transition: 'all 0.3s ease',
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Live Pipeline Checklist */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                padding: '14px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                marginBottom: 20,
+                textAlign: 'left',
+              }}
+            >
+              {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).stages.map((st, i) => {
+                const isDone = i < busyStep;
+                const isCurrent = i === busyStep;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: 12,
+                      color: isCurrent
+                        ? 'var(--text-primary)'
+                        : isDone
+                        ? 'var(--text-secondary)'
+                        : 'var(--text-tertiary)',
+                      fontWeight: isCurrent ? 600 : 400,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          backgroundColor: isDone
+                            ? 'rgba(34, 197, 94, 0.15)'
+                            : isCurrent
+                            ? 'var(--accent-subtle)'
+                            : 'var(--bg-surface)',
+                          color: isDone
+                            ? 'var(--success)'
+                            : isCurrent
+                            ? 'var(--accent-primary)'
+                            : 'var(--text-tertiary)',
+                          border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                        }}
+                      >
+                        {isDone ? '✓' : i + 1}
+                      </span>
+                      <span>{st.phase}</span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: isDone ? 'var(--success)' : isCurrent ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                      }}
+                    >
+                      {isDone ? 'Complete' : isCurrent ? 'Formulating…' : 'Queued'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Engaging Product Spine Filmmaking Rule Ticker */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px dashed var(--border-default)',
+                borderRadius: 8,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                textAlign: 'left',
+              }}
+            >
+              <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-tertiary)',
+                    marginBottom: 2,
+                  }}
+                >
+                  Product Spine Filmmaking Rule
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {(CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).tips[busyTipIndex] ||
+                    (CHECKPOINT_PIPELINES[activeCheckpointKey] || CHECKPOINT_PIPELINES.direction).tips[0]}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ========================================================
+                STEP 1: BRAND SETUP -> CONFIRMATION -> VIDEO BRIEF WORKSPACE
+                ======================================================== */}
+            {currentStep === 'input' && (
           <div>
             {/* 1A. BRAND SETUP SCREEN (First-time or Switch Brand) */}
             {brandFlowState === 'setup' && (
@@ -2474,65 +2762,6 @@ export default function App() {
                 </button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ========================================================
-            INTERACTIVE PROGRESS OVERLAY DURING CHECKPOINT TRANSITIONS
-            ======================================================== */}
-        {isBusy && (
-          <div
-            style={{
-              maxWidth: 600,
-              margin: '40px auto',
-              backgroundColor: 'var(--bg-surface)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 14,
-              padding: '36px 32px',
-              textAlign: 'center',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
-            }}
-          >
-            <div
-              style={{
-                display: 'inline-flex',
-                padding: 14,
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--accent-primary)',
-                marginBottom: 16,
-              }}
-            >
-              <Sparkles size={24} className="progress-indeterminate" />
-            </div>
-
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
-              {activeCheckpointName}
-            </div>
-
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
-              {currentStep === 'cp3_story'
-                ? SCRIPT_GEN_STAGES[scriptGenStep]?.title || 'Writing Script…'
-                : 'Formulating Creative Intelligence…'}
-            </h2>
-
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
-              {currentStep === 'cp3_story'
-                ? SCRIPT_GEN_STAGES[scriptGenStep]?.detail || 'Evaluating continuity and Section 8 gate rules.'
-                : 'Evaluating customer frictions, hook patterns, and local brand voice.'}
-            </p>
-
-            <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, border: '1px dashed var(--border-default)', textAlign: 'left', display: 'flex', gap: 10 }}>
-              <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                  Creative Director Rule
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  {SCRIPT_GEN_TIPS[scriptTipIndex]}
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -3597,6 +3826,8 @@ export default function App() {
             ) : null}
           </div>
         )}
+        </>
+      )}
       </main>
     </div>
   );
