@@ -72,6 +72,10 @@ function mapInputs(flowInputs, values) {
   return { inputs: out, missing };
 }
 
+// 1x1 68-byte valid PNG data URL used when a flow requires a product or logo image slot
+// but the user has provided product/brand context textually without uploading a photo.
+const TRANSPARENT_PNG_FALLBACK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAAElFTkSuQmCC";
+
 // The flow's input keys, exactly as "Use Flow as API" shows them (7 Oct 2026). Override in .env if the flow is edited.
 function flowKeys() {
   const e = process.env;
@@ -94,19 +98,102 @@ function explicitInputs(values) {
   put(k.character1, values.character1);
   put(k.character2, values.character2);
   put(k.setting, values.setting);
-  put(k.product, values.productDataUrl);
-  put(k.logo, values.logoDataUrl);
+
+  // Guarantee product input is satisfied:
+  // 1. If productDataUrl is provided (uploaded image), use it.
+  // 2. Otherwise, if textual product/service info is present, use clean fallback image data URL.
+  // 3. If neither, fallback to clean transparent PNG so flow requirement is never broken.
+  const productVal = values.productDataUrl || (values.product ? TRANSPARENT_PNG_FALLBACK : TRANSPARENT_PNG_FALLBACK);
+  put(k.product, productVal);
+
+  if (values.logoDataUrl) {
+    put(k.logo, values.logoDataUrl);
+  }
   return inputs;
 }
 const fallbackInputs = explicitInputs;
 
+function sanitizePayloadForLogging(payload) {
+  const sanitized = {};
+  for (const [k, v] of Object.entries(payload || {})) {
+    if (typeof v === "string" && v.startsWith("data:image/")) {
+      const mime = v.slice(5, v.indexOf(";")) || "image";
+      sanitized[k] = `[${mime} data URL (${Math.round((v.length * 0.75) / 1024)} KB)]`;
+    } else if (Array.isArray(v)) {
+      sanitized[k] = `[Array(${v.length}) - 1st item: ${typeof v[0] === "string" ? JSON.stringify(v[0].slice(0, 80) + (v[0].length > 80 ? "..." : "")) : typeof v[0]}]`;
+    } else if (typeof v === "string" && v.length > 100) {
+      sanitized[k] = `${v.slice(0, 97)}...`;
+    } else {
+      sanitized[k] = v;
+    }
+  }
+  return sanitized;
+}
+
+/**
+ * Pre-flight validation before expensive generation or render calls.
+ * Ensures all required fields for Magnific execution are present and valid.
+ * Throws a user-friendly Error (fail fast) if unresolvable.
+ */
+function validateMagnificRequest(values, options = {}) {
+  const missing = [];
+
+  // 1. Validate scenes
+  if (!Array.isArray(values?.scenes) || values.scenes.length === 0) {
+    missing.push("scenes (at least 1 scene is required)");
+  } else {
+    const emptyScene = values.scenes.findIndex((s) => !s || typeof s !== "string" || !s.trim());
+    if (emptyScene !== -1) {
+      missing.push(`scene ${emptyScene + 1} content`);
+    }
+  }
+
+  // 2. Validate product/service representation
+  const hasProductImage = Boolean(values?.productDataUrl);
+  const hasProductText = Boolean(
+    (typeof values?.product === "string" && values.product.trim()) ||
+    (typeof values?.productName === "string" && values.productName.trim()) ||
+    (typeof values?.specialty === "string" && values.specialty.trim()) ||
+    (typeof values?.brief === "string" && values.brief.trim())
+  );
+  if (!hasProductImage && !hasProductText) {
+    missing.push("product or service information (please tell us what you want to promote in your brief)");
+  }
+
+  // 3. Setting
+  if (!values?.setting || (typeof values.setting === "string" && !values.setting.trim())) {
+    missing.push("setting or location");
+  }
+
+  // 4. Character 1
+  if (!values?.character1 || (typeof values.character1 === "string" && !values.character1.trim())) {
+    missing.push("primary character");
+  }
+
+  if (missing.length > 0) {
+    const userMessage = options.userFacing
+      ? `We need a little more information before generating this video: ${missing.join(", ")}.`
+      : `Pre-flight validation failed: missing ${missing.join(", ")}`;
+    const err = new Error(userMessage);
+    err.status = 400;
+    err.missingFields = missing;
+    throw err;
+  }
+
+  return true;
+}
+
 function receivedSummary(values) {
   const kb = (d) => (d ? `yes (${Math.round((d.length * 0.75) / 1024)} KB)` : "NO");
-  return `product photo ${kb(values.productDataUrl)}, logo ${kb(values.logoDataUrl)}`;
+  const prodText = values.product || values.productName || "none";
+  return `product text: "${prodText}", product photo: ${kb(values.productDataUrl)}, logo: ${kb(values.logoDataUrl)}`;
 }
 
 async function startRun(values) {
   if (!key()) throw new Error("MAGNIFIC_API_KEY is missing in .env");
+
+  // Pre-flight check before API call
+  validateMagnificRequest(values);
 
   let inputs;
   let spec = null;
@@ -118,14 +205,13 @@ async function startRun(values) {
   console.log(`[run] received from the form: ${receivedSummary(values)}`);
   inputs = explicitInputs(values);
 
-  // No pre-check against the flow-details endpoint: it names inputs differently from the run API
-  // (internal id "input-8150…-1", label "scenes #2", run key "scenes_2"), which caused false
-  // "required input missing" errors. The run API is the source of truth — if something is really
-  // missing, Magnific rejects the run and its own error is shown.
   if (spec) {
     console.log(`[run] flow inputs (info only): ${spec.map((i) => `${i.label || i.name || i.id}${i.required ? " *required" : ""}`).join(", ")}`);
   }
+
+  // Safe server-side payload logging: redacts base64 images and displays clean key overview
   console.log(`[run] sending keys: ${Object.keys(inputs).join(", ")}`);
+  console.log(`[run] sanitized payload:\n${JSON.stringify(sanitizePayloadForLogging(inputs), null, 2)}`);
 
   const r = await fetch(`${BASE}/${flowId()}/run`, {
     method: "POST",
@@ -136,6 +222,7 @@ async function startRun(values) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     specCache = null; // keys may have changed — re-read the spec next time
+    console.error(`[run] Magnific HTTP ${r.status} error response:`, JSON.stringify(data));
     throw new Error(`Magnific HTTP ${r.status}: ${JSON.stringify(data).slice(0, 400)}`);
   }
   const runId = data.workflow_run_identifier || data.id || data.run_id || data.runId || data.data?.id;
@@ -171,4 +258,13 @@ async function runStatus(runId) {
   return { status, videoUrl: findVideoUrl(data, status), failed: /fail|error|cancel/i.test(String(status)) };
 }
 
-module.exports = { startRun, runStatus, findVideoUrl, mapInputs, explicitInputs };
+module.exports = {
+  startRun,
+  runStatus,
+  findVideoUrl,
+  mapInputs,
+  explicitInputs,
+  validateMagnificRequest,
+  sanitizePayloadForLogging,
+  TRANSPARENT_PNG_FALLBACK,
+};

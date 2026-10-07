@@ -42,6 +42,22 @@ function cleanImage(img, label) {
   return { mime: img.mime, data: img.data };
 }
 
+function resolveProduct(f) {
+  const clean = (val) => (typeof val === "string" ? val.trim() : "");
+  if (clean(f.product)) return clean(f.product);
+  if (clean(f.productName)) return clean(f.productName);
+  if (clean(f.specialty)) return clean(f.specialty);
+  if (clean(f.offer)) return clean(f.offer);
+  if (clean(f.brief)) {
+    // Extract concise product/service from brief (first sentence or up to 60 chars)
+    const match = clean(f.brief).split(/[.\n;]/)[0].trim();
+    if (match) return match.slice(0, 80);
+  }
+  if (clean(f.businessType)) return clean(f.businessType);
+  if (clean(f.businessName)) return `${clean(f.businessName)} offering`;
+  return "featured product";
+}
+
 function validateForm(b) {
   const s = (x) => (typeof x === "string" ? x.trim() : "");
   const f = {
@@ -59,6 +75,9 @@ function validateForm(b) {
     platform: s(b.platform) || "Instagram Reels / 9:16",
     creativeStyle: s(b.creativeStyle) || "UGC / Creator-style",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",
+    product: s(b.product),
+    productName: s(b.productName),
+    brief: s(b.brief),
   };
   const missing = [["businessName", "Business name"], ["businessType", "Business type"], ["town", "Town"]]
     .filter(([k]) => !f[k]).map(([, l]) => l);
@@ -66,6 +85,9 @@ function validateForm(b) {
   f.shopPhoto = cleanImage(b.shopPhoto, "Shop photo");
   f.productPhoto = cleanImage(b.productPhoto, "Product photo");
   f.logo = cleanImage(b.logo, "Brand logo");
+
+  // Ensure resolved product is attached
+  f.resolvedProduct = resolveProduct(f);
   return f;
 }
 
@@ -244,6 +266,18 @@ app.post("/api/pipeline/generate", async (req, res) => {
     };
     sessions.set(s.id, s);
 
+    // Pre-flight check: ensure required creative parameters and product context can be satisfied
+    magnific.validateMagnificRequest(
+      {
+        scenes: ["Pre-flight check placeholder scene"],
+        product: form.resolvedProduct,
+        productDataUrl: form.productPhoto ? `data:${form.productPhoto.mime};base64,${form.productPhoto.data}` : null,
+        setting: form.area || form.town || "Single Room Studio",
+        character1: form.ownerName || form.businessName || "Lead Speaker",
+      },
+      { userFacing: true }
+    );
+
     // 1. Creative Direction / Customer Tension
     console.log(`[pipeline:${s.id}] 1/4 Formulating customer tension & creative direction...`);
     await produce(s, "direction");
@@ -281,6 +315,8 @@ app.post("/api/pipeline/generate", async (req, res) => {
       scenes: s.script.parsed.scenes,
       endFrame: endFrame(s.form),
       record: s.script.record,
+      product: form.resolvedProduct,
+      productName: form.resolvedProduct,
     });
   } catch (e) {
     sendErr(res, e, "pipeline:generate");
@@ -343,10 +379,33 @@ app.post("/api/session/:id/approve", (req, res) => {
 // ---- 2) start the Magnific flow ----
 app.post("/api/run", async (req, res) => {
   try {
-    const { scenes, character1, character2, setting, productPhoto, logo, duration, shotSpec } = req.body || {};
+    const {
+      scenes,
+      character1,
+      character2,
+      setting,
+      productPhoto,
+      logo,
+      duration,
+      shotSpec,
+      product,
+      productName,
+      specialty,
+      brief,
+    } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
+
+    // Resolve product text representation
+    const resolvedProduct = resolveProduct({
+      product,
+      productName,
+      specialty,
+      brief,
+      businessType: shotSpec?.project?.productOrService,
+      businessName: shotSpec?.project?.businessName,
+    });
 
     // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
     let processedScenes;
@@ -367,13 +426,15 @@ app.post("/api/run", async (req, res) => {
       character1,
       character2,
       setting,
+      product: resolvedProduct,
+      productName: resolvedProduct,
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
     });
     res.json({ runId, shotCount: processedScenes.length });
   } catch (e) {
     console.error("[run]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 

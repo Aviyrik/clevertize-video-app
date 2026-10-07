@@ -4,7 +4,14 @@ const fs = require("fs");
 const path = require("path");
 const { parseOutput, sceneForGeneration, dialogueOf } = require("../engine/parse");
 const { runGate } = require("../engine/gate");
-const { findVideoUrl, mapInputs } = require("../engine/magnific");
+const {
+  findVideoUrl,
+  mapInputs,
+  explicitInputs,
+  validateMagnificRequest,
+  sanitizePayloadForLogging,
+  TRANSPARENT_PNG_FALLBACK,
+} = require("../engine/magnific");
 const { withDaysUntil } = require("../engine/festivals");
 const { buildSystem, buildUserContent } = require("../engine/prompt");
 
@@ -237,3 +244,133 @@ test("prompt fills the script rule and labels images", () => {
   assert.equal(c[0].type, "text"); assert.match(c[0].text, /SHOP PHOTO/);
   assert.equal(c[1].type, "image");
 });
+
+// =========================================================================
+// SECTION 12 TEST SCENARIOS (A - K)
+// =========================================================================
+
+test("A: text-only brand + brief without product photo populates required product slot with fallback", () => {
+  const inputs = explicitInputs({
+    scenes: ["Scene 1", "Scene 2"],
+    character1: "Priya",
+    character2: "Rahul",
+    setting: "Modern Kitchen",
+    product: "Modular Kitchen Cabinets",
+  });
+  assert.ok(inputs.poduct, "poduct slot must be populated");
+  assert.equal(inputs.poduct, TRANSPARENT_PNG_FALLBACK);
+  assert.equal(inputs.character_1_2, "Priya");
+  assert.equal(inputs.setting_2, "Modern Kitchen");
+});
+
+test("B: explicit product image uploaded populates product slot directly with image data URL", () => {
+  const customDataUrl = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+  const inputs = explicitInputs({
+    scenes: ["Scene 1"],
+    character1: "Priya",
+    character2: "Rahul",
+    setting: "Kitchen",
+    product: "Modular Kitchen",
+    productDataUrl: customDataUrl,
+  });
+  assert.equal(inputs.poduct, customDataUrl);
+});
+
+test("C: brand with only service description populates product slot", () => {
+  const inputs = explicitInputs({
+    scenes: ["Scene 1"],
+    character1: "Dr. Mehta",
+    character2: "Patient",
+    setting: "Dental Clinic",
+    product: "Dental consultation and teeth whitening service",
+  });
+  assert.ok(inputs.poduct);
+  assert.equal(inputs.poduct, TRANSPARENT_PNG_FALLBACK);
+});
+
+test("D: empty product with no fallback fails pre-flight validation immediately", () => {
+  assert.throws(
+    () => {
+      validateMagnificRequest({
+        scenes: ["Scene 1"],
+        character1: "Priya",
+        setting: "Store",
+        product: "",
+        productName: "",
+        specialty: "",
+        brief: "",
+      });
+    },
+    /missing product or service information/
+  );
+});
+
+test("E: preflight validation passes on valid payload before network calls", () => {
+  const valid = validateMagnificRequest({
+    scenes: ["Scene 1: Hook", "Scene 2: Build"],
+    character1: "Priya, 30s homemaker",
+    setting: "Bright contemporary Bangalore apartment kitchen",
+    product: "Livspace modular kitchen solution",
+  });
+  assert.equal(valid, true);
+});
+
+test("F: payload logging redacts base64 images and displays clean summary", () => {
+  const testPayload = {
+    scenes_2: ["Scene 1", "Scene 2"],
+    character_1_2: "Priya",
+    setting_2: "Kitchen",
+    poduct: TRANSPARENT_PNG_FALLBACK,
+    images: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA==",
+  };
+  const sanitized = sanitizePayloadForLogging(testPayload);
+  assert.equal(sanitized.character_1_2, "Priya");
+  assert.match(sanitized.poduct, /^\[image\/png data URL \(\d+ KB\)\]$/);
+  assert.match(sanitized.images, /^\[image\/png data URL \(\d+ KB\)\]$/);
+  assert.match(sanitized.scenes_2, /^\[Array\(2\)/);
+});
+
+test("G: user-friendly error message generated when brief/product is unresolvable", () => {
+  try {
+    validateMagnificRequest(
+      {
+        scenes: ["Scene 1"],
+        character1: "Priya",
+        setting: "Kitchen",
+        product: "",
+      },
+      { userFacing: true }
+    );
+    assert.fail("Should have thrown error");
+  } catch (err) {
+    assert.match(err.message, /We need a little more information before generating this video/);
+    assert.doesNotMatch(err.message, /JSON|endpoint|poduct/i);
+  }
+});
+
+test("H: preflight catches empty scenes or missing setting immediately", () => {
+  assert.throws(
+    () => {
+      validateMagnificRequest({
+        scenes: [],
+        character1: "Priya",
+        setting: "Kitchen",
+        product: "Sweets",
+      });
+    },
+    /scenes/
+  );
+
+  assert.throws(
+    () => {
+      validateMagnificRequest({
+        scenes: ["Scene 1"],
+        character1: "Priya",
+        setting: "",
+        product: "Sweets",
+      });
+    },
+    /setting or location/
+  );
+});
+
