@@ -44,6 +44,34 @@ already checks the common ones and scans the response for a video link. If a run
 never appears, open the Flows API docs (the "Open docs" button in Magnific) and check the field names
 in the run + polling responses, then tweak `findVideoUrl` / the `runId` line in `server.js`.
 
-## Going live for your team
-To let others use it without your laptop running, deploy `server.js` to any Node host (Render,
-Railway, Fly.io, a VPS, etc.) and set the same `.env` values there as environment variables.
+## Going Live (Deploying from GitHub)
+
+This application includes a Node.js Express backend and a built React frontend. Because it securely handles Anthropic and Magnific API keys, it deploys directly from GitHub to any Node or Docker hosting provider.
+
+### Option 1: 1-Click Deploy on Render (Recommended)
+1. Go to [Render.com](https://render.com) and click **New → Blueprint** (or **New → Web Service**).
+2. Connect your GitHub repository: `https://github.com/Aviyrik/clevertize-video-app`.
+3. Render automatically reads `render.yaml`.
+4. Add your Environment Secrets:
+   - `ANTHROPIC_API_KEY`: Your Claude API key
+   - `MAGNIFIC_API_KEY`: Your Magnific API key
+   - `MAGNIFIC_FLOW_ID`: `UJAMwnyikX`
+5. Click **Deploy**. Your app is live with a public HTTPS URL and automatic CI/CD deploys on every `git push origin main`!
+
+### Option 2: Deploy on Railway
+1. Go to [Railway.app](https://railway.app) and click **New Project → Deploy from GitHub Repo**.
+2. Select `clevertize-video-app`.
+3. Under **Variables**, add:
+   - `ANTHROPIC_API_KEY`
+   - `MAGNIFIC_API_KEY`
+   - `MAGNIFIC_FLOW_ID=UJAMwnyikX`
+   - `PORT=3000`
+4. Railway will automatically build the frontend (`npm run build`) and launch the production server (`npm start`).
+
+### Option 3: Docker Deployment
+A production-ready `Dockerfile` is included in the root directory. To run anywhere:
+```bash
+docker build -t clevertize-video-app .
+docker run -p 3000:3000 -e ANTHROPIC_API_KEY="your-key" -e MAGNIFIC_API_KEY="your-key" clevertize-video-app
+```
+

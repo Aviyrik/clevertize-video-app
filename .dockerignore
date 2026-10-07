@@ -1,0 +1,11 @@
+node_modules/
+.git
+.env
+.env.*
+dist/
+*.log
+.system_generated/
+scratch/
+clevertize-creative-engine-reference.zip
+Product Spine.pdf
+extracted_spine.txt
