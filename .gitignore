@@ -21,3 +21,8 @@ scratch/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Archives & runtime cache
+*.zip
+data/*.json
+!data/.gitkeep

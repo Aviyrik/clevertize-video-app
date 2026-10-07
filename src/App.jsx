@@ -32,11 +32,19 @@ import {
   Edit2,
   Share2,
   Plus,
-  Trash2
+  Trash2,
+  HelpCircle,
+  RefreshCw,
+  WifiOff,
+  Award,
+  Layers,
+  Clapperboard,
+  ShieldCheck,
+  CheckCircle2,
+  Play
 } from 'lucide-react';
 
-// Script-relevant Ad Angle Presets
-// Derived directly from how Claude constructs the story arc, scene pacing, and ending voiceover CTA
+// Ad Focus Goal Presets — defines creative objectives & CTA angles
 const AD_GOAL_PRESETS = [
   {
     id: 'offer',
@@ -59,7 +67,7 @@ const AD_GOAL_PRESETS = [
     label: 'Product Spotlight',
     icon: Sparkle,
     objective: 'Showcase product craftsmanship & premium quality',
-    cta: 'Experience the authentic fresh taste today',
+    cta: 'Experience the authentic fresh quality today',
     targetCustomers: 'Discerning buyers seeking authentic quality',
   },
   {
@@ -72,72 +80,56 @@ const AD_GOAL_PRESETS = [
   },
 ];
 
-// Production Generation Stages for engaging live progress
-const SCRIPT_STAGES = [
+// Common Indian Retail & Business Categories
+const BUSINESS_TYPE_PRESETS = [
+  'Sweet shop / bakery',
+  'Kirana / general store',
+  'Restaurant / cafe',
+  'Salon / beauty parlour',
+  'Jewellery / ornaments',
+  'Tailor / boutique',
+  'Gym / fitness centre',
+  'Mobile repair / electronics',
+  'Pharmacy / medical store',
+  'Coaching / tuition centre',
+  'Hardware / home decor',
+  'Other',
+];
+
+// Pipeline Checklist for Checkpoint 4 Script Generation & Section 8 Quality Gate
+const SCRIPT_GEN_STAGES = [
   {
-    phase: 'CREATIVE DIRECTION',
-    title: 'Deconstructing video brief & marketing angle…',
-    detail: 'Analyzing brand positioning, target hooks, and commercial narrative arc.',
+    phase: 'STORY ARC COMPOSITION',
+    title: 'Writing 4-scene narrative arc…',
+    detail: 'Translating approved plot and hook into Hook → Build → Turn → Resolution scenes.',
   },
   {
-    phase: 'CHARACTER DESIGN',
-    title: 'Casting lead & supporting characters…',
-    detail: 'Specifying expressive traits, styling, demographic fit, and visual anchors.',
+    phase: 'CHARACTER & LOCATION CONTINUITY',
+    title: 'Locking visual anchors & eye-lines…',
+    detail: 'Enforcing single-location setting, 2-character casting, and dynamic camera angles.',
   },
   {
-    phase: 'WORLD BUILDING',
-    title: 'Scouting lighting, atmosphere & setting…',
-    detail: 'Crafting the color palette, interior ambience, and cinematographic world.',
+    phase: 'DIALOGUE & SCRIPT VALIDATION',
+    title: 'Crafting natural spoken dialogue…',
+    detail: 'Writing authentic lines in target language without superlatives or ad-speak.',
   },
   {
-    phase: 'STORYBOARD & DIALOGUE',
-    title: 'Writing scene beats & spoken dialogue…',
-    detail: 'Composing punchy hook lines, narrative progression, and natural phrasing.',
-  },
-  {
-    phase: 'PRODUCTION NOTES',
-    title: 'Finalizing camera motion & sound design…',
-    detail: 'Directing camera angles, cinematic transitions, ambient foley, and music cues.',
+    phase: 'QUALITY GATE & REPAIR PASS',
+    title: 'Running Product Spine Section 8 Quality Gate…',
+    detail: 'Verifying 18+ strict rules, claim bounds, and zero on-screen text/UI.',
   },
 ];
 
-// Dynamic Creative Insights & Filmmaking Tips displayed during script generation
-const SCRIPT_TIPS = [
-  'Did you know? The first 3 seconds of a social video drive over 70% of viewer retention.',
-  'Natural dialogue in the native tongue boosts viewer emotional trust by up to 2.4×.',
-  'Establishing consistent character anchors before scene generation ensures flawless visual continuity.',
-  'Every scene follows strict 1080p production framing ready for AI video rendering engines.',
-  'Pacing rule: 15-second spots hit the hook instantly; 25-second spots allow deeper character connection.',
-  'Clear environmental lighting notes keep consecutive scenes looking like they belong in the same film shoot.',
+// Dynamic Creative Insights during Script Generation
+const SCRIPT_GEN_TIPS = [
+  'Product Spine Rule M13: All 4 scenes share the same room and lighting so neural video models maintain continuity.',
+  'Product Spine Rule M10: Maximum 2 dialogue lines per character per scene avoids audio drift.',
+  'Product Spine Rule M4: Dialogue lines are rendered in Devanagari script for flawless speech pronunciation.',
+  'Product Spine Rule M8: On-screen text, phone UIs, and background music are strictly excluded from generation.',
+  'Product Spine Rule M28: Physical gestures, reactions, and eye contact create authentic commercial chemistry.',
 ];
 
-// Hook Generation Pipeline Stages (Product Spine Section 3 & 4)
-const HOOK_STAGES = [
-  {
-    phase: 'INSIGHT ENGINE',
-    title: 'Scanning customer tension & desire lenses…',
-    detail: 'Evaluating 8 insight lenses to pinpoint authentic local consumer frictions.',
-  },
-  {
-    phase: 'HOOK ARCHETYPES',
-    title: 'Cross-referencing high-retention hook libraries…',
-    detail: 'Consulting TrueFan AI and GoFaceless libraries for 3-second pattern interrupts.',
-  },
-  {
-    phase: 'CREATIVE FORMULATION',
-    title: 'Crafting 3 distinct opening hook angles…',
-    detail: 'Formulating spoken lines in native tongue and scroll-stopping physical opening actions.',
-  },
-];
-
-const HOOK_TIPS = [
-  'Product Spine Rule M16: Borrow hook patterns and psychological triggers, never copy generic lines.',
-  'A powerful 3-second hook does not need on-screen text — a physical action and clear line do the work.',
-  'Area shoutout hooks create instant local relevance ("Bangalore waalon, suno!").',
-  'Everyday crisis hooks connect immediately by showing relatable household urgency.',
-];
-
-// Production Pipeline Stages for the Video Rendering Engine
+// Pipeline Stages for Video GPU Rendering
 const RENDER_STAGES = [
   {
     phase: 'SCENE INITIALIZATION',
@@ -166,37 +158,35 @@ const RENDER_STAGES = [
   },
 ];
 
-// Engaging Video Production & Marketing Insights during Video Render
 const RENDER_TIPS = [
   'Color grading is matched across all scenes to ensure cinematic lighting continuity.',
-  'Videos with front-loaded value propositions retain up to 3× higher engagement on mobile feeds.',
-  'Our engine renders in broadcast-ready 1080p resolution, optimized for Instagram Reels and Shorts.',
+  'Commercials with front-loaded value propositions retain up to 3× higher engagement on mobile feeds.',
+  'Our engine renders in broadcast-ready 1080p resolution, optimized for 9:16 mobile feeds.',
   'Seamless scene transitions keep pacing snappy without causing visual jarring for the viewer.',
-  'High-contrast focal points in the first frame drastically improve click-through and watch time.',
   'Voiceover cadence and background audio volume are dynamically balanced for vocal clarity.',
 ];
 
-// Helper to parse ANNEX A scene scripts for structured editing
+// Helper to parse scene texts for structured editing
 function parseScene(rawText, sceneIndex) {
   if (!rawText) {
     return {
-      title: `SCENE ${String(sceneIndex + 1).padStart(2, '0')}`,
+      title: `SCENE ${sceneIndex + 1}`,
       purpose: '',
       visual: '',
-      dialogue: '',
       camera: '',
+      dialogue: '',
       audio: '',
       notes: '',
       raw: '',
     };
   }
 
-  let title = `SCENE ${String(sceneIndex + 1).padStart(2, '0')}`;
+  let title = `SCENE ${sceneIndex + 1}`;
   let purpose = '';
 
   const titleMatch = rawText.match(/SCENE\s*(\d+)\s*(?:[–-—]\s*([^\n\r]+))?/i);
   if (titleMatch) {
-    title = `SCENE ${String(titleMatch[1]).padStart(2, '0')}`;
+    title = `SCENE ${titleMatch[1]}`;
     purpose = (titleMatch[2] || '').trim();
   }
 
@@ -222,74 +212,122 @@ function parseScene(rawText, sceneIndex) {
 
   return {
     title,
-    purpose: purpose || (sceneIndex === 0 ? 'HOOK' : sceneIndex === 1 ? 'PROBLEM' : sceneIndex === 2 ? 'SOLUTION' : 'CTA'),
+    purpose: purpose || (sceneIndex === 0 ? 'HOOK' : sceneIndex === 1 ? 'BUILD' : sceneIndex === 2 ? 'TURN' : 'RESOLUTION'),
     visual: visual || rawText,
-    dialogue: dialogue || '',
     camera: camera || '',
+    dialogue: dialogue || '',
     audio: audio || '',
     notes: notes || '',
     raw: rawText,
   };
 }
 
-// Reconstruct ANNEX A scene text when structured sections are edited
-function rebuildScene({ title, purpose, visual, dialogue, camera, audio, notes, raw }) {
-  if (!dialogue && !camera && !audio) {
+// Helper to rebuild scene text after structured section edits
+function rebuildScene({ title, purpose, visual, camera, dialogue, audio, notes, raw }) {
+  if (!camera && !dialogue && !audio) {
     return raw || visual;
   }
-  return `ANNEX A\n${title}${purpose ? ` – ${purpose}` : ''}\nVisual:\n${visual || 'None (per rules)'}\nAnimation Elements:\n${camera || 'None (per rules)'}\nAudio / Dialogue / Voiceover:\n${dialogue || 'None (per rules)'}\nSound Design / Music:\n${audio || 'None (per rules)'}\nEditing Notes (Optional):\n${notes || 'Output resolution: 1080p'}`;
+  return `ANNEX A\n${title}${purpose ? ` – ${purpose}` : ''}\nVisual:\n${visual || 'Same setting: balanced medium shot.'}\nAnimation Elements:\n${camera || 'Camera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none'}\nAudio / Dialogue / Voiceover:\n${dialogue || 'None'}\nSound Design:\n${audio || 'Natural ambient room tone. Music mood note: warm and upbeat.'}\nEditing Notes:\n${notes || 'Scene duration: ~5s | Output: 1080p'}`;
 }
 
 export default function App() {
-  // Brand Profile State (Conceptual persistent brand layer)
-  const [brandName, setBrandName] = useState(() => {
+  // Network connectivity status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
+  const [userContext, setUserContext] = useState(() => {
     try {
-      return localStorage.getItem('clevertize_brand_name') || '';
+      const saved = localStorage.getItem('clevertize_user_context');
+      if (saved) return JSON.parse(saved);
     } catch {
-      return '';
+      // fallback
     }
+    return {
+      businessName: '',
+      businessType: 'Sweet shop / bakery',
+      customBusinessType: '',
+      town: 'Bangalore',
+      area: '',
+      brief: '',
+      specialty: '',
+      offer: '',
+      occasion: '',
+      contact: '',
+      ownerName: '',
+      leadCharacter: '',
+      supportingCharacter: '',
+      environment: '',
+      websiteUrl: '',
+      language: 'Hindi',
+      scriptMode: 'devanagari',
+      selectedGoalId: 'offer',
+      shopPhoto: null,
+      productPhoto: null,
+      logo: null,
+      brandFile: null,
+    };
   });
-  const [websiteUrl, setWebsiteUrl] = useState(() => {
-    try {
-      return localStorage.getItem('clevertize_website_url') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [brandFile, setBrandFile] = useState(null); // guidelines { name, mime, data }
-  const [shopPhoto, setShopPhoto] = useState(null); // business photos { name, mime, data, previewUrl }
 
-  // First-time vs Returning session state
-  const [brandFlowState, setBrandFlowState] = useState(() => {
-    try {
-      return localStorage.getItem('clevertize_brand_name') ? 'create' : 'setup';
-    } catch {
-      return 'setup';
-    }
-  });
+  const updateUserContext = (key, val) => {
+    setUserContext((prev) => {
+      const next = { ...prev, [key]: val };
+      try {
+        // Strip heavy base64 data from localStorage to stay well under browser 5MB storage limit
+        const { shopPhoto, productPhoto, logo, brandFile, ...meta } = next;
+        localStorage.setItem('clevertize_user_context', JSON.stringify(meta));
+      } catch (err) {
+        console.warn('LocalStorage save failed:', err);
+      }
+      return next;
+    });
+  };
 
-  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  // Workflow Stages:
+  // 'input' -> Stage 1 form
+  // 'cp1_direction' -> Checkpoint 1 (Customer Tension)
+  // 'cp2_plot' -> Checkpoint 2 (Plot Line & Viral Hook)
+  // 'cp3_story' -> Checkpoint 3 (Story Arc & Format)
+  // 'storyboard' -> Checkpoint 4 (Script Review & Storyboard Studio)
+  // 'render' -> Video Rendering & Delivery
+  const [currentStep, setCurrentStep] = useState('input');
 
-  // Workflow Stages: 1 = Brief (Create Video), 2 = Creative Review, 3 = Render
-  const [currentStage, setCurrentStage] = useState(1);
+  // Backend Checkpoint Session State
+  const [sessionId, setSessionId] = useState(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const [activeCheckpointName, setActiveCheckpointName] = useState('');
+  const [checkpointSeconds, setCheckpointSeconds] = useState(null);
 
-  // Video Specific Information
-  const [brief, setBrief] = useState('');
-  const [language, setLanguage] = useState('English'); // Tab selection: English vs Hindi
-  const [duration, setDuration] = useState('15s'); // Tab selection: 10s, 15s, 20s, 25s
-  const [selectedGoalId, setSelectedGoalId] = useState('offer'); // Tab selection: 4 focused ad angles
-  const [productImage, setProductImage] = useState(null); // Optional hero product image
+  // Checkpoint Data from Backend
+  const [directionData, setDirectionData] = useState(null); // { tensions: [{ owner, en }], festival: { use, name, owner }, lens }
+  const [selectedDirectionIdx, setSelectedDirectionIdx] = useState(0);
 
-  // Hook Generation States (Product Spine Step 4)
-  const [hooks, setHooks] = useState([]);
-  const [selectedHook, setSelectedHook] = useState(null);
-  const [isGeneratingHooks, setIsGeneratingHooks] = useState(false);
-  const [hookGenStep, setHookGenStep] = useState(0);
-  const [hookTipIndex, setHookTipIndex] = useState(0);
-  const [isEditingHookLine, setIsEditingHookLine] = useState(false);
-  const [customHookLine, setCustomHookLine] = useState('');
+  const [plotData, setPlotData] = useState(null); // { plots: [{ owner, en, hook_pattern, hook_library }], framing }
+  const [selectedPlotIdx, setSelectedPlotIdx] = useState(0);
 
-  // Stage 2 Generated Creative Data
+  const [storyData, setStoryData] = useState(null); // { format, format_owner, core_idea, through_line, location, characters, scenes, hook_line, visual_world, ending }
+
+  const [scriptPayloadData, setScriptPayloadData] = useState(null); // { header, character1, character2, setting, scenes, record, endFrame, meta }
+
+  // Approved Summary History for breadcrumb context
+  const [approvedSummary, setApprovedSummary] = useState([]);
+
+  // Inline "Change Something" State
+  const [isChangeOpen, setIsChangeOpen] = useState(false);
+  const [changeNote, setChangeNote] = useState('');
+  const [changeError, setChangeError] = useState('');
+
+  // Script & Storyboard Editor State (Stage 2)
   const [character1, setCharacter1] = useState('');
   const [character2, setCharacter2] = useState('');
   const [setting, setSetting] = useState('');
@@ -298,7 +336,7 @@ export default function App() {
   const [isRawScriptMode, setIsRawScriptMode] = useState(false);
   const [isFoundationCollapsed, setIsFoundationCollapsed] = useState(false);
 
-  // Creative Foundation Draft States
+  // Editing Foundation Details
   const [isEditingCharacters, setIsEditingCharacters] = useState(false);
   const [char1Draft, setChar1Draft] = useState('');
   const [char2Draft, setChar2Draft] = useState('');
@@ -306,142 +344,49 @@ export default function App() {
   const [isEditingSetting, setIsEditingSetting] = useState(false);
   const [settingDraft, setSettingDraft] = useState('');
 
-  // Storyboard Section Edit Mode (visual | dialogue | camera | audio)
+  // Storyboard Section Edit Mode (visual | camera | dialogue | audio | notes)
   const [editingSection, setEditingSection] = useState(null);
   const [sectionDraft, setSectionDraft] = useState('');
 
-  // Stage 3 Rendering & Delivery
-  const [videoUrl, setVideoUrl] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  // Script Generation Progress & Tips Ticker
   const [scriptGenStep, setScriptGenStep] = useState(0);
   const [scriptTipIndex, setScriptTipIndex] = useState(0);
+
+  // Render & Video State
+  const [videoUrl, setVideoUrl] = useState('');
   const [isRendering, setIsRendering] = useState(false);
   const [renderStep, setRenderStep] = useState(0);
   const [renderTipIndex, setRenderTipIndex] = useState(0);
   const [renderStatusText, setRenderStatusText] = useState('Initializing video render pipeline…');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [validationError, setValidationError] = useState('');
   const [shareStatus, setShareStatus] = useState('');
 
-  const handleShareVideo = async () => {
-    if (!videoUrl) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${brandName || 'AI Generated'} Video`,
-          text: `Check out our video generated on Clevertize!`,
-          url: videoUrl,
-        });
-        setShareStatus('Shared successfully!');
-        setTimeout(() => setShareStatus(''), 3000);
-        return;
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          // fallback to clipboard
-        } else {
-          return;
-        }
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(videoUrl);
-      setShareStatus('Link copied to clipboard!');
-      setTimeout(() => setShareStatus(''), 3000);
-    } catch {
-      setShareStatus('Video link ready to copy.');
-      setTimeout(() => setShareStatus(''), 3000);
-    }
-  };
-
-  // Dynamic progress and insights ticker during hook generation
-  useEffect(() => {
-    let stepTimer = null;
-    let tipTimer = null;
-
-    if (isGeneratingHooks) {
-      setHookGenStep(0);
-      setHookTipIndex(Math.floor(Math.random() * HOOK_TIPS.length));
-
-      stepTimer = setInterval(() => {
-        setHookGenStep((prev) => (prev < HOOK_STAGES.length - 1 ? prev + 1 : prev));
-      }, 2500);
-
-      tipTimer = setInterval(() => {
-        setHookTipIndex((prev) => (prev + 1) % HOOK_TIPS.length);
-      }, 3500);
-    } else {
-      setHookGenStep(0);
-    }
-
-    return () => {
-      if (stepTimer) clearInterval(stepTimer);
-      if (tipTimer) clearInterval(tipTimer);
-    };
-  }, [isGeneratingHooks]);
-
-  // Dynamic progress and insights ticker during script generation
-  useEffect(() => {
-    let stepTimer = null;
-    let tipTimer = null;
-
-    if (isGenerating) {
-      setScriptGenStep(0);
-      setScriptTipIndex(Math.floor(Math.random() * SCRIPT_TIPS.length));
-
-      // Advance through generation phases realistically
-      stepTimer = setInterval(() => {
-        setScriptGenStep((prev) => (prev < SCRIPT_STAGES.length - 1 ? prev + 1 : prev));
-      }, 3500);
-
-      // Rotate engaging creative tips every 4.5 seconds
-      tipTimer = setInterval(() => {
-        setScriptTipIndex((prev) => (prev + 1) % SCRIPT_TIPS.length);
-      }, 4500);
-    } else {
-      setScriptGenStep(0);
-    }
-
-    return () => {
-      if (stepTimer) clearInterval(stepTimer);
-      if (tipTimer) clearInterval(tipTimer);
-    };
-  }, [isGenerating]);
-
-  // Dynamic progress and insights ticker during video rendering
-  useEffect(() => {
-    let stepTimer = null;
-    let tipTimer = null;
-
-    if (isRendering) {
-      setRenderStep(0);
-      setRenderTipIndex(Math.floor(Math.random() * RENDER_TIPS.length));
-
-      // Advance through render phases over typical 2-3 minute lifecycle
-      stepTimer = setInterval(() => {
-        setRenderStep((prev) => (prev < RENDER_STAGES.length - 1 ? prev + 1 : prev));
-      }, 25000);
-
-      // Rotate production insights every 5.5 seconds
-      tipTimer = setInterval(() => {
-        setRenderTipIndex((prev) => (prev + 1) % RENDER_TIPS.length);
-      }, 5500);
-    } else {
-      setRenderStep(0);
-    }
-
-    return () => {
-      if (stepTimer) clearInterval(stepTimer);
-      if (tipTimer) clearInterval(tipTimer);
-    };
-  }, [isRendering]);
+  // General UI errors & modals
+  const [errorMessage, setErrorMessage] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [qualityFailures, setQualityFailures] = useState([]);
 
   // Stopwatch Timer
   const [elapsedTime, setElapsedTime] = useState('00:00');
   const timerStartRef = useRef(0);
   const timerIntervalRef = useRef(null);
 
-  // Web Speech API
+  const startTimer = () => {
+    timerStartRef.current = Date.now();
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(() => {
+      const s = Math.floor((Date.now() - timerStartRef.current) / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      setElapsedTime(String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'));
+    }, 1000);
+  };
+
+  const stopTimer = () => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  };
+
+  // Web Speech API for voice dictation
   const [isListening, setIsListening] = useState(false);
   const [micSupported, setMicSupported] = useState(false);
   const [micHint, setMicHint] = useState('');
@@ -459,7 +404,7 @@ export default function App() {
 
       rec.onstart = () => {
         setIsListening(true);
-        setMicHint('Listening… Speak your idea clearly.');
+        setMicHint('Listening… Speak your video idea clearly.');
       };
 
       rec.onend = () => {
@@ -481,7 +426,7 @@ export default function App() {
           ).trim();
         }
         const updated = (baseSpeechTextRef.current + (interimText ? ' ' + interimText : '')).trim();
-        setBrief(updated);
+        updateUserContext('brief', updated);
         setValidationError('');
       };
 
@@ -506,7 +451,7 @@ export default function App() {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      baseSpeechTextRef.current = brief.trim();
+      baseSpeechTextRef.current = userContext.brief.trim();
       try {
         recognitionRef.current.start();
       } catch (err) {
@@ -515,29 +460,67 @@ export default function App() {
     }
   };
 
-  const startTimer = () => {
-    timerStartRef.current = Date.now();
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = setInterval(() => {
-      const s = Math.floor((Date.now() - timerStartRef.current) / 1000);
-      const m = Math.floor(s / 60);
-      const sec = s % 60;
-      setElapsedTime(String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'));
-    }, 1000);
-  };
+  // Ticker during Script Generation & Quality Gate Repair Loop
+  useEffect(() => {
+    let stepTimer = null;
+    let tipTimer = null;
 
-  const stopTimer = () => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-  };
+    if (isBusy && currentStep === 'cp3_story') {
+      setScriptGenStep(0);
+      setScriptTipIndex(Math.floor(Math.random() * SCRIPT_GEN_TIPS.length));
 
-  const handleFileChange = (file, setter) => {
+      stepTimer = setInterval(() => {
+        setScriptGenStep((prev) => (prev < SCRIPT_GEN_STAGES.length - 1 ? prev + 1 : prev));
+      }, 3500);
+
+      tipTimer = setInterval(() => {
+        setScriptTipIndex((prev) => (prev + 1) % SCRIPT_GEN_TIPS.length);
+      }, 4500);
+    } else {
+      setScriptGenStep(0);
+    }
+
+    return () => {
+      if (stepTimer) clearInterval(stepTimer);
+      if (tipTimer) clearInterval(tipTimer);
+    };
+  }, [isBusy, currentStep]);
+
+  // Ticker during GPU Video Render
+  useEffect(() => {
+    let stepTimer = null;
+    let tipTimer = null;
+
+    if (isRendering) {
+      setRenderStep(0);
+      setRenderTipIndex(Math.floor(Math.random() * RENDER_TIPS.length));
+
+      stepTimer = setInterval(() => {
+        setRenderStep((prev) => (prev < RENDER_STAGES.length - 1 ? prev + 1 : prev));
+      }, 24000);
+
+      tipTimer = setInterval(() => {
+        setRenderTipIndex((prev) => (prev + 1) % RENDER_TIPS.length);
+      }, 5500);
+    } else {
+      setRenderStep(0);
+    }
+
+    return () => {
+      if (stepTimer) clearInterval(stepTimer);
+      if (tipTimer) clearInterval(tipTimer);
+    };
+  }, [isRendering]);
+
+  // File Upload Helper
+  const handleFileUpload = (file, key) => {
     if (!file) {
-      setter(null);
+      updateUserContext(key, null);
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setter({
+      updateUserContext(key, {
         name: file.name,
         mime: file.type,
         data: reader.result.split(',')[1],
@@ -547,191 +530,361 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  const saveBrandToStorage = (name, url) => {
-    try {
-      if (name.trim()) localStorage.setItem('clevertize_brand_name', name.trim());
-      else localStorage.removeItem('clevertize_brand_name');
-      if (url.trim()) localStorage.setItem('clevertize_website_url', url.trim());
-      else localStorage.removeItem('clevertize_website_url');
-    } catch (e) {
-      console.warn('Storage unavailable', e);
-    }
+  // Build the Form Payload for POST /api/session
+  const buildSessionPayload = () => {
+    const activeGoal = AD_GOAL_PRESETS.find((g) => g.id === userContext.selectedGoalId) || AD_GOAL_PRESETS[0];
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+
+    // Enrich specialty with all user inputs so Claude receives the entire creative brief
+    const specialtyParts = [
+      userContext.specialty?.trim(),
+      userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
+      activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
+      userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
+      userContext.supportingCharacter?.trim() ? `Supporting Character: ${userContext.supportingCharacter.trim()}` : null,
+      userContext.environment?.trim() ? `Setting/Environment: ${userContext.environment.trim()}` : null,
+      userContext.websiteUrl?.trim() ? `Website: ${userContext.websiteUrl.trim()}` : null,
+    ].filter(Boolean);
+
+    return {
+      businessName: userContext.businessName.trim(),
+      businessType: bType || 'Retail Store',
+      town: userContext.town.trim() || 'Metro',
+      language: userContext.language || 'Hindi',
+      area: userContext.area?.trim() || '',
+      specialty: specialtyParts.join(' | '),
+      offer: userContext.offer?.trim() || '',
+      occasion: userContext.occasion?.trim() || '',
+      contact: userContext.contact?.trim() || '',
+      ownerName: userContext.ownerName?.trim() || userContext.leadCharacter?.trim() || '',
+      scriptMode: userContext.scriptMode === 'roman' ? 'roman' : 'devanagari',
+      shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
+      productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
+    };
   };
 
-  const handleResetBrandProfile = () => {
-    try {
-      localStorage.removeItem('clevertize_brand_name');
-      localStorage.removeItem('clevertize_website_url');
-    } catch (e) {
-      console.warn('Storage unavailable', e);
+  // START: POST /api/session -> CHECKPOINT 1 (DIRECTION)
+  const handleStartCreativeEngine = async () => {
+    if (!userContext.businessName.trim()) {
+      setValidationError('Please enter your business or brand name.');
+      return;
     }
-    setBrandName('');
-    setWebsiteUrl('');
-    setBrandFile(null);
-    setShopPhoto(null);
-    setIsBrandModalOpen(false);
-    setCurrentStage(1);
-    setBrandFlowState('setup');
-  };
-
-  const isFormValid = brief.trim().length > 0;
-
-  // STAGE 1 -> HOOKS GENERATION: Get 3 distinct creative hook choices from Claude (/api/hooks)
-  const handleGenerateHooks = async () => {
-    if (!isFormValid) {
-      setValidationError('Please tell us what video you want to create.');
+    if (!userContext.town.trim()) {
+      setValidationError('Please enter your town or city (e.g. Bangalore, Indore, Mumbai).');
+      return;
+    }
+    if (!userContext.brief.trim() && !userContext.specialty.trim()) {
+      setValidationError('Please tell us about your video idea or what your business sells.');
       return;
     }
 
     setValidationError('');
     setErrorMessage('');
-    setIsGeneratingHooks(true);
+    setQualityFailures([]);
+    setIsBusy(true);
+    setActiveCheckpointName('Checkpoint 1 · Creative Direction & Tensions');
+    startTimer();
 
-    const activeGoal = AD_GOAL_PRESETS.find((g) => g.id === selectedGoalId) || AD_GOAL_PRESETS[0];
-
-    const payload = {
-      brief: brief.trim(),
-      brandName: brandName.trim(),
-      language: language.trim(),
-      duration: duration.trim(),
-      targetCustomers: activeGoal.targetCustomers,
-      cta: activeGoal.cta,
-      objective: activeGoal.objective,
-    };
+    const payload = buildSessionPayload();
 
     try {
-      const res = await fetch('/api/hooks', {
+      const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      stopTimer();
 
-      if (!data.hooks || data.hooks.length === 0) {
-        throw new Error('No hook options returned. Please try again.');
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to start creative intelligence session.');
       }
 
-      setHooks(data.hooks);
-      const initial = data.hooks[0];
-      setSelectedHook(initial);
-      setCustomHookLine(initial.hookLine);
-      setIsEditingHookLine(false);
+      setSessionId(data.sessionId);
+      setDirectionData(data.data);
+      setSelectedDirectionIdx(0);
+      setCheckpointSeconds(data.seconds);
+      setApprovedSummary([]);
+      setCurrentStep('cp1_direction');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to generate hook options. Please try again.');
+      stopTimer();
+      setErrorMessage(err.message || 'Error connecting to Creative Engine.');
     } finally {
-      setIsGeneratingHooks(false);
+      setIsBusy(false);
     }
   };
 
-  // HOOK SELECTION -> STAGE 2: Generate Full Storyboard & Script (/api/generate)
-  const handleGenerateScriptWithHook = async (hookToUse) => {
-    setValidationError('');
+  // APPROVE CHECKPOINT 1 -> POST /api/session/:id/next -> CHECKPOINT 2 (PLOT)
+  const handleApproveDirection = async () => {
+    if (!sessionId) return;
+    setIsBusy(true);
     setErrorMessage('');
-    setIsGenerating(true);
+    setActiveCheckpointName('Checkpoint 2 · Plot Line & Viral Hooks');
+    startTimer();
 
-    const activeGoal = AD_GOAL_PRESETS.find((g) => g.id === selectedGoalId) || AD_GOAL_PRESETS[0];
-    const finalHook = hookToUse || selectedHook;
-
-    const payload = {
-      brief: brief.trim(),
-      brandName: brandName.trim(),
-      language: language.trim(),
-      duration: duration.trim(),
-      resolution: '1080p',
-      businessLocation: '',
-      targetCustomers: activeGoal.targetCustomers,
-      cta: activeGoal.cta,
-      objective: activeGoal.objective,
-      geo: 'Metro & Tier 1',
-      platform: 'Instagram Reels',
-      websiteUrl: websiteUrl.trim(),
-      brandFile: brandFile ? { name: brandFile.name, mime: brandFile.mime, data: brandFile.data } : null,
-      shopPhoto: shopPhoto ? { name: shopPhoto.name, mime: shopPhoto.mime, data: shopPhoto.data } : null,
-      productImage: productImage ? { name: productImage.name, mime: productImage.mime, data: productImage.data } : null,
-      selectedHook: finalHook
-        ? {
-            id: finalHook.id,
-            archetype: finalHook.archetype,
-            angle: finalHook.angle,
-            hookLine: customHookLine.trim() || finalHook.hookLine,
-            visualAction: finalHook.visualAction,
-          }
-        : null,
-    };
+    const chosenTension = directionData?.tensions?.[selectedDirectionIdx]?.owner || 'Approved Direction';
+    const festivalTag = directionData?.festival?.use ? ` · ${directionData.festival.name}` : '';
 
     try {
-      const res = await fetch('/api/generate', {
+      const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          checkpoint: 'direction',
+          choice: selectedDirectionIdx,
+        }),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      stopTimer();
 
-      setCharacter1(data.character1 || '');
-      setCharacter2(data.character2 || '');
-      setSetting(data.setting || '');
-      setScenes(data.scenes || []);
-      setActiveSceneIndex(0);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to advance to Plot stage.');
+      }
 
-      setCurrentStage(2);
+      setPlotData(data.data);
+      setSelectedPlotIdx(0);
+      setCheckpointSeconds(data.seconds);
+      setApprovedSummary((prev) => [
+        ...prev.filter((item) => item.stage !== 'Direction'),
+        { stage: 'Direction', text: chosenTension + festivalTag },
+      ]);
+      setCurrentStep('cp2_plot');
+      setIsChangeOpen(false);
+      setChangeNote('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      setErrorMessage(err.message || 'Generation failed. Please try again.');
+      stopTimer();
+      setErrorMessage(err.message || 'Error formulating plot options.');
     } finally {
-      setIsGenerating(false);
+      setIsBusy(false);
     }
   };
 
-  // STAGE 2 -> STAGE 3: Render Video (/api/run)
-  const handleRenderVideo = async () => {
+  // APPROVE CHECKPOINT 2 -> POST /api/session/:id/next -> CHECKPOINT 3 (STORY & FORMAT)
+  const handleApprovePlot = async () => {
+    if (!sessionId) return;
+    setIsBusy(true);
+    setErrorMessage('');
+    setActiveCheckpointName('Checkpoint 3 · Story Arc & Production Format');
+    startTimer();
+
+    const chosenPlot = plotData?.plots?.[selectedPlotIdx]?.owner || 'Approved Plot';
+
+    try {
+      const res = await fetch(`/api/session/${sessionId}/next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkpoint: 'plot',
+          choice: selectedPlotIdx,
+        }),
+      });
+      const data = await res.json();
+      stopTimer();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to advance to Story stage.');
+      }
+
+      setStoryData(data.data);
+      setCheckpointSeconds(data.seconds);
+      setApprovedSummary((prev) => [
+        ...prev.filter((item) => item.stage !== 'Plot'),
+        { stage: 'Plot', text: chosenPlot },
+      ]);
+      setCurrentStep('cp3_story');
+      setIsChangeOpen(false);
+      setChangeNote('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      stopTimer();
+      setErrorMessage(err.message || 'Error developing story arc.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  // APPROVE CHECKPOINT 3 -> POST /api/session/:id/next -> CHECKPOINT 4 (SCRIPT + QUALITY GATE)
+  const handleApproveStory = async () => {
+    if (!sessionId) return;
+    setIsBusy(true);
+    setErrorMessage('');
+    setQualityFailures([]);
+    setActiveCheckpointName('Checkpoint 4 · Script Writing & Section 8 Quality Gate');
+    startTimer();
+
+    try {
+      const res = await fetch(`/api/session/${sessionId}/next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkpoint: 'story',
+        }),
+      });
+      const data = await res.json();
+      stopTimer();
+
+      if (!res.ok || data.error) {
+        if (res.status === 422 && data.failures) {
+          setQualityFailures(data.failures);
+          throw new Error('The script required adjustments against quality guidelines. You can ask for a change below or retry.');
+        }
+        throw new Error(data.error || 'Failed to generate passing script.');
+      }
+
+      const p = data.data;
+      setScriptPayloadData(p);
+      setCharacter1(p.character1 || '');
+      setCharacter2(p.character2 || '');
+      setSetting(p.setting || '');
+      setScenes(p.scenes || []);
+      setActiveSceneIndex(0);
+      setCheckpointSeconds(data.seconds);
+
+      const storyTag = `${storyData?.format || 'Film'} · 4 Scenes`;
+      setApprovedSummary((prev) => [
+        ...prev.filter((item) => item.stage !== 'Story'),
+        { stage: 'Story', text: storyTag },
+      ]);
+
+      setCurrentStep('storyboard');
+      setIsChangeOpen(false);
+      setChangeNote('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      stopTimer();
+      setErrorMessage(err.message || 'Error running script quality gate.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  // REVISION REQUEST: POST /api/session/:id/change
+  const handleSendChangeRequest = async (targetCheckpoint) => {
+    if (!sessionId) return;
+    const note = changeNote.trim();
+    if (!note) {
+      setChangeError('Please describe what you would like modified.');
+      return;
+    }
+
+    setChangeError('');
+    setIsBusy(true);
+    setErrorMessage('');
+    startTimer();
+
+    try {
+      const res = await fetch(`/api/session/${sessionId}/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkpoint: targetCheckpoint,
+          note,
+        }),
+      });
+      const data = await res.json();
+      stopTimer();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to apply creative change.');
+      }
+
+      setCheckpointSeconds(data.seconds);
+      setIsChangeOpen(false);
+      setChangeNote('');
+
+      if (targetCheckpoint === 'direction') {
+        setDirectionData(data.data);
+        setSelectedDirectionIdx(0);
+        setCurrentStep('cp1_direction');
+      } else if (targetCheckpoint === 'plot') {
+        setPlotData(data.data);
+        setSelectedPlotIdx(0);
+        setCurrentStep('cp2_plot');
+      } else if (targetCheckpoint === 'story') {
+        setStoryData(data.data);
+        setCurrentStep('cp3_story');
+      } else if (targetCheckpoint === 'script') {
+        const p = data.data;
+        setScriptPayloadData(p);
+        setCharacter1(p.character1 || '');
+        setCharacter2(p.character2 || '');
+        setSetting(p.setting || '');
+        setScenes(p.scenes || []);
+        setCurrentStep('storyboard');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      stopTimer();
+      setErrorMessage(err.message || 'Could not revise stage with requested change.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  // STAGE 2 APPROVE SCRIPT -> POST /api/session/:id/approve & POST /api/run -> STAGE 3 RENDER
+  const handleApproveScriptAndRender = async () => {
     if (!scenes.length) {
-      alert('No scenes found to render.');
+      alert('No scenes found in the storyboard to render.');
       return;
     }
 
     setErrorMessage('');
     setIsRendering(true);
-    setCurrentStage(3);
-    setRenderStatusText('Initializing video render pipeline…');
+    setCurrentStep('render');
+    setRenderStatusText('Saving script record and staging GPU render pipeline…');
     startTimer();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const payload = {
-      scenes: scenes.map((s) => s.trim()).filter(Boolean),
-      character1: character1.trim(),
-      character2: character2.trim(),
-      setting: setting.trim(),
-      productImage: productImage ? { name: productImage.name, mime: productImage.mime, data: productImage.data } : null,
-    };
-
     try {
+      // 1. Record approved script to store.js
+      if (sessionId) {
+        await fetch(`/api/session/${sessionId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }).catch((e) => console.warn('Approve save call failed:', e));
+      }
+
+      // 2. Start Magnific Run with stripped edit notes and consistent characters
+      const runPayload = {
+        scenes: scenes.map((s) => s.trim()).filter(Boolean),
+        character1: character1.trim(),
+        character2: character2.trim(),
+        setting: setting.trim(),
+        productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
+        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+      };
+
       const res = await fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(runPayload),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
 
-      setRenderStatusText('Rendering video frames…');
-      await pollStatus(data.runId);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to dispatch render job to Magnific.');
+      }
+
+      setRenderStatusText('Rendering neural video frames…');
+      await pollRenderStatus(data.runId);
     } catch (err) {
       stopTimer();
       setIsRendering(false);
-      setErrorMessage(err.message || 'Failed to start video rendering.');
+      setErrorMessage(err.message || 'Error occurred while initiating video render.');
     }
   };
 
   // Poll /api/status/:runId
-  const pollStatus = async (runId) => {
+  const pollRenderStatus = async (runId) => {
     const maxAttempts = 160;
     for (let i = 1; i <= maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 15000));
       try {
-        const res = await fetch(`/api/status/${runId}`);
+        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`);
         const data = await res.json();
         if (data.error) continue;
 
@@ -749,2600 +902,1466 @@ export default function App() {
           return;
         }
 
-        const isRawOrGeneric = !data.status || /run|process|pending|queue|unknown|null|undefined/i.test(String(data.status));
-        const niceStatus = !isRawOrGeneric
-          ? String(data.status).replace(/^_+|_+$/g, '').replace(/_/g, ' ')
-          : 'Generating and compositing video scenes…';
+        const niceStatus = data.status && !/run|process|pending|queue|unknown/i.test(data.status)
+          ? data.status
+          : 'Synthesizing frames & audio in neural pipeline…';
         setRenderStatusText(niceStatus);
-      } catch (e) {
-        // Quiet poll
+      } catch (pollErr) {
+        // Keep waiting despite transient network drops
+      }
+    }
+    stopTimer();
+    setIsRendering(false);
+    setErrorMessage('Render taking longer than expected. Please verify your Magnific workspace.');
+  };
+
+  // Video Share Action
+  const handleShareVideo = async () => {
+    if (!videoUrl) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${userContext.businessName || 'Clevertize'} Commercial Video`,
+          text: `Watch our new ad film created on Clevertize!`,
+          url: videoUrl,
+        });
+        setShareStatus('Shared successfully!');
+        setTimeout(() => setShareStatus(''), 3000);
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
       }
     }
 
-    stopTimer();
-    setIsRendering(false);
-    setRenderStatusText('Still processing in background.');
-  };
-
-  // Structured scene updater
-  const updateActiveSceneSection = (key, value) => {
-    const activeText = scenes[activeSceneIndex] || '';
-    const parsed = parseScene(activeText, activeSceneIndex);
-    parsed[key] = value;
-    const newSceneText = rebuildScene(parsed);
-    const updated = [...scenes];
-    updated[activeSceneIndex] = newSceneText;
-    setScenes(updated);
-  };
-
-  // Creative Foundation Handlers
-  const handleStartEditCharacters = () => {
-    setChar1Draft(character1);
-    setChar2Draft(character2);
-    setIsEditingCharacters(true);
-  };
-
-  const handleSaveCharacters = () => {
-    setCharacter1(char1Draft);
-    setCharacter2(char2Draft);
-    setIsEditingCharacters(false);
-  };
-
-  const handleCancelCharacters = () => {
-    setChar1Draft(character1);
-    setChar2Draft(character2);
-    setIsEditingCharacters(false);
-  };
-
-  const handleStartEditSetting = () => {
-    setSettingDraft(setting);
-    setIsEditingSetting(true);
-  };
-
-  const handleSaveSetting = () => {
-    setSetting(settingDraft);
-    setIsEditingSetting(false);
-  };
-
-  const handleCancelSetting = () => {
-    setSettingDraft(setting);
-    setIsEditingSetting(false);
-  };
-
-  // Storyboard Section Handlers
-  const handleStartEditSection = (section, initialVal) => {
-    setEditingSection(section);
-    setSectionDraft(initialVal || '');
-  };
-
-  const handleSaveEditSection = () => {
-    if (editingSection) {
-      updateActiveSceneSection(editingSection, sectionDraft);
-      setEditingSection(null);
-      setSectionDraft('');
+    try {
+      await navigator.clipboard.writeText(videoUrl);
+      setShareStatus('Video link copied to clipboard!');
+      setTimeout(() => setShareStatus(''), 3000);
+    } catch {
+      setShareStatus('Video link ready to copy.');
+      setTimeout(() => setShareStatus(''), 3000);
     }
   };
 
-  const handleCancelEditSection = () => {
-    setEditingSection(null);
-    setSectionDraft('');
+  // Clean Reset for New Ad Film Project
+  const handleStartNewProject = () => {
+    setSessionId(null);
+    setDirectionData(null);
+    setPlotData(null);
+    setStoryData(null);
+    setScriptPayloadData(null);
+    setScenes([]);
+    setVideoUrl('');
+    setApprovedSummary([]);
+    setErrorMessage('');
+    setQualityFailures([]);
+    setCurrentStep('input');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Upload Tile Component
-  const UploadTile = ({ id, label, hint, accept, file, onChange, capture, icon: Icon = Upload }) => {
-    const inputRef = useRef(null);
-    return (
-      <div
-        style={{
-          border: '1px solid var(--border-default)',
-          borderRadius: 8,
-          padding: '10px 12px',
-          backgroundColor: file ? 'var(--bg-elevated)' : 'var(--bg-surface)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-        }}
-      >
+  // Reusable Upload Tile Component
+  const UploadTile = ({ id, label, hint, accept, file, onChange, icon: Icon, capture }) => (
+    <div
+      style={{
+        backgroundColor: 'var(--bg-elevated)',
+        border: file ? '1px solid var(--accent-primary)' : '1px dashed var(--border-default)',
+        borderRadius: 8,
+        padding: '12px 14px',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-          {file && file.previewUrl ? (
-            <img
-              src={file.previewUrl}
-              alt={file.name}
-              style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 6,
-                backgroundColor: file ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: file ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                flexShrink: 0,
-              }}
-            >
-              {file ? <Check size={16} strokeWidth={2.5} /> : <Icon size={14} />}
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 6,
+              backgroundColor: file ? 'var(--accent-subtle)' : 'var(--bg-surface)',
+              color: file ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={16} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {file ? file.name : label}
             </div>
-          )}
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
-            <div
-              style={{
-                fontSize: 11,
-                color: file ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {file ? file.name : hint}
+            <div style={{ fontSize: 11, color: file ? 'var(--success)' : 'var(--text-tertiary)', marginTop: 2 }}>
+              {file ? `${Math.round((file.data?.length * 0.75) / 1024) || 0} KB · Ready` : hint}
             </div>
           </div>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {file ? (
             <button
               type="button"
-              aria-label={`Remove ${label}`}
               onClick={() => onChange(null)}
               style={{
-                background: 'none',
-                border: 'none',
+                padding: '5px 10px',
+                borderRadius: 4,
                 fontSize: 11,
-                fontWeight: 600,
                 color: 'var(--error)',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--error-subtle)',
                 cursor: 'pointer',
-                padding: '4px 6px',
               }}
             >
               Remove
             </button>
           ) : (
-            <button
-              type="button"
-              id={id}
-              onClick={() => inputRef.current?.click()}
+            <label
+              htmlFor={id}
               style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
+                padding: '6px 12px',
                 borderRadius: 6,
-                padding: '5px 10px',
                 fontSize: 12,
                 fontWeight: 500,
-                color: 'var(--text-secondary)',
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
               }}
             >
-              Add
-            </button>
+              <Upload size={13} />
+              <span>Upload</span>
+            </label>
           )}
           <input
-            ref={inputRef}
+            id={id}
             type="file"
             accept={accept}
             capture={capture}
+            onChange={(e) => onChange(e.target.files[0])}
             style={{ display: 'none' }}
-            onChange={(e) => handleFileChange(e.target.files[0], onChange)}
           />
         </div>
       </div>
-    );
-  };
-
-  const currentParsedScene = parseScene(scenes[activeSceneIndex] || '', activeSceneIndex);
+      {file && file.previewUrl && (
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src={file.previewUrl}
+            alt="Preview"
+            style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-subtle)' }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Visual asset attached for AI rendering engine</span>
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--bg-app)',
-        color: 'var(--text-primary)',
-        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* ========================================================
-          TOP APPLICATION HEADER
-         ======================================================== */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-          backgroundColor: 'rgba(16, 18, 23, 0.95)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid var(--border-subtle)',
-          padding: '0 24px',
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-app)' }}>
+      {/* Offline Connectivity Notification Banner */}
+      {!isOnline && (
         <div
           style={{
-            maxWidth: 1080,
-            width: '100%',
-            margin: '0 auto',
+            backgroundColor: '#DC2626',
+            color: '#FFFFFF',
+            padding: '8px 16px',
+            fontSize: 13,
+            fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
+            justifyContent: 'center',
+            gap: 8,
+            zIndex: 9999,
           }}
         >
-          {/* Logo / Brand Identity */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <WifiOff size={16} />
+          <span>You're offline. Your progress is safe. Reconnect to continue.</span>
+        </div>
+      )}
+
+      {/* TOP APPLICATION HEADER */}
+      <header
+        style={{
+          borderBottom: '1px solid var(--border-subtle)',
+          backgroundColor: 'rgba(11, 12, 15, 0.92)',
+          backdropFilter: 'blur(12px)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          padding: '12px 24px',
+        }}
+      >
+        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div
               style={{
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
               }}
             >
-              <Film size={14} strokeWidth={2.5} />
+              <Clapperboard size={20} />
             </div>
-            <span
-              style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: 13,
-                fontWeight: 800,
-                letterSpacing: '0.12em',
-                color: 'var(--text-primary)',
-                textTransform: 'uppercase',
-              }}
-            >
-              CLEVERTIZE
-            </span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                  Clevertize
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-primary)',
+                    backgroundColor: 'var(--accent-subtle)',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                  }}
+                >
+                  Creative Intelligence v2
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                Product Spine Engine · 4-Checkpoint Production Workspace
+              </div>
+            </div>
           </div>
 
-          {/* Workflow Stepper: 01 Brief  02 Creative  03 Render */}
-          <nav aria-label="Stages" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Step 1 */}
-            <button
-              type="button"
-              onClick={() => {
-                if (!isGenerating && !isRendering) {
-                  setCurrentStage(1);
-                  setBrandFlowState('create');
-                }
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'none',
-                border: 'none',
-                cursor: isGenerating || isRendering ? 'default' : 'pointer',
-                padding: '4px 6px',
-                color: currentStage === 1 ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              <span
-                style={{
-                  color:
-                    currentStage === 1
-                      ? 'var(--accent-primary)'
-                      : currentStage > 1
-                      ? 'var(--success)'
-                      : 'var(--text-tertiary)',
-                }}
-              >
-                01 {currentStage > 1 ? '✓' : currentStage === 1 ? '•' : 'o'}
-              </span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: currentStage === 1 ? 600 : 500 }}>
-                Brief
-              </span>
-            </button>
-
-            <span style={{ color: 'var(--border-default)', fontSize: 11 }}>—</span>
-
-            {/* Step 2 */}
-            <button
-              type="button"
-              onClick={() => scenes.length > 0 && !isRendering && setCurrentStage(2)}
-              disabled={scenes.length === 0 || isRendering}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'none',
-                border: 'none',
-                cursor: scenes.length > 0 && !isRendering ? 'pointer' : 'default',
-                opacity: scenes.length === 0 ? 0.35 : 1,
-                padding: '4px 6px',
-                color: currentStage === 2 ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              <span
-                style={{
-                  color:
-                    currentStage === 2
-                      ? 'var(--accent-primary)'
-                      : currentStage > 2
-                      ? 'var(--success)'
-                      : 'var(--text-tertiary)',
-                }}
-              >
-                02 {currentStage > 2 ? '✓' : currentStage === 2 ? '•' : 'o'}
-              </span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: currentStage === 2 ? 600 : 500 }}>
-                Creative
-              </span>
-            </button>
-
-            <span style={{ color: 'var(--border-default)', fontSize: 11 }}>—</span>
-
-            {/* Step 3 */}
-            <button
-              type="button"
-              onClick={() => (videoUrl || isRendering) && setCurrentStage(3)}
-              disabled={!videoUrl && !isRendering}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'none',
-                border: 'none',
-                cursor: videoUrl || isRendering ? 'pointer' : 'default',
-                opacity: !videoUrl && !isRendering ? 0.35 : 1,
-                padding: '4px 6px',
-                color: currentStage === 3 ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              <span
-                style={{
-                  color:
-                    currentStage === 3
-                      ? 'var(--accent-primary)'
-                      : videoUrl
-                      ? 'var(--success)'
-                      : 'var(--text-tertiary)',
-                }}
-              >
-                03 {videoUrl ? '✓' : currentStage === 3 ? '•' : 'o'}
-              </span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: currentStage === 3 ? 600 : 500 }}>
-                Render
-              </span>
-            </button>
-          </nav>
-
-          {/* Right Brand Action / Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {brandName ? (
+          {/* Right Action: Active Brand Summary Pill & Profile Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {userContext.businessName && (
               <button
                 type="button"
                 onClick={() => setIsBrandModalOpen(true)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 10px',
+                  gap: 8,
+                  padding: '6px 12px',
                   borderRadius: 6,
                   backgroundColor: 'var(--bg-elevated)',
                   border: '1px solid var(--border-default)',
-                  color: 'var(--text-primary)',
-                  fontSize: 12,
-                  fontWeight: 500,
                   cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
                 }}
               >
-                <Building2 size={13} color="var(--accent-primary)" />
-                <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {brandName}
-                </span>
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>· Manage</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStage(1);
-                  setBrandFlowState('setup');
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 12px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--accent-subtle)',
-                  border: '1px solid var(--accent-primary)',
-                  color: 'var(--accent-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                <Building2 size={13} />
-                <span>+ Set up brand</span>
+                <Store size={14} style={{ color: 'var(--accent-primary)' }} />
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userContext.businessName}</span>
+                {userContext.town && <span style={{ color: 'var(--text-tertiary)' }}>· {userContext.town}</span>}
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleStartNewProject}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 6,
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={13} />
+              <span>New Film</span>
+            </button>
           </div>
         </div>
       </header>
 
-      {/* ========================================================
-          BRAND MANAGEMENT MODAL (DRAWER / MODAL)
-         ======================================================== */}
+      {/* WORKSPACE BREADCRUMB / CHECKPOINT PROGRESS TRACKER */}
+      <div style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', padding: '10px 24px' }}>
+        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <span style={{ fontWeight: currentStep === 'input' ? 700 : 500, color: currentStep === 'input' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+              1. Brief & Context
+            </span>
+            <span style={{ color: 'var(--border-strong)' }}>→</span>
+            <span style={{ fontWeight: currentStep === 'cp1_direction' ? 700 : 500, color: currentStep === 'cp1_direction' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Direction') ? 'var(--success)' : 'var(--text-tertiary)' }}>
+              2. Direction
+            </span>
+            <span style={{ color: 'var(--border-strong)' }}>→</span>
+            <span style={{ fontWeight: currentStep === 'cp2_plot' ? 700 : 500, color: currentStep === 'cp2_plot' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Plot') ? 'var(--success)' : 'var(--text-tertiary)' }}>
+              3. Plot Line
+            </span>
+            <span style={{ color: 'var(--border-strong)' }}>→</span>
+            <span style={{ fontWeight: currentStep === 'cp3_story' ? 700 : 500, color: currentStep === 'cp3_story' ? 'var(--accent-primary)' : approvedSummary.some((a) => a.stage === 'Story') ? 'var(--success)' : 'var(--text-tertiary)' }}>
+              4. Story Arc
+            </span>
+            <span style={{ color: 'var(--border-strong)' }}>→</span>
+            <span style={{ fontWeight: currentStep === 'storyboard' ? 700 : 500, color: currentStep === 'storyboard' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+              5. Storyboard & Quality Gate
+            </span>
+            <span style={{ color: 'var(--border-strong)' }}>→</span>
+            <span style={{ fontWeight: currentStep === 'render' ? 700 : 500, color: currentStep === 'render' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+              6. Video Render
+            </span>
+          </div>
+
+          {elapsedTime !== '00:00' && isBusy && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'var(--accent-primary)' }}>
+              <Clock size={12} />
+              <span>{elapsedTime}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* BRAND MODAL (MANAGE / RESET) */}
       {isBrandModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsBrandModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 20px',
-                borderBottom: '1px solid var(--border-subtle)',
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  Brand Profile
-                </h2>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  Set once for all videos created in this session.
-                </div>
-              </div>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setIsBrandModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 12,
+              maxWidth: 500,
+              width: '100%',
+              padding: 24,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Brand & Business Profile
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsBrandModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-tertiary)',
-                  cursor: 'pointer',
-                  padding: 4,
-                  display: 'flex',
-                }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  Brand / Business Name
+                  Business / Brand Name
                 </label>
                 <input
                   type="text"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  placeholder="e.g. Kanti Sweets"
-                  style={{ width: '100%', padding: '9px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                  value={userContext.businessName}
+                  onChange={(e) => updateUserContext('businessName', e.target.value)}
+                  placeholder="e.g. Sharma General Store, Kanti Sweets"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                 />
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  Website
+                  Town / City
                 </label>
                 <input
                   type="text"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  value={userContext.town}
+                  onChange={(e) => updateUserContext('town', e.target.value)}
+                  placeholder="e.g. Bangalore, Indore, Mumbai"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  Website (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={userContext.websiteUrl}
+                  onChange={(e) => updateUserContext('websiteUrl', e.target.value)}
                   placeholder="e.g. kantisweets.com"
-                  style={{ width: '100%', padding: '9px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                 />
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 10 }}>
-                  Brand Assets
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <UploadTile
-                    id="modalBrandGuidelines"
-                    label="Brand Guidelines"
-                    hint="PDF or DOCX document"
-                    accept=".pdf,.doc,.docx"
-                    file={brandFile}
-                    onChange={setBrandFile}
-                    icon={FileText}
-                  />
-                  <UploadTile
-                    id="modalShopPhoto"
-                    label="Business Photos"
-                    hint="Storefront, signboard, or interior"
-                    accept="image/*"
-                    capture="environment"
-                    file={shopPhoto}
-                    onChange={setShopPhoto}
-                    icon={ImageIcon}
-                  />
-                </div>
               </div>
             </div>
 
-            <div
-              style={{
-                padding: '14px 20px',
-                borderTop: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-surface)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Reset this brand profile and add a new brand?')) {
-                      handleResetBrandProfile();
-                    }
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: 'var(--error)',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                  }}
-                >
-                  <Trash2 size={13} />
-                  <span>Add New Brand / Reset</span>
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setIsBrandModalOpen(false)}
-                  style={{
-                    padding: '8px 14px',
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    saveBrandToStorage(brandName, websiteUrl);
-                    setIsBrandModalOpen(false);
-                  }}
-                  style={{
-                    padding: '8px 18px',
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 4px var(--accent-glow)',
-                  }}
-                >
-                  Save & Done
-                </button>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => setIsBrandModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Save Details
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================
-          MAIN WORKSPACE
-         ======================================================== */}
-      <main
-        style={{
-          flex: 1,
-          maxWidth: currentStage === 2 ? 1240 : 820,
-          width: '100%',
-          margin: '0 auto',
-          padding: currentStage === 2 ? '32px 24px 104px' : '36px 20px 64px',
-          transition: 'max-width 0.2s ease',
-        }}
-      >
-        {/* ========================================================
-            STAGE 1: STREAMLINED CREATE VIDEO SCREEN
-           ======================================================== */}
-        {currentStage === 1 && (
-          <div>
-            {/* Loading / Generating Hooks State (Product Spine Section 3 & 4) */}
-            {isGeneratingHooks ? (
-              <div
-                style={{
-                  maxWidth: 600,
-                  margin: '48px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  padding: '36px 32px',
-                  borderRadius: 14,
-                  border: '1px solid var(--border-default)',
-                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-                }}
-              >
-                {/* Header with active icon and phase badge */}
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      padding: 14,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
-                      marginBottom: 14,
-                      position: 'relative',
-                    }}
-                  >
-                    <Sparkles size={24} className="progress-indeterminate" />
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--accent-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      backgroundColor: 'var(--bg-elevated)',
-                      padding: '3px 10px',
-                      borderRadius: 12,
-                      border: '1px solid var(--border-subtle)',
-                      marginBottom: 10,
-                    }}
-                  >
-                    Phase {hookGenStep + 1} of {HOOK_STAGES.length} · {HOOK_STAGES[hookGenStep].phase}
-                  </div>
-
-                  <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-                    {HOOK_STAGES[hookGenStep].title}
-                  </h2>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    {HOOK_STAGES[hookGenStep].detail}
-                  </p>
-                </div>
-
-                {/* Multi-step progress bar */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${HOOK_STAGES.length}, 1fr)`, gap: 6, marginBottom: 8 }}>
-                    {HOOK_STAGES.map((st, i) => {
-                      const isDone = i < hookGenStep;
-                      const isCurrent = i === hookGenStep;
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: isDone
-                              ? 'var(--success)'
-                              : isCurrent
-                              ? 'var(--accent-primary)'
-                              : 'var(--bg-elevated)',
-                            transition: 'all 0.3s ease',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Live Pipeline Checklist */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 10,
-                    padding: '14px 18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                    marginBottom: 20,
-                  }}
-                >
-                  {HOOK_STAGES.map((st, i) => {
-                    const isDone = i < hookGenStep;
-                    const isCurrent = i === hookGenStep;
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: 12,
-                          color: isCurrent
-                            ? 'var(--text-primary)'
-                            : isDone
-                            ? 'var(--text-secondary)'
-                            : 'var(--text-tertiary)',
-                          fontWeight: isCurrent ? 600 : 400,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: '50%',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 10,
-                              fontFamily: "'JetBrains Mono', monospace",
-                              backgroundColor: isDone
-                                ? 'rgba(34, 197, 94, 0.15)'
-                                : isCurrent
-                                ? 'var(--accent-subtle)'
-                                : 'var(--bg-surface)',
-                              color: isDone
-                                ? 'var(--success)'
-                                : isCurrent
-                                ? 'var(--accent-primary)'
-                                : 'var(--text-tertiary)',
-                              border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                            }}
-                          >
-                            {isDone ? '✓' : i + 1}
-                          </span>
-                          <span>{st.phase}</span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: isDone ? 'var(--success)' : isCurrent ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                          }}
-                        >
-                          {isDone ? 'Complete' : isCurrent ? 'Formulating…' : 'Queued'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Engaging Hook Insight Ticker */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px dashed var(--border-default)',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                  }}
-                >
-                  <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                      Product Spine Rule
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      {HOOK_TIPS[hookTipIndex]}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : isGenerating ? (
-              <div
-                style={{
-                  maxWidth: 600,
-                  margin: '48px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  padding: '36px 32px',
-                  borderRadius: 14,
-                  border: '1px solid var(--border-default)',
-                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-                }}
-              >
-                {/* Header with active icon and phase badge */}
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      padding: 14,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
-                      marginBottom: 14,
-                      position: 'relative',
-                    }}
-                  >
-                    <Sparkles size={24} className="progress-indeterminate" />
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--accent-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      backgroundColor: 'var(--bg-elevated)',
-                      padding: '3px 10px',
-                      borderRadius: 12,
-                      border: '1px solid var(--border-subtle)',
-                      marginBottom: 10,
-                    }}
-                  >
-                    Phase {scriptGenStep + 1} of {SCRIPT_STAGES.length} · {SCRIPT_STAGES[scriptGenStep].phase}
-                  </div>
-
-                  <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-                    {SCRIPT_STAGES[scriptGenStep].title}
-                  </h2>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    {SCRIPT_STAGES[scriptGenStep].detail}
-                  </p>
-                </div>
-
-                {/* Multi-step progress bar */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${SCRIPT_STAGES.length}, 1fr)`, gap: 6, marginBottom: 8 }}>
-                    {SCRIPT_STAGES.map((st, i) => {
-                      const isDone = i < scriptGenStep;
-                      const isCurrent = i === scriptGenStep;
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: isDone
-                              ? 'var(--success)'
-                              : isCurrent
-                              ? 'var(--accent-primary)'
-                              : 'var(--bg-elevated)',
-                            transition: 'all 0.3s ease',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Live Pipeline Checklist */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 10,
-                    padding: '14px 18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                    marginBottom: 20,
-                  }}
-                >
-                  {SCRIPT_STAGES.map((st, i) => {
-                    const isDone = i < scriptGenStep;
-                    const isCurrent = i === scriptGenStep;
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: 12,
-                          color: isCurrent
-                            ? 'var(--text-primary)'
-                            : isDone
-                            ? 'var(--text-secondary)'
-                            : 'var(--text-tertiary)',
-                          fontWeight: isCurrent ? 600 : 400,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: '50%',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 10,
-                              fontFamily: "'JetBrains Mono', monospace",
-                              backgroundColor: isDone
-                                ? 'rgba(34, 197, 94, 0.15)'
-                                : isCurrent
-                                ? 'var(--accent-subtle)'
-                                : 'var(--bg-surface)',
-                              color: isDone
-                                ? 'var(--success)'
-                                : isCurrent
-                                ? 'var(--accent-primary)'
-                                : 'var(--text-tertiary)',
-                              border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                            }}
-                          >
-                            {isDone ? '✓' : i + 1}
-                          </span>
-                          <span>{st.phase}</span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: isDone ? 'var(--success)' : isCurrent ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                          }}
-                        >
-                          {isDone ? 'Complete' : isCurrent ? 'Generating…' : 'Queued'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Engaging Filmmaking & Creative Insight Ticker */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px dashed var(--border-default)',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                  }}
-                >
-                  <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                      Creative Insight
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      {SCRIPT_TIPS[scriptTipIndex]}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : brandFlowState === 'setup' ? (
-              /* ========================================================
-                 FIRST-TIME EXPERIENCE: SET UP YOUR BRAND
-                 ======================================================== */
-              <div
-                style={{
-                  maxWidth: 540,
-                  margin: '32px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 12,
-                  padding: '32px 36px',
-                }}
-              >
-                <div style={{ marginBottom: 24, textAlign: 'center' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      padding: 10,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <Building2 size={22} />
-                  </div>
-                  <h1
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      color: 'var(--text-primary)',
-                      margin: '0 0 6px',
-                    }}
-                  >
-                    Set up your brand
-                  </h1>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    Tell us a little about your business. We'll use this context to create more consistent videos.
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  <div>
-                    <label
-                      htmlFor="setupBrandName"
-                      style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                    >
-                      Brand Name <span style={{ color: 'var(--error)' }}>*</span>
-                    </label>
-                    <input
-                      id="setupBrandName"
-                      type="text"
-                      autoFocus
-                      value={brandName}
-                      onChange={(e) => {
-                        setBrandName(e.target.value);
-                        setValidationError('');
-                      }}
-                      placeholder="e.g. Kanti Sweets"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: 14,
-                        backgroundColor: 'var(--bg-elevated)',
-                        borderColor: validationError && !brandName.trim() ? 'var(--error)' : 'var(--border-default)',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="setupWebsite"
-                      style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}
-                    >
-                      Website
-                    </label>
-                    <input
-                      id="setupWebsite"
-                      type="text"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      placeholder="e.g. kantisweets.com"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: 14,
-                        backgroundColor: 'var(--bg-elevated)',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-tertiary)',
-                        marginBottom: 10,
-                      }}
-                    >
-                      Brand Assets
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div>
-                        <UploadTile
-                          id="setupBrandDoc"
-                          label="Brand Guidelines"
-                          hint="PDF or DOCX document"
-                          accept=".pdf,.doc,.docx"
-                          file={brandFile}
-                          onChange={setBrandFile}
-                          icon={FileText}
-                        />
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, paddingLeft: 4 }}>
-                          Optional. Upload your brand guidelines so the AI can follow your visual identity.
-                        </div>
-                      </div>
-
-                      <div>
-                        <UploadTile
-                          id="setupShopPhoto"
-                          label="Business Photos"
-                          hint="Storefront, signboard, or interior"
-                          accept="image/*"
-                          capture="environment"
-                          file={shopPhoto}
-                          onChange={setShopPhoto}
-                          icon={ImageIcon}
-                        />
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, paddingLeft: 4 }}>
-                          Optional. Help the AI understand your store, workspace or physical environment.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {validationError && (
-                    <div
-                      role="alert"
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: 'var(--error-subtle)',
-                        border: '1px solid var(--error)',
-                        borderRadius: 6,
-                        color: 'var(--error)',
-                        fontSize: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <AlertCircle size={14} />
-                      <span>{validationError}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!brandName.trim()) {
-                          setValidationError('Please enter your brand or business name.');
-                          return;
-                        }
-                        saveBrandToStorage(brandName, websiteUrl);
-                        setValidationError('');
-                        setBrandFlowState('confirmation');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 20px',
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <span>Continue</span>
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValidationError('');
-                        setBrandFlowState('create');
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-tertiary)',
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        padding: '6px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {brandName.trim() ? 'Cancel & back to video' : 'Skip for now'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : brandFlowState === 'confirmation' ? (
-              /* ========================================================
-                 TRANSITION: BRAND READY CONFIRMATION
-                 ======================================================== */
-              <div
-                style={{
-                  maxWidth: 500,
-                  margin: '48px auto',
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 12,
-                  padding: '36px 32px',
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    padding: 12,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--success-subtle)',
-                    color: 'var(--success)',
-                    marginBottom: 16,
-                  }}
-                >
-                  <Check size={24} strokeWidth={2.5} />
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--success)', marginBottom: 4 }}>
-                  Brand Ready
-                </div>
-                <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
-                  {brandName || 'Your Brand'}
-                </h1>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
-                  Brand profile saved for this session. You can now create your video.
-                </p>
-
-                {/* Status List */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    marginBottom: 24,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Website</span>
-                    <span style={{ color: websiteUrl ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: websiteUrl ? 600 : 400 }}>
-                      {websiteUrl ? `Connected (${websiteUrl})` : 'Not added'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Brand guidelines</span>
-                    <span style={{ color: brandFile ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: brandFile ? 600 : 400 }}>
-                      {brandFile ? `Added (${brandFile.name})` : 'Not added'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Business photos</span>
-                    <span style={{ color: shopPhoto ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: shopPhoto ? 600 : 400 }}>
-                      {shopPhoto ? `Added (${shopPhoto.name})` : 'Not added'}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setBrandFlowState('setup')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Edit Brand
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBrandFlowState('create')}
-                    style={{
-                      flex: 2,
-                      padding: '12px 20px',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <span>Create Video</span>
-                    <ArrowRight size={15} />
-                  </button>
-                </div>
-              </div>
-            ) : hooks && hooks.length === 0 ? (
-              /* ========================================================
-                 STREAMLINED CREATE VIDEO WORKSPACE (TAB-BASED SELECTIONS)
-                 ======================================================== */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-                {/* 1. BRAND CONTEXT BANNER */}
-                {!brandName.trim() ? (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px dashed var(--accent-primary)',
-                      borderRadius: 10,
-                      padding: '14px 18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, flex: 1 }}>
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 8,
-                          backgroundColor: 'var(--accent-subtle)',
-                          color: 'var(--accent-primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Building2 size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          Brand setup skipped (Generic Creative)
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                          Want your business name spoken in dialogue and styled with your storefront colors?
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setBrandFlowState('setup')}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#ffffff',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        flexShrink: 0,
-                        boxShadow: '0 1px 4px var(--accent-glow)',
-                      }}
-                    >
-                      <Building2 size={13} />
-                      <span>Set Up Brand Now</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: 10,
-                      padding: '12px 18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                        Creating for
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px' }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {brandName}
-                        </span>
-                        {websiteUrl && (
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            · {websiteUrl}
-                          </span>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                          <span>
-                            Guidelines: {brandFile ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'Not added'}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            Photos: {shopPhoto ? <strong style={{ color: 'var(--success)' }}>✓ Added</strong> : 'Not added'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => setIsBrandModalOpen(true)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
-                          color: 'var(--text-secondary)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Manage Details
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm('Switch brand profile? You can enter a new brand name, website, and assets.')) {
-                            handleResetBrandProfile();
-                          }
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          backgroundColor: 'transparent',
-                          border: '1px solid var(--border-default)',
-                          color: 'var(--text-tertiary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 5,
-                        }}
-                      >
-                        <Plus size={13} />
-                        <span>Add New Brand</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. THE SCRIPT IDEA (DOMINANT BRIEF) */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 10,
-                    padding: '20px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <label htmlFor="briefInput" style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>
-                      What is your video idea? <span style={{ color: 'var(--error)' }}>*</span>
-                    </label>
-
-                    {micSupported && (
-                      <button
-                        type="button"
-                        onClick={toggleVoiceInput}
-                        className={isListening ? 'mic-recording' : ''}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          border: isListening ? '1px solid var(--error)' : '1px solid var(--border-default)',
-                          backgroundColor: isListening ? 'var(--error-subtle)' : 'var(--bg-elevated)',
-                          color: isListening ? 'var(--error)' : 'var(--text-secondary)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {isListening ? <MicOff size={13} /> : <Mic size={13} />}
-                        <span>{isListening ? 'Stop' : 'Dictate'}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
-                    Describe your product, discount offer, or celebration in 1–2 sentences.
-                  </p>
-
-                  {micHint && (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: isListening ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                        padding: '6px 10px',
-                        backgroundColor: 'var(--bg-elevated)',
-                        borderRadius: 6,
-                        marginBottom: 10,
-                      }}
-                    >
-                      {micHint}
-                    </div>
-                  )}
-
-                  <textarea
-                    id="briefInput"
-                    rows={4}
-                    value={brief}
-                    onChange={(e) => {
-                      setBrief(e.target.value);
-                      setValidationError('');
-                    }}
-                    placeholder="e.g. Need a festive Diwali video for our sweets gift box, announcing 50% discount and fresh assorted sweets..."
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      fontSize: 14,
-                      lineHeight: 1.6,
-                      color: 'var(--text-primary)',
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: validationError && !brief.trim() ? '1px solid var(--error)' : '1px solid var(--border-subtle)',
-                      borderRadius: 8,
-                      resize: 'vertical',
-                    }}
-                  />
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    {brief.length} characters
-                  </div>
-                </div>
-
-                {/* 3. SCRIPT OPTIONS AS ONE-CLICK TABS */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 10,
-                    padding: '20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 18,
-                  }}
-                >
-                  {/* Row: Language and Duration side-by-side tabs */}
-                  <div className="responsive-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {/* Language Tab */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        Spoken Language
-                      </div>
-                      <div className="tab-group">
-                        <button
-                          type="button"
-                          onClick={() => setLanguage('English')}
-                          className={`tab-pill ${language === 'English' ? 'active-accent' : ''}`}
-                        >
-                          English
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLanguage('Hindi')}
-                          className={`tab-pill ${language === 'Hindi' ? 'active-accent' : ''}`}
-                        >
-                          Hindi (Romanized)
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Duration Tab */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        Duration & Scenes
-                      </div>
-                      <div className="tab-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                        <button
-                          type="button"
-                          onClick={() => setDuration('10s')}
-                          className={`tab-pill ${duration === '10s' ? 'active-accent' : ''}`}
-                          style={{ padding: '8px 4px', fontSize: 12 }}
-                        >
-                          <span>10 sec</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDuration('15s')}
-                          className={`tab-pill ${duration === '15s' ? 'active-accent' : ''}`}
-                          style={{ padding: '8px 4px', fontSize: 12 }}
-                        >
-                          <span>15 sec</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDuration('20s')}
-                          className={`tab-pill ${duration === '20s' ? 'active-accent' : ''}`}
-                          style={{ padding: '8px 4px', fontSize: 12 }}
-                        >
-                          <span>20 sec</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDuration('25s')}
-                          className={`tab-pill ${duration === '25s' ? 'active-accent' : ''}`}
-                          style={{ padding: '8px 4px', fontSize: 12 }}
-                        >
-                          <span>25 sec</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Ad Angle / Purpose Tabs */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                        Ad Focus & Call-To-Action
-                      </div>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                        Shapes story arc & final voiceover line
-                      </span>
-                    </div>
-
-                    <div className="responsive-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {AD_GOAL_PRESETS.map((preset) => {
-                        const Icon = preset.icon;
-                        const isSelected = selectedGoalId === preset.id;
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            onClick={() => setSelectedGoalId(preset.id)}
-                            style={{
-                              padding: '12px 10px',
-                              borderRadius: 8,
-                              border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                              backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              textAlign: 'center',
-                              gap: 6,
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <Icon size={16} />
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                fontWeight: isSelected ? 700 : 500,
-                                color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                              }}
-                            >
-                              {preset.label}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Optional Product Photo Upload */}
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                      Product Photo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)', textTransform: 'none' }}>(Optional)</span>
-                    </div>
-                    <UploadTile
-                      id="streamlinedProductUpload"
-                      label="Product Photo"
-                      hint="Upload product to feature in video scenes"
-                      accept="image/*"
-                      file={productImage}
-                      onChange={setProductImage}
-                      icon={ImageIcon}
-                    />
-                  </div>
-                </div>
-
-                {/* 4. VALIDATION & GENERATE CTA */}
-                <div>
-                  {validationError && (
-                    <div
-                      role="alert"
-                      style={{
-                        padding: '10px 14px',
-                        backgroundColor: 'var(--error-subtle)',
-                        border: '1px solid var(--error)',
-                        borderRadius: 8,
-                        color: 'var(--error)',
-                        fontSize: 13,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginBottom: 12,
-                      }}
-                    >
-                      <AlertCircle size={15} />
-                      <span>{validationError}</span>
-                    </div>
-                  )}
-
-                  {errorMessage && (
-                    <div
-                      role="alert"
-                      style={{
-                        padding: '10px 14px',
-                        backgroundColor: 'var(--error-subtle)',
-                        border: '1px solid var(--error)',
-                        borderRadius: 8,
-                        color: 'var(--error)',
-                        fontSize: 13,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginBottom: 12,
-                      }}
-                    >
-                      <AlertCircle size={15} />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleGenerateHooks}
-                    style={{
-                      width: '100%',
-                      padding: '14px 24px',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      boxShadow: '0 2px 8px var(--accent-glow)',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                  >
-                    <span>Generate Creative Hooks</span>
-                    <Sparkles size={16} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* ========================================================
-                 STAGE 1.5: CHOOSE CREATIVE HOOK (PRODUCT SPINE SECTION 4)
-                 ======================================================== */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {/* Header with back action */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                          color: 'var(--accent-primary)',
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}
-                      >
-                        Step 2 · Creative Hook
-                      </span>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '2px 8px',
-                          borderRadius: 999,
-                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                          color: 'var(--success)',
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Check size={11} strokeWidth={2.5} />
-                        3 Hooks Ready
-                      </span>
-                    </div>
-                    <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                      Choose Your Story Opening
-                    </h1>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-                      The first 3 seconds determine viewer retention. Select the angle that fits your campaign best.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setHooks([])}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '8px 14px',
-                      borderRadius: 6,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <ArrowLeft size={13} />
-                    <span>Edit Brief</span>
-                  </button>
-                </div>
-
-                {/* 3 Hook Cards Grid */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {hooks.map((h, idx) => {
-                    const isSelected = selectedHook?.id === h.id;
-                    return (
-                      <div
-                        key={h.id || idx}
-                        onClick={() => {
-                          setSelectedHook(h);
-                          setCustomHookLine(h.hookLine);
-                          setIsEditingHookLine(false);
-                        }}
-                        style={{
-                          padding: '18px 20px',
-                          borderRadius: 10,
-                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                          boxShadow: isSelected ? '0 4px 16px var(--accent-glow)' : 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.18s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 12,
-                        }}
-                      >
-                        {/* Top row: Archetype and Selection radio */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span
-                              style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: '50%',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 11,
-                                fontFamily: "'JetBrains Mono', monospace",
-                                fontWeight: 700,
-                                backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                              }}
-                            >
-                              0{idx + 1}
-                            </span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                              {h.archetype}
-                            </span>
-                            {h.angle && (
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  color: 'var(--text-tertiary)',
-                                  backgroundColor: 'var(--bg-elevated)',
-                                  padding: '2px 8px',
-                                  borderRadius: 4,
-                                }}
-                              >
-                                {h.angle}
-                              </span>
-                            )}
-                          </div>
-
-                          <div
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: '50%',
-                              border: isSelected ? '5px solid var(--accent-primary)' : '2px solid var(--border-default)',
-                              backgroundColor: '#ffffff',
-                            }}
-                          />
-                        </div>
-
-                        {/* Spoken Hook Line */}
-                        <div
-                          style={{
-                            padding: '10px 14px',
-                            borderRadius: 6,
-                            backgroundColor: 'var(--bg-elevated)',
-                            borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid var(--border-subtle)',
-                          }}
-                        >
-                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 4 }}>
-                            Spoken Opening Line ({language})
-                          </div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                            "{isSelected && customHookLine ? customHookLine : h.hookLine}"
-                          </div>
-                        </div>
-
-                        {/* Physical Visual Action */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          <Camera size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
-                          <div>
-                            <strong style={{ color: 'var(--text-primary)' }}>Opening Action: </strong>
-                            {h.visualAction}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Edit selected hook option */}
-                {selectedHook && (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 8,
-                      padding: '12px 16px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        Customize Selected Hook Line (Optional)
-                      </span>
-                      {!isEditingHookLine ? (
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingHookLine(true)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--accent-primary)',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          <Edit2 size={12} />
-                          <span>Edit Line</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingHookLine(false)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--success)',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Done
-                        </button>
-                      )}
-                    </div>
-
-                    {isEditingHookLine ? (
-                      <textarea
-                        rows={2}
-                        value={customHookLine}
-                        onChange={(e) => setCustomHookLine(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          fontSize: 13,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--accent-primary)',
-                          borderRadius: 6,
-                          color: 'var(--text-primary)',
-                        }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                        Click "Edit Line" if you want to tweak the exact words spoken in the opening scene.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Error Banner */}
-                {errorMessage && (
-                  <div
-                    role="alert"
-                    style={{
-                      padding: '10px 14px',
-                      backgroundColor: 'var(--error-subtle)',
-                      border: '1px solid var(--error)',
-                      borderRadius: 8,
-                      color: 'var(--error)',
-                      fontSize: 13,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <AlertCircle size={15} />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
-
-                {/* Confirm & Continue to Storyboard CTA */}
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateHooks()}
-                    style={{
-                      flex: 1,
-                      padding: '13px 18px',
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <RotateCcw size={14} />
-                    <span>Regenerate Hooks</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateScriptWithHook(selectedHook)}
-                    style={{
-                      flex: 2,
-                      padding: '14px 24px',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      boxShadow: '0 2px 8px var(--accent-glow)',
-                    }}
-                  >
-                    <span>Build Storyboard Script</span>
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
+      {/* MAIN VIEW CONTAINER */}
+      <main style={{ flex: 1, maxWidth: currentStep === 'storyboard' ? 1240 : 860, width: '100%', margin: '0 auto', padding: '32px 20px 80px' }}>
+        {/* GLOBAL ERROR BANNER */}
+        {errorMessage && (
+          <div
+            role="alert"
+            style={{
+              padding: '12px 16px',
+              backgroundColor: 'var(--error-subtle)',
+              border: '1px solid var(--error)',
+              borderRadius: 8,
+              color: 'var(--error)',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              marginBottom: 20,
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600 }}>{errorMessage}</div>
+              {qualityFailures.length > 0 && (
+                <ul style={{ margin: '8px 0 0', paddingLeft: 16, fontSize: 12, lineHeight: 1.5 }}>
+                  {qualityFailures.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
 
         {/* ========================================================
-            STAGE 2: CREATIVE REVIEW (EDITORIAL AI STORYBOARD WORKSPACE)
-           ======================================================== */}
-        {currentStage === 2 && (
-          <div>
-            {/* STAGE HEADER WITH CONTEXT PILLS */}
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
+            STEP 1: CREATIVE INPUT & BUSINESS CONTEXT WORKSPACE
+            ======================================================== */}
+        {currentStep === 'input' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Stage Title */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>
+                Stage 01 · Creative Brief & Business Profile
+              </div>
+              <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                Tell Us What You Want to Create
+              </h1>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Our Creative Director intelligence evaluates your local business, audience tensions, and festival moments to formulate high-retention commercials.
+              </p>
+            </div>
+
+            {/* 1. Business Identity Card */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 14 }}>
+                1. Your Business Identity
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                    Business / Brand Name <span style={{ color: 'var(--error)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.businessName}
+                    onChange={(e) => updateUserContext('businessName', e.target.value)}
+                    placeholder="e.g. Kanti Sweets, Sharma General Store"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                    Business Category <span style={{ color: 'var(--error)' }}>*</span>
+                  </label>
+                  <select
+                    value={userContext.businessType}
+                    onChange={(e) => updateUserContext('businessType', e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                  >
+                    {BUSINESS_TYPE_PRESETS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {userContext.businessType === 'Other' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                      Specify Business Type <span style={{ color: 'var(--error)' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={userContext.customBusinessType}
+                      onChange={(e) => updateUserContext('customBusinessType', e.target.value)}
+                      placeholder="e.g. Luxury Handloom Store"
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                    Town / City <span style={{ color: 'var(--error)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.town}
+                    onChange={(e) => updateUserContext('town', e.target.value)}
+                    placeholder="e.g. Bangalore, Indore, Mumbai"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                    Neighborhood / Area <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.area}
+                    onChange={(e) => updateUserContext('area', e.target.value)}
+                    placeholder="e.g. Indiranagar, Palasia"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Creative Brief / Video Idea Card */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <label htmlFor="briefInput" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>
+                  2. Video Idea / Campaign Brief <span style={{ color: 'var(--error)' }}>*</span>
+                </label>
+
+                {micSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleVoiceInput}
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--accent-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      border: isListening ? '1px solid var(--error)' : '1px solid var(--border-default)',
+                      backgroundColor: isListening ? 'var(--error-subtle)' : 'var(--bg-elevated)',
+                      color: isListening ? 'var(--error)' : 'var(--text-secondary)',
                     }}
                   >
-                    02 · Storyboard Studio
+                    {isListening ? <MicOff size={13} /> : <Mic size={13} />}
+                    <span>{isListening ? 'Stop' : 'Dictate'}</span>
+                  </button>
+                )}
+              </div>
+
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 10px' }}>
+                Describe your promotion, hero product, festive offer, or relatable customer situation.
+              </p>
+
+              {micHint && (
+                <div style={{ fontSize: 12, color: 'var(--accent-primary)', padding: '6px 10px', backgroundColor: 'var(--bg-elevated)', borderRadius: 6, marginBottom: 10 }}>
+                  {micHint}
+                </div>
+              )}
+
+              <textarea
+                id="briefInput"
+                rows={4}
+                value={userContext.brief}
+                onChange={(e) => {
+                  updateUserContext('brief', e.target.value);
+                  setValidationError('');
+                }}
+                placeholder="e.g. Announce a festive Diwali gift sweet box with 50% discount and assorted dry fruits. Highlight fresh quality over boring generic gift boxes..."
+                style={{ width: '100%', padding: '12px 14px', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }}
+              />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Special Offer / Discount <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.offer}
+                    onChange={(e) => updateUserContext('offer', e.target.value)}
+                    placeholder="e.g. 50% off on gift boxes till Sunday"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Specific Occasion / Festival <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.occasion}
+                    onChange={(e) => updateUserContext('occasion', e.target.value)}
+                    placeholder="e.g. Diwali (leave blank to auto-detect calendar)"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Creative Constraints & Character Casting */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 6 }}>
+                3. Creative Casting & Setting Preferences <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
+                Specify characters or locations to guide the story. The AI ensures strict visual continuity across all scenes.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Lead Character / Speaker
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.leadCharacter}
+                    onChange={(e) => updateUserContext('leadCharacter', e.target.value)}
+                    placeholder="e.g. Young female architect in her 30s"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Supporting Character
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.supportingCharacter}
+                    onChange={(e) => updateUserContext('supportingCharacter', e.target.value)}
+                    placeholder="e.g. Her husband, or smiling shop owner"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Storefront / Interior Setting
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.environment}
+                    onChange={(e) => updateUserContext('environment', e.target.value)}
+                    placeholder="e.g. Bright contemporary sweet boutique counter"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Language & Ad Focus Options */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 14 }}>
+                4. Dialogue Language & Commercial Goal
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                    Dialogue Language
+                  </label>
+                  <div className="tab-group">
+                    {['Hindi', 'Hinglish', 'English', 'Marathi'].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => updateUserContext('language', lang)}
+                        className={`tab-pill ${userContext.language === lang ? 'active-accent' : ''}`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                    Dialogue Script Mode
+                  </label>
+                  <div className="tab-group">
+                    <button
+                      type="button"
+                      onClick={() => updateUserContext('scriptMode', 'devanagari')}
+                      className={`tab-pill ${userContext.scriptMode === 'devanagari' ? 'active-accent' : ''}`}
+                    >
+                      Devanagari (Standard)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateUserContext('scriptMode', 'roman')}
+                      className={`tab-pill ${userContext.scriptMode === 'roman' ? 'active-accent' : ''}`}
+                    >
+                      Romanized (Test)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  Commercial Angle & CTA Focus
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                  {AD_GOAL_PRESETS.map((preset) => {
+                    const Icon = preset.icon;
+                    const isSelected = userContext.selectedGoalId === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => updateUserContext('selectedGoalId', preset.id)}
+                        style={{
+                          padding: '12px 10px',
+                          borderRadius: 8,
+                          border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Icon size={16} style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-tertiary)' }} />
+                        <span style={{ fontSize: 12, fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                          {preset.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Visual Asset Uploads */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 12 }}>
+                5. Visual Brand Assets <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                <UploadTile
+                  id="productPhotoInput"
+                  label="Hero Product Photo"
+                  hint="Attached to video render and Claude vision"
+                  accept="image/*"
+                  file={userContext.productPhoto}
+                  onChange={(f) => handleFileUpload(f, 'productPhoto')}
+                  icon={ImageIcon}
+                />
+                <UploadTile
+                  id="shopPhotoInput"
+                  label="Storefront / Shop Photo"
+                  hint="Used to match setting and interior lighting"
+                  accept="image/*"
+                  file={userContext.shopPhoto}
+                  onChange={(f) => handleFileUpload(f, 'shopPhoto')}
+                  icon={Store}
+                  capture="environment"
+                />
+                <UploadTile
+                  id="logoInput"
+                  label="Brand Logo"
+                  hint="Used for final video branded end frame"
+                  accept="image/png,image/jpeg,image/webp"
+                  file={userContext.logo}
+                  onChange={(f) => handleFileUpload(f, 'logo')}
+                  icon={Building2}
+                />
+              </div>
+            </div>
+
+            {/* Launch CTA */}
+            {validationError && (
+              <div style={{ padding: '10px 14px', backgroundColor: 'var(--error-subtle)', border: '1px solid var(--error)', borderRadius: 8, color: 'var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle size={15} />
+                <span>{validationError}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={handleStartCreativeEngine}
+              style={{
+                width: '100%',
+                padding: '16px 24px',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: isBusy ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                boxShadow: '0 2px 10px var(--accent-glow)',
+              }}
+            >
+              <span>Launch Creative Intelligence Engine</span>
+              <Sparkles size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* ========================================================
+            INTERACTIVE PROGRESS OVERLAY DURING CHECKPOINT TRANSITIONS
+            ======================================================== */}
+        {isBusy && (
+          <div
+            style={{
+              maxWidth: 600,
+              margin: '40px auto',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 14,
+              padding: '36px 32px',
+              textAlign: 'center',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                padding: 14,
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-subtle)',
+                color: 'var(--accent-primary)',
+                marginBottom: 16,
+              }}
+            >
+              <Sparkles size={24} className="progress-indeterminate" />
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+              {activeCheckpointName}
+            </div>
+
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
+              {currentStep === 'cp3_story'
+                ? SCRIPT_GEN_STAGES[scriptGenStep]?.title || 'Writing Script…'
+                : 'Formulating Creative Intelligence…'}
+            </h2>
+
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
+              {currentStep === 'cp3_story'
+                ? SCRIPT_GEN_STAGES[scriptGenStep]?.detail || 'Evaluating continuity and Section 8 gate rules.'
+                : 'Evaluating customer frictions, hook patterns, and local brand voice.'}
+            </p>
+
+            <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, border: '1px dashed var(--border-default)', textAlign: 'left', display: 'flex', gap: 10 }}>
+              <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                  Creative Director Rule
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {SCRIPT_GEN_TIPS[scriptTipIndex]}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            CHECKPOINT 1: CREATIVE DIRECTION & CUSTOMER TENSIONS
+            ======================================================== */}
+        {currentStep === 'cp1_direction' && !isBusy && directionData && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>
+                  Checkpoint 01 · Creative Direction
+                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Customer Tension & Occasion
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  The AI evaluated 8 insight lenses for <strong style={{ color: 'var(--text-primary)' }}>{userContext.businessName}</strong>. Select the customer worry or friction your film will address.
+                </p>
+              </div>
+
+              {checkpointSeconds && (
+                <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                  Formulated in {checkpointSeconds}s
+                </span>
+              )}
+            </div>
+
+            {/* Festival Calendar Context Card */}
+            {directionData.festival && (
+              <div
+                style={{
+                  padding: '14px 18px',
+                  borderRadius: 10,
+                  backgroundColor: directionData.festival.use ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-elevated)',
+                  border: directionData.festival.use ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                <Sparkles size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                    {directionData.festival.use ? `Festival Context: ${directionData.festival.name}` : 'Everyday Commercial Setting'}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {directionData.festival.owner}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tension Options */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                Top 3 Customer Tensions (Ranked by Emotional Engagement):
+              </div>
+
+              {directionData.tensions.map((t, idx) => {
+                const isSelected = selectedDirectionIdx === idx;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedDirectionIdx(idx)}
+                    style={{
+                      padding: '18px 20px',
+                      borderRadius: 10,
+                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        border: isSelected ? '6px solid var(--accent-primary)' : '2px solid var(--border-default)',
+                        backgroundColor: '#ffffff',
+                        marginTop: 2,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Option 0{idx + 1}
+                        </span>
+                        {idx === 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                            Recommended
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                        "{t.owner}"
+                      </div>
+                      {t.en && t.en !== t.owner && (
+                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                          {t.en}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Change Something Expandable */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Is this the right direction, or would you like to modify it?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsChangeOpen(!isChangeOpen)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {isChangeOpen ? 'Cancel' : 'Change Something'}
+                </button>
+              </div>
+
+              {isChangeOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <textarea
+                    rows={2}
+                    value={changeNote}
+                    onChange={(e) => setChangeNote(e.target.value)}
+                    placeholder="e.g. Focus on quality and freshness instead of pricing..."
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                  />
+                  {changeError && <div style={{ fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{changeError}</div>}
+                  <button
+                    type="button"
+                    onClick={() => handleSendChangeRequest('direction')}
+                    style={{ marginTop: 8, padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Submit Revision
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm & Next Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                onClick={handleApproveDirection}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>Approve Direction & Proceed to Plot (Option 0{selectedDirectionIdx + 1})</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            CHECKPOINT 2: PLOT LINE & VIRAL HOOKS
+            ======================================================== */}
+        {currentStep === 'cp2_plot' && !isBusy && plotData && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    Checkpoint 02 · Plot Line
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Check size={12} /> Direction Approved
+                  </span>
+                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Choose Your Story Plot & Hook
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Each plot line establishes a complete one-line mini-story (Hook → Conflict → Resolution) paired with a high-retention creator hook pattern.
+                </p>
+              </div>
+
+              {checkpointSeconds && (
+                <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                  Formulated in {checkpointSeconds}s
+                </span>
+              )}
+            </div>
+
+            {/* 3 Plot Option Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {plotData.plots.map((p, idx) => {
+                const isSelected = selectedPlotIdx === idx;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedPlotIdx(idx)}
+                    style={{
+                      padding: '20px',
+                      borderRadius: 10,
+                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Plot Option 0{idx + 1}
+                        </span>
+                        {idx === 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                            Recommended
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4 }}>
+                          Hook: {p.hook_pattern}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          border: isSelected ? '5px solid var(--accent-primary)' : '2px solid var(--border-default)',
+                          backgroundColor: '#ffffff',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      "{p.owner}"
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <span>Library: {p.hook_library || 'Indian Instagram Creators'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Change Something Expandable */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Would you like to adjust these plot angles?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsChangeOpen(!isChangeOpen)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {isChangeOpen ? 'Cancel' : 'Change Something'}
+                </button>
+              </div>
+
+              {isChangeOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <textarea
+                    rows={2}
+                    value={changeNote}
+                    onChange={(e) => setChangeNote(e.target.value)}
+                    placeholder="e.g. Make it about unboxing the sweets rather than visiting the store..."
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                  />
+                  {changeError && <div style={{ fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{changeError}</div>}
+                  <button
+                    type="button"
+                    onClick={() => handleSendChangeRequest('plot')}
+                    style={{ marginTop: 8, padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Submit Revision
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm & Next Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                onClick={handleApprovePlot}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>Approve Plot & Build Story Arc (Option 0{selectedPlotIdx + 1})</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            CHECKPOINT 3: STORY ARC & FORMAT
+            ======================================================== */}
+        {currentStep === 'cp3_story' && !isBusy && storyData && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    Checkpoint 03 · Story Arc & Format
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Check size={12} /> Direction & Plot Approved
+                  </span>
+                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Review 4-Scene Story Progression
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  The AI has structured your film into the {storyData.format} format across one continuous setting.
+                </p>
+              </div>
+
+              {checkpointSeconds && (
+                <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                  Formulated in {checkpointSeconds}s
+                </span>
+              )}
+            </div>
+
+            {/* Format & Narrative Anchors Card */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', backgroundColor: 'var(--accent-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: 4 }}>
+                  Format: {storyData.format}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {storyData.format_owner || storyData.format_reason}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                    📍 Single Location
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {storyData.location || 'The business storefront'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                    👥 Characters
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {(storyData.characters || []).join(' · ') || '2 characters'}
+                  </div>
+                </div>
+
+                {storyData.through_line && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                      🧵 Story Through-Line
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      {storyData.through_line}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Opening Spoken Hook Line */}
+            {storyData.hook_line && (
+              <div style={{ padding: '14px 18px', borderRadius: 8, backgroundColor: 'var(--bg-elevated)', borderLeft: '3px solid var(--accent-primary)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                  Opening Spoken Hook Line (Scene 1)
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  "{storyData.hook_line}"
+                </div>
+              </div>
+            )}
+
+            {/* 4 Scene Beat Breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                4-Scene Progression Roadmap:
+              </div>
+
+              {storyData.scenes.map((sc, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: '14px 18px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                  }}
+                >
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      backgroundColor: 'var(--bg-elevated)',
+                      color: 'var(--accent-primary)',
+                      marginTop: 2,
+                    }}
+                  >
+                    0{i + 1} {sc.beat}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {sc.owner}
+                    </div>
+                    {sc.en && sc.en !== sc.owner && (
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                        {sc.en}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Change Something Expandable */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Would you like to adjust this story progression?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsChangeOpen(!isChangeOpen)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {isChangeOpen ? 'Cancel' : 'Change Something'}
+                </button>
+              </div>
+
+              {isChangeOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <textarea
+                    rows={2}
+                    value={changeNote}
+                    onChange={(e) => setChangeNote(e.target.value)}
+                    placeholder="e.g. End with a callback to the sweet box in Scene 4..."
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                  />
+                  {changeError && <div style={{ fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{changeError}</div>}
+                  <button
+                    type="button"
+                    onClick={() => handleSendChangeRequest('story')}
+                    style={{ marginTop: 8, padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Submit Revision
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm & Next Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                onClick={handleApproveStory}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>Approve Story & Write Production Script</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            STAGE 2: STORYBOARD STUDIO (SCRIPT REVIEW & APPROVAL)
+            ======================================================== */}
+        {currentStep === 'storyboard' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header with Gate Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    Stage 02 · Storyboard Studio
                   </span>
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 5,
+                      gap: 4,
                       padding: '2px 8px',
                       borderRadius: 999,
                       backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.25)',
                       color: 'var(--success)',
                       fontSize: 11,
                       fontWeight: 600,
                     }}
                   >
-                    <Check size={11} strokeWidth={2.5} />
-                    Creative Ready for Review
+                    <ShieldCheck size={12} />
+                    Section 8 Quality Gate Passed {scriptPayloadData?.meta?.attempts > 1 ? `(${scriptPayloadData.meta.attempts} passes)` : ''}
                   </span>
                 </div>
-
-                {/* Orientation metadata tags */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {brandName && (
-                    <span
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 5,
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-subtle)',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      {brandName}
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 5,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {duration} ({scenes.length} Scenes)
-                  </span>
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 5,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {language}
-                  </span>
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 5,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--accent-primary)',
-                    }}
-                  >
-                    {AD_GOAL_PRESETS.find((g) => g.id === selectedGoalId)?.title || 'Offer Promo'}
-                  </span>
-                  {selectedHook && (
-                    <span
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 5,
-                        backgroundColor: 'var(--accent-subtle)',
-                        border: '1px solid var(--accent-primary)',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: 'var(--accent-primary)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Sparkles size={11} />
-                      Hook: {selectedHook.archetype}
-                    </span>
-                  )}
-                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Review & Approve Storyboard Script
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Review character consistency, camera staging, and spoken dialogue. You can edit any section before rendering.
+                </p>
               </div>
 
-              <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                Review AI Storyboard
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Review characters, environment world-building, and scene-by-scene direction. Click <strong style={{ color: 'var(--text-primary)' }}>Edit</strong> on any section to customize before rendering.
-              </p>
-            </div>
-
-            {/* ========================================================
-                SECTION 01: CREATIVE FOUNDATION (CHARACTERS & SETTING)
-               ======================================================== */}
-            <div
-              style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 12,
-                marginBottom: 28,
-                overflow: 'hidden',
-              }}
-            >
-              {/* Foundation Accordion Header */}
-              <button
-                type="button"
-                onClick={() => setIsFoundationCollapsed(!isFoundationCollapsed)}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  borderBottom: isFoundationCollapsed ? 'none' : '1px solid var(--border-subtle)',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'var(--accent-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    01 · Creative Foundation
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    {isFoundationCollapsed ? '— Cast & Environment (Click to expand)' : '— Visual continuity anchors for all scenes'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 500 }}>
-                  <span>{isFoundationCollapsed ? 'Expand' : 'Collapse'}</span>
-                  {isFoundationCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
-                </div>
-              </button>
-
-              {!isFoundationCollapsed && (
-                <div style={{ padding: 20 }}>
-                  <div className="responsive-cols-2" style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 20 }}>
-                    {/* CHARACTERS CARD */}
-                    <div
-                      style={{
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 10,
-                        padding: 18,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div
-                              style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: 6,
-                                backgroundColor: 'var(--accent-subtle)',
-                                color: 'var(--accent-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <User size={14} />
-                            </div>
-                            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>
-                              Cast & Characters
-                            </span>
-                          </div>
-
-                          {!isEditingCharacters ? (
-                            <button
-                              type="button"
-                              onClick={handleStartEditCharacters}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '4px 10px',
-                                borderRadius: 6,
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--border-default)',
-                                color: 'var(--text-secondary)',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Edit2 size={11} />
-                              <span>Edit</span>
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={handleCancelCharacters}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: 5,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSaveCharacters}
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: 5,
-                                  backgroundColor: 'var(--accent-primary)',
-                                  border: 'none',
-                                  color: '#ffffff',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Save
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Review Mode vs Edit Mode */}
-                        {!isEditingCharacters ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
-                                Lead Character
-                              </div>
-                              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: character1 ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-                                {character1 || 'No lead character specified.'}
-                              </p>
-                            </div>
-
-                            {character2 && (
-                              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
-                                  Supporting Cast
-                                </div>
-                                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-primary)' }}>
-                                  {character2}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div>
-                              <label htmlFor="char1Input" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                                Lead Character Description
-                              </label>
-                              <textarea
-                                id="char1Input"
-                                rows={3}
-                                value={char1Draft}
-                                onChange={(e) => setChar1Draft(e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 10px',
-                                  fontSize: 12,
-                                  lineHeight: 1.5,
-                                  backgroundColor: 'var(--bg-surface)',
-                                  border: '1px solid var(--border-focus)',
-                                  borderRadius: 6,
-                                  color: 'var(--text-primary)',
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="char2Input" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                                Supporting Cast (Optional)
-                              </label>
-                              <textarea
-                                id="char2Input"
-                                rows={2}
-                                value={char2Draft}
-                                onChange={(e) => setChar2Draft(e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 10px',
-                                  fontSize: 12,
-                                  lineHeight: 1.5,
-                                  backgroundColor: 'var(--bg-surface)',
-                                  border: '1px solid var(--border-default)',
-                                  borderRadius: 6,
-                                  color: 'var(--text-primary)',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* SETTING & WORLD CARD */}
-                    <div
-                      style={{
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 10,
-                        padding: 18,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div
-                              style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: 6,
-                                backgroundColor: 'var(--accent-subtle)',
-                                color: 'var(--accent-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <MapPin size={14} />
-                            </div>
-                            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>
-                              Setting & World
-                            </span>
-                          </div>
-
-                          {!isEditingSetting ? (
-                            <button
-                              type="button"
-                              onClick={handleStartEditSetting}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '4px 10px',
-                                borderRadius: 6,
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--border-default)',
-                                color: 'var(--text-secondary)',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Edit2 size={11} />
-                              <span>Edit</span>
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={handleCancelSetting}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: 5,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSaveSetting}
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: 5,
-                                  backgroundColor: 'var(--accent-primary)',
-                                  border: 'none',
-                                  color: '#ffffff',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Save
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {!isEditingSetting ? (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
-                              Environment & Lighting
-                            </div>
-                            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: setting ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-                              {setting || 'No environment specified.'}
-                            </p>
-                          </div>
-                        ) : (
-                          <div>
-                            <label htmlFor="settingInput" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                              Environment Description
-                            </label>
-                            <textarea
-                              id="settingInput"
-                              rows={5}
-                              value={settingDraft}
-                              onChange={(e) => setSettingDraft(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '8px 10px',
-                                fontSize: 12,
-                                lineHeight: 1.5,
-                                backgroundColor: 'var(--bg-surface)',
-                                border: '1px solid var(--border-focus)',
-                                borderRadius: 6,
-                                color: 'var(--text-primary)',
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ========================================================
-                SECTION 02: STORYBOARD WORKSPACE (SCENE NAV + EDITOR)
-               ======================================================== */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'var(--accent-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    02 · Storyboard Scenes
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    ({scenes.length} Scenes · Select a scene to inspect)
-                  </span>
-                </div>
-
-                {/* Raw Script View Toggle */}
+              {/* View Switcher: Structured vs Raw Script */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button
                   type="button"
                   onClick={() => setIsRawScriptMode(!isRawScriptMode)}
@@ -3350,1152 +2369,501 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    background: 'none',
-                    border: '1px solid var(--border-default)',
+                    padding: '8px 12px',
                     borderRadius: 6,
-                    padding: '4px 10px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: isRawScriptMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 12,
+                    fontWeight: 500,
                     cursor: 'pointer',
                   }}
                 >
-                  {isRawScriptMode ? <Edit3 size={12} /> : <FileCode2 size={12} />}
-                  <span>{isRawScriptMode ? 'Back to Storyboard' : 'Raw Script View'}</span>
+                  <FileCode2 size={13} />
+                  <span>{isRawScriptMode ? 'Storyboard View' : 'Raw Script'}</span>
                 </button>
-              </div>
-
-              {/* TWO-COLUMN STORYBOARD STUDIO */}
-              <div
-                className="storyboard-layout"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '260px minmax(0, 1fr)',
-                  gap: 20,
-                  alignItems: 'start',
-                }}
-              >
-                {/* LEFT COLUMN: SCENE NAVIGATOR */}
-                <div
-                  className="storyboard-nav-container"
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 12,
-                    padding: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                  }}
-                >
-                  {scenes.map((s, idx) => {
-                    const parsed = parseScene(s, idx);
-                    const isActive = activeSceneIndex === idx;
-                    const previewText = parsed.dialogue || parsed.visual || '';
-                    const cleanSnippet = previewText.replace(/^["'\s]+|["'\s]+$/g, '').slice(0, 52);
-
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          if (editingSection) {
-                            handleCancelEditSection();
-                          }
-                          setActiveSceneIndex(idx);
-                        }}
-                        className={`scene-nav-item ${isActive ? 'active' : ''}`}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              fontFamily: "'JetBrains Mono', monospace",
-                              color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                            }}
-                          >
-                            SCENE {String(idx + 1).padStart(2, '0')}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              backgroundColor: isActive ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                              color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            {parsed.purpose || (idx === 0 ? 'HOOK' : idx === 1 ? 'PROBLEM' : idx === 2 ? 'SOLUTION' : 'CTA')}
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: isActive ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            textAlign: 'left',
-                            width: '100%',
-                            marginTop: 2,
-                          }}
-                        >
-                          {cleanSnippet ? `"${cleanSnippet}…"` : parsed.title}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* RIGHT COLUMN: SELECTED SCENE WORKSPACE */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 12,
-                    padding: 24,
-                  }}
-                >
-                  {/* Scene Header */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 22,
-                      borderBottom: '1px solid var(--border-subtle)',
-                      paddingBottom: 14,
-                      gap: 12,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: 'var(--accent-primary)',
-                          }}
-                        >
-                          SCENE {String(activeSceneIndex + 1).padStart(2, '0')}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: 4,
-                            backgroundColor: 'var(--accent-subtle)',
-                            color: 'var(--accent-primary)',
-                          }}
-                        >
-                          {currentParsedScene.purpose || `Scene ${activeSceneIndex + 1}`}
-                        </span>
-                      </div>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '6px 0 0', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-                        {currentParsedScene.title}
-                      </h2>
-                    </div>
-
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {activeSceneIndex + 1} of {scenes.length} Scenes
-                    </span>
-                  </div>
-
-                  {isRawScriptMode ? (
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                          Direct Scene Script (ANNEX A Format)
-                        </div>
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                          Direct changes update the production payload immediately
-                        </span>
-                      </div>
-                      <textarea
-                        rows={16}
-                        value={scenes[activeSceneIndex] || ''}
-                        onChange={(e) => {
-                          const updated = [...scenes];
-                          updated[activeSceneIndex] = e.target.value;
-                          setScenes(updated);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '14px 16px',
-                          fontSize: 13,
-                          lineHeight: 1.6,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          backgroundColor: 'var(--bg-active)',
-                          border: '1px solid var(--border-default)',
-                          borderRadius: 8,
-                          color: 'var(--text-primary)',
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                      {/* 1. VISUAL DIRECTION (Hero Block) */}
-                      <div
-                        style={{
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 10,
-                          padding: 18,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
-                            Visual Direction
-                          </span>
-
-                          {editingSection !== 'visual' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditSection('visual', currentParsedScene.visual)}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '3px 8px',
-                                borderRadius: 5,
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--border-default)',
-                                color: 'var(--text-secondary)',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Edit2 size={11} />
-                              <span>Edit</span>
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={handleCancelEditSection}
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSaveEditSection}
-                                style={{
-                                  padding: '3px 10px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'var(--accent-primary)',
-                                  border: 'none',
-                                  color: '#ffffff',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Save
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {editingSection !== 'visual' ? (
-                          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-primary)' }}>
-                            {currentParsedScene.visual || 'No visual description available.'}
-                          </p>
-                        ) : (
-                          <textarea
-                            rows={4}
-                            value={sectionDraft}
-                            onChange={(e) => setSectionDraft(e.target.value)}
-                            placeholder="Describe everything visible in the scene…"
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              fontSize: 13,
-                              lineHeight: 1.55,
-                              backgroundColor: 'var(--bg-surface)',
-                              border: '1px solid var(--border-focus)',
-                              borderRadius: 6,
-                              color: 'var(--text-primary)',
-                            }}
-                          />
-                        )}
-                      </div>
-
-                      {/* 2. SPOKEN DIALOGUE (Quotation block) */}
-                      <div
-                        style={{
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 10,
-                          padding: 18,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
-                              Spoken Dialogue
-                            </span>
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                padding: '1px 6px',
-                                borderRadius: 4,
-                                backgroundColor: 'var(--accent-subtle)',
-                                color: 'var(--accent-primary)',
-                              }}
-                            >
-                              {language}
-                            </span>
-                          </div>
-
-                          {editingSection !== 'dialogue' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditSection('dialogue', currentParsedScene.dialogue)}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '3px 8px',
-                                borderRadius: 5,
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--border-default)',
-                                color: 'var(--text-secondary)',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Edit2 size={11} />
-                              <span>Edit</span>
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={handleCancelEditSection}
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSaveEditSection}
-                                style={{
-                                  padding: '3px 10px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'var(--accent-primary)',
-                                  border: 'none',
-                                  color: '#ffffff',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Save
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {editingSection !== 'dialogue' ? (
-                          <div className="quote-block">
-                            {currentParsedScene.dialogue ? (
-                              `"${currentParsedScene.dialogue.replace(/^["']|["']$/g, '')}"`
-                            ) : (
-                              <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No spoken dialogue in this scene.</span>
-                            )}
-                          </div>
-                        ) : (
-                          <textarea
-                            rows={3}
-                            value={sectionDraft}
-                            onChange={(e) => setSectionDraft(e.target.value)}
-                            placeholder='Dialogue line in target language (romanized)'
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              fontSize: 13,
-                              lineHeight: 1.55,
-                              backgroundColor: 'var(--bg-surface)',
-                              border: '1px solid var(--border-focus)',
-                              borderRadius: 6,
-                              color: 'var(--text-primary)',
-                            }}
-                          />
-                        )}
-                      </div>
-
-                      {/* 3 & 4. CAMERA & SOUND DESIGN (Production Details) */}
-                      <div className="responsive-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        {/* CAMERA & ANIMATION */}
-                        <div
-                          style={{
-                            backgroundColor: 'var(--bg-elevated)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: 10,
-                            padding: 16,
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <Camera size={13} style={{ color: 'var(--text-tertiary)' }} />
-                              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
-                                Camera & Movement
-                              </span>
-                            </div>
-
-                            {editingSection !== 'camera' ? (
-                              <button
-                                type="button"
-                                onClick={() => handleStartEditSection('camera', currentParsedScene.camera)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  padding: '2px 6px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Edit2 size={10} />
-                                <span>Edit</span>
-                              </button>
-                            ) : (
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEditSection}
-                                  style={{
-                                    padding: '2px 6px',
-                                    borderRadius: 4,
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid var(--border-default)',
-                                    color: 'var(--text-tertiary)',
-                                    fontSize: 10,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSaveEditSection}
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 4,
-                                    backgroundColor: 'var(--accent-primary)',
-                                    border: 'none',
-                                    color: '#ffffff',
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {editingSection !== 'camera' ? (
-                            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: currentParsedScene.camera ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
-                              {currentParsedScene.camera || 'Standard framing.'}
-                            </p>
-                          ) : (
-                            <textarea
-                              rows={3}
-                              value={sectionDraft}
-                              onChange={(e) => setSectionDraft(e.target.value)}
-                              placeholder="Camera movement / animation…"
-                              style={{
-                                width: '100%',
-                                padding: '8px 10px',
-                                fontSize: 12,
-                                backgroundColor: 'var(--bg-surface)',
-                                border: '1px solid var(--border-focus)',
-                                borderRadius: 6,
-                                color: 'var(--text-primary)',
-                              }}
-                            />
-                          )}
-                        </div>
-
-                        {/* SOUND DESIGN & SFX */}
-                        <div
-                          style={{
-                            backgroundColor: 'var(--bg-elevated)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: 10,
-                            padding: 16,
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <Volume2 size={13} style={{ color: 'var(--text-tertiary)' }} />
-                              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
-                                Sound Design & SFX
-                              </span>
-                            </div>
-
-                            {editingSection !== 'audio' ? (
-                              <button
-                                type="button"
-                                onClick={() => handleStartEditSection('audio', currentParsedScene.audio)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  padding: '2px 6px',
-                                  borderRadius: 4,
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-default)',
-                                  color: 'var(--text-tertiary)',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Edit2 size={10} />
-                                <span>Edit</span>
-                              </button>
-                            ) : (
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEditSection}
-                                  style={{
-                                    padding: '2px 6px',
-                                    borderRadius: 4,
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid var(--border-default)',
-                                    color: 'var(--text-tertiary)',
-                                    fontSize: 10,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSaveEditSection}
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 4,
-                                    backgroundColor: 'var(--accent-primary)',
-                                    border: 'none',
-                                    color: '#ffffff',
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {editingSection !== 'audio' ? (
-                            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: currentParsedScene.audio ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
-                              {currentParsedScene.audio || 'Ambient audio & background music.'}
-                            </p>
-                          ) : (
-                            <textarea
-                              rows={3}
-                              value={sectionDraft}
-                              onChange={(e) => setSectionDraft(e.target.value)}
-                              placeholder="Ambience / SFX / music…"
-                              style={{
-                                width: '100%',
-                                padding: '8px 10px',
-                                fontSize: 12,
-                                backgroundColor: 'var(--bg-surface)',
-                                border: '1px solid var(--border-focus)',
-                                borderRadius: 6,
-                                color: 'var(--text-primary)',
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
-            {/* ========================================================
-                SECTION 03: STICKY BOTTOM ACTION BAR
-               ======================================================== */}
-            <div
-              style={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: 'rgba(16, 18, 23, 0.95)',
-                backdropFilter: 'blur(12px)',
-                borderTop: '1px solid var(--border-subtle)',
-                padding: '12px 24px',
-                zIndex: 40,
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: 1240,
-                  margin: '0 auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 16,
-                  flexWrap: 'wrap',
-                }}
-              >
+            {/* CREATIVE FOUNDATION: CHARACTERS & SETTING */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <User size={16} style={{ color: 'var(--accent-primary)' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>
+                    Creative Foundation Anchors
+                  </span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setCurrentStage(1)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: 'none',
-                    border: '1px solid var(--border-default)',
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
+                  onClick={() => setIsFoundationCollapsed(!isFoundationCollapsed)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex' }}
                 >
-                  <ArrowLeft size={14} />
-                  <span>← Back to Brief</span>
+                  {isFoundationCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                 </button>
+              </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--success)', display: 'inline-block' }} />
-                    <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>READY TO RENDER</span>
-                    <span>·</span>
-                    <span>{duration}</span>
-                    <span>·</span>
-                    <span>{language}</span>
-                    <span>·</span>
-                    <span>{scenes.length} Scenes</span>
+              {!isFoundationCollapsed && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+                  {/* Character 1 */}
+                  <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 6 }}>
+                      Character 1 (Lead Speaker)
+                    </div>
+                    {isEditingCharacters ? (
+                      <textarea
+                        rows={3}
+                        value={char1Draft}
+                        onChange={(e) => setChar1Draft(e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {character1 || 'None'}
+                      </div>
+                    )}
                   </div>
 
+                  {/* Character 2 */}
+                  <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 6 }}>
+                      Character 2 (Supporting / Customer)
+                    </div>
+                    {isEditingCharacters ? (
+                      <textarea
+                        rows={3}
+                        value={char2Draft}
+                        onChange={(e) => setChar2Draft(e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {character2 || 'None'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Setting */}
+                  <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14, gridColumn: '1 / -1' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 6 }}>
+                      Setting (Locked Single Location Across All Scenes)
+                    </div>
+                    {isEditingSetting ? (
+                      <textarea
+                        rows={3}
+                        value={settingDraft}
+                        onChange={(e) => setSettingDraft(e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: 12 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {setting || 'None'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* RAW SCRIPT MODE */}
+            {isRawScriptMode ? (
+              <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 10 }}>
+                  Full Raw ANNEX A Script
+                </div>
+                <textarea
+                  rows={20}
+                  value={scenes.join('\n\n')}
+                  onChange={(e) => setScenes(e.target.value.split(/\n\s*\n/).filter(Boolean))}
+                  style={{ width: '100%', padding: 12, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1.6 }}
+                />
+              </div>
+            ) : (
+              /* STRUCTURED 4-SCENE STORYBOARD WORKSPACE */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Scene Tabs (1-4) */}
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+                  {scenes.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveSceneIndex(i)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        border: activeSceneIndex === i ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                        backgroundColor: activeSceneIndex === i ? 'var(--bg-active)' : 'var(--bg-surface)',
+                        color: activeSceneIndex === i ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        fontSize: 12,
+                        fontWeight: activeSceneIndex === i ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <span>Scene 0{i + 1}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                        ({i === 0 ? 'HOOK' : i === 1 ? 'BUILD' : i === 2 ? 'TURN' : 'RESOLUTION'})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active Scene Card */}
+                {scenes[activeSceneIndex] && (() => {
+                  const sc = parseScene(scenes[activeSceneIndex], activeSceneIndex);
+                  return (
+                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', pb: 12 }}>
+                        <div>
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {sc.title} · {sc.purpose}
+                          </span>
+                          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '2px 0 0', color: 'var(--text-primary)' }}>
+                            {activeSceneIndex === 0 ? 'Scroll-Stopping Hook (0–3s)' : activeSceneIndex === 1 ? 'Problem & Conflict Escalation' : activeSceneIndex === 2 ? 'Business Solution & Proof' : 'Payoff & Callback Resolution'}
+                          </h2>
+                        </div>
+                      </div>
+
+                      {/* Visual Description */}
+                      <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 6 }}>
+                          <Camera size={13} />
+                          <span>Visual Staging & Physical Action</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                          {sc.visual}
+                        </div>
+                      </div>
+
+                      {/* Spoken Dialogue Section */}
+                      <div style={{ backgroundColor: 'var(--bg-elevated)', borderLeft: '3px solid var(--accent-primary)', borderRadius: '0 8px 8px 0', padding: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 6 }}>
+                          <Quote size={13} />
+                          <span>Spoken Dialogue ({userContext.language})</span>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                          {sc.dialogue || '(Physical action beat — no dialogue)'}
+                        </div>
+                      </div>
+
+                      {/* Camera & Sound Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                        <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 12 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                            Animation & Camera Direction
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {sc.camera}
+                          </div>
+                        </div>
+
+                        <div style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 12 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                            Sound Design & Atmosphere
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {sc.audio}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* BRANDED END FRAME COMPOSITING CARD */}
+            {scriptPayloadData?.endFrame && (
+              <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Tag size={16} style={{ color: 'var(--accent-primary)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>
+                      End Frame Card (Composited after video generation)
+                    </span>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleRenderVideo}
+                    onClick={async () => {
+                      const ef = scriptPayloadData.endFrame;
+                      const text = [ef.businessName, ef.address, ef.contact, ef.offer].filter(Boolean).join('\n');
+                      try {
+                        await navigator.clipboard.writeText(text);
+                        alert('End frame copied to clipboard!');
+                      } catch {}
+                    }}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '11px 24px',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 600,
+                      padding: '4px 10px',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px var(--accent-glow)',
-                      transition: 'background-color 0.15s ease',
                     }}
                   >
-                    <span>Render Video</span>
-                    <ArrowRight size={15} />
+                    Copy End Card
                   </button>
                 </div>
+
+                <div style={{ padding: '12px 14px', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, fontSize: 13, lineHeight: 1.5, color: 'var(--text-primary)' }}>
+                  <div><strong>{scriptPayloadData.endFrame.businessName}</strong></div>
+                  {scriptPayloadData.endFrame.address && <div>{scriptPayloadData.endFrame.address}</div>}
+                  {scriptPayloadData.endFrame.contact && <div>Contact: {scriptPayloadData.endFrame.contact}</div>}
+                  {scriptPayloadData.endFrame.offer && <div style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{scriptPayloadData.endFrame.offer}</div>}
+                </div>
               </div>
+            )}
+
+            {/* REVISE SCRIPT VIA CHANGE LOOP */}
+            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Want the AI Creative Director to rewrite any part of this script?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsChangeOpen(!isChangeOpen)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {isChangeOpen ? 'Cancel' : 'Request Script Rewrite'}
+                </button>
+              </div>
+
+              {isChangeOpen && (
+                <div style={{ marginTop: 12 }}>
+                  <textarea
+                    rows={2}
+                    value={changeNote}
+                    onChange={(e) => setChangeNote(e.target.value)}
+                    placeholder="e.g. Make Scene 2 faster and punchier, and add a reaction beat to the product..."
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                  />
+                  {changeError && <div style={{ fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{changeError}</div>}
+                  <button
+                    type="button"
+                    onClick={() => handleSendChangeRequest('script')}
+                    style={{ marginTop: 8, padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Submit Script Revision
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* APPROVE SCRIPT & SEND TO PRODUCTION BUTTON */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                onClick={handleApproveScriptAndRender}
+                style={{
+                  padding: '16px 32px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  boxShadow: '0 2px 10px var(--accent-glow)',
+                }}
+              >
+                <span>Approve Script & Send to Production</span>
+                <ArrowRight size={18} />
+              </button>
             </div>
           </div>
         )}
 
         {/* ========================================================
-            STAGE 3: RENDER & WATCH
-           ======================================================== */}
-        {currentStage === 3 && (
-          <div style={{ maxWidth: 760, margin: '20px auto 0' }}>
-            {/* In Progress */}
-            {isRendering && (
+            STAGE 3: PRODUCTION & VIDEO RENDERING
+            ======================================================== */}
+        {currentStep === 'render' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {isRendering ? (
+              /* RENDERING ACTIVE STATE */
               <div
                 style={{
+                  maxWidth: 640,
+                  margin: '40px auto',
                   backgroundColor: 'var(--bg-surface)',
-                  borderRadius: 14,
                   border: '1px solid var(--border-default)',
+                  borderRadius: 14,
                   padding: '36px 32px',
-                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
+                  textAlign: 'center',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
                 }}
               >
-                {/* Header with active icon and phase badge */}
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    padding: 14,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-subtle)',
+                    color: 'var(--accent-primary)',
+                    marginBottom: 16,
+                  }}
+                >
+                  <Film size={26} className="progress-indeterminate" />
+                </div>
+
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+                  Phase 0{renderStep + 1} of 05 · {RENDER_STAGES[renderStep]?.phase}
+                </div>
+
+                <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
+                  {RENDER_STAGES[renderStep]?.title || 'Rendering Video…'}
+                </h2>
+
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.5 }}>
+                  {renderStatusText}
+                </p>
+
+                {/* Progress bar */}
+                <div style={{ height: 4, backgroundColor: 'var(--bg-elevated)', borderRadius: 2, overflow: 'hidden', marginBottom: 24 }}>
                   <div
                     style={{
-                      display: 'inline-flex',
-                      padding: 14,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
-                      marginBottom: 14,
+                      height: '100%',
+                      width: `${((renderStep + 1) / RENDER_STAGES.length) * 100}%`,
+                      backgroundColor: 'var(--accent-primary)',
+                      transition: 'width 0.4s ease',
                     }}
-                  >
-                    <Film size={26} className="progress-indeterminate" />
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                    <div
-                      style={{
-                        display: 'inline-block',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'var(--accent-primary)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        backgroundColor: 'var(--bg-elevated)',
-                        padding: '3px 10px',
-                        borderRadius: 12,
-                        border: '1px solid var(--border-subtle)',
-                      }}
-                    >
-                      Stage {renderStep + 1} of {RENDER_STAGES.length} · {RENDER_STAGES[renderStep].phase}
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '3px 10px',
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-secondary)',
-                        borderRadius: 12,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        fontFamily: "'JetBrains Mono', monospace",
-                      }}
-                    >
-                      <Clock size={12} color="var(--accent-primary)" />
-                      <span>{elapsedTime}</span>
-                    </div>
-                  </div>
-
-                  <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                    {RENDER_STAGES[renderStep].title}
-                  </h1>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                    {RENDER_STAGES[renderStep].detail}
-                  </p>
+                  />
                 </div>
 
-                {/* Multi-step progress bar */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${RENDER_STAGES.length}, 1fr)`, gap: 6, marginBottom: 8 }}>
-                    {RENDER_STAGES.map((st, i) => {
-                      const isDone = i < renderStep;
-                      const isCurrent = i === renderStep;
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: isDone
-                              ? 'var(--success)'
-                              : isCurrent
-                              ? 'var(--accent-primary)'
-                              : 'var(--bg-elevated)',
-                            transition: 'all 0.3s ease',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Live Render Engine Pipeline Checklist */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 10,
-                    padding: '14px 18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                    marginBottom: 20,
-                  }}
-                >
-                  {RENDER_STAGES.map((st, i) => {
-                    const isDone = i < renderStep;
-                    const isCurrent = i === renderStep;
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: 12,
-                          color: isCurrent
-                            ? 'var(--text-primary)'
-                            : isDone
-                            ? 'var(--text-secondary)'
-                            : 'var(--text-tertiary)',
-                          fontWeight: isCurrent ? 600 : 400,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: '50%',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 10,
-                              fontFamily: "'JetBrains Mono', monospace",
-                              backgroundColor: isDone
-                                ? 'rgba(34, 197, 94, 0.15)'
-                                : isCurrent
-                                ? 'var(--accent-subtle)'
-                                : 'var(--bg-surface)',
-                              color: isDone
-                                ? 'var(--success)'
-                                : isCurrent
-                                ? 'var(--accent-primary)'
-                                : 'var(--text-tertiary)',
-                              border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                            }}
-                          >
-                            {isDone ? '✓' : i + 1}
-                          </span>
-                          <span>{st.phase}</span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: isDone ? 'var(--success)' : isCurrent ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                          }}
-                        >
-                          {isDone ? 'Complete' : isCurrent ? 'Rendering…' : 'Queued'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Engaging Video Production & Creative Insight Ticker */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px dashed var(--border-default)',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                  }}
-                >
+                {/* Production Tips */}
+                <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, border: '1px dashed var(--border-default)', textAlign: 'left', display: 'flex', gap: 10 }}>
                   <Sparkle size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                      Production Insight
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                      Video Production Insight
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {RENDER_TIPS[renderTipIndex]}
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Error State */}
-            {errorMessage && !isRendering && (
-              <div
-                style={{
-                  backgroundColor: 'var(--bg-surface)',
-                  borderRadius: 12,
-                  border: '1px solid var(--border-default)',
-                  padding: 36,
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--error-subtle)',
-                    color: 'var(--error)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 14px',
-                  }}
-                >
-                  <AlertCircle size={22} />
-                </div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-                  Rendering failed
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px' }}>
-                  {errorMessage}
-                </p>
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStage(2)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: 6,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Back to Creative
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRenderVideo}
-                    style={{
-                      padding: '8px 20px',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Try Rendering Again
-                  </button>
+                <div style={{ marginTop: 20, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                  Elapsed GPU Time: {elapsedTime}
                 </div>
               </div>
-            )}
-
-            {/* Video Complete / Ready */}
-            {videoUrl && !isRendering && (
-              <div
-                style={{
-                  backgroundColor: 'var(--bg-surface)',
-                  borderRadius: 12,
-                  border: '1px solid var(--border-default)',
-                  padding: 24,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                      Your video is ready
-                    </h1>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
-                      Review your final video, share the preview link, or download the master file.
-                    </p>
-                  </div>
-
-                  <span
+            ) : videoUrl ? (
+              /* COMPLETED VIDEO DELIVERY */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div
                     style={{
                       display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 10px',
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      padding: 10,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(34, 197, 94, 0.15)',
                       color: 'var(--success)',
-                      fontSize: 12,
-                      fontWeight: 600,
+                      marginBottom: 12,
                     }}
                   >
-                    <Check size={13} strokeWidth={2.5} />
-                    <span>Render Complete · 1080p</span>
-                  </span>
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                    Your Commercial Video is Ready!
+                  </h1>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                    Mastered in broadcast-ready 1080p resolution, optimized for 9:16 mobile feeds.
+                  </p>
                 </div>
 
-                {/* Video Player Frame */}
+                {/* Video Player */}
                 <div
                   style={{
-                    borderRadius: 10,
+                    maxWidth: 420,
+                    margin: '0 auto',
+                    borderRadius: 12,
                     overflow: 'hidden',
+                    border: '1px solid var(--border-default)',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
                     backgroundColor: '#000000',
-                    border: '1px solid var(--border-subtle)',
-                    marginBottom: 20,
                   }}
                 >
                   <video
                     src={videoUrl}
                     controls
                     playsInline
-                    preload="metadata"
-                    style={{
-                      width: '100%',
-                      maxHeight: 480,
-                      display: 'block',
-                    }}
+                    style={{ width: '100%', display: 'block', maxHeight: 680 }}
                   />
                 </div>
 
-                {/* Primary Action Bar: Share & Download */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderTop: '1px solid var(--border-subtle)',
-                    paddingTop: 16,
-                    gap: 12,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVideoUrl('');
-                        setCurrentStage(1);
-                        setBrief('');
-                        setScenes([]);
-                        setCharacter1('');
-                        setCharacter2('');
-                        setSetting('');
-                        setProductImage(null);
-                        setErrorMessage('');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        background: 'transparent',
-                        border: '1px solid var(--border-default)',
-                        padding: '9px 15px',
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <Plus size={14} />
-                      <span>Create New Video</span>
-                    </button>
+                {/* CTAs */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/api/download?url=${encodeURIComponent(videoUrl)}`, '_blank')}
+                    style={{
+                      padding: '12px 24px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--accent-primary)',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Download size={16} />
+                    <span>Download MP4</span>
+                  </button>
 
-                    {shareStatus && (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: 'var(--success)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                        }}
-                      >
-                        <Check size={14} strokeWidth={2.5} />
-                        <span>{shareStatus}</span>
-                      </span>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleShareVideo}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-primary)',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Share2 size={16} />
+                    <span>{shareStatus || 'Share Link'}</span>
+                  </button>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {/* Share CTA */}
-                    <button
-                      type="button"
-                      onClick={handleShareVideo}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '10px 18px',
-                        borderRadius: 8,
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-primary)',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <Share2 size={14} />
-                      <span>Share</span>
-                    </button>
-
-                    {/* Download CTA */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        window.open(`/api/download?url=${encodeURIComponent(videoUrl)}`, '_blank')
-                      }
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px var(--accent-glow)',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                    >
-                      <Download size={14} />
-                      <span>Download</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleStartNewProject}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: 8,
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <RotateCcw size={16} />
+                    <span>Create New Video</span>
+                  </button>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </main>

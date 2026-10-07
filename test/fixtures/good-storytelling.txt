@@ -1,0 +1,87 @@
+@@HEADER@@
+Business: Sharma General Store – Kirana / general store, Palasia, Indore
+Format: Storytelling
+Lens: 2, Everyday Moments
+Hook: Everyday crisis – Annex C, pulled 2026-10-05
+Moment: Sharad Navratri
+@@CHARACTER1@@
+Ramesh (owner) — 48, male, wheatish brown skin, short grey-black hair, white kurta with a navy sleeveless jacket, steel wristwatch, reading glasses on a cord.
+@@CHARACTER2@@
+Sunita (customer) — 38, female, medium brown skin, hair in a low bun, mustard cotton saree with a maroon border, thin gold bangles, cloth shopping bag.
+@@SETTING@@
+A small neighbourhood kirana in Palasia, Indore, early evening. Warm tubelight over a wooden counter, steel weighing scale, gunny sacks of atta and sabudana on the floor, neatly stacked shelves of packets behind, freshly painted walls and a clean tiled floor, marigold garlands and a toran over the entrance with small brass lamps for Navratri, a scooter passing on the lane outside. UIs needed: none.
+@@SCENE@@
+SCENE 1 – HOOK: Running out mid-cooking
+Visual:
+Same setting: wide shot from inside the counter. Sunita hurries through the kirana doorway holding an empty steel sabudana jar. She tips the jar towards the counter. Two grains fall out onto the wood. She sets the jar down.
+Animation Elements:
+• Camera: wide eye-level shot from behind the counter, slow push-in
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Sunita: "अरे, व्रत का साबूदाना ख़त्म!"
+Sound Design:
+Ambience: lane chatter, distant temple bell
+SFX: two grains tapping the counter
+Music mood note (for the edit step): light, playful
+Editing Notes (edit step only):
+Hold on the empty jar for half a second before the cut.
+@@SCENE@@
+SCENE 2 – BUILD: At the counter
+Visual:
+Same setting: medium shot across the counter. Sunita walks up to the wooden counter. Ramesh lifts a sack of sabudana onto the steel scale. He looks at Sunita as he turns the scale display towards her.
+Animation Elements:
+• Camera: over-the-shoulder on Ramesh from Sunita's side, gentle handheld
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Ramesh: "आइए भाभी जी, ताज़ा साबूदाना आज ही आया है।"
+Sound Design:
+Ambience: lane chatter, scooter passing
+SFX: sack thud on the scale
+Music mood note (for the edit step): warm
+Editing Notes (edit step only):
+Cut on the sack landing.
+@@SCENE@@
+SCENE 3 – TURN: Delivery promise
+Visual:
+Same setting: close two-shot at the counter. Ramesh ties the packet with a thread. He hands it across the counter. Sunita takes the packet and smiles at Ramesh.
+Animation Elements:
+• Camera: low-angle close two-shot, slow arc around the counter
+• Text overlay: none
+• UI element: none
+• Transition: soft dissolve
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Sunita: "कल से होम डिलीवरी करवा दीजिए।"
+Ramesh: "बस एक कॉल कीजिए, बीस मिनट में घर पर।"
+Sound Design:
+Ambience: evening lane sounds
+SFX: paper rustle
+Music mood note (for the edit step): gentle resolve
+Editing Notes (edit step only):
+Cut on the handover.
+@@SCENE@@
+SCENE 4 – RESOLUTION: Sorted at the counter
+Visual:
+Same setting: wide shot from the counter. Sunita lifts the tied packet into her cloth bag. Ramesh writes her number in a thin notebook. Sunita looks at Ramesh and nods.
+Animation Elements:
+• Camera: medium shot from the doorway, slow pull-back
+• Text overlay: none
+• UI element: none
+• Transition: soft dissolve
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Sunita: "शर्मा जी, आप तो कमाल हैं!"
+Sound Design:
+Ambience: evening lane sounds
+SFX: pen on paper
+Music mood note (for the edit step): warm resolve
+Editing Notes (edit step only):
+Hold two seconds on the doorway for the end card.
+@@RECORD@@
+{"business_name": "Sharma General Store", "business_type": "Kirana / general store", "town": "Indore", "date": "2026-10-05", "lens": "2, Everyday Moments", "tension": "Running out of fasting staples mid-cooking during Navratri", "format": "Storytelling", "hook_pattern": "Everyday crisis", "hook_library": "Annex C", "moment": "Sharad Navratri", "scenes": 4}

@@ -1,0 +1,369 @@
+{
+  "pulled": "2026-10-05",
+  "note": "Hook libraries: Indian Instagram creator patterns (priority 1, Clevertize addition) + the two libraries named in Product Spine Section 4. Patterns only - lines are reference, never copied (M21). Refresh by re-reading the source pages and editing this file; bump 'pulled'. Patterns marked usable:false break a Spine rule and are never offered to the engine.",
+  "libraries": [
+    {
+      "id": "Indian Instagram creators",
+      "source": "Clevertize curated — hook patterns common in Indian Instagram Reels creator content (Hinglish), 2025–26",
+      "source_note": "Curated from widely used Indian creator formats, not scraped. Patterns only — the engine writes fresh lines (M21). Refresh this list as trends change; bump 'pulled'.",
+      "patterns": [
+        {
+          "name": "POV opener",
+          "structure": "Open on a 'POV:' line spoken to camera that drops the viewer straight into the customer's moment.",
+          "reference": "POV: आप दिवाली से 2 दिन पहले फ़ोन ढूँढ रहे हो…",
+          "usable": true,
+          "rule": "Spoken, never as on-screen text (M8)."
+        },
+        {
+          "name": "Kisi ne bataya kyun nahi",
+          "structure": "Mock-outrage that nobody told them this local secret earlier, then reveal the shop.",
+          "reference": "ये बात किसी ने मुझे पहले क्यों नहीं बताई?",
+          "usable": true
+        },
+        {
+          "name": "Ye galti mat karna",
+          "structure": "Warn the viewer off a common mistake in this category, then show the right way (this shop).",
+          "reference": "[category] लेने से पहले ये गलती मत करना।",
+          "usable": true
+        },
+        {
+          "name": "Ruko ruko ruko",
+          "structure": "A sudden stop — a character halts someone mid-action with a punchy 'रुको!' and a reason.",
+          "reference": "रुको रुको रुको! ऑनलाइन ऑर्डर मत करो अभी।",
+          "usable": true
+        },
+        {
+          "name": "Sach batau?",
+          "structure": "A conspiratorial 'सच बताऊँ?' confession that reveals an honest insight about the shop or category.",
+          "reference": "सच बताऊँ? मैं भी ऑनलाइन ही लेता था…",
+          "usable": true
+        },
+        {
+          "name": "Mummy/Papa reaction",
+          "structure": "Hook on a parent's reaction or dreaded question — highly relatable Indian family beat.",
+          "reference": "मम्मी को पता चला तो…",
+          "usable": true
+        },
+        {
+          "name": "Bhai ne bola tha",
+          "structure": "A friend's (bhai/didi) recommendation that the speaker doubted and then proved right.",
+          "reference": "भाई ने बोला था यहाँ से लेना, मैंने नहीं सुना…",
+          "usable": true
+        },
+        {
+          "name": "Area-wale dosto",
+          "structure": "Direct call-out to people of the locality/town, creator style.",
+          "reference": "[AREA] वाले दोस्तो, ये तुम्हारे लिए है!",
+          "usable": true
+        },
+        {
+          "name": "Unpopular opinion",
+          "structure": "State a mildly contrarian take about the category in one line, then back it with the shop.",
+          "reference": "Unpopular opinion: ऑनलाइन हमेशा सस्ता नहीं होता।",
+          "usable": true,
+          "rule": "No claims the owner didn't give (M22); write fully in Devanagari for Hindi/Hinglish."
+        },
+        {
+          "name": "Story time",
+          "structure": "'स्टोरी टाइम' — the speaker starts telling what just happened, mid-anecdote.",
+          "reference": "स्टोरी टाइम: कल दुकान पर एक आंटी आईं…",
+          "usable": true
+        },
+        {
+          "name": "Expectation vs reality",
+          "structure": "Spoken setup of what the customer expected vs what actually happened at this shop — played as two quick beats in the same place.",
+          "reference": "सोचा था एक घंटा लगेगा… हुआ दस मिनट में।",
+          "usable": true,
+          "rule": "Spoken/acted, not a split-screen with text (M8)."
+        },
+        {
+          "name": "Things nobody tells you",
+          "structure": "'कोई नहीं बताता…' — an insider truth about buying in this category.",
+          "reference": "फ़ोन खरीदने के बारे में ये कोई नहीं बताता…",
+          "usable": true
+        },
+        {
+          "name": "Challenge / bet",
+          "structure": "A playful bet or challenge between the two characters that the shop resolves.",
+          "reference": "शर्त लगा लो, यहाँ मिल जाएगा।",
+          "usable": true
+        },
+        {
+          "name": "Wait for it",
+          "structure": "Tease a payoff ('रुको, आगे देखो…') that lands in Scene 3–4.",
+          "reference": "रुको… आगे देखो क्या हुआ।",
+          "usable": true,
+          "rule": "Only if the payoff really lands later in the film (M27)."
+        }
+      ]
+    },
+    {
+      "id": "TrueFan AI",
+      "source": "https://www.truefan.ai/blogs/trending-hook-formats-2026",
+      "source_title": "Trending Hook Formats 2026: AI video hooks in India (published 15 Feb 2026)",
+      "source_note": "The article lists 10 frameworks and 10 Hinglish example lines (Product Spine says 12 and 15). It also recommends Hinglish code-switching, festival/cricket relevance, city call-outs ('POV: You just found the best Biryani in Hyderabad') and 'Interval'-style filmi drama.",
+      "patterns": [
+        {
+          "name": "Problem-first reveal",
+          "structure": "Name the customer's pain in one spoken line, then a hard stop, then show the business solving it.",
+          "reference": "Struggling with [Problem]? Stop.",
+          "usable": true
+        },
+        {
+          "name": "Twist reveal",
+          "structure": "A character states a common belief, then admits it was wrong and shows what is true.",
+          "reference": "I thought [Common Belief] was true. I was wrong.",
+          "usable": true
+        },
+        {
+          "name": "Jugaad hack",
+          "structure": "A clever, low-effort local workaround the business makes possible (home delivery, a quick fix, a fixed slot).",
+          "reference": "Free way to get [Benefit] in India.",
+          "usable": true,
+          "rule": "No 'free' unless the owner's offer says free (M22)."
+        },
+        {
+          "name": "Secret place",
+          "structure": "Conspiratorial line: don't tell anyone about this shop/place - it is our neighbourhood's secret.",
+          "reference": "Don't tell anyone about this [App/Place].",
+          "usable": true
+        },
+        {
+          "name": "List promise (spoken)",
+          "structure": "Promise a small number of reasons or tips out loud, then show them as actions.",
+          "reference": "Sach batao - ye 3 hacks kaam karte hai?",
+          "usable": true,
+          "rule": "Spoken only - no numbered on-screen list (M8)."
+        },
+        {
+          "name": "Price-drop flash (spoken)",
+          "structure": "Say the usual price, then the owner's offer price, out loud.",
+          "reference": "MRP Rs1999? No, Rs499.",
+          "usable": true,
+          "rule": "Only when the owner supplied an [OFFER] with the price. Spoken, never on-screen (M8, M22)."
+        },
+        {
+          "name": "Area call-out",
+          "structure": "Speak directly to people of the locality / town by name.",
+          "reference": "POV: You just found the best Biryani in Hyderabad.",
+          "usable": true,
+          "rule": "Never 'best' unless proven (M22) - use the area name, not a superlative."
+        },
+        {
+          "name": "Shock stat",
+          "structure": "Opens with a surprising statistic.",
+          "reference": "99% Indians ye galti karte hai...",
+          "usable": false,
+          "why": "Needs a number the owner never supplied (M22)."
+        },
+        {
+          "name": "Aspirational status frame",
+          "structure": "Shows money or achievement milestones.",
+          "reference": "How I went from Rs0 to Rs10L/month.",
+          "usable": false,
+          "why": "Income claims (M22) and off-tone for a local shop (M3)."
+        },
+        {
+          "name": "Duet / reaction cold-open",
+          "structure": "Reacts to an existing viral clip.",
+          "reference": "Is this actually possible?",
+          "usable": false,
+          "why": "Needs someone else's footage."
+        },
+        {
+          "name": "Filmi title card",
+          "structure": "Cinematic on-screen title text.",
+          "reference": "The Truth About [Topic].",
+          "usable": false,
+          "why": "On-screen text (M8)."
+        }
+      ]
+    },
+    {
+      "id": "GoFaceless",
+      "source": "https://www.gofaceless.ai/en/tools/hook-library",
+      "source_note": "Category pages read: problem-solution, relatability-humor, sales-persuasion, myth-busting, urgency-fear. Global, English - patterns are localised by the engine.",
+      "patterns": [
+        {
+          "category": "Problem & Solution",
+          "name": "What finally worked",
+          "structure": "A customer or owner says they tried everything, then shows the one thing that worked - this shop.",
+          "reference": "Here's what finally worked for me.",
+          "usable": true
+        },
+        {
+          "category": "Problem & Solution",
+          "name": "Simpler fix",
+          "structure": "Promise that the fix is simpler than people think, then show it.",
+          "reference": "The fix is simpler than you think.",
+          "usable": true
+        },
+        {
+          "category": "Problem & Solution",
+          "name": "Don't blame yourself",
+          "structure": "Reassure the customer the problem is not their fault, name the real cause, show the business fixing it.",
+          "reference": "Don't blame yourself - blame this.",
+          "usable": true
+        },
+        {
+          "category": "Relatability & Humor",
+          "name": "Is it just me?",
+          "structure": "A relatable everyday annoyance asked out loud as a question.",
+          "reference": "Who else does this or is it just me?",
+          "usable": true
+        },
+        {
+          "category": "Relatability & Humor",
+          "name": "Everyday 'why' question",
+          "structure": "A comic 'why does this always happen' about the everyday moment in Section 2.",
+          "reference": "Why does my phone battery die faster when I actually need it?",
+          "usable": true
+        },
+        {
+          "category": "Relatability & Humor",
+          "name": "Don't lie, you've done this",
+          "structure": "Call out a habit everyone shares, then show the shop as the easy way out.",
+          "reference": "Don't lie, you've done this too.",
+          "usable": true
+        },
+        {
+          "category": "Relatability & Humor",
+          "name": "Every time without fail",
+          "structure": "A small recurring disaster (something runs out, breaks) that 'always' happens.",
+          "reference": "This happens every single time.",
+          "usable": true
+        },
+        {
+          "category": "Sales & Persuasion",
+          "name": "Sell the outcome",
+          "structure": "Open on the result the customer wants (a ready outfit, a fixed phone), not the service.",
+          "reference": "Never sell a mattress. Sell better sleep.",
+          "usable": true
+        },
+        {
+          "category": "Sales & Persuasion",
+          "name": "Imagine",
+          "structure": "Open with 'imagine...' and a small, concrete scene of relief.",
+          "reference": "Every sale starts with one word: 'Imagine.'",
+          "usable": true
+        },
+        {
+          "category": "Sales & Persuasion",
+          "name": "Real over perfect",
+          "structure": "Show the honest, unpolished side of the business as the reason to trust it.",
+          "reference": "Buyers don't trust perfect. They trust real.",
+          "usable": true
+        },
+        {
+          "category": "Myth Busting",
+          "name": "But I'm not...",
+          "structure": "A customer voices their hesitation ('but I'm not fit enough...'), the owner answers in one calm line.",
+          "reference": "But I'm not ready yet...",
+          "usable": true
+        },
+        {
+          "category": "Myth Busting",
+          "name": "You don't need X, you need Y",
+          "structure": "Reject a common belief about this kind of business and replace it with the real need.",
+          "reference": "You don't need fancy tools - you need this skill.",
+          "usable": true
+        },
+        {
+          "category": "Myth Busting",
+          "name": "Told your whole life",
+          "structure": "Something everyone believes about this category, gently corrected.",
+          "reference": "You've been told this your whole life - but it's wrong.",
+          "usable": true
+        },
+        {
+          "category": "Urgency & Fear",
+          "name": "Don't wait until it's too late",
+          "structure": "A small cost of waiting (guests at 7 pm, wedding next week), shown as a moment.",
+          "reference": "Don't wait until it's too late.",
+          "usable": true,
+          "rule": "No fake deadlines - only a real occasion or the owner's offer dates (M22)."
+        },
+        {
+          "category": "Urgency & Fear",
+          "name": "Learned the hard way",
+          "structure": "Someone admits a past mistake (bad repair, missed fitting) so the viewer doesn't repeat it.",
+          "reference": "I learned this the hard way - don't repeat my mistake.",
+          "usable": true
+        },
+        {
+          "category": "Urgency & Fear",
+          "name": "If not now, then when?",
+          "structure": "One short question tied to a real upcoming moment.",
+          "reference": "If not now, then when?",
+          "usable": true
+        }
+      ]
+    }
+  ],
+  "local_versions": {
+    "note": "Product Spine Section 4 local-business adaptations (illustrative lines only).",
+    "patterns": [
+      {
+        "name": "City / area shoutout",
+        "line": "[AREA] वालों, सुनो!",
+        "use_with": "Any type; strongest local hook"
+      },
+      {
+        "name": "No / Stop opener",
+        "line": "रुको! आटा लेने से पहले ये देखो।",
+        "use_with": "Kirana, sweet shop, pharmacy"
+      },
+      {
+        "name": "Myth-buster",
+        "line": "सब सोचते हैं जिम सिर्फ़ बॉडी बनाने वालों के लिए है…",
+        "use_with": "Gym, coaching, salon"
+      },
+      {
+        "name": "Interval twist",
+        "line": "मुझे लगा था ऑनलाइन सस्ता है, लेकिन…",
+        "use_with": "Kirana, mobile repair, tailor"
+      },
+      {
+        "name": "Festival FOMO",
+        "line": "दिवाली से पहले ये लिस्ट पूरी कर लो।",
+        "use_with": "Any type, only when the film is festival-led"
+      },
+      {
+        "name": "Price-jugaad",
+        "line": "Built only from an offer the owner gave",
+        "use_with": "Any type with an [OFFER]"
+      },
+      {
+        "name": "Mid-sentence start",
+        "line": "Opens mid-conversation at the counter",
+        "use_with": "Storytelling format"
+      }
+    ]
+  },
+  "annex_c": [
+    {
+      "name": "Area shoutout",
+      "structure": "The owner looks into the lens and calls out the locality."
+    },
+    {
+      "name": "Counter question",
+      "structure": "A customer asks the question everyone has (\"भैया, उधार चलेगा?\"); cut to the owner."
+    },
+    {
+      "name": "Everyday crisis",
+      "structure": "Something runs out, breaks or goes wrong at home; a quick cut to the business."
+    },
+    {
+      "name": "Myth-bust",
+      "structure": "Someone says a common belief about this kind of business; the owner calmly disagrees in one line."
+    },
+    {
+      "name": "Same place, two moments",
+      "structure": "The same kitchen, mirror or phone, first with the problem, then sorted."
+    },
+    {
+      "name": "Unexpected action",
+      "structure": "A familiar place with one odd action that stops the scroll (the gym trainer helping an old man tie his shoes)."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "note": "Product Spine Annex C1 - fallback only, used when the live festival check fails. Drik Panchang-based calendar for New Delhi; dates can shift by a day by region. EXTEND THIS BEFORE IT RUNS OUT (last entry Nov 2026).",
+  "moments": [
+    { "name": "Sharad Navratri", "start": "2026-10-11", "end": "2026-10-20", "where": "Pan-India", "strong_fit": "Kirana, boutique, salon", "activities": "Fasting groceries, festive outfits, getting ready for garba / puja evenings" },
+    { "name": "Dussehra", "start": "2026-10-20", "end": "2026-10-20", "where": "Pan-India (Dasara in Maharashtra and Karnataka)", "strong_fit": "Kirana, sweet shop, electronics", "activities": "New purchases, family visits, sweets" },
+    { "name": "Karva Chauth", "start": "2026-10-29", "end": "2026-10-29", "where": "North India", "strong_fit": "Salon, boutique, sweet shop", "activities": "Mehendi, getting ready, festive outfits, sweets" },
+    { "name": "Dhanteras", "start": "2026-11-06", "end": "2026-11-06", "where": "Pan-India", "strong_fit": "Kirana, electronics, sweet shop", "activities": "Major buying day - utensils, electronics, gold" },
+    { "name": "Diwali", "start": "2026-11-08", "end": "2026-11-08", "where": "Pan-India", "strong_fit": "Kirana, sweet shop, salon, tailor", "activities": "Stocking up for guests, gifting boxes, cleaning, new clothes" },
+    { "name": "Govardhan Puja / Diwali Padwa", "start": "2026-11-10", "end": "2026-11-10", "where": "North India / Maharashtra", "strong_fit": "Sweet shop, kirana", "activities": "Family meals, sweets" },
+    { "name": "Bhai Dooj / Bhau Beej", "start": "2026-11-11", "end": "2026-11-11", "where": "Pan-India (some calendars: 10 Nov)", "strong_fit": "Sweet shop, gifting", "activities": "Sibling visits and gifts" },
+    { "name": "Chhath Puja", "start": "2026-11-13", "end": "2026-11-16", "where": "Bihar, Jharkhand, eastern UP, migrant communities in metros", "strong_fit": "Kirana, sweet shop", "activities": "Families shopping for the festival, people travelling home" },
+    { "name": "Wedding season opens", "start": "2026-11-20", "end": "2026-12-31", "where": "Pan-India", "strong_fit": "Salon, tailor, gym, sweet shop", "activities": "Fittings, getting in shape, bridal prep, orders for guests" },
+    { "name": "Kartik Purnima / Dev Diwali", "start": "2026-11-24", "end": "2026-11-24", "where": "Varanasi and wider UP", "strong_fit": "Sweet shop, kirana", "activities": "Diyas, family gatherings" }
+  ]
+}
