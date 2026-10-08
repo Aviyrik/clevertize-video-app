@@ -1789,29 +1789,25 @@ export default function App() {
             >
               <Clapperboard size={20} />
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  Clevertize
-                </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    color: 'var(--accent-primary)',
-                    backgroundColor: 'var(--accent-subtle)',
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                  }}
-                >
-                  Creative Intelligence v2
-                </span>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>
-                Product Spine Engine · 4-Checkpoint Production Workspace
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                Clevertize
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-primary)',
+                  backgroundColor: 'var(--accent-subtle)',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Video Intelligence
+              </span>
             </div>
           </div>
 
