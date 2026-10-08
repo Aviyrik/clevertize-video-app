@@ -2968,6 +2968,7 @@ export default function App() {
           <Screen02Brief
             userContext={userContext}
             updateUserContext={updateUserContext}
+            handleFileUpload={handleFileUpload}
             onContinue={() => {
               if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
@@ -3002,6 +3003,7 @@ export default function App() {
           <Screen03Settings
             userContext={userContext}
             updateUserContext={updateUserContext}
+            handleFileUpload={handleFileUpload}
             onLanguageChange={(lang) => {
               setExplicitChoices((prev) => ({ ...prev, language: lang }));
               handleLanguageChange(lang);

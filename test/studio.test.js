@@ -867,3 +867,35 @@ test('Studio Stage 07 Script: Headline says "Here\'s your script", not "Here\'s 
   );
 });
 
+test('Studio Stage 02 Brief: Product Image upload option is present after brief', () => {
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.equal(
+    guidedStudioSource.includes('Product Image (Optional)'),
+    true,
+    'Screen02Brief should have "Product Image (Optional)" card'
+  );
+  assert.equal(
+    guidedStudioSource.includes('Click to upload product photo (Optional)'),
+    true,
+    'Screen02Brief should provide upload button for product photo'
+  );
+});
+
+test('Studio Stage 03 Settings: Product Asset option is present and editable', () => {
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.equal(
+    guidedStudioSource.includes('5. Product Asset (Optional)'),
+    true,
+    'Screen03Settings should display Product Asset section'
+  );
+});
+
+test('Studio Product Image: handleFileUpload is provided to Screen02Brief and Screen03Settings in App.jsx', () => {
+  const appSource = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.equal(
+    appSource.includes('<Screen02Brief') && appSource.includes('handleFileUpload={handleFileUpload}'),
+    true,
+    'App.jsx must pass handleFileUpload to Screen02Brief'
+  );
+});
+
