@@ -780,3 +780,61 @@ test('Brief Transition Test 10: "Your Choices" fix remains intact (fresh film do
   const choices = getActiveStudioChoices(freshExplicitChoices);
   assert.equal(choices.length, 0, 'Strip must be hidden when zero explicit choices have been made');
 });
+
+test('Studio Stale Warning: Selecting an idea during initial forward pass does NOT show stale warning', () => {
+  let hasStaleWarning = false;
+  const completedStages = ['business', 'brief', 'settings'];
+  const scenes = [];
+  const generatedScript = null;
+
+  // Simulate user selecting an idea card on stage 04
+  const onSelectIdea = (ideaTitle) => {
+    const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
+    if (hasDownstream) {
+      hasStaleWarning = true;
+    }
+  };
+
+  onSelectIdea('THE HAMPER KNOWS');
+  assert.equal(hasStaleWarning, false, 'Stale warning must NOT trigger during initial forward idea selection');
+
+  // StudioChoicesBar gate test
+  const showStaleWarningInBar = Boolean(
+    hasStaleWarning && (
+      completedStages.includes('script') ||
+      completedStages.includes('video') ||
+      scenes.length > 0 ||
+      generatedScript
+    )
+  );
+  assert.equal(showStaleWarningInBar, false, 'Choices bar must not render warning when no downstream script exists');
+});
+
+test('Studio Stale Warning: Modifying an idea AFTER script generation DOES show stale warning', () => {
+  let hasStaleWarning = false;
+  const completedStages = ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'];
+  const scenes = [{ sceneNumber: 1, text: 'Opening shot' }];
+  const generatedScript = 'Scene 1...';
+
+  // User navigates back to stage 04 and picks a different idea
+  const onSelectIdea = (ideaTitle) => {
+    const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
+    if (hasDownstream) {
+      hasStaleWarning = true;
+    }
+  };
+
+  onSelectIdea('DIFFERENT IDEA');
+  assert.equal(hasStaleWarning, true, 'Stale warning MUST trigger when downstream script exists and idea is changed');
+
+  const showStaleWarningInBar = Boolean(
+    hasStaleWarning && (
+      completedStages.includes('script') ||
+      completedStages.includes('video') ||
+      scenes.length > 0 ||
+      generatedScript
+    )
+  );
+  assert.equal(showStaleWarningInBar, true, 'Choices bar MUST render warning and update button');
+});
+

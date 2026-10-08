@@ -1459,8 +1459,11 @@ export default function App() {
       story: prev?.story ? { ...prev.story, format: newFormat } : { format: newFormat },
     }));
     // Invalidate downstream script because format changed
+    const hadDownstream = Boolean(generatedScript || scenes.length > 0 || completedStages.includes('script'));
     setGeneratedScript(null);
-    setHasStaleWarning(true);
+    if (hadDownstream) {
+      setHasStaleWarning(true);
+    }
     await loadStoryWorld(true, null, newFormat);
   };
 
@@ -2563,7 +2566,14 @@ export default function App() {
         <StudioChoicesBar
           explicitChoices={explicitChoices}
           onNavigateStage={handleNavigateStage}
-          hasStaleWarning={hasStaleWarning}
+          hasStaleWarning={Boolean(
+            hasStaleWarning && (
+              completedStages.includes('script') ||
+              completedStages.includes('video') ||
+              scenes.length > 0 ||
+              generatedScript
+            )
+          )}
           onApplyUpdate={handleApplyUpdate}
         />
       </div>
@@ -3034,7 +3044,10 @@ export default function App() {
               if (d?.title) {
                 setExplicitChoices((prev) => ({ ...prev, idea: d.title }));
               }
-              setHasStaleWarning(true);
+              const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
+              if (hasDownstream) {
+                setHasStaleWarning(true);
+              }
             }}
             customDirection={customDirection}
             setCustomDirection={setCustomDirection}
@@ -3073,7 +3086,10 @@ export default function App() {
               if (hookLabel) {
                 setExplicitChoices((prev) => ({ ...prev, opening: hookLabel }));
               }
-              setHasStaleWarning(true);
+              const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
+              if (hasDownstream) {
+                setHasStaleWarning(true);
+              }
             }}
             customHook={customHook}
             setCustomHook={setCustomHook}
@@ -3105,7 +3121,10 @@ export default function App() {
             setStoryWorldData={(sw) => {
               setStoryWorldData(sw);
               setCreativeDNA((prev) => ({ ...prev, story: sw }));
-              setHasStaleWarning(true);
+              const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
+              if (hasDownstream) {
+                setHasStaleWarning(true);
+              }
             }}
             userContext={userContext}
             updateUserContext={updateUserContext}
