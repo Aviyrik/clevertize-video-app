@@ -45,12 +45,42 @@ import {
 } from 'lucide-react';
 
 import {
-  ResearchInsightsBanner,
   CreativeDNABar,
   CreativePanelsWorkspace,
   SceneAIRewriteModal,
   ProductionShotSpecView,
 } from './components/CreativeWorkspace';
+
+class WorkspaceErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('WorkspaceErrorBoundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 24, backgroundColor: 'var(--bg-surface)', border: '1px solid #ef4444', borderRadius: 10, color: 'var(--text-primary)', textAlign: 'center' }}>
+          <h3 style={{ color: '#ef4444', margin: '0 0 8px' }}>Error Loading Creative Options</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{this.state.error?.message || 'Unexpected render error'}</p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ padding: '8px 16px', backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+          >
+            Retry Creative Stage
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Ad Focus Goal Presets — defines creative objectives & CTA angles
 const AD_GOAL_PRESETS = [
@@ -3665,6 +3695,7 @@ export default function App() {
                             }
                             setValidationError('');
                             setCreationStep(3);
+                            loadCreativeDirections();
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           style={{
@@ -3765,69 +3796,71 @@ export default function App() {
                     />
 
                     {/* Progressive Creative Decision Panels */}
-                    <CreativePanelsWorkspace
-                      creativePanel={creativePanel}
-                      setCreativePanel={setCreativePanel}
-                      // Directions
-                      directionsList={directionsList}
-                      selectedDirection={selectedDirection}
-                      setSelectedDirection={(d) => {
-                        setSelectedDirection(d);
-                        setCreativeDNA((prev) => ({ ...prev, direction: d }));
-                      }}
-                      customDirection={customDirection}
-                      setCustomDirection={setCustomDirection}
-                      isLoadingDirections={isLoadingDirections}
-                      onLoadDirections={loadDirections}
-                      // Hooks
-                      hooksList={hooksList}
-                      selectedHook={selectedHook}
-                      setSelectedHook={(h) => {
-                        setSelectedHook(h);
-                        setCreativeDNA((prev) => ({ ...prev, hook: h }));
-                      }}
-                      customHook={customHook}
-                      setCustomHook={setCustomHook}
-                      isLoadingHooks={isLoadingHooks}
-                      onLoadHooks={loadHooks}
-                      // Plots
-                      plotsList={plotsList}
-                      selectedPlot={selectedPlot}
-                      setSelectedPlot={(p) => {
-                        setSelectedPlot(p);
-                        setCreativeDNA((prev) => ({ ...prev, plot: p }));
-                      }}
-                      customPlot={customPlot}
-                      setCustomPlot={setCustomPlot}
-                      isLoadingPlots={isLoadingPlots}
-                      onLoadPlots={loadPlots}
-                      // Story World
-                      storyWorldData={storyWorldData}
-                      setStoryWorldData={(sw) => {
-                        setStoryWorldData(sw);
-                        setCreativeDNA((prev) => ({ ...prev, story: sw }));
-                      }}
-                      isLoadingStory={isLoadingStory}
-                      onLoadStory={loadStoryWorld}
-                      // Constraints
-                      constraintsList={constraintsList}
-                      setConstraintsList={setConstraintsList}
-                      avoidList={avoidList}
-                      setAvoidList={setAvoidList}
-                      newConstraintInput={newConstraintInput}
-                      setNewConstraintInput={setNewConstraintInput}
-                      newAvoidInput={newAvoidInput}
-                      setNewAvoidInput={setNewAvoidInput}
-                      // Production options
-                      userContext={userContext}
-                      updateUserContext={updateUserContext}
-                      handleFileUpload={handleFileUpload}
-                      PLATFORM_PRESETS={PLATFORM_PRESETS}
-                      // Actions
-                      onSynthesizeMasterScript={handleSynthesizeMasterScript}
-                      isBusy={isBusy}
-                      onBackToBrief={() => setCreationStep(2)}
-                    />
+                    <WorkspaceErrorBoundary>
+                      <CreativePanelsWorkspace
+                        creativePanel={creativePanel}
+                        setCreativePanel={setCreativePanel}
+                        // Directions
+                        directionsList={directionsList}
+                        selectedDirection={selectedDirection}
+                        setSelectedDirection={(d) => {
+                          setSelectedDirection(d);
+                          setCreativeDNA((prev) => ({ ...prev, direction: d }));
+                        }}
+                        customDirection={customDirection}
+                        setCustomDirection={setCustomDirection}
+                        isLoadingDirections={isLoadingDirections}
+                        onLoadDirections={loadCreativeDirections}
+                        // Hooks
+                        hooksList={hooksList}
+                        selectedHook={selectedHook}
+                        setSelectedHook={(h) => {
+                          setSelectedHook(h);
+                          setCreativeDNA((prev) => ({ ...prev, hook: h }));
+                        }}
+                        customHook={customHook}
+                        setCustomHook={setCustomHook}
+                        isLoadingHooks={isLoadingHooks}
+                        onLoadHooks={loadHooks}
+                        // Plots
+                        plotsList={plotsList}
+                        selectedPlot={selectedPlot}
+                        setSelectedPlot={(p) => {
+                          setSelectedPlot(p);
+                          setCreativeDNA((prev) => ({ ...prev, plot: p }));
+                        }}
+                        customPlot={customPlot}
+                        setCustomPlot={setCustomPlot}
+                        isLoadingPlots={isLoadingPlots}
+                        onLoadPlots={loadPlots}
+                        // Story World
+                        storyWorldData={storyWorldData}
+                        setStoryWorldData={(sw) => {
+                          setStoryWorldData(sw);
+                          setCreativeDNA((prev) => ({ ...prev, story: sw }));
+                        }}
+                        isLoadingStory={isLoadingStory}
+                        onLoadStory={loadStoryWorld}
+                        // Constraints
+                        constraintsList={constraintsList}
+                        setConstraintsList={setConstraintsList}
+                        avoidList={avoidList}
+                        setAvoidList={setAvoidList}
+                        newConstraintInput={newConstraintInput}
+                        setNewConstraintInput={setNewConstraintInput}
+                        newAvoidInput={newAvoidInput}
+                        setNewAvoidInput={setNewAvoidInput}
+                        // Production options
+                        userContext={userContext}
+                        updateUserContext={updateUserContext}
+                        handleFileUpload={handleFileUpload}
+                        PLATFORM_PRESETS={PLATFORM_PRESETS}
+                        // Actions
+                        onSynthesizeMasterScript={handleSynthesizeMasterScript}
+                        isBusy={isBusy}
+                        onBackToBrief={() => setCreationStep(2)}
+                      />
+                    </WorkspaceErrorBoundary>
                   </div>
                 )}
 

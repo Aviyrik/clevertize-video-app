@@ -417,52 +417,52 @@ function CreativeLoadingState({ message }) {
  * 5. MAIN CREATIVE WORKSPACE (ONE CREATIVE DECISION AT A TIME)
  */
 export function CreativePanelsWorkspace({
-  creativePanel,
+  creativePanel = 'direction',
   setCreativePanel,
   // Directions
-  directionsList,
-  selectedDirection,
+  directionsList = [],
+  selectedDirection = null,
   setSelectedDirection,
-  customDirection,
+  customDirection = '',
   setCustomDirection,
-  isLoadingDirections,
+  isLoadingDirections = false,
   onLoadDirections,
   // Hooks
-  hooksList,
-  selectedHook,
+  hooksList = [],
+  selectedHook = null,
   setSelectedHook,
-  customHook,
+  customHook = '',
   setCustomHook,
-  isLoadingHooks,
+  isLoadingHooks = false,
   onLoadHooks,
   // Plots
-  plotsList,
-  selectedPlot,
+  plotsList = [],
+  selectedPlot = null,
   setSelectedPlot,
-  customPlot,
+  customPlot = '',
   setCustomPlot,
-  isLoadingPlots,
+  isLoadingPlots = false,
   onLoadPlots,
   // Story World & Format
-  storyWorldData,
+  storyWorldData = null,
   setStoryWorldData,
-  isLoadingStory,
+  isLoadingStory = false,
   onLoadStory,
   // Constraints
-  constraintsList,
+  constraintsList = [],
   setConstraintsList,
-  avoidList,
+  avoidList = [],
   setAvoidList,
-  newConstraintInput,
+  newConstraintInput = '',
   setNewConstraintInput,
-  newAvoidInput,
+  newAvoidInput = '',
   setNewAvoidInput,
   // Production / Brand Options
-  userContext,
+  userContext = {},
   updateUserContext,
   // Actions
   onSynthesizeMasterScript,
-  isBusy,
+  isBusy = false,
   onBackToBrief,
 }) {
   const [isConstraintsExpanded, setIsConstraintsExpanded] = useState(false);
@@ -608,11 +608,11 @@ export function CreativePanelsWorkspace({
             </p>
           </div>
 
-          {isLoadingDirections ? (
+          {isLoadingDirections || (!directionsList?.length && !customDirection) ? (
             <CreativeLoadingState message="Finding strong creative territories…" />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
-              {directionsList.map((dir, idx) => {
+              {(directionsList || []).map((dir, idx) => {
                 const isSelected = selectedDirection?.id === dir.id || (!selectedDirection && dir.recommended);
                 return (
                   <div
@@ -725,11 +725,11 @@ export function CreativePanelsWorkspace({
             </p>
           </div>
 
-          {isLoadingHooks ? (
+          {isLoadingHooks || (!hooksList?.length && !customHook) ? (
             <CreativeLoadingState message="Finding scroll-stopping hooks…" />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
-              {hooksList.map((h, idx) => {
+              {(hooksList || []).map((h, idx) => {
                 const isSelected = selectedHook?.id === h.id || (!selectedHook && h.recommended);
                 return (
                   <div
@@ -834,11 +834,11 @@ export function CreativePanelsWorkspace({
             </p>
           </div>
 
-          {isLoadingPlots ? (
+          {isLoadingPlots || (!plotsList?.length && !customPlot) ? (
             <CreativeLoadingState message="Building story options…" />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-              {plotsList.map((p, idx) => {
+              {(plotsList || []).map((p, idx) => {
                 const isSelected = selectedPlot?.id === p.id || (!selectedPlot && p.recommended);
                 return (
                   <div
