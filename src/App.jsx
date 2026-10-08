@@ -2119,10 +2119,10 @@ export default function App() {
       return next;
     });
 
-    setCompletedStages(userContext.businessName ? ['business'] : []);
-    setStudioStage(userContext.businessName && userContext.businessName.trim().length > 0 ? 'brief' : 'business');
+    setCompletedStages([]);
+    setStudioStage('business');
     setCurrentStep('input');
-    setCreationStep(userContext.businessName && userContext.businessName.trim().length > 0 ? 2 : 1);
+    setCreationStep(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

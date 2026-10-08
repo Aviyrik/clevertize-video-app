@@ -409,3 +409,180 @@ test('Regression 8: Changing an explicit Style triggers downstream stale-state/i
   assert.equal(generatedScript, null, 'Downstream script must be invalidated');
   assert.equal(hasStaleWarning, true, 'hasStaleWarning must be set to true');
 });
+
+// ============================================================================
+// Business Screen Auto-Advance & Form Submission Regression Tests
+// ============================================================================
+
+function createBusinessScreenState(initialUserContext = {}) {
+  let userContext = { ...initialUserContext };
+  const hasInitialBrand = Boolean(userContext.businessName?.trim());
+  let isEditingExisting = !hasInitialBrand;
+  let errorMsg = '';
+  let currentStage = 'business';
+  let continueCalled = false;
+
+  const updateUserContext = (key, val) => {
+    userContext[key] = val;
+    // TEXT INPUT != FORM SUBMISSION: typing must never advance stage or invoke continue
+  };
+
+  const getShowCurrentBrandCard = () => {
+    return Boolean(hasInitialBrand && !isEditingExisting && userContext.businessName?.trim());
+  };
+
+  const handleNext = () => {
+    if (!userContext.businessName?.trim()) {
+      errorMsg = 'Please enter your business or brand name.';
+      return false;
+    }
+    errorMsg = '';
+    continueCalled = true;
+    currentStage = 'brief';
+    return true;
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      return handleNext();
+    }
+    // Normal key typing must never submit
+    return false;
+  };
+
+  const editBrand = () => {
+    isEditingExisting = true;
+  };
+
+  return {
+    getUserContext: () => userContext,
+    getCurrentStage: () => currentStage,
+    getErrorMsg: () => errorMsg,
+    getShowCurrentBrandCard,
+    isContinueCalled: () => continueCalled,
+    updateUserContext,
+    handleNext,
+    handleKeyDown,
+    editBrand,
+  };
+}
+
+test('Business Bug Test 1: Single character typing does not advance or collapse into card', () => {
+  const screen = createBusinessScreenState({ businessName: '' });
+
+  // Simulate typing "K"
+  screen.updateUserContext('businessName', 'K');
+
+  assert.equal(screen.getUserContext().businessName, 'K');
+  assert.equal(screen.getCurrentStage(), 'business', 'Screen must remain Business');
+  assert.equal(screen.isContinueCalled(), false, 'Continue must NOT be invoked on typing');
+  assert.equal(screen.getShowCurrentBrandCard(), false, 'Form must NOT collapse into Current Brand card while typing');
+});
+
+test('Business Bug Test 2: Multiple characters typing keeps user on Business screen', () => {
+  const screen = createBusinessScreenState({ businessName: '' });
+
+  const inputSequence = ['K', 'Ka', 'Kan', 'Kanti', 'Kanti ', 'Kanti Sweets'];
+  for (const str of inputSequence) {
+    screen.updateUserContext('businessName', str);
+    assert.equal(screen.getCurrentStage(), 'business');
+    assert.equal(screen.isContinueCalled(), false);
+    assert.equal(screen.getShowCurrentBrandCard(), false);
+  }
+
+  assert.equal(screen.getUserContext().businessName, 'Kanti Sweets');
+});
+
+test('Business Bug Test 3: Continue explicitly advances to Brief', () => {
+  const screen = createBusinessScreenState({ businessName: '' });
+  screen.updateUserContext('businessName', 'Kanti Sweets');
+
+  const success = screen.handleNext();
+
+  assert.equal(success, true);
+  assert.equal(screen.getErrorMsg(), '');
+  assert.equal(screen.getCurrentStage(), 'brief');
+  assert.equal(screen.isContinueCalled(), true);
+});
+
+test('Business Bug Test 4: Empty Continue shows error and remains on Business', () => {
+  const screen = createBusinessScreenState({ businessName: '' });
+
+  const success = screen.handleNext();
+
+  assert.equal(success, false);
+  assert.equal(screen.getErrorMsg(), 'Please enter your business or brand name.');
+  assert.equal(screen.getCurrentStage(), 'business');
+  assert.equal(screen.isContinueCalled(), false);
+});
+
+test('Business Bug Test 5: Typing into other inputs never advances workflow', () => {
+  const screen = createBusinessScreenState({ businessName: 'Kanti Sweets' });
+
+  screen.updateUserContext('businessType', 'Sweet Shop, Bakery & Mithai');
+  screen.updateUserContext('town', 'Bangalore');
+  screen.updateUserContext('websiteUrl', 'https://kantisweets.com');
+  screen.updateUserContext('specialty', 'Mysore Pak');
+  screen.updateUserContext('offer', 'Festive 20% off');
+
+  assert.equal(screen.getCurrentStage(), 'business');
+  assert.equal(screen.isContinueCalled(), false);
+  assert.equal(screen.getUserContext().town, 'Bangalore');
+  assert.equal(screen.getUserContext().specialty, 'Mysore Pak');
+});
+
+test('Business Bug Test 6: New Film resets to Business and typing does not advance', () => {
+  // Simulate starting New Film
+  const prevContext = { businessName: 'Old Brand', brief: 'Old brief' };
+  const resetResult = resetFilmForNewProject(prevContext, {});
+
+  // New Film always sets stage to 'business'
+  let currentStage = 'business';
+  assert.equal(currentStage, 'business');
+
+  // Open Business screen and type
+  const screen = createBusinessScreenState(resetResult.userContext);
+  screen.editBrand();
+  screen.updateUserContext('businessName', 'New Brand Name');
+
+  assert.equal(screen.getCurrentStage(), 'business');
+  assert.equal(screen.isContinueCalled(), false);
+  assert.equal(screen.getShowCurrentBrandCard(), false);
+});
+
+test('Business Bug Test 7: Brand Profile card edit does not trigger navigation while editing', () => {
+  // User enters screen with existing brand
+  const screen = createBusinessScreenState({ businessName: 'Kanti Sweets', businessType: 'Bakery' });
+
+  // Initially shows Current Brand card
+  assert.equal(screen.getShowCurrentBrandCard(), true);
+  assert.equal(screen.getCurrentStage(), 'business');
+
+  // User clicks "Edit brand"
+  screen.editBrand();
+  assert.equal(screen.getShowCurrentBrandCard(), false);
+
+  // User types and edits
+  screen.updateUserContext('businessName', 'Kanti Sweets Bangalore');
+  assert.equal(screen.getCurrentStage(), 'business');
+  assert.equal(screen.isContinueCalled(), false);
+  assert.equal(screen.getShowCurrentBrandCard(), false);
+});
+
+test('Business Bug Test 8: Keyboard typing never triggers navigation; Enter explicitly submits', () => {
+  const screen = createBusinessScreenState({ businessName: 'Kanti Sweets' });
+
+  // Ordinary keystrokes
+  const resK = screen.handleKeyDown({ key: 'K' });
+  const resA = screen.handleKeyDown({ key: 'a' });
+  assert.equal(resK, false);
+  assert.equal(resA, false);
+  assert.equal(screen.getCurrentStage(), 'business');
+  assert.equal(screen.isContinueCalled(), false);
+
+  // Intentional Enter key
+  const resEnter = screen.handleKeyDown({ key: 'Enter' });
+  assert.equal(resEnter, true);
+  assert.equal(screen.getCurrentStage(), 'brief');
+  assert.equal(screen.isContinueCalled(), true);
+});

@@ -262,13 +262,15 @@ export function Screen01Business({
   onContinue,
   BUSINESS_TYPES = [],
 }) {
-  const [isEditingExisting, setIsEditingExisting] = useState(false);
+  const [hasInitialBrand] = useState(() => Boolean(userContext.businessName?.trim()));
+  const [isEditingExisting, setIsEditingExisting] = useState(() => !Boolean(userContext.businessName?.trim()));
   const [showOptionalFields, setShowOptionalFields] = useState(
     Boolean(userContext.specialty || userContext.offer)
   );
   const [errorMsg, setErrorMsg] = useState('');
 
-  const hasExistingBrand = Boolean(userContext.businessName?.trim());
+  // Show Current Brand card ONLY if brand existed on mount, user hasn't chosen to edit, and name is non-empty
+  const showCurrentBrandCard = Boolean(hasInitialBrand && !isEditingExisting && userContext.businessName?.trim());
 
   const handleNext = () => {
     if (!userContext.businessName?.trim()) {
@@ -292,7 +294,7 @@ export function Screen01Business({
       </div>
 
       {/* Existing Brand Profile Banner */}
-      {hasExistingBrand && !isEditingExisting && (
+      {showCurrentBrandCard && (
         <div style={{
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
@@ -334,7 +336,7 @@ export function Screen01Business({
       )}
 
       {/* Main Form Fields */}
-      {(!hasExistingBrand || isEditingExisting) && (
+      {!showCurrentBrandCard && (
         <div style={{
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
@@ -362,6 +364,12 @@ export function Screen01Business({
               onChange={(e) => {
                 updateUserContext('businessName', e.target.value);
                 if (errorMsg) setErrorMsg('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleNext();
+                }
               }}
               placeholder="e.g. Kanti Sweets"
               style={{
