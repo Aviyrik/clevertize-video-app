@@ -1890,6 +1890,36 @@ export default function App() {
                 />
               </div>
 
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  Business Category
+                </label>
+                <select
+                  value={userContext.businessType}
+                  onChange={(e) => updateUserContext('businessType', e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                >
+                  {BUSINESS_TYPE_PRESETS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {userContext.businessType === 'Other' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Custom Category
+                  </label>
+                  <input
+                    type="text"
+                    value={userContext.customBusinessType}
+                    onChange={(e) => updateUserContext('customBusinessType', e.target.value)}
+                    placeholder="e.g. Handmade Ceramic Pottery"
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                  />
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
@@ -1906,7 +1936,7 @@ export default function App() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Area / Neighborhood
+                    Area / Neighborhood <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -1916,21 +1946,6 @@ export default function App() {
                     style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  Business Category
-                </label>
-                <select
-                  value={userContext.businessType}
-                  onChange={(e) => updateUserContext('businessType', e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
-                >
-                  {BUSINESS_TYPE_PRESETS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
               </div>
 
               <div>
@@ -2604,7 +2619,8 @@ export default function App() {
                       <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saved to your reusable brand profile</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
+                    {/* Row 1: Mandatory Core Brand Information */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: userContext.businessType === 'Other' ? 10 : 14 }}>
                       <div>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
                           Brand / Business Name <span style={{ color: 'var(--error)' }}>*</span>
@@ -2622,6 +2638,39 @@ export default function App() {
                       </div>
 
                       <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                          Product / Service Category <span style={{ color: 'var(--error)' }}>*</span>
+                        </label>
+                        <select
+                          value={userContext.businessType}
+                          onChange={(e) => updateUserContext('businessType', e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                        >
+                          {BUSINESS_TYPE_PRESETS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {userContext.businessType === 'Other' && (
+                      <div style={{ marginBottom: 14 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          Custom Category / Business Type
+                        </label>
+                        <input
+                          type="text"
+                          value={userContext.customBusinessType}
+                          onChange={(e) => updateUserContext('customBusinessType', e.target.value)}
+                          placeholder="e.g. Handmade Ceramic Pottery, Drone Photography"
+                          style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Row 2: Location Information (Optional) */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
+                      <div>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                           Town / City <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
                         </label>
@@ -2635,23 +2684,6 @@ export default function App() {
                           placeholder="e.g. Bangalore, Mumbai (leave blank if global/national)"
                           style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
                         />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                          Product / Service Category <span style={{ color: 'var(--error)' }}>*</span>
-                        </label>
-                        <select
-                          value={userContext.businessType}
-                          onChange={(e) => updateUserContext('businessType', e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
-                        >
-                          {BUSINESS_TYPE_PRESETS.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
                       </div>
 
                       <div>
