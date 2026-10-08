@@ -463,3 +463,30 @@ test("L: sceneForGeneration incorporates BUSINESS DOMAIN lock when businessType 
   assert.match(genScene, /BUSINESS DOMAIN: Authentic setting and merchandise for Saree, Ethnic Wear & Bridal Store/);
 });
 
+test("M: compileShotPrompt explicitly incorporates spoken dialogue and visible acting delivery", () => {
+  const { compileShotSpecification, compileShotPrompt } = require("../engine/compiler");
+  const sceneWithDialogue = `SCENE 1 – HOOK
+Visual:
+Same setting: Sunita rushes into the shop with an empty jar.
+Animation Elements:
+• Camera: medium close-up, motivated push-in
+Audio / Dialogue / Voiceover:
+Sunita: "अरे, व्रत का साबूदाना ख़त्म!"
+Sound Design:
+SFX: jar tapping the counter`;
+
+  const spec = compileShotSpecification(
+    {
+      setting: "Small grocery store",
+      character1: "Ramesh",
+      character2: "Sunita",
+      scenes: [sceneWithDialogue],
+    },
+    { businessType: "Kirana" }
+  );
+
+  const prompt = compileShotPrompt(spec.shots[0], spec.staticWorld);
+  assert.match(prompt, /SPOKEN DIALOGUE & ACTING DELIVERY: Sunita: "अरे, व्रत का साबूदाना ख़त्म!"/);
+  assert.match(prompt, /The character visibly speaks this line on camera with natural expressive mouth\/lip movement/);
+});
+

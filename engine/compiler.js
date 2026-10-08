@@ -126,7 +126,12 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
 
     // 6. Timing & Spacing
     `TIMING: Shot duration ~${perShotSec}s (part of a ${totalDuration} commercial film). Fast, crisp, responsive pacing.`,
-  ];
+
+    // 7. Spoken Dialogue & Visible Acting Delivery
+    shot.dialogue && shot.dialogue !== "None"
+      ? `SPOKEN DIALOGUE & ACTING DELIVERY: ${shot.dialogue}. The character visibly speaks this line on camera with natural expressive mouth/lip movement, engaged facial expressions, and authentic conversational delivery.`
+      : null,
+  ].filter(Boolean);
 
   return lines.join("\n\n");
 }
