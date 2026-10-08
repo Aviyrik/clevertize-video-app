@@ -586,6 +586,60 @@ CANONICAL FILM LANGUAGE: ${language}`;
   };
 }
 
+function sanitizeParsedScript(parsed, form, format, creativeDNA, festName) {
+  if (!parsed) return parsed;
+  if (!parsed.header) parsed.header = {};
+  if (!parsed.header.business) parsed.header.business = form.businessName;
+  if (!parsed.header.format) parsed.header.format = format;
+  if (!parsed.header.lens) parsed.header.lens = creativeDNA?.direction?.lens || "1, Everyday Relatability";
+  if (!parsed.header.hook) parsed.header.hook = creativeDNA?.hook?.hookPattern || "Creator Hook";
+  if (!parsed.header.moment) parsed.header.moment = festName || "Everyday";
+
+  if (!parsed.character1 && creativeDNA?.character1) {
+    parsed.character1 = typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : `${creativeDNA.character1.name} — ${creativeDNA.character1.role || ""}`;
+  }
+  if (!parsed.character2 && creativeDNA?.character2) {
+    parsed.character2 = typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : `${creativeDNA.character2.name} — ${creativeDNA.character2.role || ""}`;
+  }
+  if (!parsed.setting && creativeDNA?.location) {
+    parsed.setting = `${creativeDNA.location.name}. ${creativeDNA.location.details || ""}`;
+  }
+
+  if (!Array.isArray(parsed.scenes)) return parsed;
+
+  const char1Name = (parsed.character1 || "").split(/\s[—–-]\s|,|—/)[0].replace(/\(.*?\)/g, "").trim();
+  const char2Name = (parsed.character2 || "").split(/\s[—–-]\s|,|—/)[0].replace(/\(.*?\)/g, "").trim();
+
+  parsed.scenes = parsed.scenes.map((sc) => {
+    let updated = sc;
+
+    // 1. Ensure visual starts with "Same setting:" (Rule M13b)
+    updated = updated.replace(/(Visual\s*:\s*)(?!same setting\b)/i, "$1Same setting: ");
+
+    // 2. Fix M13d: if visual describes characters or dialogue is present, ensure eye contact / looking at each other is stated
+    const visualMatch = updated.match(/(Visual\s*:\s*)([\s\S]*?)(?=\n\s*(?:Animation Elements|Sound Design|Dialogue|Audio|Editing Notes)\s*:|$)/i);
+    if (visualMatch) {
+      const visualBody = visualMatch[2];
+      const hasLookAt = /\b(looks?|looking|glances?|glancing|smiles?|smiling|nods?|nodding)\s+(up\s+)?(at|towards|to)\b|\b(turns?|turning)\s+(to|towards)\b|\b(faces?|facing)\b|\beye contact\b|\bmeets? (his|her|their) (eyes|gaze)\b|\bover-the-shoulder\b/i.test(visualBody);
+      
+      const hasDialogue = /Audio\s*\/\s*Dialogue\s*\/\s*Voiceover\s*:[\s\S]*?[A-Za-z0-9\u0900-\u097F]+\s*:\s*["“][^"”]+["”]/i.test(updated);
+
+      if (hasDialogue && !hasLookAt) {
+        const eyePhrase = (char1Name && char2Name)
+          ? `${char1Name} and ${char2Name} look at each other as they speak.`
+          : `They look at each other as they speak.`;
+        const cleanBody = visualBody.trim().replace(/\.?$/, `.`);
+        const fixedBody = `${cleanBody} ${eyePhrase}`;
+        updated = updated.replace(visualMatch[0], `${visualMatch[1]}${fixedBody}\n`);
+      }
+    }
+
+    return updated;
+  });
+
+  return parsed;
+}
+
 /**
  * 6. SCRIPT SYNTHESIS (The Master Creative Synthesis Engine)
  * Takes all approved decisions, constraints, DNA, and synthesizes the canonical Production Script.
@@ -602,7 +656,8 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     ? `FORMAT EXECUTION (UGC / CREATOR-STYLE):
 - Conversational direct-to-camera delivery or authentic peer interaction.
 - Fast scroll-stopping hook within 2 seconds.
-- Natural handheld camera feel and high social energy.`
+- Natural handheld camera feel and high social energy.
+- CRITICAL SECTION 6 RULE: The owner/creator speaks in AT MOST 3 of the 4 scenes. Exactly ONE scene (e.g. Scene 2 or Scene 3) must be visual B-roll (showing hands handling or packaging product, counter, or shop atmosphere) with ambient sound or dialogue from Character 2 only. The owner MUST NOT speak in all 4 scenes.`
     : format.includes("Demo")
     ? `FORMAT EXECUTION (PRODUCT DEMO):
 - Featured product MUST be introduced and in focus within the first 4 seconds.
@@ -639,12 +694,13 @@ ${formatExecutionRules}
 Follow all Product Spine Section 8 rules:
 - Exactly 4 scenes titled SCENE 1 – HOOK / SCENE 2 – BUILD / SCENE 3 – TURN / SCENE 4 – RESOLUTION.
 - Scene 1 MUST open with the approved hook line and action.
-- Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13).
+- Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b).
 - Exactly 2 characters throughout with consistent look and wardrobe.
 - Maximum 2 spoken dialogue lines per character per scene.
 - Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)."}
-- Vary camera shot size and movement across scenes (at least 3 different camera setups).
-- When characters talk, they look at each other with natural eye contact.
+- CAMERA SETUP VARIETY (Rule M13c): Use at least 3 distinct camera setups across scenes with motivated camera motion, no two consecutive scenes identical.
+- EYE-LINE RULE (Rule M13d): In EVERY scene where two characters talk or interact, the Visual description MUST explicitly state that they look at each other, face each other, or make eye contact (e.g. "Ramesh looks at Sunita as he speaks", "Sunita turns to face Ramesh"). Never omit eye contact when both characters are in the scene or speaking, and never have characters stare into distance or look away.
+${format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 of the 4 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
 - Return ONLY the standard @@HEADER@@, @@CHARACTER1@@, @@CHARACTER2@@, @@SETTING@@, @@SCENE@@, and @@RECORD@@ markers. In @@HEADER@@, set Format: ${format}.`;
 
   const base = buildUserContent(form, fest, [], todayIST(), stageInst);
@@ -655,11 +711,13 @@ Follow all Product Spine Section 8 rules:
   for (let i = 0; i <= 3; i++) {
     attempts++;
     if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
-    parsed = parseOutput(await callClaude({ system, content, thinking: false }));
+    parsed = parseOutput(await callClaude({ system, content, maxTokens: 4000, thinking: false }));
+    parsed = sanitizeParsedScript(parsed, form, format, creativeDNA, festName);
     failures = runGate(parsed, form, gateOpts);
     console.log(`[synthesis] pass #${attempts}: ${failures.length ? `${failures.length} failing checks (${failures.map(f => (typeof f === "object" ? f.rule || f.message : f)).join(" | ")})` : "PASSED"}`);
     if (!failures.length) break;
   }
+
 
   if (failures.length) {
     console.warn(`[synthesis] Quality gate had ${failures.length} remaining check(s) after ${attempts} passes:`, failures);

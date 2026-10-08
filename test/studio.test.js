@@ -1071,3 +1071,19 @@ test('Magnific explicitInputs: Always satisfies logo requirement even when omitt
   });
   assert.equal(inputsWithLogo.images, 'data:image/png;base64,CUSTOM_LOGO_DATA', 'Must use provided logo data URL');
 });
+
+test('Studio Stage 06 Story: Synthesis loading screen dynamically paces steps using elapsed time', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('parseElapsedSeconds'), 'Must parse elapsed seconds from timer');
+  assert.ok(guidedStudioSrc.includes('elapsedSec < 8 ? 0 : elapsedSec < 17 ? 1 : elapsedSec < 27 ? 2 : 3'), 'Must dynamically calculate active step based on elapsed seconds');
+  assert.ok(!guidedStudioSrc.includes('setInterval(() => {\n      setActiveStepIdx'), 'Should not use fixed 4s interval that rushes to last step');
+  assert.ok(guidedStudioSrc.includes('Directing broadcast scenes & running Section 8 quality checks'), 'Must include realistic synthesis reassurance text');
+});
+
+test('Creative Engine: Master Script Synthesis enforces UGC Section 6 and M13d Eye-line rules', () => {
+  const creativeSrc = fs.readFileSync(path.join(__dirname, '../engine/creative.js'), 'utf8');
+  assert.ok(creativeSrc.includes('CRITICAL SECTION 6 RULE'), 'Must include Section 6 UGC rule in prompt');
+  assert.ok(creativeSrc.includes('The owner/creator speaks in AT MOST 3 of the 4 scenes'), 'Prompt must restrict owner to max 3 scenes in UGC');
+  assert.ok(creativeSrc.includes('EYE-LINE RULE (Rule M13d)'), 'Prompt must explicitly require eye contact');
+  assert.ok(creativeSrc.includes('sanitizeParsedScript'), 'Must sanitize parsed script immediately in synthesis loop');
+});

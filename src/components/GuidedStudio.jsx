@@ -2053,7 +2053,23 @@ export function Screen06Story({
   const [newConstraint, setNewConstraint] = useState('');
   const [newAvoid, setNewAvoid] = useState('');
 
-  const [activeStepIdx, setActiveStepIdx] = useState(0);
+  const parseElapsedSeconds = (str) => {
+    if (!str || typeof str !== 'string') return 0;
+    const parts = str.split(':').map(Number);
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 0;
+  };
+
+  const elapsedSec = parseElapsedSeconds(elapsedTime);
+  // Dynamically map active step according to real elapsed time:
+  // Step 0: 0-7s (Structuring narrative arc)
+  // Step 1: 8-16s (Writing spoken dialogue)
+  // Step 2: 17-26s (Directing camera setups & scene blocking)
+  // Step 3: 27s+ (Validating Section 8 Quality Gate)
+  const activeStepIdx = elapsedSec < 8 ? 0 : elapsedSec < 17 ? 1 : elapsedSec < 27 ? 2 : 3;
+
   const [tipIdx, setTipIdx] = useState(0);
 
   const synthesisSteps = [
@@ -2072,20 +2088,11 @@ export function Screen06Story({
   ];
 
   useEffect(() => {
-    if (!isBusy) {
-      setActiveStepIdx(0);
-      return;
-    }
-    const stepTimer = setInterval(() => {
-      setActiveStepIdx((prev) => (prev < synthesisSteps.length - 1 ? prev + 1 : prev));
-    }, 4000);
+    if (!isBusy) return;
     const tipTimer = setInterval(() => {
       setTipIdx((prev) => (prev + 1) % filmmakingTips.length);
     }, 5000);
-    return () => {
-      clearInterval(stepTimer);
-      clearInterval(tipTimer);
-    };
+    return () => clearInterval(tipTimer);
   }, [isBusy]);
 
   const beats = storyWorldData?.beats || [];
@@ -2232,9 +2239,13 @@ export function Screen06Story({
           </div>
         </div>
 
-        {/* Reassurance footer */}
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-          Running multi-pass script synthesis and quality gate verification (~15–25s)
+        {/* Dynamic Reassurance footer */}
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+          {elapsedSec < 28
+            ? 'Directing broadcast scenes & running Section 8 quality checks (~25–35s)'
+            : elapsedSec < 55
+            ? 'Polishing scene blocking & conversational dialogue… almost ready!'
+            : 'Finalizing broadcast quality gate verification… wrapping up!'}
         </div>
       </div>
     );
