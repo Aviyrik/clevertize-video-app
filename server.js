@@ -570,7 +570,14 @@ app.post("/api/run", async (req, res) => {
       );
     } else {
       // Robust fallback to continuous scene compilation
-      processedScenes = scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration, businessType: businessType || shotSpec?.project?.businessType || resolvedProduct }));
+      processedScenes = scenes.map((sc) => sceneForGeneration(sc, {
+        setting,
+        character1,
+        character2,
+        duration,
+        businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
+        language: shotSpec?.project?.language || "English",
+      }));
     }
 
     const runId = await magnific.startRun({

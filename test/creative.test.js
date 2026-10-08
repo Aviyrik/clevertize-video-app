@@ -314,3 +314,70 @@ test("10. synthesizeMasterScript sets shotSpec.format correctly based on chosen 
   assert.strictEqual(res.shotSpec.format, "Storytelling");
   assert.strictEqual(res.record.format, "Storytelling");
 });
+
+test("11. Exact bug scenario: Kanti Sweets, Siliguri, festival brief without language defaults to English hooks", async () => {
+  // Scenario from user: Brand Kanti Sweets, City Siliguri, Category Sweet Shop, festival brief.
+  // When no language is selected: MUST default to English (zero Devanagari).
+  const hooks = await creative.generateHooks({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop / Bakery / Mithai",
+    brief: "Announce special festival gift boxes and same-day delivery for corporate orders",
+    direction: { title: "Everyday Relatable" },
+    // Notice: NO language passed (or undefined)
+  });
+
+  assert.ok(hooks.length >= 4);
+  for (const h of hooks) {
+    // Assert absolutely NO Devanagari script in the English fallback hook line
+    assert.strictEqual(/[\u0900-\u097F]/.test(h.hookLine), false, `Expected English but found Devanagari in: ${h.hookLine}`);
+  }
+  assert.strictEqual(hooks[0].hookLine, "Wait, did you run out of this again?");
+});
+
+test("12. Canonical language selection generates Hindi, Hinglish, and Marathi hooks accordingly", async () => {
+  // 1) Hindi
+  const hindiHooks = await creative.generateHooks({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop / Bakery / Mithai",
+    brief: "Announce special festival gift boxes and same-day delivery for corporate orders",
+    language: "Hindi",
+  });
+  assert.strictEqual(hindiHooks[0].hookLine, "अरे, ये फिर से ख़त्म हो गया?!");
+  assert.ok(/[\u0900-\u097F]/.test(hindiHooks[0].hookLine));
+
+  // 2) Hinglish
+  const hinglishHooks = await creative.generateHooks({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop / Bakery / Mithai",
+    brief: "Announce special festival gift boxes and same-day delivery for corporate orders",
+    language: "Hinglish",
+  });
+  assert.ok(/[\u0900-\u097F]/.test(hinglishHooks[0].hookLine));
+
+  // 3) Marathi
+  const marathiHooks = await creative.generateHooks({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop / Bakery / Mithai",
+    brief: "Announce special festival gift boxes and same-day delivery for corporate orders",
+    language: "Marathi",
+  });
+  assert.strictEqual(marathiHooks[0].hookLine, "अरे, हे पुन्हा संपले की काय?!");
+  assert.ok(/[\u0900-\u097F]/.test(marathiHooks[0].hookLine));
+});
+
+test("13. Quality gate rejects Devanagari dialogue when film language is English", () => {
+  const { runGate } = require("../engine/gate");
+  const { parseOutput } = require("../engine/parse");
+
+  // Script with Hindi dialogue when form says English
+  const scriptWithHindi = GOOD_SCRIPT.replace("Sure Ramesh, give me five minutes.", "हाँ रमेश, मुझे पाँच मिनट दीजिए।");
+  const parsed = parseOutput(scriptWithHindi);
+  const fails = runGate(parsed, {
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    town: "Indore",
+    language: "English",
+  });
+
+  assert.ok(fails.some(f => f.includes("dialogue contains Devanagari script — film language is English")));
+});

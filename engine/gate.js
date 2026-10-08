@@ -151,6 +151,11 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
         } else if (DEVANAGARI.test(text)) {
           fails.push(`${S} dialogue uses Devanagari but the romanized test mode is on: "${text.slice(0, 50)}"`);
         }
+      } else {
+        const isEng = !f.language || /eng/i.test(String(f.language).trim());
+        if (isEng && DEVANAGARI.test(text)) {
+          fails.push(`${S} dialogue contains Devanagari script — film language is English; dialogue must be written in English (Rule M4): "${text.slice(0, 50)}"`);
+        }
       }
     }
     for (const [sp, count] of Object.entries(perSpeaker)) {

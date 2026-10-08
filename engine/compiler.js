@@ -42,7 +42,7 @@ function extractSceneParts(sceneText) {
 function compileShotSpecification(parsedScript, form = {}) {
   const duration = form.duration || "15s";
   const platform = form.platform || "Instagram Reels / 9:16 Mobile";
-  const language = form.language || "Hindi";
+  const language = form.language || "English";
   const style = form.creativeStyle || "UGC / Creator-style";
   const businessType = form.businessType || form.customBusinessType || "";
 

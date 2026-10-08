@@ -464,6 +464,8 @@ export function CreativePanelsWorkspace({
   onSynthesizeMasterScript,
   isBusy = false,
   onBackToBrief,
+  onBackToPreferences,
+  onLanguageChange,
 }) {
   const [isConstraintsExpanded, setIsConstraintsExpanded] = useState(false);
   const [downstreamWarning, setDownstreamWarning] = useState(false);
@@ -694,10 +696,10 @@ export function CreativePanelsWorkspace({
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <button
               type="button"
-              onClick={onBackToBrief}
+              onClick={onBackToPreferences || onBackToBrief}
               style={{ padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
             >
-              Back to Brief
+              {onBackToPreferences ? 'Back to Preferences' : 'Back to Brief'}
             </button>
             <button
               type="button"
@@ -1112,7 +1114,10 @@ export function CreativePanelsWorkspace({
                       <button
                         key={lang}
                         type="button"
-                        onClick={() => updateUserContext('language', lang)}
+                        onClick={() => {
+                          if (onLanguageChange) onLanguageChange(lang);
+                          else updateUserContext('language', lang);
+                        }}
                         style={{
                           padding: '4px 10px',
                           borderRadius: 4,

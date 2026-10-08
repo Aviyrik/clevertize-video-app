@@ -674,6 +674,10 @@ export default function App() {
       const saved = localStorage.getItem('clevertize_user_context');
       if (saved) {
         const parsed = JSON.parse(saved);
+        const isExplicitLang = localStorage.getItem('clevertize_lang_explicit');
+        if (!isExplicitLang && parsed.language === 'Hindi') {
+          parsed.language = 'English';
+        }
         base = { ...base, ...parsed };
       }
     } catch {
@@ -683,6 +687,11 @@ export default function App() {
   });
 
   const updateUserContext = (key, val) => {
+    if (key === 'language') {
+      try {
+        localStorage.setItem('clevertize_lang_explicit', 'true');
+      } catch {}
+    }
     setUserContext((prev) => {
       const next = { ...prev, [key]: val };
       try {
@@ -1082,7 +1091,7 @@ export default function App() {
       businessName: userContext.businessName.trim(),
       businessType: bType || 'Retail Store',
       town: userContext.town?.trim() || '',
-      language: userContext.language || 'Hindi',
+      language: userContext.language || 'English',
       duration: targetDur,
       platform: userContext.platform || 'Instagram Reels / 9:16',
       creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
@@ -1194,12 +1203,28 @@ export default function App() {
   };
 
   // 3. Fetching Hooks
-  const loadHooks = async (force = false) => {
+  const [languageChangedNotice, setLanguageChangedNotice] = useState('');
+
+  const handleLanguageChange = (newLang) => {
+    if (userContext.language === newLang) return;
+    updateUserContext('language', newLang);
+    if (hooksList.length > 0 || selectedHook) {
+      setLanguageChangedNotice(`Language changed to ${newLang}. Regenerating creative copy and script...`);
+      setTimeout(() => setLanguageChangedNotice(''), 5000);
+      setPlotsList([]);
+      setSelectedPlot(null);
+      setStoryWorldData(null);
+      loadHooks(true, newLang);
+    }
+  };
+
+  const loadHooks = async (force = false, overrideLang = null) => {
     if (hooksList.length && !force) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
+    const lang = overrideLang || userContext.language || 'English';
 
     setIsLoadingHooks(true);
     try {
@@ -1211,7 +1236,7 @@ export default function App() {
           businessType: bType,
           brief: userContext.brief || '',
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
-          language: userContext.language || 'English',
+          language: lang,
         }),
       });
       if (res.ok) {
@@ -1229,12 +1254,13 @@ export default function App() {
   };
 
   // 4. Fetching Plots
-  const loadPlots = async (force = false) => {
+  const loadPlots = async (force = false, overrideLang = null) => {
     if (plotsList.length && !force) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
+    const lang = overrideLang || userContext.language || 'English';
 
     setIsLoadingPlots(true);
     try {
@@ -1248,7 +1274,7 @@ export default function App() {
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
           hook: selectedHook || { hookLine: customHook || '' },
           format: userContext.creativeStyle || 'Storytelling',
-          language: userContext.language || 'English',
+          language: lang,
         }),
       });
       if (res.ok) {
@@ -1266,12 +1292,13 @@ export default function App() {
   };
 
   // 5. Fetching Story & World
-  const loadStoryWorld = async (force = false) => {
+  const loadStoryWorld = async (force = false, overrideLang = null) => {
     if (storyWorldData && !force) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
+    const lang = overrideLang || userContext.language || 'English';
 
     setIsLoadingStory(true);
     try {
@@ -1287,7 +1314,7 @@ export default function App() {
           hook: selectedHook || { hookLine: customHook || '' },
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
           format: userContext.creativeStyle || 'Storytelling',
-          language: userContext.language || 'English',
+          language: lang,
         }),
       });
       if (res.ok) {
@@ -1412,7 +1439,7 @@ export default function App() {
 
   // Auto-trigger options loading based on creativePanel
   useEffect(() => {
-    if (creationStep === 3) {
+    if (creationStep === 4) {
       if (creativePanel === 'direction') loadCreativeDirections();
       else if (creativePanel === 'hook') loadHooks();
       else if (creativePanel === 'plot') loadPlots();
@@ -1979,9 +2006,11 @@ export default function App() {
       setCurrentStep('storyboard');
     } else if (currentStep === 'storyboard') {
       setCurrentStep('input');
-      setCreationStep(3);
+      setCreationStep(4);
     } else if (currentStep === 'input') {
-      if (creationStep === 3) {
+      if (creationStep === 4) {
+        setCreationStep(3);
+      } else if (creationStep === 3) {
         setCreationStep(2);
       } else if (creationStep === 2) {
         setCreationStep(1);
@@ -2015,7 +2044,7 @@ export default function App() {
       supportingCharacter: '',
       environment: '',
       websiteUrl: '',
-      language: 'Hindi',
+      language: 'English',
       scriptMode: 'devanagari',
       selectedGoalId: 'offer',
       shopPhoto: null,
@@ -2371,7 +2400,7 @@ export default function App() {
               </span>
               <span style={{ color: 'var(--border-strong)' }}>→</span>
 
-              {/* 3. Production */}
+              {/* 3. Preferences */}
               <span
                 onClick={() => {
                   if (!isBusy && !isRendering && userContext.businessName && userContext.brief) {
@@ -2384,16 +2413,42 @@ export default function App() {
                   fontWeight: currentStep === 'input' && creationStep === 3 ? 700 : 500,
                   color: currentStep === 'input' && creationStep === 3
                     ? 'var(--accent-primary)'
-                    : currentStep === 'storyboard' || currentStep === 'render'
+                    : creationStep > 3 || currentStep === 'storyboard' || currentStep === 'render'
                     ? 'var(--success)'
                     : 'var(--text-tertiary)',
                   cursor: !isBusy && !isRendering && userContext.businessName && userContext.brief ? 'pointer' : 'default',
                   textDecoration: currentStep === 'input' && creationStep === 3 ? 'none' : (userContext.businessName && userContext.brief) ? 'underline' : 'none',
                   textUnderlineOffset: 3,
                 }}
-                title="Step 3: Production Options & Assets"
+                title="Step 3: Production Preferences (Language, Platform, Duration, Format)"
               >
-                3. Production
+                3. Preferences
+              </span>
+              <span style={{ color: 'var(--border-strong)' }}>→</span>
+
+              {/* 4. Creative Direction */}
+              <span
+                onClick={() => {
+                  if (!isBusy && !isRendering && userContext.businessName && userContext.brief) {
+                    setCurrentStep('input');
+                    setCreationStep(4);
+                    setErrorMessage('');
+                  }
+                }}
+                style={{
+                  fontWeight: currentStep === 'input' && creationStep === 4 ? 700 : 500,
+                  color: currentStep === 'input' && creationStep === 4
+                    ? 'var(--accent-primary)'
+                    : currentStep === 'storyboard' || currentStep === 'render'
+                    ? 'var(--success)'
+                    : 'var(--text-tertiary)',
+                  cursor: !isBusy && !isRendering && userContext.businessName && userContext.brief ? 'pointer' : 'default',
+                  textDecoration: currentStep === 'input' && creationStep === 4 ? 'none' : (userContext.businessName && userContext.brief) ? 'underline' : 'none',
+                  textUnderlineOffset: 3,
+                }}
+                title="Step 4: Creative Intelligence & Workspace"
+              >
+                4. Creative
               </span>
               <span style={{ color: 'var(--border-strong)' }}>→</span>
 
@@ -3696,7 +3751,6 @@ export default function App() {
                             }
                             setValidationError('');
                             setCreationStep(3);
-                            loadCreativeDirections();
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           style={{
@@ -3714,7 +3768,7 @@ export default function App() {
                             boxShadow: '0 2px 8px var(--accent-glow)',
                           }}
                         >
-                          <span>Continue to Production Options</span>
+                          <span>Continue to Production Preferences</span>
                           <ArrowRight size={16} />
                         </button>
                       </div>
@@ -3786,10 +3840,409 @@ export default function App() {
                 ) : null}
 
                 {/* ========================================================
-                    STEP 3: PRODUCTION OPTIONS + ASSETS + ADVANCED
+                    STEP 3: PRODUCTION PREFERENCES (Language, Platform, Duration, Format)
                     ======================================================== */}
-                {creationStep === 3 && (
+                {creationStep === 3 ? (
+                  <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--accent-primary)', borderRadius: 12, padding: 24, boxShadow: '0 4px 20px rgba(99, 102, 241, 0.08)' }}>
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 2 }}>
+                        STEP 3 · PRODUCTION PREFERENCES
+                      </div>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                        Establish Film Production Settings
+                      </h2>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                        Set spoken dialogue language, platform, format, and pacing before creative intelligence generates options.
+                      </p>
+                    </div>
+
+                    {/* Section 1: Canonical Film Spoken Language */}
+                    <div style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+                        <div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <Volume2 size={15} style={{ color: 'var(--accent-primary)' }} />
+                            <span>Spoken Dialogue Language (Canonical Source of Truth)</span>
+                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', fontWeight: 600 }}>Default: English</span>
+                          </label>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                            Output language is NEVER inferred from brand name, city, or culture. Only this setting controls dialogue.
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-primary)' }}>
+                          Selected: {userContext.language || 'English'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {['English', 'Hindi', 'Hinglish', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Kannada', 'Malayalam', 'Punjabi'].map((lang) => {
+                          const isSelected = (userContext.language || 'English') === lang;
+                          return (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => handleLanguageChange(lang)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                padding: '7px 14px',
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: isSelected ? 700 : 500,
+                                backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                                color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                boxShadow: isSelected ? '0 2px 8px var(--accent-glow)' : 'none',
+                              }}
+                            >
+                              {isSelected && <Check size={13} />}
+                              <span>{lang}</span>
+                              {lang === 'English' && !isSelected && (
+                                <span style={{ fontSize: 9, opacity: 0.7 }}>(Neutral)</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 2: Storytelling Format */}
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                        <Clapperboard size={15} style={{ color: 'var(--accent-primary)' }} />
+                        <span>Creative Format</span>
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                        {[
+                          { id: 'UGC / Creator-style', label: 'UGC / Creator', desc: 'Direct-to-camera, fast mobile hook & peer recommendation' },
+                          { id: 'Storytelling', label: 'Storytelling', desc: '2-character relatable dilemma & heartwarming emotional arc' },
+                          { id: 'Product Demo', label: 'Product Demo', desc: 'Product shown within 4s with hands-on tactile proof' },
+                          { id: 'Situational Comedy', label: 'Comedy', desc: 'Humorous setup, comic escalation & funny punchline' },
+                        ].map((fmt) => {
+                          const isSelected = (userContext.creativeStyle || 'UGC / Creator-style') === fmt.id;
+                          return (
+                            <div
+                              key={fmt.id}
+                              onClick={() => updateUserContext('creativeStyle', fmt.id)}
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: 8,
+                                backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-elevated)',
+                                border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                                  {fmt.label}
+                                </span>
+                                {isSelected && <Check size={14} style={{ color: 'var(--accent-primary)' }} />}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                                {fmt.desc}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 3: Platform & Duration */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 20 }}>
+                      {/* Platform */}
+                      <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                          <Camera size={14} style={{ color: 'var(--accent-primary)' }} />
+                          <span>Platform & Feed Aspect Ratio</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {[
+                            { id: 'Instagram Reels / 9:16', label: 'Instagram Reels (9:16)' },
+                            { id: 'YouTube Shorts / 9:16', label: 'YouTube Shorts (9:16)' },
+                            { id: 'Mobile Feed / 9:16', label: 'Mobile Feed (9:16)' },
+                            { id: 'Landscape / 16:9', label: 'Landscape (16:9)' },
+                          ].map((plt) => {
+                            const isSelected = (userContext.platform || 'Instagram Reels / 9:16') === plt.id;
+                            return (
+                              <button
+                                key={plt.id}
+                                type="button"
+                                onClick={() => updateUserContext('platform', plt.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? 700 : 500,
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  border: '1px solid var(--border-subtle)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {plt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                          <Clock size={14} style={{ color: 'var(--accent-primary)' }} />
+                          <span>Target Film Duration</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {['15s', '30s', '45s'].map((dur) => {
+                            const isSelected = (userContext.duration || '15s') === dur;
+                            return (
+                              <button
+                                key={dur}
+                                type="button"
+                                onClick={() => updateUserContext('duration', dur)}
+                                style={{
+                                  flex: 1,
+                                  padding: '7px 12px',
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? 700 : 500,
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  border: '1px solid var(--border-subtle)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {dur}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 4: Brand Assets (Optional) */}
+                    <div style={{ marginBottom: 20, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                        Visual Assets (Optional)
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                        {/* Product Photo */}
+                        <div style={{ padding: 12, borderRadius: 8, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                            Product Photo
+                          </div>
+                          {userContext.productPhoto ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>✓ Attached</span>
+                              <button
+                                type="button"
+                                onClick={() => updateUserContext('productPhoto', null)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 11 }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--accent-primary)', cursor: 'pointer' }}>
+                              <Upload size={12} />
+                              <span>Upload Photo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(file, 'productPhoto');
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Brand Logo */}
+                        <div style={{ padding: 12, borderRadius: 8, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                            Brand Logo
+                          </div>
+                          {userContext.logo ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>✓ Attached</span>
+                              <button
+                                type="button"
+                                onClick={() => updateUserContext('logo', null)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 11 }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--accent-primary)', cursor: 'pointer' }}>
+                              <Upload size={12} />
+                              <span>Upload Logo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(file, 'logo');
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Navigation */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                      <button
+                        type="button"
+                        onClick={() => setCreationStep(2)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 14px',
+                          borderRadius: 6,
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-secondary)',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ArrowLeft size={13} />
+                        <span>Back to Brief</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreationStep(4);
+                          loadCreativeDirections();
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '12px 24px',
+                          borderRadius: 8,
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontSize: 14,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px var(--accent-glow)',
+                        }}
+                      >
+                        <span>Continue to Creative Direction</span>
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ) : creationStep > 3 ? (
+                  /* Compact Collapsed Preferences Summary Card */
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 10,
+                      padding: '14px 18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 260, flex: 1 }}>
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 8,
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          color: 'var(--success)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <CheckCircle2 size={18} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
+                            STEP 3 · PREFERENCES
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 12, backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                            Language: {userContext.language || 'English'}
+                          </span>
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
+                            {userContext.creativeStyle || 'UGC / Creator-style'}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                            {userContext.duration || '15s'} · {userContext.platform || 'Instagram Reels / 9:16'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setCreationStep(3)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        backgroundColor: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Edit3 size={13} />
+                      <span>Edit Preferences</span>
+                    </button>
+                  </div>
+                ) : null}
+
+                {/* ========================================================
+                    STEP 4: CREATIVE DECISION WORKSPACE (01 Direction -> 02 Hook -> 03 Plot -> 04 Story -> 05 Script)
+                    ======================================================== */}
+                {creationStep === 4 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {languageChangedNotice && (
+                      <div style={{
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        border: '1px solid var(--accent-primary)',
+                        borderRadius: 8,
+                        padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        fontSize: 12,
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                      }}>
+                        <Sparkles size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                        <span>{languageChangedNotice}</span>
+                      </div>
+                    )}
+
                     {/* Persistent Creative DNA Bar */}
                     <CreativeDNABar
                       creativeDNA={creativeDNA}
@@ -3860,6 +4313,8 @@ export default function App() {
                         onSynthesizeMasterScript={handleSynthesizeMasterScript}
                         isBusy={isBusy}
                         onBackToBrief={() => setCreationStep(2)}
+                        onBackToPreferences={() => setCreationStep(3)}
+                        onLanguageChange={handleLanguageChange}
                       />
                     </WorkspaceErrorBoundary>
                   </div>

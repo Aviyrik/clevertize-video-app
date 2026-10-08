@@ -172,6 +172,18 @@ UPCOMING OCCASION: ${festival?.name || "None"}`;
  */
 async function generateHooks({ businessName, businessType, brief, direction, language = "English" }) {
   const isEng = !language || /eng/i.test(language);
+  const isHin = /hindi/i.test(language);
+  const isHinglish = /hinglish/i.test(language);
+  const isMar = /marathi/i.test(language);
+
+  const langRule = isEng
+    ? "STRICT: The film's canonical language is ENGLISH. Every hookLine MUST be written in natural, fluent conversational English. Absolutely NO Hindi, NO Devanagari script, NO regional Indian language words under any circumstances."
+    : isHinglish
+    ? "STRICT: The film's canonical language is HINGLISH. Write natural spoken Hinglish (conversational Hindi with everyday English loan words) in Devanagari script."
+    : isHin
+    ? "STRICT: The film's canonical language is HINDI. Spoken hookLine MUST be in authentic spoken Hindi in Devanagari script."
+    : `STRICT: The film's canonical language is ${language}. Spoken hookLine MUST be in authentic spoken ${language}.`;
+
   const system = `You are a short-form video viral hook specialist for Instagram Reels and YouTube Shorts.
 Generate 5 to 7 high-impact commercial opening hooks (first 3 seconds).
 Each hook must span a distinct archetype:
@@ -182,9 +194,13 @@ Each hook must span a distinct archetype:
 - Creator / UGC (direct to camera insider tip)
 - Demonstration (instant before-and-after action)
 
+MANDATORY LANGUAGE ENFORCEMENT:
+${langRule}
+CRITICAL PRINCIPLE: Never infer output language from the brand name, product category, city, country, or cultural context. The film's explicit language setting (${language}) is the ONLY source of truth.
+
 Provide:
 - archetype (name of the hook style)
-- hookLine: spoken line in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"})
+- hookLine: spoken line strictly in ${language} (${isEng ? "natural conversational English only" : "Devanagari script for Hindi/Hinglish/Marathi"})
 - visualAction: vivid physical opening action in English (1-2 sentences)
 - recommended: true for the top option
 
@@ -205,7 +221,7 @@ Return valid JSON between @@JSON@@ and @@END@@:
   const content = `BRAND: ${businessName} (${businessType})
 BRIEF: ${brief || "Promote brand"}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
-LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
@@ -216,11 +232,21 @@ LANGUAGE: ${language}`;
     console.warn("[hooks] fallback:", e.message);
   }
 
+  const getHookLine = (eng, hin, mar) => {
+    if (isMar) return mar || hin;
+    if (isHin || isHinglish) return hin;
+    return eng; // English is the canonical default
+  };
+
   return [
     {
       id: "hook_1",
       archetype: "Problem / Everyday Crisis",
-      hookLine: isEng ? "Wait, did you run out of this again?" : "अरे, ये फिर से ख़त्म हो गया?!",
+      hookLine: getHookLine(
+        "Wait, did you run out of this again?",
+        "अरे, ये फिर से ख़त्म हो गया?!",
+        "अरे, हे पुन्हा संपले की काय?!"
+      ),
       visualAction: "A person checks an empty container or shelf with sudden realization and turns around in urgency.",
       angle: "Everyday household panic",
       recommended: true,
@@ -228,7 +254,11 @@ LANGUAGE: ${language}`;
     {
       id: "hook_2",
       archetype: "Curiosity / Counter-Intuitive",
-      hookLine: isEng ? "Most people get this completely wrong." : "ज्यादातर लोग यहाँ गलती करते हैं।",
+      hookLine: getHookLine(
+        "Most people get this completely wrong.",
+        "ज्यादातर लोग यहाँ गलती करते हैं।",
+        "बहुतेक लोक इथेच चूक करतात."
+      ),
       visualAction: "The speaker holds up two contrasting items directly to the camera lens, gesturing emphatically.",
       angle: "Knowledge gap reveal",
       recommended: false,
@@ -236,7 +266,11 @@ LANGUAGE: ${language}`;
     {
       id: "hook_3",
       archetype: "Creator / UGC Secret",
-      hookLine: isEng ? "If you live in this area, you need to know this." : "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
+      hookLine: getHookLine(
+        "If you live in this area, you need to know this.",
+        "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
+        "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या."
+      ),
       visualAction: "Creator leans in closely towards the phone camera with a knowing smile, pointing over their shoulder.",
       angle: "Insider recommendation",
       recommended: false,
@@ -244,7 +278,11 @@ LANGUAGE: ${language}`;
     {
       id: "hook_4",
       archetype: "Visual Action",
-      hookLine: isEng ? "Stop doing this right now!" : "रुको, ये मत करना!",
+      hookLine: getHookLine(
+        "Stop doing this right now!",
+        "रुको, ये मत करना!",
+        "थांबा, हे मुळीच करू नका!"
+      ),
       visualAction: "Hands rush in to catch a slipping product just before it hits the counter, freezing the frame.",
       angle: "Immediate motion stop",
       recommended: false,
@@ -252,7 +290,11 @@ LANGUAGE: ${language}`;
     {
       id: "hook_5",
       archetype: "Demonstration / Proof",
-      hookLine: isEng ? "See the difference in literally three seconds." : "सिर्फ तीन सेकंड में असली फर्क देखिए।",
+      hookLine: getHookLine(
+        "See the difference in literally three seconds.",
+        "सिर्फ तीन सेकंड में असली फर्क देखिए।",
+        "फक्त तीन सेकंदात खरा फरक बघा."
+      ),
       visualAction: "Split screen action contrasting slow ordinary result with instant premium result.",
       angle: "Immediate visual proof",
       recommended: false,
@@ -273,10 +315,18 @@ async function generatePlots({ businessName, businessType, brief, direction, hoo
     ? "Situational Comedy format: clear humorous setup, comedic escalation, situational misunderstanding, exaggerated relatable reactions, and funny payoff."
     : "Storytelling format: dramatic character dilemma, genuine interpersonal relationship, emotional progression, and earned resolution.";
 
+  const langRule = isEng
+    ? "CANONICAL LANGUAGE DIRECTIVE: Output language is ENGLISH. Any character dialogue snippets or spoken examples MUST be in natural conversational English. Never output Hindi or Devanagari script."
+    : `CANONICAL LANGUAGE DIRECTIVE: Output language is ${language}. Character dialogue snippets must be in ${language} (${/hindi|hinglish|marathi/i.test(language) ? "Devanagari script" : language}).`;
+
   const system = `You are a narrative screenwriter for commercial advertising.
 Generate 3 distinct 4-scene narrative plot lines for a commercial video.
 FORMAT INFLUENCE (${format}):
 ${formatGuidelines}
+
+LANGUAGE RULE:
+${langRule}
+CRITICAL: Do NOT infer output language from brand, city, or culture. Spoken language is strictly ${language}.
 
 Each plot must have:
 - title: punchy creative title
@@ -305,7 +355,7 @@ Return valid JSON between @@JSON@@ and @@END@@:
 BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || "Relatable Tension"}
 CHOSEN HOOK: ${hook?.hookLine || ""} (${hook?.visualAction || ""})
-LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
@@ -360,16 +410,23 @@ async function generateStoryWorld({ businessName, businessType, town, brief, dir
     ? "Situational Comedy format: clear humorous setup, escalation, misunderstanding, witty banter, funny punchline payoff."
     : "Storytelling format: character-driven emotional dilemma, interpersonal relationship, emotional progression, earned resolution.";
 
+  const storyLangRule = isEng
+    ? "CANONICAL LANGUAGE DIRECTIVE: Output language is ENGLISH. Spoken dialogue in beats MUST be in natural conversational English. Absolutely NO Hindi or Devanagari script."
+    : `CANONICAL LANGUAGE DIRECTIVE: Output language is ${language}. Dialogue in beats MUST be spoken in ${language} (${/hindi|hinglish|marathi/i.test(language) ? "Devanagari script" : language}).`;
+
   const system = `You are a film director setting up the visual world, 2 characters, and 4 story beats for a commercial film.
 FORMAT INFLUENCE (${format}):
 ${formatGuidelines}
+
+${storyLangRule}
+CRITICAL: Spoken language is strictly determined by the canonical film language (${language}).
 
 Requirements:
 1. Exactly ONE single continuous location (Rule M13) — authentic Indian middle/upper-middle class setting.
 2. Exactly TWO recurring characters with vivid appearance, clothing, and chemistry.
 3. Exactly FOUR story beats: HOOK, BUILD, TURN, PAYOFF.
 4. Format: ${format}.
-5. Dialogue in beats: spoken in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"}).
+5. Dialogue in beats: spoken strictly in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"}).
 
 Return valid JSON between @@JSON@@ and @@END@@:
 @@JSON@@
@@ -410,7 +467,7 @@ DIRECTION: ${direction?.title || ""}
 HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
 FORMAT: ${format}
-LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -459,10 +516,10 @@ LANGUAGE: ${language}`;
       personality: "Smart shopper, values quality and genuine attention",
     },
     beats: [
-      { beat: "HOOK", title: "Scene 1: Scroll-Stopping Hook", action: hook?.visualAction || "Customer hurries in looking for an urgent solution.", dialogue: hook?.hookLine || (isEng ? "Has this ever happened to you?" : "क्या आपके साथ भी ऐसा होता है?") },
-      { beat: "BUILD", title: "Scene 2: Problem Deepens", action: "Customer explains their specific requirement at the counter.", dialogue: isEng ? "I need something genuine and completely reliable." : "मुझे बिलकुल सही और भरोसेमंद चीज़ चाहिए।" },
-      { beat: "TURN", title: "Scene 3: Solution Revealed", action: "Owner presents the featured product with clear visual demonstration.", dialogue: isEng ? "Look at this—this is exactly what makes our craft special." : "यह देखिए, यही तो हमारी ख़ासियत है।" },
-      { beat: "PAYOFF", title: "Scene 4: Delight & Call to Action", action: "Customer smiles in satisfaction, holding the product. Clean end card transition.", dialogue: isEng ? "From now on, I'm coming straight here every time!" : "अब से हर बार यहीं से लेंगे!" },
+      { beat: "HOOK", title: "Scene 1: Scroll-Stopping Hook", action: hook?.visualAction || "Customer hurries in looking for an urgent solution.", dialogue: hook?.hookLine || (isMar ? "तुमच्यासोबतही असं कधी घडलंय का?" : (isHin || isHinglish ? "क्या आपके साथ भी ऐसा होता है?" : "Has this ever happened to you?")) },
+      { beat: "BUILD", title: "Scene 2: Problem Deepens", action: "Customer explains their specific requirement at the counter.", dialogue: isMar ? "मला अगदी विश्वासार्ह आणि खात्रीशीर वस्तू हवी आहे." : (isHin || isHinglish ? "मुझे बिलकुल सही और भरोसेमंद चीज़ चाहिए।" : "I need something genuine and completely reliable.") },
+      { beat: "TURN", title: "Scene 3: Solution Revealed", action: "Owner presents the featured product with clear visual demonstration.", dialogue: isMar ? "हे बघा, हेच तर आमच्या कामाचं वैशिष्ट्य आहे." : (isHin || isHinglish ? "यह देखिए, यही तो हमारी ख़ासियत है।" : "Look at this—this is exactly what makes our craft special.") },
+      { beat: "PAYOFF", title: "Scene 4: Delight & Call to Action", action: "Customer smiles in satisfaction, holding the product. Clean end card transition.", dialogue: isMar ? "आतापासून दर वेळी मी थेट इथेच येणार!" : (isHin || isHinglish ? "अब से हर बार यहीं से लेंगे!" : "From now on, I'm coming straight here every time!") },
     ],
   };
 }

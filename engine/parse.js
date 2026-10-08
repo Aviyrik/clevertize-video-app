@@ -91,6 +91,9 @@ function sceneForGeneration(scene, ctx = {}) {
     const perScene = (totalSec / 4).toFixed(1);
     lock.push(`PACING & DURATION: Total video target duration is ${ctx.duration} across 4 scenes (~${perScene}s per scene). Ensure fast, snappy pacing calibrated to ~${perScene} seconds.`);
   }
+  if (ctx.language) {
+    lock.push(`LANGUAGE & SPOKEN DELIVERY: Dialogue is in ${ctx.language}. Actors mouth, deliver, and express authentic spoken dialogue delivery matching ${ctx.language}.`);
+  }
   return `${lock.join("\n")}\n\n${body}`;
 }
 
