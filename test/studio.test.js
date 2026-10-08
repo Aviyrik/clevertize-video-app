@@ -838,3 +838,17 @@ test('Studio Stale Warning: Modifying an idea AFTER script generation DOES show 
   assert.equal(showStaleWarningInBar, true, 'Choices bar MUST render warning and update button');
 });
 
+test('Studio Stage 06 Story: Continue button loading state references Script, not Video', () => {
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.equal(
+    guidedStudioSource.includes('Writing and polishing your video'),
+    false,
+    'Story screen should not say "Writing and polishing your video"'
+  );
+  assert.equal(
+    guidedStudioSource.includes('Writing and polishing your script'),
+    true,
+    'Story screen should say "Writing and polishing your script"'
+  );
+});
+

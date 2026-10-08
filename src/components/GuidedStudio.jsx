@@ -2038,7 +2038,7 @@ export function Screen06Story({
           }}
         >
           {isBusy && <RefreshCw size={14} className="icon-spinner" />}
-          <span>{isBusy ? 'Writing and polishing your video…' : 'Continue to Script →'}</span>
+          <span>{isBusy ? 'Writing and polishing your script…' : 'Continue to Script →'}</span>
         </button>
       </div>
     </div>
