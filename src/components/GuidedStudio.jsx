@@ -704,6 +704,37 @@ export function Screen02Brief({
               </button>
             ))}
           </div>
+
+          {/* Dynamic Category Suggestions if available */}
+          {Array.isArray(briefSuggestions) && briefSuggestions.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                Ideas for your business category:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {briefSuggestions.slice(0, 3).map((sug, sIdx) => (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => updateUserContext('brief', sug)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '7px 12px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    💡 {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

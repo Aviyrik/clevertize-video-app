@@ -640,6 +640,32 @@ function getCategoryBriefSuggestions(businessType, businessName, town, offer) {
   };
 }
 
+// Resilient Brand & Category Brief Suggestions (Fail-safe wrapper)
+export function getBriefSuggestions(businessType, businessName, town, offer) {
+  try {
+    return getCategoryBriefSuggestions(businessType, businessName, town, offer) || {
+      placeholder: 'Tell us what you want to promote, explain, announce or show.',
+      suggestions: [
+        'Show why customers choose our brand for trusted quality and personalized service',
+        'Create a relatable commercial highlighting our special offer and fast delivery',
+        'Tell the authentic story behind our craft, dedication, and happy patrons',
+        'Demonstrate how our brand solves everyday customer dilemmas with ease and care',
+      ],
+    };
+  } catch (err) {
+    console.warn('[getBriefSuggestions] fallback on error:', err);
+    return {
+      placeholder: 'Tell us what you want to promote, explain, announce or show.',
+      suggestions: [
+        'Show why customers choose our brand for trusted quality and personalized service',
+        'Create a relatable commercial highlighting our special offer and fast delivery',
+        'Tell the authentic story behind our craft, dedication, and happy patrons',
+        'Demonstrate how our brand solves everyday customer dilemmas with ease and care',
+      ],
+    };
+  }
+}
+
 export default function App() {
   // Network connectivity status
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -2915,7 +2941,11 @@ export default function App() {
                 return;
               }
               setValidationError('');
-              triggerAdaptiveResearch();
+              try {
+                triggerAdaptiveResearch();
+              } catch (err) {
+                console.warn('[research] non-blocking research error:', err);
+              }
               markStageComplete('business');
               setStudioStage('brief');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2943,7 +2973,15 @@ export default function App() {
             }}
             isRecording={isListening}
             toggleRecording={toggleVoiceInput}
-            briefSuggestions={getBriefSuggestions(userContext.businessType, userContext.businessName, userContext.town).suggestions}
+            briefSuggestions={(() => {
+              try {
+                const res = getBriefSuggestions(userContext.businessType, userContext.businessName, userContext.town);
+                return (res && Array.isArray(res.suggestions)) ? res.suggestions : [];
+              } catch (err) {
+                console.warn('[Screen02Brief] suggestions error:', err);
+                return [];
+              }
+            })()}
             researchData={researchData}
             isResearching={isResearching}
           />
