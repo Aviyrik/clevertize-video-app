@@ -262,12 +262,20 @@ export function Screen01Business({
   onContinue,
   BUSINESS_TYPES = [],
 }) {
-  const [hasInitialBrand] = useState(() => Boolean(userContext.businessName?.trim()));
+  const [hasInitialBrand, setHasInitialBrand] = useState(() => Boolean(userContext.businessName?.trim()));
   const [isEditingExisting, setIsEditingExisting] = useState(() => !Boolean(userContext.businessName?.trim()));
   const [showOptionalFields, setShowOptionalFields] = useState(
     Boolean(userContext.specialty || userContext.offer)
   );
   const [errorMsg, setErrorMsg] = useState('');
+
+  // When businessName is cleared (e.g. via reset brand), immediately reveal fresh input form
+  React.useEffect(() => {
+    if (!userContext.businessName?.trim()) {
+      setHasInitialBrand(false);
+      setIsEditingExisting(true);
+    }
+  }, [userContext.businessName]);
 
   // Show Current Brand card ONLY if brand existed on mount, user hasn't chosen to edit, and name is non-empty
   const showCurrentBrandCard = Boolean(hasInitialBrand && !isEditingExisting && userContext.businessName?.trim());

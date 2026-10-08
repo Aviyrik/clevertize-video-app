@@ -818,6 +818,7 @@ export default function App() {
   });
 
   const [hasStaleWarning, setHasStaleWarning] = useState(false);
+  const [brandResetKey, setBrandResetKey] = useState(0);
 
   // V4 Guided Studio: Explicit confirmed choices only (defaults are not choices!)
   const [explicitChoices, setExplicitChoices] = useState({
@@ -2233,6 +2234,8 @@ export default function App() {
 
   // Full Brand Reset (Allows Adding a Brand New Business)
   const handleResetBrandProfile = () => {
+    setIsBrandModalOpen(false);
+    setBrandResetKey((prev) => prev + 1);
     try {
       localStorage.removeItem('clevertize_user_context');
       localStorage.removeItem('clevertize_brand_name');
@@ -2942,6 +2945,7 @@ export default function App() {
         {/* 8 DEDICATED GUIDED STUDIO SCREENS */}
         {studioStage === 'business' && (
           <Screen01Business
+            key={`screen-01-business-${brandResetKey}`}
             userContext={userContext}
             updateUserContext={updateUserContext}
             handleFileUpload={handleFileUpload}

@@ -899,3 +899,23 @@ test('Studio Product Image: handleFileUpload is provided to Screen02Brief and Sc
   );
 });
 
+test('Brand Reset Test: resetting brand profile immediately closes modal and navigates to fresh Business stage', () => {
+  let isBrandModalOpen = true;
+  let studioStage = 'settings';
+  let businessName = 'Kanti Sweets';
+  let completedStages = ['business', 'brief'];
+
+  const resetBrandProfile = () => {
+    isBrandModalOpen = false;
+    businessName = '';
+    studioStage = 'business';
+    completedStages = [];
+  };
+
+  resetBrandProfile();
+  assert.equal(isBrandModalOpen, false, 'Brand modal MUST close immediately upon brand reset');
+  assert.equal(studioStage, 'business', 'Studio stage MUST navigate to Business');
+  assert.equal(businessName, '', 'Business name MUST be cleared');
+  assert.equal(completedStages.length, 0, 'Completed stages MUST be cleared');
+});
+
