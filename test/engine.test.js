@@ -412,3 +412,54 @@ test("J: buildUserContent with town provides optional contextual guide without f
   assert.match(text, /DO NOT force-fit city names/);
 });
 
+test("K: businessType (e.g. Saree store) is deeply integrated into prompt and compiler shot specification", () => {
+  const { buildUserContent } = require("../engine/prompt");
+  const { compileShotSpecification, compileShotPrompt } = require("../engine/compiler");
+
+  const content = buildUserContent(
+    {
+      businessName: "Meena Silk Sarees",
+      businessType: "Saree, Ethnic Wear & Bridal Store",
+      town: "Kanchipuram",
+      language: "Tamil",
+    },
+    { source: "seed", checked: "x", moments: [] },
+    [],
+    "2026-10-08",
+    "direction"
+  );
+  const promptText = content.map((c) => c.text).join("\n");
+  assert.match(promptText, /Saree, Ethnic Wear & Bridal Store/);
+  assert.match(promptText, /Industry & retail domain: ensure the setting, visible merchandise/);
+
+  // Compiler verification
+  const spec = compileShotSpecification(
+    {
+      setting: "A traditional silk saree showroom with rich brass lamps and wooden shelves",
+      character1: "Meena (owner)",
+      character2: "Priya (bride)",
+      scenes: ["Scene 1 visual. camera: Medium shot."],
+    },
+    {
+      businessName: "Meena Silk Sarees",
+      businessType: "Saree, Ethnic Wear & Bridal Store",
+      duration: "15s",
+    }
+  );
+  assert.equal(spec.project.businessType, "Saree, Ethnic Wear & Bridal Store");
+  assert.equal(spec.staticWorld.businessType, "Saree, Ethnic Wear & Bridal Store");
+
+  const shotPrompt = compileShotPrompt(spec.shots[0], spec.staticWorld, { duration: "15s" });
+  assert.match(shotPrompt, /Business domain: Saree, Ethnic Wear & Bridal Store/);
+});
+
+test("L: sceneForGeneration incorporates BUSINESS DOMAIN lock when businessType is provided", () => {
+  const { sceneForGeneration } = require("../engine/parse");
+  const genScene = sceneForGeneration("Customer examines exquisite handloom border.", {
+    setting: "Heritage saree boutique",
+    character1: "Owner",
+    businessType: "Saree, Ethnic Wear & Bridal Store",
+  });
+  assert.match(genScene, /BUSINESS DOMAIN: Authentic setting and merchandise for Saree, Ethnic Wear & Bridal Store/);
+});
+

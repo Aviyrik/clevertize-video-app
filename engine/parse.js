@@ -81,6 +81,9 @@ function sceneForGeneration(scene, ctx = {}) {
   if (ctx.character1 || ctx.character2) {
     lock.push(`CHARACTERS — SAME LOOK AND CLOTHES IN EVERY SCENE: ${[ctx.character1, ctx.character2].filter(Boolean).join(" | ")}`);
   }
+  if (ctx.businessType) {
+    lock.push(`BUSINESS DOMAIN: Authentic setting and merchandise for ${ctx.businessType}. Props, environment, and character actions must believably belong to this business.`);
+  }
   lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person (only a UGC owner speaking to the viewer looks into the lens).");
   lock.push("CAMERA: follow this scene's camera direction exactly (shot size, angle, movement) — smooth, motivated movement only, no whip pans or fast cuts.");
   if (ctx.duration) {

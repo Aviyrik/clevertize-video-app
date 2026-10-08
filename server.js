@@ -392,6 +392,8 @@ app.post("/api/run", async (req, res) => {
       productName,
       specialty,
       brief,
+      businessType,
+      businessName,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
@@ -403,22 +405,22 @@ app.post("/api/run", async (req, res) => {
       productName,
       specialty,
       brief,
-      businessType: shotSpec?.project?.productOrService,
-      businessName: shotSpec?.project?.businessName,
+      businessType: businessType || shotSpec?.project?.businessType || shotSpec?.project?.productOrService,
+      businessName: businessName || shotSpec?.project?.businessName,
     });
 
     // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
     let processedScenes;
     if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
       processedScenes = shotSpec.shots.map((sh) =>
-        compileShotPrompt(sh, shotSpec.staticWorld || { setting, characters: [character1, character2].filter(Boolean).join(" | ") }, {
+        compileShotPrompt(sh, shotSpec.staticWorld || { setting, characters: [character1, character2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
           duration: duration || "15s",
           shotCount: scenes.length,
         })
       );
     } else {
       // Robust fallback to continuous scene compilation
-      processedScenes = scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration }));
+      processedScenes = scenes.map((sc) => sceneForGeneration(sc, { setting, character1, character2, duration, businessType: businessType || shotSpec?.project?.businessType || resolvedProduct }));
     }
 
     const runId = await magnific.startRun({

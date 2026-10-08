@@ -44,6 +44,7 @@ function compileShotSpecification(parsedScript, form = {}) {
   const platform = form.platform || "Instagram Reels / 9:16 Mobile";
   const language = form.language || "Hindi";
   const style = form.creativeStyle || "UGC / Creator-style";
+  const businessType = form.businessType || form.customBusinessType || "";
 
   const continuityLock = [
     `GLOBAL CONTINUITY LOCK:`,
@@ -84,11 +85,13 @@ function compileShotSpecification(parsedScript, form = {}) {
       language,
       style,
       businessName: form.businessName,
-      productOrService: form.specialty || form.product,
+      businessType,
+      productOrService: form.specialty || form.product || businessType,
     },
     staticWorld: {
       setting: (parsedScript.setting || "").replace(/\s*UIs needed:\s*none\.?/i, "").trim(),
       characters: [parsedScript.character1, parsedScript.character2].filter(Boolean).join(" | "),
+      businessType,
     },
     continuityLock,
     shots,
@@ -110,7 +113,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     `COMPOSITION & FRAMING: ${shot.framing}. Subject/character fills primary vertical 9:16 viewing area with clear head-and-chest or waist-up visibility. Hero product is clearly discernible and never obscured.`,
 
     // 2. Static World (Environment, Lighting, Wardrobe consistency)
-    `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}. Same lighting, color palette, and atmosphere throughout.`,
+    `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}.${staticWorld.businessType ? ` Business domain: ${staticWorld.businessType}.` : ""} Same lighting, color palette, and atmosphere throughout.`,
 
     // 3. Motion (Action, Camera, Physics & Physical Interaction)
     `MOTION & ACTION (Cause → Action → Reaction): ${shot.primaryAction} ${shot.fullVisual !== shot.primaryAction ? shot.fullVisual : ""}`,

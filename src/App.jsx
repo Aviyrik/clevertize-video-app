@@ -80,19 +80,33 @@ const AD_GOAL_PRESETS = [
   },
 ];
 
-// Common Indian Retail & Business Categories
+// Comprehensive Business & Product/Service Categories
 const BUSINESS_TYPE_PRESETS = [
-  'Sweet shop / bakery',
-  'Kirana / general store',
-  'Restaurant / cafe',
-  'Salon / beauty parlour',
-  'Jewellery / ornaments',
-  'Tailor / boutique',
-  'Gym / fitness centre',
-  'Mobile repair / electronics',
-  'Pharmacy / medical store',
-  'Coaching / tuition centre',
-  'Hardware / home decor',
+  'Saree, Ethnic Wear & Bridal Store',
+  'Clothing, Fashion & Apparel Store',
+  'Jewellery, Gold & Ornaments',
+  'Sweet Shop, Bakery & Mithai',
+  'Restaurant, Cafe & Cloud Kitchen',
+  'Kirana, Grocery & Supermarket',
+  'Beauty Salon, Spa & Parlour',
+  'Skincare, Cosmetics & Wellness',
+  'Mobile, Laptop & Electronics Store',
+  'Home Decor, Furniture & Modular Kitchen',
+  'Hardware, Electrical & Sanitaryware',
+  'Pharmacy, Medical Store & Diagnostics',
+  'Dental Clinic & Healthcare Centre',
+  'Gym, Fitness & Yoga Studio',
+  'Coaching Institute & Tuition Centre',
+  'Footwear, Bags & Leather Goods',
+  'Optical, Eyewear & Sunglasses',
+  'Automobile, Bike Showroom & Car Care',
+  'Real Estate, Builder & Interior Designer',
+  'Gifts, Toys, Books & Stationery',
+  'Photography, Events & Wedding Services',
+  'Dry Fruits, Organic & Gourmet Food',
+  'Tailor, Boutique & Alterations',
+  'Pet Care, Clinic & Pet Shop',
+  'Professional, Legal & Business Services',
   'Other',
 ];
 
@@ -393,7 +407,7 @@ export default function App() {
   const [userContext, setUserContext] = useState(() => {
     let base = {
       businessName: '',
-      businessType: 'Sweet shop / bakery',
+      businessType: 'Saree, Ethnic Wear & Bridal Store',
       customBusinessType: '',
       town: '',
       area: '',
@@ -1117,6 +1131,10 @@ export default function App() {
 
       // 2. Transition straight to video GPU rendering with compiled Shot Specification!
       setFastStageIndex(3); // Generating your video...
+      const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+        ? userContext.customBusinessType.trim()
+        : userContext.businessType;
+
       const runPayload = {
         scenes: (pipeData.scenes || []).map((s) => s.trim()).filter(Boolean),
         character1: (pipeData.character1 || '').trim(),
@@ -1124,8 +1142,10 @@ export default function App() {
         setting: (pipeData.setting || '').trim(),
         duration: userContext.duration || '15s',
         platform: userContext.platform || 'Instagram Reels / 9:16',
-        product: pipeData.product || userContext.specialty || userContext.offer || userContext.brief || userContext.businessType || 'featured product',
-        productName: pipeData.productName || pipeData.product || userContext.specialty || userContext.businessType || 'featured product',
+        product: pipeData.product || userContext.specialty || userContext.offer || userContext.brief || bType || 'featured product',
+        productName: pipeData.productName || pipeData.product || userContext.specialty || bType || 'featured product',
+        businessType: bType,
+        businessName: userContext.businessName.trim(),
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
@@ -1177,6 +1197,10 @@ export default function App() {
         }).catch((e) => console.warn('Approve save call failed:', e));
       }
 
+      const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+        ? userContext.customBusinessType.trim()
+        : userContext.businessType;
+
       // 2. Start Magnific Run with compiled shot specification & consistent characters
       const runPayload = {
         scenes: scenes.map((s) => s.trim()).filter(Boolean),
@@ -1185,8 +1209,10 @@ export default function App() {
         setting: setting.trim(),
         duration: userContext.duration || '15s',
         platform: userContext.platform || 'Instagram Reels / 9:16',
-        product: userContext.specialty || userContext.offer || userContext.brief || userContext.businessType || 'featured product',
-        productName: userContext.specialty || userContext.businessType || 'featured product',
+        product: userContext.specialty || userContext.offer || userContext.brief || bType || 'featured product',
+        productName: userContext.specialty || bType || 'featured product',
+        businessType: bType,
+        businessName: userContext.businessName.trim(),
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
@@ -1374,7 +1400,7 @@ export default function App() {
     }
     setUserContext({
       businessName: '',
-      businessType: 'Sweet shop / bakery',
+      businessType: 'Saree, Ethnic Wear & Bridal Store',
       customBusinessType: '',
       town: '',
       area: '',

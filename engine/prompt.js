@@ -68,7 +68,7 @@ function buildUserContent(f, fest, previous, today, stageText = STAGE_FALLBACK) 
     : "(Not specified / Universal brand: video production does not depend on any specific city; keep characters, environment, and story universally relatable)";
   const form = [
     `BUSINESS_NAME: ${f.businessName}`,
-    `BUSINESS_TYPE: ${f.businessType}`,
+    `BUSINESS_TYPE: ${f.businessType} (Industry & retail domain: ensure the setting, visible merchandise, props, and customer conversation authentically reflect a real ${f.businessType})`,
     `TOWN: ${townDirective}`,
     `LANGUAGE: ${f.language}`,
     `AREA: ${v(f.area, "(blank — no specific neighborhood)")}`,
