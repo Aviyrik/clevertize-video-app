@@ -400,62 +400,93 @@ CANONICAL FILM LANGUAGE: ${language}`;
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "Storytelling", language = "English" }) {
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English" }) {
   const isEng = !language || /eng/i.test(language);
-  const formatGuidelines = format === "UGC / Creator-style" || format === "UGC"
-    ? "UGC / Creator format: conversational direct-to-camera, fast hook within 2s, peer recommendation, authentic mobile camera."
-    : format === "Product Demo"
-    ? "Product Demo format: the product must be physically introduced early, hands-on demonstration central, tactile textures, fewer spoken lines."
-    : format === "Situational Comedy" || format === "Comedy"
-    ? "Situational Comedy format: clear humorous setup, escalation, misunderstanding, witty banter, funny punchline payoff."
-    : "Storytelling format: character-driven emotional dilemma, interpersonal relationship, emotional progression, earned resolution.";
+  const isHin = /hindi/i.test(language);
+  const isHinglish = /hinglish/i.test(language);
+  const isMar = /marathi/i.test(language);
+
+  const cleanFormat = format === "UGC / Creator" ? "UGC / Creator-style" : format;
+  const isUGC = cleanFormat.includes("UGC");
+  const isDemo = cleanFormat.includes("Demo");
+  const isComedy = cleanFormat.includes("Comedy");
+
+  const formatGuidelines = isUGC
+    ? `FORMAT EXECUTION (UGC / CREATOR-STYLE):
+- Direct-to-camera or creator point-of-view in authentic mobile framing.
+- Fast hook within 2 seconds. The creator shares personal excitement, unboxing, or authentic trial.
+- Conversational pacing, natural energy, relatable peer recommendation. Minimal cinematic exposition.`
+    : isDemo
+    ? `FORMAT EXECUTION (PRODUCT DEMO):
+- Featured product is introduced immediately within the first 2-3 seconds.
+- Hands-on tactile interaction, physical textures, sensory details, and unboxing/finish in clear focus.
+- Visual demonstration leads over dialogue; clear, tangible commercial proof.`
+    : isComedy
+    ? `FORMAT EXECUTION (SITUATIONAL COMEDY):
+- Humorous setup, playful escalation, witty misunderstanding, and funny punchline payoff.
+- Exaggerated relatable reactions directly centered on the product or occasion.`
+    : `FORMAT EXECUTION (STORYTELLING):
+- Character-driven commercial narrative between two people.
+- Relatable human dilemma or festive requirement solved naturally by the product.
+- Warm emotional payoff and delightful brand resolution.`;
 
   const storyLangRule = isEng
-    ? "CANONICAL LANGUAGE DIRECTIVE: Output language is ENGLISH. Spoken dialogue in beats MUST be in natural conversational English. Absolutely NO Hindi or Devanagari script."
-    : `CANONICAL LANGUAGE DIRECTIVE: Output language is ${language}. Dialogue in beats MUST be spoken in ${language} (${/hindi|hinglish|marathi/i.test(language) ? "Devanagari script" : language}).`;
+    ? "CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly ENGLISH. Spoken dialogue in beats MUST be written in natural conversational English. Absolutely NO Hindi or Devanagari script."
+    : `CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly ${language}. Spoken dialogue in beats MUST be written in authentic ${language} (${isHin || isHinglish || isMar ? "Devanagari script" : language}).`;
 
-  const system = `You are a film director setting up the visual world, 2 characters, and 4 story beats for a commercial film.
-FORMAT INFLUENCE (${format}):
+  const system = `You are a commercial film director shaping the concise story architecture (4 beats) and core anchors for a video commercial.
+
+HARD CREATIVE CONSTRAINT — BRIEF ANCHORING (CRITICAL):
+The user's brief is: "${brief || businessName}".
+The business is: "${businessName} (${businessType || 'Local Business'})".
+EVERY SINGLE STORY BEAT MUST DIRECTLY SHOWCASE AND PROGRESS THIS EXACT BRIEF AND PRODUCT.
+- E.g. if the brief is "Show fresh pure desi ghee sweets being packed into premium festive gift hampers", ALL 4 beats must visibly showcase those exact sweets, packing, premium boxes, freshness, or festive gifting.
+- DO NOT invent unrelated family drama, rituals, or random scenarios that wander away from the brief.
+
+FORMAT CONSTRAINT (${cleanFormat}):
 ${formatGuidelines}
 
 ${storyLangRule}
-CRITICAL: Spoken language is strictly determined by the canonical film language (${language}).
 
-Requirements:
-1. Exactly ONE single continuous location (Rule M13) — authentic Indian middle/upper-middle class setting.
-2. Exactly TWO recurring characters with vivid appearance, clothing, and chemistry.
-3. Exactly FOUR story beats: HOOK, BUILD, TURN, PAYOFF.
-4. Format: ${format}.
-5. Dialogue in beats: spoken strictly in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"}).
+STRICT BEAT CONSTRAINTS (NOT A SCREENPLAY):
+Keep each beat concise, crisp, and scannable in under 10 seconds!
+1. Exactly 4 story beats: HOOK, BUILD, TURN, PAYOFF.
+2. For each beat:
+   - "title": Short descriptive title (e.g. "Scene 1: The Direct Hook")
+   - "action": Exactly 1 to 2 short sentences describing what happens (STRICT LIMIT: 20 to 30 words max).
+   - "dialogue": Exactly 1 short spoken dialogue line in ${language} (maximum 8-12 words).
+3. Compact World Anchors:
+   - "leadCharacter": { "name": "Name", "role": "Role · Title" }
+   - "supportingCharacter": { "name": "Name", "role": "Role · Title" }
+   - "setting": Concise 1-sentence setting location.
+   - "product": Concise featured product name extracted from the brief.
 
 Return valid JSON between @@JSON@@ and @@END@@:
 @@JSON@@
 {
-  "format": "${format}",
-  "formatReason": "Two-character commercial chemistry provides natural, relatable persuasion.",
+  "format": "${cleanFormat}",
+  "formatReason": "Concise 1-sentence explanation of format fit.",
+  "product": "Featured product/offering",
+  "setting": "Concise setting description (1 sentence)",
   "location": {
-    "name": "Single Room Setting",
-    "details": "Vivid description of room, lighting, counters, props, surfaces"
+    "name": "Short setting name (e.g. Packing Station / Living Room)",
+    "details": "Concise setting description"
   },
   "character1": {
-    "role": "Owner / Host",
-    "name": "Ramesh",
-    "age": 45,
-    "appearance": "Warm wheatish skin, neat short hair, traditional modern attire",
-    "personality": "Warm, trustworthy, quick with a smile"
+    "name": "Lead name",
+    "role": "Role · Title",
+    "appearance": "Short visual note"
   },
   "character2": {
-    "role": "Customer / Neighbour",
-    "name": "Sunita",
-    "age": 36,
-    "appearance": "Expressive eyes, tasteful cotton salwar or saree, cloth tote bag",
-    "personality": "Practical, observant, speaks her mind"
+    "name": "Supporting name",
+    "role": "Role · Title",
+    "appearance": "Short visual note"
   },
   "beats": [
-    { "beat": "HOOK", "title": "Scene 1: The Hook", "action": "...", "dialogue": "..." },
-    { "beat": "BUILD", "title": "Scene 2: The Build", "action": "...", "dialogue": "..." },
-    { "beat": "TURN", "title": "Scene 3: The Turn", "action": "...", "dialogue": "..." },
-    { "beat": "PAYOFF", "title": "Scene 4: The Payoff", "action": "...", "dialogue": "..." }
+    { "beat": "HOOK", "timing": "0-3s", "title": "Scene 1: Hook Title", "action": "1-2 short sentences (max 30 words).", "dialogue": "Short 1-line dialogue." },
+    { "beat": "BUILD", "timing": "3-8s", "title": "Scene 2: Build Title", "action": "1-2 short sentences (max 30 words).", "dialogue": "Short 1-line dialogue." },
+    { "beat": "TURN", "timing": "8-14s", "title": "Scene 3: Turn Title", "action": "1-2 short sentences (max 30 words).", "dialogue": "Short 1-line dialogue." },
+    { "beat": "PAYOFF", "timing": "14-20s", "title": "Scene 4: Payoff Title", "action": "1-2 short sentences (max 30 words).", "dialogue": "Short 1-line dialogue." }
   ]
 }
 @@END@@`;
@@ -466,61 +497,92 @@ BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || ""}
 HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
-FORMAT: ${format}
+FORMAT: ${cleanFormat}
 CANONICAL FILM LANGUAGE: ${language}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
     const parsed = parseJSONBlock(raw);
-    if (parsed) {
-      const c1 = parsed.characters?.character1 || parsed.character1;
-      const c2 = parsed.characters?.character2 || parsed.character2;
+    if (parsed && Array.isArray(parsed.beats) && parsed.beats.length > 0) {
+      const c1 = parsed.character1 || parsed.characters?.character1 || parsed.leadCharacter;
+      const c2 = parsed.character2 || parsed.characters?.character2 || parsed.supportingCharacter;
       const rawLoc = parsed.location || parsed.setting;
-      const settingStr = typeof rawLoc === "string" ? rawLoc : (rawLoc?.details || rawLoc?.name || "Store interior");
+      const settingStr = typeof rawLoc === "string" ? rawLoc : (rawLoc?.details || rawLoc?.name || `${businessName} setting`);
+      const prodStr = parsed.product || brief || `${businessName} Special`;
+      const beats = Array.isArray(parsed.beats) ? parsed.beats : [];
+
       return {
-        format: format || parsed.format || "Storytelling",
-        formatReason: parsed.formatReason || "Two-character commercial chemistry provides natural, relatable persuasion.",
-        location: typeof parsed.location === "object" ? parsed.location : { name: "Single Room Setting", details: settingStr },
+        format: cleanFormat || parsed.format || "Storytelling",
+        formatReason: parsed.formatReason || "Selected format provides natural audience engagement.",
+        product: prodStr,
+        location: typeof parsed.location === "object" ? parsed.location : { name: "Featured Setting", details: settingStr },
         setting: settingStr,
+        character1: typeof c1 === "object" ? c1 : { name: "Lead", role: "Host / Creator", appearance: String(c1 || "") },
+        character2: typeof c2 === "object" ? c2 : { name: "Supporting", role: "Partner / Customer", appearance: String(c2 || "") },
         characters: {
-          character1: typeof c1 === "string" ? c1 : `${c1?.name || "Character 1"} (${c1?.role || "Owner"}) — ${c1?.appearance || ""}`,
-          character2: typeof c2 === "string" ? c2 : `${c2?.name || "Character 2"} (${c2?.role || "Customer"}) — ${c2?.appearance || ""}`,
+          character1: typeof c1 === "string" ? c1 : `${c1?.name || "Lead"} (${c1?.role || "Host"})`,
+          character2: typeof c2 === "string" ? c2 : `${c2?.name || "Supporting"} (${c2?.role || "Partner"})`,
         },
-        beats: Array.isArray(parsed.beats) ? parsed.beats : [],
+        beats,
       };
     }
   } catch (e) {
     console.warn("[storyWorld] fallback:", e.message);
   }
 
+  const prodFallback = brief || `${businessName} Special`;
+  const defaultBeats = isUGC
+    ? [
+        { beat: "HOOK", timing: "0-3s", title: "Scene 1: The Direct Hook", action: hook?.visualAction || `Lead speaks directly to camera, revealing ${prodFallback} with enthusiastic energy.`, dialogue: hook?.hookLine || (isEng ? "You won't believe what just arrived!" : (isHin || isHinglish ? "ये देखिए, क्या शानदार चीज़ मिली है!" : isMar ? "हे बघा, काय भारी गोष्ट मिळाली आहे!" : "Look at what just arrived!")) },
+        { beat: "BUILD", timing: "3-8s", title: "Scene 2: Unboxing & Texture", action: `Close-up camera reveals the fresh texture, authentic quality, and premium packaging of ${prodFallback}.`, dialogue: isEng ? "Look at this pure, handcrafted finish up close." : (isHin || isHinglish ? "इसकी बनावट और शुद्धता पास से देखिए।" : isMar ? "याची शुद्धता आणि फिनिशिंग जवळून बघा." : "Look at this finish up close.") },
+        { beat: "TURN", timing: "8-14s", title: "Scene 3: Proof & Convenience", action: `Lead highlights guaranteed quality standard and swift same-day ordering for ${businessName}.`, dialogue: isEng ? "Plus, guaranteed same-day delivery right to your door!" : (isHin || isHinglish ? "और उसी दिन आपके घर तक डिलीवरी भी!" : isMar ? "आणि त्याच दिवशी थेट घरपोच डिलिव्हरी सुद्धा!" : "And fast same-day delivery right to your door!") },
+        { beat: "PAYOFF", timing: "14-20s", title: "Scene 4: Joyful Call to Action", action: `Lead presents the completed package with a delighted smile. Clean brand end-card transition.`, dialogue: isEng ? "Order yours today before festival stock sells out!" : (isHin || isHinglish ? "त्योहार का स्टॉक खत्म होने से पहले अभी आर्डर करें!" : isMar ? "सणाचा साठा संपण्यापूर्वी आजच ऑर्डर करा!" : "Order yours today before stock sells out!") },
+      ]
+    : isDemo
+    ? [
+        { beat: "HOOK", timing: "0-3s", title: "Scene 1: Product Reveal", action: hook?.visualAction || `Immediate high-definition focus on ${prodFallback}, opening with crisp tactile sound and visual clarity.`, dialogue: hook?.hookLine || (isEng ? "Here is genuine craftsmanship in action." : (isHin || isHinglish ? "ये है असली कारीगरी का कमाल।" : isMar ? "ही आहे अस्सल कारागिरीची कमाल." : "Here is genuine craftsmanship.")) },
+        { beat: "BUILD", timing: "3-8s", title: "Scene 2: Sensory Demonstration", action: `Hands-on demonstration showing fresh ingredients, meticulous preparation, and exquisite detail.`, dialogue: isEng ? "Every single piece is prepared with 100% purity." : (isHin || isHinglish ? "हर एक पीस 100% शुद्धता से तैयार किया जाता है।" : isMar ? "प्रत्येक पीस 100% शुद्धतेने बनवला जातो." : "Prepared with 100% purity.") },
+        { beat: "TURN", timing: "8-14s", title: "Scene 3: Premium Pack & Seal", action: `Customer counter seal stamped onto the premium gift box, confirming freshness guarantee.`, dialogue: isEng ? "Sealed fresh and ready for instant delivery." : (isHin || isHinglish ? "एकदम ताज़ा और तुरंत डिलीवरी के लिए तैयार।" : isMar ? "अगदी ताजे आणि त्वरित डिलिव्हरीसाठी सज्ज." : "Sealed fresh and ready.") },
+        { beat: "PAYOFF", timing: "14-20s", title: "Scene 4: Finished Showcase", action: `The complete festive presentation displayed prominently with order link and contact info.`, dialogue: isEng ? "Experience the authentic standard of " + businessName + "." : (isHin || isHinglish ? businessName + " की शुद्धता का अनुभव खुद लें।" : isMar ? businessName + " च्या शुद्धतेचा स्वतः अनुभव घ्या." : "Experience the quality.") },
+      ]
+    : isComedy
+    ? [
+        { beat: "HOOK", timing: "0-3s", title: "Scene 1: The Sneak Attempt", action: hook?.visualAction || `Character sneakily attempts to hide a box of ${prodFallback} for themselves before anyone notices.`, dialogue: hook?.hookLine || (isEng ? "Nobody saw that... right?" : (isHin || isHinglish ? "किसी ने नहीं देखा ना...?" : isMar ? "कोणी पाहिलं नाही ना...?" : "Nobody saw that, right?")) },
+        { beat: "BUILD", timing: "3-8s", title: "Scene 2: Caught in the Act", action: `Partner suddenly appears with arms crossed, catching them red-handed with the open box.`, dialogue: isEng ? "Were you really going to finish the whole box alone?" : (isHin || isHinglish ? "क्या पूरा डिब्बा अकेले ही चट करने का इरादा था?" : isMar ? "काय, एकट्यानेच पूर्ण डबा संपवणार होतास?" : "Were you going to finish it alone?") },
+        { beat: "TURN", timing: "8-14s", title: "Scene 3: The Relief Reveal", action: `Counter partner smiles and pulls out a second fresh box, revealing there is plenty for both.`, dialogue: isEng ? "Don't worry, there's another fresh box right here!" : (isHin || isHinglish ? "चिंता मत करो, एक और ताज़ा डिब्बा यहाँ तैयार है!" : isMar ? "काळजी करू नकोस, दुसरा ताटा डबा इथे तयार आहे!" : "There is another box right here!") },
+        { beat: "PAYOFF", timing: "14-20s", title: "Scene 4: Shared Delight", action: `Both joyfully share the treat, laughing together as the special festive offer appears.`, dialogue: isEng ? "Too good to share, but better together!" : (isHin || isHinglish ? "इतना स्वादिष्ट कि शेयर करना मुश्किल, पर साथ खाने में ही मज़ा है!" : isMar ? "शेअर करणे कठीण, पण एकत्र खाण्यातच खरी मजा!" : "Better together!") },
+      ]
+    : [
+        { beat: "HOOK", timing: "0-3s", title: "Scene 1: The Urgent Need", action: hook?.visualAction || `Customer arrives looking for an exceptional festive gesture with ${prodFallback}.`, dialogue: hook?.hookLine || (isEng ? "Has this ever happened to you before?" : (isHin || isHinglish ? "क्या आपके साथ भी ऐसा होता है?" : isMar ? "तुमच्यासोबतही असं घडतं का?" : "Has this ever happened to you?")) },
+        { beat: "BUILD", timing: "3-8s", title: "Scene 2: The Warm Recommendation", action: `Host presents the handcrafted collection, walking through the authentic quality details.`, dialogue: isEng ? "Look at this—this is made with pure, traditional care." : (isHin || isHinglish ? "यह देखिए—यह शुद्ध पारंपरिक तरीके से बना है।" : isMar ? "हे बघा—हे अस्सल पारंपरिक पद्धतीने बनवले आहे." : "Made with traditional care.") },
+        { beat: "TURN", timing: "8-14s", title: "Scene 3: The Guarantee", action: `Customer inspects the pristine presentation and same-day delivery seal with visible delight.`, dialogue: isEng ? "This is exactly what makes our festive celebration special." : (isHin || isHinglish ? "यही तो हमारे त्योहार की शान बढ़ाएगा!" : isMar ? "यानेच तर आपल्या सणाची शोभा वाढेल!" : "This makes our celebration special.") },
+        { beat: "PAYOFF", timing: "14-20s", title: "Scene 4: Heartfelt Payoff", action: `Both smile in shared confidence as customer leaves happily with the festive package.`, dialogue: isEng ? "From now on, I'm coming straight to " + businessName + "!" : (isHin || isHinglish ? "अब से हर बार सीधे " + businessName + " से ही लेंगे!" : isMar ? "आतापासून दर वेळी थेट " + businessName + " मधूनच घेणार!" : "I am coming straight here!") },
+      ];
+
   return {
-    format: format || "Storytelling",
-    formatReason: "Two-character commercial chemistry provides natural, relatable persuasion.",
+    format: cleanFormat,
+    formatReason: "Selected format provides natural audience engagement.",
+    product: prodFallback,
+    setting: `A bright, welcoming storefront counter at ${businessName} in ${town || "the city"}, featuring neatly arranged merchandise displays and warm lighting.`,
     location: {
-      name: `Authentic ${businessType} Interior`,
-      details: `A bright, clean storefront interior in ${town || "the city"}, featuring a polished service counter, neatly organized merchandise displays, warm ceiling lighting, and welcoming atmosphere.`,
+      name: `Authentic ${businessType} Counter`,
+      details: `A bright, clean storefront counter at ${businessName} in ${town || "the city"}, with warm lighting and tidy displays.`,
     },
-    setting: `A bright, clean storefront interior in ${town || "the city"}, featuring a polished service counter, neatly organized merchandise displays, warm ceiling lighting, and welcoming atmosphere.`,
     character1: {
-      role: "Business Owner / Lead",
-      name: "Rohan",
-      age: 42,
-      appearance: "Neat modern shirt, warm welcoming posture, knowledgeable presence",
-      personality: "Helpful, energetic, proud of their craft",
+      name: isUGC ? "Pooja" : "Rohan",
+      role: isUGC ? "Creator · Host" : "Store Lead · Owner",
+      appearance: "Neat modern attire, warm energetic presence",
     },
     character2: {
-      role: "Customer",
       name: "Ananya",
-      age: 32,
-      appearance: "Smart casual Indian attire, expressive facial delivery, carrying a small bag",
-      personality: "Smart shopper, values quality and genuine attention",
+      role: isUGC ? "Co-Creator · Partner" : "Customer · Friend",
+      appearance: "Smart casual festive outfit, expressive smile",
     },
-    beats: [
-      { beat: "HOOK", title: "Scene 1: Scroll-Stopping Hook", action: hook?.visualAction || "Customer hurries in looking for an urgent solution.", dialogue: hook?.hookLine || (isMar ? "तुमच्यासोबतही असं कधी घडलंय का?" : (isHin || isHinglish ? "क्या आपके साथ भी ऐसा होता है?" : "Has this ever happened to you?")) },
-      { beat: "BUILD", title: "Scene 2: Problem Deepens", action: "Customer explains their specific requirement at the counter.", dialogue: isMar ? "मला अगदी विश्वासार्ह आणि खात्रीशीर वस्तू हवी आहे." : (isHin || isHinglish ? "मुझे बिलकुल सही और भरोसेमंद चीज़ चाहिए।" : "I need something genuine and completely reliable.") },
-      { beat: "TURN", title: "Scene 3: Solution Revealed", action: "Owner presents the featured product with clear visual demonstration.", dialogue: isMar ? "हे बघा, हेच तर आमच्या कामाचं वैशिष्ट्य आहे." : (isHin || isHinglish ? "यह देखिए, यही तो हमारी ख़ासियत है।" : "Look at this—this is exactly what makes our craft special.") },
-      { beat: "PAYOFF", title: "Scene 4: Delight & Call to Action", action: "Customer smiles in satisfaction, holding the product. Clean end card transition.", dialogue: isMar ? "आतापासून दर वेळी मी थेट इथेच येणार!" : (isHin || isHinglish ? "अब से हर बार यहीं से लेंगे!" : "From now on, I'm coming straight here every time!") },
-    ],
+    characters: {
+      character1: isUGC ? "Pooja (Creator / Host)" : "Rohan (Store Lead / Owner)",
+      character2: isUGC ? "Ananya (Co-Creator / Partner)" : "Ananya (Customer / Friend)",
+    },
+    beats: defaultBeats,
   };
 }
 
@@ -532,7 +594,7 @@ CANONICAL FILM LANGUAGE: ${language}`;
 async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], options = {} }) {
   const fest = await getFestivals();
   const system = buildSystem(form.scriptMode);
-  const format = creativeDNA?.story?.format || form.creativeStyle || "Storytelling";
+  const format = creativeDNA?.format || creativeDNA?.story?.format || form.creativeStyle || "Storytelling";
   const isEng = !form.language || /eng/i.test(form.language);
 
   const formatExecutionRules = format.includes("UGC")

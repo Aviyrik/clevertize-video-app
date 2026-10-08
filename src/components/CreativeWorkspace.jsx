@@ -166,9 +166,16 @@ export function ResearchInsightsBanner({
 /**
  * 2. YOUR CREATIVE PLAN (V3: Compact Chips beneath Stage Stepper)
  */
-export function CreativeDNABar({ creativeDNA, onEditPanel }) {
+export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
   const { direction, hook, plot, story } = creativeDNA || {};
-  const hasAny = Boolean(direction || hook || plot || story);
+  const activeFormat = canonicalFormat || creativeDNA?.format || story?.format || 'UGC / Creator-style';
+  const formatLabel = activeFormat === 'UGC / Creator-style' || activeFormat === 'UGC'
+    ? 'UGC / Creator'
+    : activeFormat === 'Situational Comedy' || activeFormat === 'Comedy'
+    ? 'Comedy'
+    : activeFormat;
+
+  const hasAny = Boolean(direction || hook || plot || story || canonicalFormat || creativeDNA?.format);
   if (!hasAny) return null;
 
   return (
@@ -270,30 +277,30 @@ export function CreativeDNABar({ creativeDNA, onEditPanel }) {
           </div>
         )}
 
-        {story && (
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: '2px 8px',
-            borderRadius: 6,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: 11,
-            color: 'var(--text-primary)'
-          }}>
-            <span style={{ color: 'var(--text-tertiary)' }}>Format:</span>
-            <strong>{story.format || 'Storytelling'}</strong>
-            <button
-              type="button"
-              onClick={() => onEditPanel('story')}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
-              title="Edit Story & Format"
-            >
-              Edit
-            </button>
-          </div>
-        )}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '2px 8px',
+          borderRadius: 6,
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-subtle)',
+          fontSize: 11,
+          color: 'var(--text-primary)'
+        }}>
+          <span style={{ color: 'var(--text-tertiary)' }}>Format:</span>
+          <strong style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--accent-primary)' }}>
+            {formatLabel}
+          </strong>
+          <button
+            type="button"
+            onClick={() => onEditPanel('story')}
+            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+            title="Edit Video Format & Story"
+          >
+            Edit
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -466,10 +473,20 @@ export function CreativePanelsWorkspace({
   onBackToBrief,
   onBackToPreferences,
   onLanguageChange,
+  onFormatChange,
 }) {
   const [isConstraintsExpanded, setIsConstraintsExpanded] = useState(false);
   const [downstreamWarning, setDownstreamWarning] = useState(false);
   const [previousDirectionId, setPreviousDirectionId] = useState(selectedDirection?.id);
+
+  // Inline editing state for Compact World Anchors (Lead, Supporting, Setting, Product)
+  const [editingCard, setEditingCard] = useState(null);
+  const [editLeadName, setEditLeadName] = useState('');
+  const [editLeadRole, setEditLeadRole] = useState('');
+  const [editSuppName, setEditSuppName] = useState('');
+  const [editSuppRole, setEditSuppRole] = useState('');
+  const [editSettingName, setEditSettingName] = useState('');
+  const [editProductName, setEditProductName] = useState('');
 
   // Manage completed stages
   const completedStages = [];
@@ -951,7 +968,7 @@ export function CreativePanelsWorkspace({
               Story & Format Architecture
             </h2>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
-              Video format, 4 continuous story beats, and character world.
+              Select your video format and review the 4 story beats before continuing to the script.
             </p>
           </div>
 
@@ -961,20 +978,29 @@ export function CreativePanelsWorkspace({
             <>
               {/* Decision A: Visual Format Tiles */}
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                  1. Video Format
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>1. Video Format</span>
+                  <span style={{ fontSize: 10, color: 'var(--accent-primary)', textTransform: 'none', fontWeight: 600 }}>
+                    Changes regenerate downstream beats
+                  </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
                   {FORMAT_PRESETS.map((fmt) => {
-                    const currentFmt = storyWorldData?.format || userContext.creativeStyle || 'Storytelling';
-                    const isSelected = currentFmt === fmt.id;
+                    const currentFmt = userContext.creativeStyle || storyWorldData?.format || 'UGC / Creator-style';
+                    const isSelected = currentFmt === fmt.id || (fmt.id.includes('UGC') && currentFmt.includes('UGC')) || (fmt.id.includes('Comedy') && currentFmt.includes('Comedy'));
                     const Icon = fmt.icon;
                     return (
                       <div
                         key={fmt.id}
                         onClick={() => {
-                          updateUserContext('creativeStyle', fmt.id);
-                          setStoryWorldData((prev) => ({ ...prev, format: fmt.id }));
+                          const targetFmt = fmt.id;
+                          updateUserContext('creativeStyle', targetFmt);
+                          setStoryWorldData((prev) => (prev ? { ...prev, format: targetFmt } : { format: targetFmt }));
+                          if (onFormatChange) {
+                            onFormatChange(targetFmt);
+                          } else {
+                            onLoadStory?.(true, null, targetFmt);
+                          }
                         }}
                         style={{
                           backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
@@ -1015,64 +1041,385 @@ export function CreativePanelsWorkspace({
                 </div>
               </div>
 
-              {/* Decision B: 4 Story Beats */}
+              {/* Decision B: Compact World Anchors (Lead, Supporting, Setting, Product) */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                  2. Story World Anchors
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                  {/* Lead Card */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>👩</span>
+                        <span>Lead</span>
+                      </span>
+                      {editingCard === 'lead' ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLead = { ...storyWorldData?.character1, name: editLeadName || 'Lead', role: editLeadRole || 'Customer' };
+                              setStoryWorldData((prev) => ({ ...prev, character1: newLead }));
+                              updateUserContext('leadCharacter', `${newLead.name} (${newLead.role})`);
+                              setEditingCard(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          >
+                            Save
+                          </button>
+                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCard(null)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const c1 = storyWorldData?.character1;
+                            setEditLeadName(typeof c1 === 'object' ? c1.name : (userContext.leadCharacter?.split('—')[0]?.split('(')[0]?.trim() || (userContext.creativeStyle?.includes('UGC') ? 'Pooja' : 'Rohan')));
+                            setEditLeadRole(typeof c1 === 'object' ? (c1.role || 'Host') : 'Customer');
+                            setEditingCard('lead');
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          [Edit]
+                        </button>
+                      )}
+                    </div>
+                    {editingCard === 'lead' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
+                        <input
+                          type="text"
+                          value={editLeadName}
+                          onChange={(e) => setEditLeadName(e.target.value)}
+                          placeholder="Name"
+                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                        <input
+                          type="text"
+                          value={editLeadRole}
+                          onChange={(e) => setEditLeadRole(e.target.value)}
+                          placeholder="Role (e.g. Customer, Creator)"
+                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {typeof storyWorldData?.character1 === 'object' && storyWorldData.character1.name
+                          ? `${storyWorldData.character1.name} · ${storyWorldData.character1.role || 'Host'}`
+                          : (userContext.leadCharacter || (userContext.creativeStyle?.includes('UGC') ? 'Pooja · Creator' : 'Rohan · Store Lead'))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Supporting Card */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>👨</span>
+                        <span>Supporting</span>
+                      </span>
+                      {editingCard === 'supporting' ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newSupp = { ...storyWorldData?.character2, name: editSuppName || 'Supporting', role: editSuppRole || 'Partner' };
+                              setStoryWorldData((prev) => ({ ...prev, character2: newSupp }));
+                              updateUserContext('supportingCharacter', `${newSupp.name} (${newSupp.role})`);
+                              setEditingCard(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          >
+                            Save
+                          </button>
+                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCard(null)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const c2 = storyWorldData?.character2;
+                            setEditSuppName(typeof c2 === 'object' ? c2.name : (userContext.supportingCharacter?.split('—')[0]?.split('(')[0]?.trim() || 'Ananya'));
+                            setEditSuppRole(typeof c2 === 'object' ? (c2.role || 'Customer') : 'Customer');
+                            setEditingCard('supporting');
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          [Edit]
+                        </button>
+                      )}
+                    </div>
+                    {editingCard === 'supporting' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
+                        <input
+                          type="text"
+                          value={editSuppName}
+                          onChange={(e) => setEditSuppName(e.target.value)}
+                          placeholder="Name"
+                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                        <input
+                          type="text"
+                          value={editSuppRole}
+                          onChange={(e) => setEditSuppRole(e.target.value)}
+                          placeholder="Role (e.g. Partner, Friend)"
+                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {typeof storyWorldData?.character2 === 'object' && storyWorldData.character2.name
+                          ? `${storyWorldData.character2.name} · ${storyWorldData.character2.role || 'Partner'}`
+                          : (userContext.supportingCharacter || 'Ananya · Family member')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Setting Card */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>🏠</span>
+                        <span>Setting</span>
+                      </span>
+                      {editingCard === 'setting' ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLoc = editSettingName || 'Store Setting';
+                              setStoryWorldData((prev) => ({
+                                ...prev,
+                                setting: newLoc,
+                                location: { ...(prev?.location || {}), name: newLoc, details: newLoc }
+                              }));
+                              updateUserContext('environment', newLoc);
+                              setEditingCard(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          >
+                            Save
+                          </button>
+                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCard(null)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const curSetting = storyWorldData?.location?.name || storyWorldData?.setting || userContext.environment || 'Store Setting';
+                            setEditSettingName(curSetting);
+                            setEditingCard('setting');
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          [Edit]
+                        </button>
+                      )}
+                    </div>
+                    {editingCard === 'setting' ? (
+                      <div style={{ marginTop: 2 }}>
+                        <input
+                          type="text"
+                          value={editSettingName}
+                          onChange={(e) => setEditSettingName(e.target.value)}
+                          placeholder="Setting (e.g. Home kitchen, Store counter)"
+                          style={{ width: '100%', padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {storyWorldData?.location?.name || (typeof storyWorldData?.setting === 'string' ? storyWorldData.setting.slice(0, 32) : '') || userContext.environment?.slice(0, 32) || `${userContext.businessName || 'Store'} setting`}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Card */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>📦</span>
+                        <span>Product</span>
+                      </span>
+                      {editingCard === 'product' ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newProd = editProductName || 'Featured Product';
+                              setStoryWorldData((prev) => ({ ...prev, product: newProd }));
+                              setEditingCard(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          >
+                            Save
+                          </button>
+                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCard(null)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditProductName(storyWorldData?.product || userContext.brief?.slice(0, 40) || `${userContext.businessName} items`);
+                            setEditingCard('product');
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          [Edit]
+                        </button>
+                      )}
+                    </div>
+                    {editingCard === 'product' ? (
+                      <div style={{ marginTop: 2 }}>
+                        <input
+                          type="text"
+                          value={editProductName}
+                          onChange={(e) => setEditProductName(e.target.value)}
+                          placeholder="Product (e.g. Festive sweet boxes)"
+                          style={{ width: '100%', padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {storyWorldData?.product || userContext.brief?.slice(0, 32) || `${userContext.businessName || 'Brand'} offering`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Decision C: 4 Story Beats Preview */}
               {storyWorldData?.beats && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                    2. 4 Story Beats Preview
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>3. 4 Story Beats Architecture</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'none' }}>
+                      Target: {userContext.targetDuration || '20s'} Film
+                    </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
-                    {storyWorldData.beats.map((b, idx) => (
-                      <div key={idx} style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            0{idx + 1}
-                          </span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            {b.beat}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
-                          {b.action}
-                        </div>
-                        {b.dialogue && (
-                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 4 }}>
-                            "{b.dialogue}"
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                    {storyWorldData.beats.map((b, idx) => {
+                      const dur = parseInt(userContext.targetDuration, 10) || 20;
+                      const timingLabel = b.timing || (
+                        dur <= 15 ? ['0-2s', '2-6s', '6-11s', '11-15s'][idx] :
+                        dur <= 20 ? ['0-3s', '3-8s', '8-14s', '14-20s'][idx] :
+                        dur <= 30 ? ['0-4s', '4-12s', '12-22s', '22-30s'][idx] :
+                        ['0-6s', '6-25s', '25-45s', '45-60s'][idx]
+                      ) || `Scene ${idx + 1}`;
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            backgroundColor: 'var(--bg-surface)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 8,
+                            padding: 12,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 6
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                              color: 'var(--accent-primary)',
+                              fontFamily: "'JetBrains Mono', monospace",
+                              letterSpacing: '0.04em'
+                            }}>
+                              {b.beat || `BEAT ${idx + 1}`} ({timingLabel})
+                            </span>
+                            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                              0{idx + 1}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {b.title || `Scene ${idx + 1}`}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                            {b.action}
+                          </div>
+                          {b.dialogue && (
+                            <div style={{
+                              fontSize: 10,
+                              color: 'var(--text-tertiary)',
+                              fontStyle: 'italic',
+                              marginTop: 2,
+                              paddingTop: 4,
+                              borderTop: '1px dashed var(--border-subtle)'
+                            }}>
+                              "{b.dialogue}"
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
-
-              {/* Compact Casting & Location Lock Summary */}
-              <div style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 8,
-                padding: '10px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 12,
-                fontSize: 11,
-                color: 'var(--text-secondary)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <MapPin size={13} style={{ color: 'var(--accent-primary)' }} />
-                  <span><strong>Room:</strong> {storyWorldData?.location?.name || userContext.area || 'Single Studio Setting'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <User size={13} style={{ color: 'var(--accent-primary)' }} />
-                  <span><strong>Lead:</strong> {typeof storyWorldData?.character1 === 'object' ? storyWorldData.character1.name : (userContext.leadCharacter || 'Owner')}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <User size={13} style={{ color: 'var(--accent-primary)' }} />
-                  <span><strong>Customer:</strong> {typeof storyWorldData?.character2 === 'object' ? storyWorldData.character2.name : (userContext.supportingCharacter || 'Customer')}</span>
-                </div>
-              </div>
             </>
           )}
 
@@ -1249,7 +1596,7 @@ export function CreativePanelsWorkspace({
               }}
             >
               {isBusy && <RefreshCw size={14} className="icon-spinner" />}
-              <span>{isBusy ? 'Synthesizing Broadcast Script…' : 'Synthesize Script →'}</span>
+              <span>{isBusy ? 'Creating Broadcast Script…' : 'Continue to Script →'}</span>
             </button>
           </div>
         </div>

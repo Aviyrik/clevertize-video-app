@@ -1292,13 +1292,14 @@ export default function App() {
   };
 
   // 5. Fetching Story & World
-  const loadStoryWorld = async (force = false, overrideLang = null) => {
-    if (storyWorldData && !force) return;
+  const loadStoryWorld = async (force = false, overrideLang = null, overrideFormat = null) => {
+    if (storyWorldData && !force && !overrideFormat) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
+    const activeFormat = overrideFormat || userContext.creativeStyle || creativeDNA?.format || 'UGC / Creator-style';
 
     setIsLoadingStory(true);
     try {
@@ -1313,14 +1314,14 @@ export default function App() {
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
           hook: selectedHook || { hookLine: customHook || '' },
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
-          format: userContext.creativeStyle || 'Storytelling',
+          format: activeFormat,
           language: lang,
         }),
       });
       if (res.ok) {
         const data = await res.json();
         setStoryWorldData(data);
-        setCreativeDNA((prev) => ({ ...prev, story: data }));
+        setCreativeDNA((prev) => ({ ...prev, story: data, format: data.format || activeFormat }));
         if (data.characters?.character1 && !userContext.leadCharacter) {
           updateUserContext('leadCharacter', data.characters.character1);
         }
@@ -1336,6 +1337,18 @@ export default function App() {
     } finally {
       setIsLoadingStory(false);
     }
+  };
+
+  const handleFormatChange = async (newFormat) => {
+    updateUserContext('creativeStyle', newFormat);
+    setCreativeDNA((prev) => ({
+      ...prev,
+      format: newFormat,
+      story: prev?.story ? { ...prev.story, format: newFormat } : { format: newFormat },
+    }));
+    // Invalidate downstream script because format changed
+    setGeneratedScript(null);
+    await loadStoryWorld(true, null, newFormat);
   };
 
   // 6. Master Script Synthesis via /api/creative/synthesize-script
@@ -4246,6 +4259,7 @@ export default function App() {
                     {/* Persistent Creative DNA Bar */}
                     <CreativeDNABar
                       creativeDNA={creativeDNA}
+                      canonicalFormat={userContext.creativeStyle}
                       onEditPanel={(panelKey) => setCreativePanel(panelKey)}
                     />
 
@@ -4315,6 +4329,7 @@ export default function App() {
                         onBackToBrief={() => setCreationStep(2)}
                         onBackToPreferences={() => setCreationStep(3)}
                         onLanguageChange={handleLanguageChange}
+                        onFormatChange={handleFormatChange}
                       />
                     </WorkspaceErrorBoundary>
                   </div>
@@ -5004,9 +5019,10 @@ export default function App() {
             {/* Persistent Creative DNA Summary */}
             <CreativeDNABar
               creativeDNA={creativeDNA}
+              canonicalFormat={userContext.creativeStyle}
               onEditPanel={(panelKey) => {
                 setCurrentStep('input');
-                setCreationStep(3);
+                setCreationStep(4);
                 setCreativePanel(panelKey);
               }}
             />

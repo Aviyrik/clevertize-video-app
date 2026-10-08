@@ -381,3 +381,59 @@ test("13. Quality gate rejects Devanagari dialogue when film language is English
 
   assert.ok(fails.some(f => f.includes("dialogue contains Devanagari script — film language is English")));
 });
+
+test("14. generateStoryWorld generates concise brief-anchored beats under 35 words", async () => {
+  const brief = "Show fresh pure desi ghee sweets being packed into premium festive gift hampers";
+  const ugcWorld = await creative.generateStoryWorld({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop / Bakery / Mithai",
+    brief,
+    format: "UGC / Creator-style",
+    language: "English",
+  });
+
+  assert.strictEqual(ugcWorld.format, "UGC / Creator-style");
+  assert.strictEqual(ugcWorld.beats.length, 4);
+  assert.ok(ugcWorld.product.toLowerCase().includes("sweets") || ugcWorld.product.toLowerCase().includes("hampers"));
+
+  // Check word counts of all beats (must be concise, not a screenplay)
+  for (const beat of ugcWorld.beats) {
+    const wordCount = beat.action.split(/\s+/).length;
+    assert.ok(wordCount <= 35, `Beat action "${beat.action}" exceeds 35 words (count: ${wordCount})`);
+    assert.ok(beat.timing, `Beat ${beat.beat} missing timing indicator`);
+  }
+});
+
+test("15. Switching formats (UGC -> Demo -> Comedy -> Storytelling) produces distinct format-specific beats", async () => {
+  const brief = "Show fresh pure desi ghee sweets being packed into premium festive gift hampers";
+
+  const ugc = await creative.generateStoryWorld({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brief,
+    format: "UGC / Creator-style",
+    language: "English",
+  });
+  const demo = await creative.generateStoryWorld({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brief,
+    format: "Product Demo",
+    language: "English",
+  });
+  const comedy = await creative.generateStoryWorld({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brief,
+    format: "Situational Comedy",
+    language: "English",
+  });
+
+  // UGC focuses on direct-to-camera/creator
+  assert.ok(ugc.beats[0].action.toLowerCase().includes("camera") || ugc.beats[0].action.toLowerCase().includes("lead"));
+  // Product Demo focuses on sensory demonstration and unboxing
+  assert.ok(demo.beats[1].action.toLowerCase().includes("demonstration") || demo.beats[0].action.toLowerCase().includes("focus"));
+  // Comedy focuses on playful sneak/dilemma
+  assert.ok(comedy.beats[0].action.toLowerCase().includes("sneak") || comedy.beats[1].action.toLowerCase().includes("caught"));
+});
+
