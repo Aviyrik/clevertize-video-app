@@ -162,7 +162,7 @@ async function runJSONStage(s, stage, change) {
   const content = buildUserContent(s.form, s.fest, s.previous, s.today, stageInstruction(stage, s, change));
   let lastErr;
   for (let i = 0; i < 2; i++) {
-    const text = await callClaude({ system: s.system, content, maxTokens: 8000 });
+    const text = await callClaude({ system: s.system, content, maxTokens: 8000, thinking: false });
     try { return checkStage(stage, parseJSONBlock(text)); }
     catch (e) { lastErr = e; console.warn(`[${stage}] unreadable answer (${e.message}) — retrying`); }
   }
@@ -176,7 +176,7 @@ async function runScript(s, change) {
   for (let i = 0; i <= MAX_REPAIRS; i++) {
     attempts++;
     if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
-    parsed = parseOutput(await callClaude({ system: s.system, content }));
+    parsed = parseOutput(await callClaude({ system: s.system, content, thinking: false }));
     failures = runGate(parsed, s.form, gateOpts);
     console.log(`[script] pass #${attempts}: ${failures.length ? `${failures.length} failing checks` : "passed"}`);
     if (!failures.length) break;
@@ -278,24 +278,33 @@ app.post("/api/pipeline/generate", async (req, res) => {
       { userFacing: true }
     );
 
-    // 1. Creative Direction / Customer Tension
-    console.log(`[pipeline:${s.id}] 1/4 Formulating customer tension & creative direction...`);
-    await produce(s, "direction");
-    s.direction.choice = 0; // Select best scoring tension
+    // Fast Direct Production Script & Section 8 Quality Gate (Single-Pass Execution ~35-45s)
+    console.log(`[pipeline:${s.id}] Fast single-pass creative intelligence & script generation...`);
+    const stageInst = "Pick the best customer tension and viral hook pattern for this business, and write the complete 4-scene film following all Product Spine rules. Return ONLY the OUTPUT markers.";
+    const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInst);
+    const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s) };
+    let content = base, parsed, failures = [], attempts = 0;
+    for (let i = 0; i <= MAX_REPAIRS; i++) {
+      attempts++;
+      if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
+      parsed = parseOutput(await callClaude({ system: s.system, content, thinking: false }));
+      failures = runGate(parsed, s.form, gateOpts);
+      console.log(`[pipeline:${s.id}] pass #${attempts}: ${failures.length ? `${failures.length} failing checks` : "passed"}`);
+      if (!failures.length) break;
+    }
 
-    // 2. Plot Line & Viral Hook
-    console.log(`[pipeline:${s.id}] 2/4 Selecting viral plot & hook pattern...`);
-    await produce(s, "plot");
-    s.plot.choice = 0; // Select top-ranked creator plot
+    if (failures.length) {
+      const err = new Error("The script could not pass the quality gate after several passes. Ask for a change at this checkpoint, or go back a step.");
+      err.status = 422; err.failures = failures;
+      throw err;
+    }
 
-    // 3. Story Arc & Single Location
-    console.log(`[pipeline:${s.id}] 3/4 Structuring story progression & single-location anchors...`);
-    await produce(s, "story");
-    s.story.approved = true;
-
-    // 4. Production Script & Section 8 Quality Gate (with repair loop)
-    console.log(`[pipeline:${s.id}] 4/4 Writing production script and validating Section 8 Gate...`);
-    const scriptRes = await produce(s, "script");
+    s.script = {
+      parsed,
+      attempts,
+      record: { ...parsed.record, business_name: s.form.businessName, business_type: s.form.businessType, town: s.form.town, date: s.today, format: parsed.record?.format || "Storytelling", scenes: parsed.scenes.length },
+    };
+    const scriptRes = { data: scriptPayload(s) };
 
     // Automatically record approved script
     store.save(s.form.businessName, s.form.town, s.script.record, s.script.parsed.header);

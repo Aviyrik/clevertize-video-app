@@ -5,7 +5,7 @@ function config() {
   return {
     key: process.env.ANTHROPIC_API_KEY,
     model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-    thinkingBudget: parseInt(process.env.ANTHROPIC_THINKING_BUDGET || "8000", 10),
+    thinkingBudget: parseInt(process.env.ANTHROPIC_THINKING_BUDGET || "0", 10),
   };
 }
 

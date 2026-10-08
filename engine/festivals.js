@@ -75,7 +75,7 @@ async function getFestivals() {
     return { source: "cache", checked: cache.checkedAt, moments: withDaysUntil(cache.moments, today) };
   }
 
-  if (process.env.FESTIVAL_LIVE !== "off" && process.env.ANTHROPIC_API_KEY) {
+  if (process.env.FESTIVAL_LIVE === "on" && process.env.ANTHROPIC_API_KEY) {
     try {
       const moments = await fetchLive(today);
       writeCache({ date: today, checkedAt: new Date().toISOString(), moments });

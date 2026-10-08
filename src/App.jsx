@@ -162,8 +162,8 @@ const FAST_PIPELINE_STAGES = [
   },
   {
     phase: 'STEP 4 · QUALITY VERIFICATION',
-    title: 'Verifying script quality…',
-    detail: 'Running continuity checks, natural dialogue timing, and story completion.',
+    title: 'Writing & verifying script…',
+    detail: 'Composing dialogue, running continuity checks, and compiling shot specifications (~30–45s).',
   },
 ];
 
@@ -937,7 +937,7 @@ export default function App() {
       setFastStageIndex(0);
       fastStageTimer = setInterval(() => {
         setFastStageIndex((prev) => (prev < 3 ? prev + 1 : prev));
-      }, 4500);
+      }, 9000);
 
       tipTimer = setInterval(() => {
         setBusyTipIndex((prev) => (prev + 1) % FAST_PIPELINE_TIPS.length);
