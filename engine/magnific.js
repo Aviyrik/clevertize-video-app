@@ -58,7 +58,11 @@ function mapInputs(flowInputs, values) {
   const productInput = pick((label, i) => PRODUCT_RE.test(label) || PRODUCT_RE.test(keyOf(i).toLowerCase()));
   if (values.productDataUrl) assign(productInput, values.productDataUrl);
   const logoInput = pick((label, i) => LOGO_RE.test(label) || LOGO_RE.test(keyOf(i).toLowerCase()) || keyOf(i) === LOGO_KEY);
-  if (values.logoDataUrl) assign(logoInput, values.logoDataUrl);
+  if (values.logoDataUrl) {
+    assign(logoInput, values.logoDataUrl);
+  } else if (logoInput && logoInput.required) {
+    assign(logoInput, TRANSPARENT_PNG_FALLBACK);
+  }
 
   // 2) fallbacks only if the named slot wasn't found
   if (values.productDataUrl && !productInput) {
@@ -101,14 +105,14 @@ function explicitInputs(values) {
 
   // Guarantee product input is satisfied:
   // 1. If productDataUrl is provided (uploaded image), use it.
-  // 2. Otherwise, if textual product/service info is present, use clean fallback image data URL.
-  // 3. If neither, fallback to clean transparent PNG so flow requirement is never broken.
-  const productVal = values.productDataUrl || (values.product ? TRANSPARENT_PNG_FALLBACK : TRANSPARENT_PNG_FALLBACK);
+  // 2. Otherwise, fallback to clean transparent PNG so flow requirement is never broken.
+  const productVal = values.productDataUrl || TRANSPARENT_PNG_FALLBACK;
   put(k.product, productVal);
 
-  if (values.logoDataUrl) {
-    put(k.logo, values.logoDataUrl);
-  }
+  // Guarantee logo input is satisfied (flow requires images slot):
+  const logoVal = values.logoDataUrl || TRANSPARENT_PNG_FALLBACK;
+  put(k.logo, logoVal);
+
   return inputs;
 }
 const fallbackInputs = explicitInputs;

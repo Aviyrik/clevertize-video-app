@@ -313,15 +313,24 @@ export function Screen01Business({
           justifyContent: 'space-between',
           gap: 12,
         }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-              Current Brand
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Using {userContext.businessName}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              {userContext.businessType}{userContext.town ? ` · ${userContext.town}` : ''}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {userContext.logo && (userContext.logo.previewUrl || userContext.logo.data) && (
+              <img
+                src={userContext.logo.previewUrl || `data:${userContext.logo.mime || 'image/png'};base64,${userContext.logo.data}`}
+                alt="Brand Logo"
+                style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain', backgroundColor: '#ffffff', padding: 2, border: '1px solid var(--border-subtle)', flexShrink: 0 }}
+              />
+            )}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                Current Brand
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Using {userContext.businessName}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                {userContext.businessType}{userContext.town ? ` · ${userContext.town}` : ''}
+              </div>
             </div>
           </div>
           <button
@@ -458,6 +467,129 @@ export function Screen01Business({
                 color: 'var(--text-primary)'
               }}
             />
+          </div>
+
+          {/* Brand Logo (Optional) */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <Building2 size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>Brand Logo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></span>
+              </label>
+              {userContext.logo && (
+                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={12} />
+                  Attached
+                </span>
+              )}
+            </div>
+
+            {userContext.logo ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                backgroundColor: 'var(--bg-elevated)',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                flexWrap: 'wrap',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {(userContext.logo.previewUrl || userContext.logo.data) && (
+                    <img
+                      src={userContext.logo.previewUrl || `data:${userContext.logo.mime || 'image/png'};base64,${userContext.logo.data}`}
+                      alt="Brand Logo"
+                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain', backgroundColor: '#ffffff', padding: 2, border: '1px solid var(--border-subtle)' }}
+                    />
+                  )}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {userContext.logo.name || 'Brand logo'}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                      Attached for video production
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    <span>Replace</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && handleFileUpload) handleFileUpload(file, 'logo');
+                      }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => updateUserContext('logo', null)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: 'var(--error)',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3
+                    }}
+                  >
+                    <Trash2 size={11} />
+                    <span>Remove</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px dashed var(--border-default)',
+                color: 'var(--accent-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'border-color 0.15s ease'
+              }}>
+                <Upload size={13} />
+                <span>Upload brand logo (Optional)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && handleFileUpload) handleFileUpload(file, 'logo');
+                  }}
+                />
+              </label>
+            )}
           </div>
 
           {/* Optional: Add product or offer toggle */}

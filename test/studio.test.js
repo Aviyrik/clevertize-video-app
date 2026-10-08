@@ -1039,6 +1039,35 @@ test('Studio Stage 04 Idea: Changing Idea invalidates downstream and reloads ope
   assert.equal(loadedHooksDirectionKey, "GRANDMA'S BENCHMARK", 'loadedHooksDirectionKey MUST track the new idea');
 });
 
+test('Studio Stage 01 Business: Brand logo upload control and preview exist', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('Brand Logo'), 'GuidedStudio must have Brand Logo section');
+  assert.ok(guidedStudioSrc.includes('Upload brand logo (Optional)'), 'GuidedStudio must have optional upload button');
+  assert.ok(guidedStudioSrc.includes("handleFileUpload(file, 'logo')"), 'GuidedStudio must trigger logo upload');
+  assert.ok(guidedStudioSrc.includes("updateUserContext('logo', null)"), 'GuidedStudio must allow removing uploaded logo');
+  assert.ok(guidedStudioSrc.includes('Current Brand'), 'GuidedStudio must have Current Brand section');
+});
 
+test('Magnific explicitInputs: Always satisfies logo requirement even when omitted', () => {
+  const magnific = require('../engine/magnific.js');
+  
+  // 1. Without logo provided:
+  const inputsWithoutLogo = magnific.explicitInputs({
+    scenes: ['Scene 1', 'Scene 2'],
+    character1: 'Char 1',
+    character2: 'Char 2',
+    setting: 'Setting 1',
+  });
+  assert.ok(inputsWithoutLogo.images, 'Logo slot "images" must be populated');
+  assert.equal(inputsWithoutLogo.images, magnific.TRANSPARENT_PNG_FALLBACK, 'Must fallback to transparent 1x1 PNG');
 
-
+  // 2. With logo provided:
+  const inputsWithLogo = magnific.explicitInputs({
+    scenes: ['Scene 1', 'Scene 2'],
+    character1: 'Char 1',
+    character2: 'Char 2',
+    setting: 'Setting 1',
+    logoDataUrl: 'data:image/png;base64,CUSTOM_LOGO_DATA',
+  });
+  assert.equal(inputsWithLogo.images, 'data:image/png;base64,CUSTOM_LOGO_DATA', 'Must use provided logo data URL');
+});
