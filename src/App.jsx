@@ -388,6 +388,205 @@ function rebuildScene({ title, purpose, visual, camera, dialogue, audio, notes, 
   return `ANNEX A\n${title}${purpose ? ` – ${purpose}` : ''}\nVisual:\n${visual || 'Same setting: balanced medium shot.'}\nAnimation Elements:\n${camera || 'Camera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none'}\nAudio / Dialogue / Voiceover:\n${dialogue || 'None'}\nSound Design:\n${audio || 'Natural ambient room tone. Music mood note: warm and upbeat.'}\nEditing Notes:\n${notes || 'Scene duration: ~5s | Output: 1080p'}`;
 }
 
+// Dynamic Category & Brand-Aware Brief Suggestions and Placeholders
+function getCategoryBriefSuggestions(businessType, businessName, town, offer) {
+  const brand = (businessName && businessName.trim()) || 'your brand';
+  const city = (town && town.trim()) || '';
+  const citySuffix = city ? ` in ${city}` : '';
+  const bType = (businessType || '').toLowerCase();
+
+  if (bType.includes('saree') || bType.includes('ethnic') || bType.includes('bridal')) {
+    return {
+      placeholder: `e.g. Show why ${brand} is the top destination for wedding & festive sarees${citySuffix}. Highlight authentic handloom silks, intricate zardozi borders, and special bridal styling assistance...`,
+      suggestions: [
+        `Showcase our new pure Kanjivaram & Banarasi bridal saree collection for wedding season`,
+        `Create a fun festive video highlighting special discount on designer partywear sarees`,
+        `Show a daughter helping her mother choose the perfect silk saree at ${brand}`,
+        `Highlight our handloom lightweight daily wear and office sarees with modern prints`,
+      ],
+    };
+  }
+
+  if (bType.includes('clothing') || bType.includes('apparel') || bType.includes('fashion')) {
+    return {
+      placeholder: `e.g. Launch our new seasonal clothing collection at ${brand}${citySuffix}. Highlight premium cotton fabrics, flattering fits, and trendsetting styles for every occasion...`,
+      suggestions: [
+        `Launch our new festive ethnic and western collection with trending outfits`,
+        `Create a relatable Reel comparing online fitting disappointments vs perfect trial at ${brand}`,
+        `Showcase Buy 2 Get 1 Free festive sale on trending outfits`,
+        `Show college students finding stylish, budget-friendly everyday fits`,
+      ],
+    };
+  }
+
+  if (bType.includes('jewel') || bType.includes('gold') || bType.includes('ornament')) {
+    return {
+      placeholder: `e.g. Announce our festive gold and diamond collection at ${brand}${citySuffix}. Emphasize 100% BIS hallmark purity, exquisite craftsmanship, and 0% making charges offer...`,
+      suggestions: [
+        `Highlight hallmark 916 gold & diamond lightweight jewellery for festive occasions`,
+        `Show a heartwarming story of a husband surprising his wife with a delicate necklace`,
+        `Announce 0% making charges offer on antique temple jewellery this wedding season`,
+        `Promote daily wear rose gold and silver ornaments that match every modern outfit`,
+      ],
+    };
+  }
+
+  if (bType.includes('sweet') || bType.includes('bakery') || bType.includes('mithai')) {
+    return {
+      placeholder: `e.g. Create a festive video for ${brand}${citySuffix} highlighting pure desi ghee sweets, fresh customized gift hampers, and guaranteed same-day delivery...`,
+      suggestions: [
+        `Show fresh pure desi ghee sweets being packed into premium festive gift hampers`,
+        `Create a funny family video about sneaking the last piece of Kaju Katli from the box`,
+        `Announce special festival gift boxes and same-day delivery for corporate orders`,
+        `Highlight our famous signature sweets made fresh every morning with 100% purity`,
+      ],
+    };
+  }
+
+  if (bType.includes('restaurant') || bType.includes('cafe') || bType.includes('kitchen') || bType.includes('food')) {
+    return {
+      placeholder: `e.g. Show why food lovers visit ${brand}${citySuffix} for authentic flavors, warm cozy ambience, and unbeatable weekend dining specials...`,
+      suggestions: [
+        `Showcase our sizzling signature dishes and warm family dining ambience`,
+        `Create a fun video of friends arguing over who gets the last bite of our special platter`,
+        `Promote our weekend unlimited buffet and special discount on online orders`,
+        `Highlight authentic regional recipes crafted with traditional slow-cooked spices`,
+      ],
+    };
+  }
+
+  if (bType.includes('kirana') || bType.includes('grocery') || bType.includes('supermarket')) {
+    return {
+      placeholder: `e.g. Show why local families trust ${brand}${citySuffix} for monthly grocery shopping, farm-fresh produce, and 30-minute free home delivery...`,
+      suggestions: [
+        `Show why neighbours trust ${brand} for monthly groceries with instant free delivery`,
+        `Relatable video of a husband remembering forgotten grocery items via a quick WhatsApp list`,
+        `Promote special festive discounts on cooking oil, staples, and dry fruit packs`,
+        `Highlight fresh daily morning arrivals and better-than-online prices on essentials`,
+      ],
+    };
+  }
+
+  if (bType.includes('salon') || bType.includes('parlour') || bType.includes('spa') || bType.includes('beauty')) {
+    return {
+      placeholder: `e.g. Promote our festive makeover and bridal packages at ${brand}${citySuffix}. Highlight certified hair stylists, relaxing ambience, and glowing transformations...`,
+      suggestions: [
+        `Show a stunning bridal makeup and pre-wedding glow transformation at ${brand}`,
+        `Highlight our festive head-to-toe beauty package at flat 40% discount`,
+        `Relatable video on busy professionals taking a relaxing weekend pampering spa day`,
+        `Promote advanced skin treatments and organic hair spa with expert stylists`,
+      ],
+    };
+  }
+
+  if (bType.includes('skin') || bType.includes('cosmetic') || bType.includes('wellness')) {
+    return {
+      placeholder: `e.g. Introduce our clean, chemical-free skincare formulas from ${brand}. Focus on natural glowing skin, visible transformation in 14 days, and dermatologist approval...`,
+      suggestions: [
+        `Demonstrate our gentle ayurvedic glow serum clearing dullness naturally`,
+        `Customer testimonial Reel showing visible skin glow without harsh chemicals`,
+        `Launch our festive skincare combo gift kit with exclusive limited-period gift`,
+        `Highlight dermatologically tested, clean formulations crafted for Indian skin`,
+      ],
+    };
+  }
+
+  if (bType.includes('mobile') || bType.includes('laptop') || bType.includes('electronics')) {
+    return {
+      placeholder: `e.g. Show why purchasing gadgets at ${brand}${citySuffix} gives instant setup, best exchange bonus, and zero-cost EMI plans...`,
+      suggestions: [
+        `Show why buying phones offline at ${brand} beats online delivery with instant setup`,
+        `Promote festive exchange bonanza with up to ₹10,000 off on 5G smartphones`,
+        `Relatable story of upgrading parents to a smooth smartphone with friendly guidance`,
+        `Highlight zero down-payment EMI offers and genuine manufacturer warranties`,
+      ],
+    };
+  }
+
+  if (bType.includes('decor') || bType.includes('furniture') || bType.includes('modular') || bType.includes('interior')) {
+    return {
+      placeholder: `e.g. Show why ${brand} is the smart choice for interior makeovers${citySuffix}. Highlight modular space-saving designs, premium materials, and 10-year warranty...`,
+      suggestions: [
+        `Show how our modular kitchen maximizes space for compact modern apartments`,
+        `Highlight durable solid teakwood dining and living room sets with 10-year warranty`,
+        `Create a cozy festive home makeover Reel with designer lighting and curtains`,
+        `Promote free 3D design consultation and turnkey interior installation`,
+      ],
+    };
+  }
+
+  if (bType.includes('dental') || bType.includes('clinic') || bType.includes('health') || bType.includes('hospital')) {
+    return {
+      placeholder: `e.g. Encourage families to book a consultation at ${brand}${citySuffix}. Emphasize pain-free modern technology, gentle doctors, and warm patient care...`,
+      suggestions: [
+        `Convince patients to book a pain-free dental checkup or smile correction`,
+        `Overcome doctor anxiety with gentle modern technology and caring specialists`,
+        `Promote complete family preventive health checkup package with fast reports`,
+        `Share a confidence transformation story after invisible aligners treatment`,
+      ],
+    };
+  }
+
+  if (bType.includes('gym') || bType.includes('fitness') || bType.includes('yoga')) {
+    return {
+      placeholder: `e.g. Inspire fitness enthusiasts to join ${brand}${citySuffix}. Highlight imported equipment, certified personal trainers, and motivating community culture...`,
+      suggestions: [
+        `Inspire people to start their transformation journey with expert certified trainers`,
+        `Promote annual membership festive discount with free personalized diet plan`,
+        `Show an energetic group workout session and welcoming community vibe`,
+        `Highlight modern imported equipment, clean locker rooms, and flexible timings`,
+      ],
+    };
+  }
+
+  if (bType.includes('coaching') || bType.includes('tuition') || bType.includes('education')) {
+    return {
+      placeholder: `e.g. Showcase why parents and students trust ${brand}${citySuffix} for board and competitive exams. Emphasize experienced faculty and structured doubt clearing...`,
+      suggestions: [
+        `Showcase our top student rankers and proven structured learning methodology`,
+        `Announce scholarship admission test for CBSE & competitive exam batches`,
+        `Highlight small batch sizes with 1-on-1 mentor doubts clearance`,
+        `Show relatable student turning from exam anxiety to confident mastery`,
+      ],
+    };
+  }
+
+  if (bType.includes('auto') || bType.includes('bike') || bType.includes('car')) {
+    return {
+      placeholder: `e.g. Highlight festive delivery offers at ${brand}${citySuffix}. Show express service turnaround, genuine spare parts, and exciting exchange bonuses...`,
+      suggestions: [
+        `Show a family joyfully taking delivery of their shiny new vehicle for the festival`,
+        `Promote bumper-to-bumper car detailing, ceramic coating, and AC service package`,
+        `Highlight easy exchange schemes and lowest interest EMI financing on two-wheelers`,
+        `Showcase quick 60-minute express periodic servicing with genuine parts`,
+      ],
+    };
+  }
+
+  if (bType.includes('real estate') || bType.includes('builder') || bType.includes('property')) {
+    return {
+      placeholder: `e.g. Tour the luxury lifestyle and prime connectivity at ${brand}${citySuffix}. Showcase modern amenities, green surroundings, and attractive payment plans...`,
+      suggestions: [
+        `Show walkthrough of ready-to-move spacious apartments with scenic balconies`,
+        `Highlight prime location with 5-minute connectivity to metro, schools, and tech parks`,
+        `Promote festive booking offer with zero registration charges and modular kitchen`,
+        `Showcase luxury gated community amenities with clubhouse, pool, and 24/7 security`,
+      ],
+    };
+  }
+
+  // Universal fallback tailored to brand name and city
+  return {
+    placeholder: `e.g. Show why customers choose ${brand}${citySuffix}. Highlight your specialty, unique craftsmanship, and special festive offer for new patrons...`,
+    suggestions: [
+      `Show why customers choose ${brand} for trusted quality and personalized service`,
+      `Create a relatable commercial highlighting our special offer and fast delivery`,
+      `Tell the authentic story behind our craft, dedication, and happy patrons`,
+      `Demonstrate how ${brand} solves everyday customer dilemmas with ease and care`,
+    ],
+  };
+}
+
 export default function App() {
   // Network connectivity status
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -2972,55 +3171,69 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* Inspiring Example Chips */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '10px 0 12px' }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>Try an example:</span>
-                      {[
-                        'Show why our modular kitchens are perfect for small Bangalore homes',
-                        'Create a funny Diwali offer video with 50% discount on sweets',
-                        'Convince people to book a free dental consultation',
-                        'Launch our new premium skincare product with authentic glow',
-                      ].map((sample, sIdx) => (
-                        <button
-                          key={sIdx}
-                          type="button"
-                          onClick={() => {
-                            updateUserContext('brief', sample);
-                            setValidationError('');
-                          }}
-                          style={{
-                            fontSize: 11,
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                            backgroundColor: 'var(--bg-elevated)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                        >
-                          "{sample.slice(0, 36)}…"
-                        </button>
-                      ))}
-                    </div>
+                    {/* Inspiring Example Chips tailored to Brand & Category */}
+                    {(() => {
+                      const bType = userContext.businessType === 'Other' && userContext.customBusinessType
+                        ? userContext.customBusinessType
+                        : userContext.businessType;
+                      const { suggestions, placeholder } = getCategoryBriefSuggestions(
+                        bType,
+                        userContext.businessName,
+                        userContext.town,
+                        userContext.offer
+                      );
+                      return (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '10px 0 12px' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                              Suggestions for {userContext.businessName?.trim() ? `"${userContext.businessName.trim()}"` : 'your brand'}:
+                            </span>
+                            {suggestions.map((sample, sIdx) => (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => {
+                                  updateUserContext('brief', sample);
+                                  setValidationError('');
+                                }}
+                                style={{
+                                  fontSize: 11,
+                                  padding: '4px 9px',
+                                  borderRadius: 4,
+                                  backgroundColor: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  color: 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                title={sample}
+                              >
+                                "{sample.length > 40 ? sample.slice(0, 40) + '…' : sample}"
+                              </button>
+                            ))}
+                          </div>
 
-                    {micHint && (
-                      <div style={{ fontSize: 12, color: 'var(--accent-primary)', padding: '6px 10px', backgroundColor: 'var(--bg-elevated)', borderRadius: 6, marginBottom: 10 }}>
-                        {micHint}
-                      </div>
-                    )}
+                          {micHint && (
+                            <div style={{ fontSize: 12, color: 'var(--accent-primary)', padding: '6px 10px', backgroundColor: 'var(--bg-elevated)', borderRadius: 6, marginBottom: 10 }}>
+                              {micHint}
+                            </div>
+                          )}
 
-                    <textarea
-                      id="briefInput"
-                      rows={4}
-                      value={userContext.brief}
-                      onChange={(e) => {
-                        updateUserContext('brief', e.target.value);
-                        setValidationError('');
-                      }}
-                      placeholder="e.g. Show why our modular kitchens are perfect for small Bangalore homes. Highlight smart storage, modern aesthetic, and hassle-free 48-hour installation..."
-                      style={{ width: '100%', padding: '14px 16px', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }}
-                    />
+                          <textarea
+                            id="briefInput"
+                            rows={4}
+                            value={userContext.brief}
+                            onChange={(e) => {
+                              updateUserContext('brief', e.target.value);
+                              setValidationError('');
+                            }}
+                            placeholder={placeholder}
+                            style={{ width: '100%', padding: '14px 16px', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }}
+                          />
+                        </>
+                      );
+                    })()}
 
                     {validationError && (
                       <div style={{ padding: '8px 12px', backgroundColor: 'var(--error-subtle)', border: '1px solid var(--error)', borderRadius: 6, color: 'var(--error)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
