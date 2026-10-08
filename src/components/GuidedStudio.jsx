@@ -1725,6 +1725,12 @@ export function Screen04Idea({
                     setCustomDirection(e.target.value);
                     if (selectedDirection) setSelectedDirection(null);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customDirection.trim()) {
+                      e.preventDefault();
+                      onContinue();
+                    }
+                  }}
                   placeholder="e.g. Show corporate managers scrambling for Diwali gifts until finding same-day hampers"
                   style={{
                     padding: '8px 12px',
@@ -1732,7 +1738,8 @@ export function Screen04Idea({
                     border: '1px solid var(--border-default)',
                     fontSize: 12,
                     backgroundColor: 'var(--bg-elevated)',
-                    color: 'var(--text-primary)'
+                    color: 'var(--text-primary)',
+                    outline: 'none'
                   }}
                 />
               </div>
@@ -1886,7 +1893,13 @@ export function Screen05Opening({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isEditing) {
-                            hk.hookLine = editLineText;
+                            const trimmed = editLineText.trim();
+                            if (trimmed) {
+                              hk.hookLine = trimmed;
+                              if (selectedHook?.id === hk.id) {
+                                setSelectedHook({ ...hk, hookLine: trimmed });
+                              }
+                            }
                             setEditingHookId(null);
                           } else {
                             setEditLineText(hk.hookLine || hk.text || '');
@@ -1905,7 +1918,20 @@ export function Screen05Opening({
                       type="text"
                       value={editLineText}
                       onChange={(e) => setEditLineText(e.target.value)}
-                      style={{ padding: '6px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const trimmed = editLineText.trim();
+                          if (trimmed) {
+                            hk.hookLine = trimmed;
+                            if (selectedHook?.id === hk.id) {
+                              setSelectedHook({ ...hk, hookLine: trimmed });
+                            }
+                          }
+                          setEditingHookId(null);
+                        }
+                      }}
+                      style={{ padding: '6px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                   ) : (
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>
@@ -1965,6 +1991,12 @@ export function Screen05Opening({
                     setCustomHook(e.target.value);
                     if (selectedHook) setSelectedHook(null);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customHook.trim()) {
+                      e.preventDefault();
+                      onContinue();
+                    }
+                  }}
                   placeholder="e.g. Wait, did you forget to order festive gift boxes again?!"
                   style={{
                     padding: '8px 12px',
@@ -1972,7 +2004,8 @@ export function Screen05Opening({
                     border: '1px solid var(--border-default)',
                     fontSize: 12,
                     backgroundColor: 'var(--bg-elevated)',
-                    color: 'var(--text-primary)'
+                    color: 'var(--text-primary)',
+                    outline: 'none'
                   }}
                 />
               </div>
@@ -2039,11 +2072,21 @@ export function Screen06Story({
   setConstraintsList,
   avoidList = [],
   setAvoidList,
+  onAddConstraint,
+  onRemoveConstraint,
+  onAddAvoid,
+  onRemoveAvoid,
+  onUpdateCharacters,
+  onUpdateSetting,
+  onUpdateProduct,
   onContinue,
   onBack,
   isBusy = false,
   elapsedTime = '00:00',
 }) {
+  const currentConstraints = Array.isArray(constraintsList) ? constraintsList : [];
+  const currentAvoid = Array.isArray(avoidList) ? avoidList : [];
+
   const [editingCard, setEditingCard] = useState(null);
   const [editLeadName, setEditLeadName] = useState('');
   const [editLeadRole, setEditLeadRole] = useState('');
@@ -2051,9 +2094,167 @@ export function Screen06Story({
   const [editSuppRole, setEditSuppRole] = useState('');
   const [editSettingName, setEditSettingName] = useState('');
   const [editProductName, setEditProductName] = useState('');
-  const [isCustomizeExpanded, setIsCustomizeExpanded] = useState(false);
+  const [isCustomizeExpanded, setIsCustomizeExpanded] = useState(() => (currentConstraints.length > 0 || currentAvoid.length > 0));
   const [newConstraint, setNewConstraint] = useState('');
   const [newAvoid, setNewAvoid] = useState('');
+
+  const handleAddConstraint = (text) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+    const next = [...currentConstraints, trimmed];
+    if (typeof setConstraintsList === 'function') setConstraintsList(next);
+    if (typeof onAddConstraint === 'function') onAddConstraint(trimmed);
+    setNewConstraint('');
+  };
+
+  const handleRemoveConstraint = (idx) => {
+    const next = currentConstraints.filter((_, i) => i !== idx);
+    if (typeof setConstraintsList === 'function') setConstraintsList(next);
+    if (typeof onRemoveConstraint === 'function') onRemoveConstraint(idx);
+  };
+
+  const handleAddAvoid = (text) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+    const next = [...currentAvoid, trimmed];
+    if (typeof setAvoidList === 'function') setAvoidList(next);
+    if (typeof onAddAvoid === 'function') onAddAvoid(trimmed);
+    setNewAvoid('');
+  };
+
+  const handleRemoveAvoid = (idx) => {
+    const next = currentAvoid.filter((_, i) => i !== idx);
+    if (typeof setAvoidList === 'function') setAvoidList(next);
+    if (typeof onRemoveAvoid === 'function') onRemoveAvoid(idx);
+  };
+
+  const startEditLead = () => {
+    const char = storyWorldData?.character1 || userContext.leadCharacter;
+    let name = 'Lead';
+    let role = 'Host';
+    if (char && typeof char === 'object') {
+      name = char.name || 'Lead';
+      role = char.role || 'Host';
+    } else if (typeof char === 'string') {
+      const match = char.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+      if (match) {
+        name = match[1]?.trim() || char;
+        role = match[2]?.trim() || 'Host';
+      }
+    }
+    setEditLeadName(name);
+    setEditLeadRole(role);
+    setEditingCard('lead');
+  };
+
+  const handleSaveLead = () => {
+    const name = editLeadName.trim() || 'Lead';
+    const role = editLeadRole.trim() || 'Host';
+    const char1 = { name, role };
+    if (typeof setStoryWorldData === 'function') {
+      const next = { ...(storyWorldData || {}), character1: char1 };
+      setStoryWorldData(next);
+    }
+    if (typeof updateUserContext === 'function') {
+      updateUserContext('leadCharacter', `${name} (${role})`);
+    }
+    if (typeof onUpdateCharacters === 'function') {
+      onUpdateCharacters(char1, storyWorldData?.character2);
+    }
+    setEditingCard(null);
+  };
+
+  const startEditSupp = () => {
+    const char = storyWorldData?.character2 || userContext.supportingCharacter;
+    let name = 'Supporting';
+    let role = 'Partner';
+    if (char && typeof char === 'object') {
+      name = char.name || 'Supporting';
+      role = char.role || 'Partner';
+    } else if (typeof char === 'string') {
+      const match = char.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+      if (match) {
+        name = match[1]?.trim() || char;
+        role = match[2]?.trim() || 'Partner';
+      }
+    }
+    setEditSuppName(name);
+    setEditSuppRole(role);
+    setEditingCard('supp');
+  };
+
+  const handleSaveSupp = () => {
+    const name = editSuppName.trim() || 'Supporting';
+    const role = editSuppRole.trim() || 'Partner';
+    const char2 = { name, role };
+    if (typeof setStoryWorldData === 'function') {
+      const next = { ...(storyWorldData || {}), character2: char2 };
+      setStoryWorldData(next);
+    }
+    if (typeof updateUserContext === 'function') {
+      updateUserContext('supportingCharacter', `${name} (${role})`);
+    }
+    if (typeof onUpdateCharacters === 'function') {
+      onUpdateCharacters(storyWorldData?.character1, char2);
+    }
+    setEditingCard(null);
+  };
+
+  const startEditPlace = () => {
+    const place = storyWorldData?.location?.name || storyWorldData?.setting || `${userContext.businessName || 'Store'} Setting`;
+    setEditSettingName(place);
+    setEditingCard('place');
+  };
+
+  const handleSavePlace = () => {
+    const place = editSettingName.trim() || `${userContext.businessName || 'Store'} Setting`;
+    if (typeof setStoryWorldData === 'function') {
+      const next = {
+        ...(storyWorldData || {}),
+        setting: place,
+        location: { ...(storyWorldData?.location || {}), name: place }
+      };
+      setStoryWorldData(next);
+    }
+    if (typeof updateUserContext === 'function') {
+      updateUserContext('setting', place);
+    }
+    if (typeof onUpdateSetting === 'function') {
+      onUpdateSetting(place);
+    }
+    setEditingCard(null);
+  };
+
+  const startEditProduct = () => {
+    const prod = storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || 'Featured Product';
+    setEditProductName(prod);
+    setEditingCard('prod');
+  };
+
+  const handleSaveProduct = () => {
+    const prod = editProductName.trim() || userContext.specialty || userContext.brief?.slice(0, 30) || 'Featured Product';
+    if (typeof setStoryWorldData === 'function') {
+      const next = { ...(storyWorldData || {}), product: prod };
+      setStoryWorldData(next);
+    }
+    if (typeof updateUserContext === 'function') {
+      updateUserContext('specialty', prod);
+    }
+    if (typeof onUpdateProduct === 'function') {
+      onUpdateProduct(prod);
+    }
+    setEditingCard(null);
+  };
+
+  const handleProceed = () => {
+    if (newConstraint.trim()) {
+      handleAddConstraint(newConstraint.trim());
+    }
+    if (newAvoid.trim()) {
+      handleAddAvoid(newAvoid.trim());
+    }
+    if (onContinue) onContinue();
+  };
 
   const parseElapsedSeconds = (str) => {
     if (!str || typeof str !== 'string') return 0;
@@ -2386,15 +2587,9 @@ export function Screen06Story({
                     type="button"
                     onClick={() => {
                       if (editingCard === 'lead') {
-                        setStoryWorldData((prev) => ({
-                          ...prev,
-                          character1: { ...prev?.character1, name: editLeadName || 'Lead', role: editLeadRole || 'Host' }
-                        }));
-                        setEditingCard(null);
+                        handleSaveLead();
                       } else {
-                        setEditLeadName(storyWorldData?.character1?.name || 'Lead');
-                        setEditLeadRole(storyWorldData?.character1?.role || 'Host');
-                        setEditingCard('lead');
+                        startEditLead();
                       }
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
@@ -2404,12 +2599,26 @@ export function Screen06Story({
                 </div>
                 {editingCard === 'lead' ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <input type="text" value={editLeadName} onChange={(e) => setEditLeadName(e.target.value)} placeholder="Name" style={{ padding: '3px 6px', fontSize: 11 }} />
-                    <input type="text" value={editLeadRole} onChange={(e) => setEditLeadRole(e.target.value)} placeholder="Role" style={{ padding: '3px 6px', fontSize: 11 }} />
+                    <input
+                      type="text"
+                      value={editLeadName}
+                      onChange={(e) => setEditLeadName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveLead(); } }}
+                      placeholder="Name"
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
+                    <input
+                      type="text"
+                      value={editLeadRole}
+                      onChange={(e) => setEditLeadRole(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveLead(); } }}
+                      placeholder="Role"
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
                   </div>
                 ) : (
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {storyWorldData?.character1?.name ? `${storyWorldData.character1.name} · ${storyWorldData.character1.role || 'Host'}` : (userContext.leadCharacter || 'Creator')}
+                    {storyWorldData?.character1?.name ? `${storyWorldData.character1.name} · ${storyWorldData.character1.role || 'Host'}` : (typeof userContext.leadCharacter === 'string' && userContext.leadCharacter.trim() ? userContext.leadCharacter : 'Creator')}
                   </div>
                 )}
               </div>
@@ -2422,15 +2631,9 @@ export function Screen06Story({
                     type="button"
                     onClick={() => {
                       if (editingCard === 'supp') {
-                        setStoryWorldData((prev) => ({
-                          ...prev,
-                          character2: { ...prev?.character2, name: editSuppName || 'Supporting', role: editSuppRole || 'Partner' }
-                        }));
-                        setEditingCard(null);
+                        handleSaveSupp();
                       } else {
-                        setEditSuppName(storyWorldData?.character2?.name || 'Supporting');
-                        setEditSuppRole(storyWorldData?.character2?.role || 'Partner');
-                        setEditingCard('supp');
+                        startEditSupp();
                       }
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
@@ -2440,12 +2643,26 @@ export function Screen06Story({
                 </div>
                 {editingCard === 'supp' ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <input type="text" value={editSuppName} onChange={(e) => setEditSuppName(e.target.value)} placeholder="Name" style={{ padding: '3px 6px', fontSize: 11 }} />
-                    <input type="text" value={editSuppRole} onChange={(e) => setEditSuppRole(e.target.value)} placeholder="Role" style={{ padding: '3px 6px', fontSize: 11 }} />
+                    <input
+                      type="text"
+                      value={editSuppName}
+                      onChange={(e) => setEditSuppName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveSupp(); } }}
+                      placeholder="Name"
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
+                    <input
+                      type="text"
+                      value={editSuppRole}
+                      onChange={(e) => setEditSuppRole(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveSupp(); } }}
+                      placeholder="Role"
+                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
                   </div>
                 ) : (
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {storyWorldData?.character2?.name ? `${storyWorldData.character2.name} · ${storyWorldData.character2.role || 'Partner'}` : (userContext.supportingCharacter || 'Customer')}
+                    {storyWorldData?.character2?.name ? `${storyWorldData.character2.name} · ${storyWorldData.character2.role || 'Partner'}` : (typeof userContext.supportingCharacter === 'string' && userContext.supportingCharacter.trim() ? userContext.supportingCharacter : 'Partner')}
                   </div>
                 )}
               </div>
@@ -2458,15 +2675,9 @@ export function Screen06Story({
                     type="button"
                     onClick={() => {
                       if (editingCard === 'place') {
-                        setStoryWorldData((prev) => ({
-                          ...prev,
-                          setting: editSettingName,
-                          location: { ...(prev?.location || {}), name: editSettingName }
-                        }));
-                        setEditingCard(null);
+                        handleSavePlace();
                       } else {
-                        setEditSettingName(storyWorldData?.location?.name || storyWorldData?.setting || 'Store Setting');
-                        setEditingCard('place');
+                        startEditPlace();
                       }
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
@@ -2475,7 +2686,14 @@ export function Screen06Story({
                   </button>
                 </div>
                 {editingCard === 'place' ? (
-                  <input type="text" value={editSettingName} onChange={(e) => setEditSettingName(e.target.value)} style={{ width: '100%', padding: '3px 6px', fontSize: 11 }} />
+                  <input
+                    type="text"
+                    value={editSettingName}
+                    onChange={(e) => setEditSettingName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePlace(); } }}
+                    placeholder="Place / Location"
+                    style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
                 ) : (
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {storyWorldData?.location?.name || storyWorldData?.setting?.slice(0, 30) || `${userContext.businessName || 'Store'} Setting`}
@@ -2491,11 +2709,9 @@ export function Screen06Story({
                     type="button"
                     onClick={() => {
                       if (editingCard === 'prod') {
-                        setStoryWorldData((prev) => ({ ...prev, product: editProductName }));
-                        setEditingCard(null);
+                        handleSaveProduct();
                       } else {
-                        setEditProductName(storyWorldData?.product || userContext.brief?.slice(0, 30) || 'Featured Product');
-                        setEditingCard('prod');
+                        startEditProduct();
                       }
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
@@ -2504,10 +2720,17 @@ export function Screen06Story({
                   </button>
                 </div>
                 {editingCard === 'prod' ? (
-                  <input type="text" value={editProductName} onChange={(e) => setEditProductName(e.target.value)} style={{ width: '100%', padding: '3px 6px', fontSize: 11 }} />
+                  <input
+                    type="text"
+                    value={editProductName}
+                    onChange={(e) => setEditProductName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProduct(); } }}
+                    placeholder="Featured Product"
+                    style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
                 ) : (
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {storyWorldData?.product || userContext.brief?.slice(0, 30) || `${userContext.businessName} items`}
+                    {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || `${userContext.businessName || 'Store'} items`}
                   </div>
                 )}
               </div>
@@ -2533,48 +2756,78 @@ export function Screen06Story({
                 color: 'var(--text-primary)'
               }}
             >
-              <span>Customize details (Optional)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>Customize details (Optional)</span>
+                {(currentConstraints.length > 0 || currentAvoid.length > 0) && (
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--accent-primary)'
+                  }}>
+                    {currentConstraints.length + currentAvoid.length} active
+                  </span>
+                )}
+              </div>
               {isCustomizeExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
             {isCustomizeExpanded && (
-              <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* Things to include */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                     Things to include
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                    {constraintsList.map((c, i) => (
-                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {c}
-                        <X size={10} style={{ cursor: 'pointer' }} onClick={() => setConstraintsList(constraintsList.filter((_, idx) => idx !== i))} />
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  {currentConstraints.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {currentConstraints.map((c, i) => (
+                        <span key={i} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span>{c}</span>
+                          <X size={11} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => handleRemoveConstraint(i)} />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <input
                       type="text"
                       value={newConstraint}
                       onChange={(e) => setNewConstraint(e.target.value)}
                       placeholder="e.g. mention WhatsApp order number"
-                      style={{ flex: 1, padding: '6px 8px', fontSize: 11 }}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--text-primary)',
+                        outline: 'none'
+                      }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newConstraint.trim()) {
-                          setConstraintsList([...constraintsList, newConstraint.trim()]);
-                          setNewConstraint('');
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddConstraint(newConstraint);
                         }
                       }}
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        if (newConstraint.trim()) {
-                          setConstraintsList([...constraintsList, newConstraint.trim()]);
-                          setNewConstraint('');
-                        }
+                      onClick={() => handleAddConstraint(newConstraint)}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        border: '1px solid var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
                       }}
-                      style={{ padding: '6px 12px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', cursor: 'pointer' }}
                     >
                       Add
                     </button>
@@ -2583,40 +2836,56 @@ export function Screen06Story({
 
                 {/* Things to avoid */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                     Things to avoid
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                    {avoidList.map((a, i) => (
-                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {a}
-                        <X size={10} style={{ cursor: 'pointer' }} onClick={() => setAvoidList(avoidList.filter((_, idx) => idx !== i))} />
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  {currentAvoid.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {currentAvoid.map((a, i) => (
+                        <span key={i} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span>{a}</span>
+                          <X size={11} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => handleRemoveAvoid(i)} />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <input
                       type="text"
                       value={newAvoid}
                       onChange={(e) => setNewAvoid(e.target.value)}
                       placeholder="e.g. no loud shouting, no dance steps"
-                      style={{ flex: 1, padding: '6px 8px', fontSize: 11 }}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--text-primary)',
+                        outline: 'none'
+                      }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newAvoid.trim()) {
-                          setAvoidList([...avoidList, newAvoid.trim()]);
-                          setNewAvoid('');
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAvoid(newAvoid);
                         }
                       }}
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        if (newAvoid.trim()) {
-                          setAvoidList([...avoidList, newAvoid.trim()]);
-                          setNewAvoid('');
-                        }
+                      onClick={() => handleAddAvoid(newAvoid)}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        border: '1px solid var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
                       }}
-                      style={{ padding: '6px 12px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', cursor: 'pointer' }}
                     >
                       Add
                     </button>
@@ -2649,7 +2918,7 @@ export function Screen06Story({
         <button
           type="button"
           disabled={isBusy || isLoadingStory}
-          onClick={onContinue}
+          onClick={handleProceed}
           style={{
             padding: '12px 28px',
             borderRadius: 8,
@@ -2885,12 +3154,26 @@ export function Screen07Script({
               </div>
 
               {isEditing ? (
-                <textarea
-                  rows={4}
-                  value={editSceneText}
-                  onChange={(e) => setEditSceneText(e.target.value)}
-                  style={{ width: '100%', padding: '8px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <textarea
+                    rows={4}
+                    value={editSceneText}
+                    onChange={(e) => setEditSceneText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        const updated = [...scenes];
+                        updated[idx] = editSceneText;
+                        setScenes(updated);
+                        setEditingSceneIdx(null);
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                    Press Save or Ctrl+Enter to apply scene edits.
+                  </div>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>

@@ -1701,8 +1701,14 @@ export function SceneAIRewriteModal({
           rows={3}
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && instruction.trim() && !isRewriting) {
+              e.preventDefault();
+              onApplyRewrite(instruction);
+            }
+          }}
           placeholder="e.g. Make Ramesh tease Sunita about running out of groceries again..."
-          style={{ width: '100%', padding: '10px 12px', fontSize: 13, marginBottom: 16 }}
+          style={{ width: '100%', padding: '10px 12px', fontSize: 13, marginBottom: 16, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
         />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

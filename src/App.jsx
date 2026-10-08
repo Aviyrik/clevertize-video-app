@@ -1504,6 +1504,10 @@ export default function App() {
       hook: selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended)),
       plot: selectedPlot || (customPlot ? { title: customPlot } : plotsList.find((p) => p.recommended)),
       story: storyWorldData || { format: userContext.creativeStyle || 'Storytelling' },
+      character1: storyWorldData?.character1 || userContext.leadCharacter || undefined,
+      character2: storyWorldData?.character2 || userContext.supportingCharacter || undefined,
+      location: storyWorldData?.location || (storyWorldData?.setting ? { name: storyWorldData.setting } : undefined),
+      product: storyWorldData?.product || userContext.specialty || userContext.brief || undefined,
     };
 
     try {
@@ -2118,6 +2122,8 @@ export default function App() {
     setSelectedPlot(null);
     setCustomPlot('');
     setStoryWorldData(null);
+    setConstraintsList([]);
+    setAvoidList([]);
     setGeneratedScript(null);
     setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
 
@@ -3185,8 +3191,9 @@ export default function App() {
           <Screen06Story
             storyWorldData={storyWorldData}
             setStoryWorldData={(sw) => {
-              setStoryWorldData(sw);
-              setCreativeDNA((prev) => ({ ...prev, story: sw }));
+              const nextSw = typeof sw === 'function' ? sw(storyWorldData) : sw;
+              setStoryWorldData(nextSw);
+              setCreativeDNA((prev) => ({ ...prev, story: nextSw }));
               const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
               if (hasDownstream) {
                 setHasStaleWarning(true);
@@ -3199,6 +3206,15 @@ export default function App() {
             setConstraintsList={setConstraintsList}
             avoidList={avoidList}
             setAvoidList={setAvoidList}
+            onAddConstraint={(c) => setConstraintsList((prev) => [...(prev || []), c])}
+            onRemoveConstraint={(idx) => setConstraintsList((prev) => (prev || []).filter((_, i) => i !== idx))}
+            onAddAvoid={(a) => setAvoidList((prev) => [...(prev || []), a])}
+            onRemoveAvoid={(idx) => setAvoidList((prev) => (prev || []).filter((_, i) => i !== idx))}
+            onUpdateCharacters={(c1, c2) => {
+              if (c1) setCharacter1(typeof c1 === 'string' ? c1 : c1.name);
+              if (c2) setCharacter2(typeof c2 === 'string' ? c2 : c2.name);
+            }}
+            onUpdateSetting={(s) => setSetting(s)}
             isBusy={isBusy}
             elapsedTime={elapsedTime}
             onContinue={async () => {

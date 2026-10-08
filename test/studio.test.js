@@ -1115,3 +1115,59 @@ test('Studio Reset: New Film and Create Another Video restart process and open e
   assert.ok(guidedStudioSrc.includes('autoEdit = false'), 'Screen01Business must accept autoEdit prop');
   assert.ok(guidedStudioSrc.includes('setIsEditingExisting(true)'), 'autoEdit must switch Screen01Business to editable mode');
 });
+
+test('Studio Stage 06 Story: Custom constraints and avoid details add, remove, and auto-commit on continue', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('handleAddConstraint'), 'Screen06Story must have handleAddConstraint');
+  assert.ok(guidedStudioSrc.includes('handleRemoveConstraint'), 'Screen06Story must have handleRemoveConstraint');
+  assert.ok(guidedStudioSrc.includes('handleAddAvoid'), 'Screen06Story must have handleAddAvoid');
+  assert.ok(guidedStudioSrc.includes('handleRemoveAvoid'), 'Screen06Story must have handleRemoveAvoid');
+  assert.ok(guidedStudioSrc.includes('handleProceed'), 'Screen06Story must have handleProceed');
+  assert.ok(guidedStudioSrc.includes('if (newConstraint.trim())'), 'handleProceed must auto-commit unsubmitted constraint');
+  assert.ok(guidedStudioSrc.includes('if (newAvoid.trim())'), 'handleProceed must auto-commit unsubmitted avoid rule');
+  assert.ok(guidedStudioSrc.includes('onAddConstraint'), 'Screen06Story must support onAddConstraint callback');
+  assert.ok(guidedStudioSrc.includes('onAddAvoid'), 'Screen06Story must support onAddAvoid callback');
+});
+
+test('Studio Stage 06 Story: People & Setting cards support inline editing for Lead, Supp, Place, and Product', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('startEditLead'), 'Screen06Story must have startEditLead');
+  assert.ok(guidedStudioSrc.includes('handleSaveLead'), 'Screen06Story must have handleSaveLead');
+  assert.ok(guidedStudioSrc.includes('startEditSupp'), 'Screen06Story must have startEditSupp');
+  assert.ok(guidedStudioSrc.includes('handleSaveSupp'), 'Screen06Story must have handleSaveSupp');
+  assert.ok(guidedStudioSrc.includes('startEditPlace'), 'Screen06Story must have startEditPlace');
+  assert.ok(guidedStudioSrc.includes('handleSavePlace'), 'Screen06Story must have handleSavePlace');
+  assert.ok(guidedStudioSrc.includes('startEditProduct'), 'Screen06Story must have startEditProduct');
+  assert.ok(guidedStudioSrc.includes('handleSaveProduct'), 'Screen06Story must have handleSaveProduct');
+  assert.ok(guidedStudioSrc.includes('onUpdateCharacters'), 'Must trigger character updates');
+  assert.ok(guidedStudioSrc.includes('onUpdateSetting'), 'Must trigger setting updates');
+  assert.ok(guidedStudioSrc.includes('onUpdateProduct'), 'Must trigger product updates');
+});
+
+test('Studio Custom Inputs: Stage 04 Idea and Stage 05 Opening support custom entry with Enter submission', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('customDirection.trim()'), 'Screen04Idea must check trimmed custom direction');
+  assert.ok(guidedStudioSrc.includes('customHook.trim()'), 'Screen05Opening must check trimmed custom hook');
+  assert.ok(guidedStudioSrc.includes('+ I have my own idea'), 'Screen04Idea must have custom idea button');
+  assert.ok(guidedStudioSrc.includes('+ Write my own opening'), 'Screen05Opening must have custom opening button');
+});
+
+test('Studio Custom Inputs: Scene AI Rewrite supports custom instruction entry with shortcut submission', () => {
+  const workspaceSrc = fs.readFileSync(path.join(__dirname, '../src/components/CreativeWorkspace.jsx'), 'utf8');
+  assert.ok(workspaceSrc.includes('SceneAIRewriteModal'), 'SceneAIRewriteModal must exist');
+  assert.ok(workspaceSrc.includes('onApplyRewrite(instruction)'), 'Must apply custom rewrite instructions');
+  assert.ok(workspaceSrc.includes('(e.ctrlKey || e.metaKey) && e.key === \'Enter\''), 'Must support Ctrl+Enter shortcut in rewrite modal');
+});
+
+test('Creative Synthesis: Active DNA passes custom characters, location, product, constraints, and avoid rules', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('character1: storyWorldData?.character1'), 'activeDNA must include character1');
+  assert.ok(appSrc.includes('character2: storyWorldData?.character2'), 'activeDNA must include character2');
+  assert.ok(appSrc.includes('location: storyWorldData?.location'), 'activeDNA must include location');
+  assert.ok(appSrc.includes('product: storyWorldData?.product'), 'activeDNA must include product');
+  assert.ok(appSrc.includes('constraints: constraintsList'), 'synthesis must pass constraintsList');
+  assert.ok(appSrc.includes('avoid: avoidList'), 'synthesis must pass avoidList');
+  assert.ok(appSrc.includes('setConstraintsList([])'), 'handleStartNewProject must clear constraintsList');
+  assert.ok(appSrc.includes('setAvoidList([])'), 'handleStartNewProject must clear avoidList');
+});
+
