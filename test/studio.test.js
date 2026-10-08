@@ -984,5 +984,61 @@ test('Studio Stage 06 Story: Error during synthesis stops loading and stays on S
   assert.equal(errorMessage, 'Quality gate validation failed', 'Error message should be captured');
 });
 
+test('Studio Stage 04 Idea: Changing Idea invalidates downstream and reloads openings for the new idea', async () => {
+  let selectedDirection = { id: 'dir-1', title: 'THE PURITY TEST' };
+  let explicitChoices = { idea: 'THE PURITY TEST', opening: 'Curiosity Hook' };
+  let completedStages = ['business', 'brief', 'settings', 'idea', 'opening'];
+  let hooksList = [{ id: 'hk-1', hookLine: 'Old Purity Hook', archetype: 'Curiosity' }];
+  let selectedHook = hooksList[0];
+  let studioStage = 'idea';
+  let loadedHooksDirectionKey = 'THE PURITY TEST';
+  let loadHooksCalls = [];
+
+  const mockLoadHooks = async (force, lang, direction) => {
+    loadHooksCalls.push({ force, direction });
+    hooksList = [{ id: 'hk-2', hookLine: 'Grandma checks the box', archetype: 'Relatable Benchmarking', recommended: true }];
+    selectedHook = hooksList[0];
+    explicitChoices.opening = selectedHook.archetype;
+    loadedHooksDirectionKey = direction.title;
+  };
+
+  // Step 1: User switches to a different idea
+  const newIdea = { id: 'dir-2', title: "GRANDMA'S BENCHMARK" };
+  const prevKey = selectedDirection?.id || selectedDirection?.title || '';
+  const newKey = newIdea?.id || newIdea?.title || '';
+  const isDifferent = prevKey !== newKey;
+
+  selectedDirection = newIdea;
+  explicitChoices.idea = newIdea.title;
+  if (isDifferent) {
+    delete explicitChoices.opening;
+    completedStages = completedStages.filter((s) => !['opening', 'story', 'script', 'video'].includes(s));
+  }
+
+  assert.equal(explicitChoices.idea, "GRANDMA'S BENCHMARK");
+  assert.equal(explicitChoices.opening, undefined, 'Old opening must be removed from explicitChoices');
+  assert.ok(!completedStages.includes('opening'), 'Opening stage must no longer be marked completed');
+
+  // Step 2: User clicks "Use this idea ->"
+  const activeD = selectedDirection;
+  const currentIdeaKey = activeD?.id || activeD?.title || '';
+  const ideaChanged = !loadedHooksDirectionKey || loadedHooksDirectionKey !== currentIdeaKey;
+
+  studioStage = 'opening';
+  if (ideaChanged || !hooksList.length) {
+    selectedHook = null;
+    await mockLoadHooks(true, null, activeD);
+  }
+
+  assert.equal(studioStage, 'opening');
+  assert.equal(loadHooksCalls.length, 1, 'loadHooks MUST be called when idea changes');
+  assert.equal(loadHooksCalls[0].force, true, 'loadHooks MUST be forced when idea changes');
+  assert.equal(loadHooksCalls[0].direction.title, "GRANDMA'S BENCHMARK", 'loadHooks MUST receive the new idea');
+  assert.equal(hooksList[0].hookLine, 'Grandma checks the box', 'hooksList MUST now contain openings for new idea');
+  assert.equal(explicitChoices.opening, 'Relatable Benchmarking', 'explicitChoices.opening MUST be updated to new opening');
+  assert.equal(loadedHooksDirectionKey, "GRANDMA'S BENCHMARK", 'loadedHooksDirectionKey MUST track the new idea');
+});
+
+
 
 

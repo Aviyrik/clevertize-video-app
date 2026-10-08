@@ -878,6 +878,7 @@ export default function App() {
   const [selectedGapOption, setSelectedGapOption] = useState('');
   const [customGapAnswer, setCustomGapAnswer] = useState('');
   const lastResearchedBrandRef = useRef('');
+  const loadedHooksDirectionKeyRef = useRef('');
 
   // Creative Decision Panels: 'direction' | 'hook' | 'plot' | 'story' | 'constraints'
   const [creativePanel, setCreativePanel] = useState('direction');
@@ -1331,13 +1332,18 @@ export default function App() {
     }
   };
 
-  const loadHooks = async (force = false, overrideLang = null) => {
-    if (hooksList.length && !force) return;
+  const loadHooks = async (force = false, overrideLang = null, overrideDirection = null) => {
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
+    const activeDir = overrideDirection || selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' });
+    const activeKey = activeDir?.id || activeDir?.title || '';
+
+    if (hooksList.length && !force) {
+      if (loadedHooksDirectionKeyRef.current === activeKey) return;
+    }
 
     setIsLoadingHooks(true);
     try {
@@ -1348,7 +1354,7 @@ export default function App() {
           businessName: brand,
           businessType: bType,
           brief: userContext.brief || '',
-          direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
+          direction: activeDir,
           language: lang,
         }),
       });
@@ -1357,7 +1363,14 @@ export default function App() {
         setHooksList(list);
         const rec = list.find((h) => h.recommended) || list[0];
         setSelectedHook(rec);
-        setCreativeDNA((prev) => ({ ...prev, hook: rec }));
+        setCreativeDNA((prev) => ({ ...prev, direction: activeDir, hook: rec }));
+        if (rec) {
+          const hookLabel = rec.archetype || rec.hookLine;
+          if (hookLabel) {
+            setExplicitChoices((prev) => ({ ...prev, opening: hookLabel }));
+          }
+        }
+        loadedHooksDirectionKeyRef.current = activeKey;
       }
     } catch (e) {
       console.warn('[hooks] load error:', e);
@@ -1405,7 +1418,7 @@ export default function App() {
   };
 
   // 5. Fetching Story & World
-  const loadStoryWorld = async (force = false, overrideLang = null, overrideFormat = null) => {
+  const loadStoryWorld = async (force = false, overrideLang = null, overrideFormat = null, overrideHook = null, overrideDirection = null) => {
     if (storyWorldData && !force && !overrideFormat) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
@@ -1413,6 +1426,8 @@ export default function App() {
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
     const activeFormat = overrideFormat || userContext.creativeStyle || creativeDNA?.format || 'UGC / Creator-style';
+    const activeDir = overrideDirection || selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' });
+    const activeHk = overrideHook || selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended) || hooksList[0] || { hookLine: '' });
 
     setIsLoadingStory(true);
     try {
@@ -1424,8 +1439,8 @@ export default function App() {
           businessType: bType,
           town: userContext.town || '',
           brief: userContext.brief || '',
-          direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
-          hook: selectedHook || { hookLine: customHook || '' },
+          direction: activeDir,
+          hook: activeHk,
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
           format: activeFormat,
           language: lang,
@@ -2101,6 +2116,7 @@ export default function App() {
     setSelectedDirection(null);
     setCustomDirection('');
     setHooksList([]);
+    loadedHooksDirectionKeyRef.current = '';
     setSelectedHook(null);
     setCustomHook('');
     setPlotsList([]);
@@ -2258,6 +2274,7 @@ export default function App() {
     setSelectedDirection(null);
     setCustomDirection('');
     setHooksList([]);
+    loadedHooksDirectionKeyRef.current = '';
     setSelectedHook(null);
     setCustomHook('');
     setPlotsList([]);
@@ -3048,10 +3065,22 @@ export default function App() {
             directionsList={directionsList}
             selectedDirection={selectedDirection}
             setSelectedDirection={(d) => {
+              const prevKey = selectedDirection?.id || selectedDirection?.title || '';
+              const newKey = d?.id || d?.title || '';
+              const isDifferent = prevKey !== newKey;
               setSelectedDirection(d);
               setCreativeDNA((prev) => ({ ...prev, direction: d }));
               if (d?.title) {
-                setExplicitChoices((prev) => ({ ...prev, idea: d.title }));
+                setExplicitChoices((prev) => {
+                  const next = { ...prev, idea: d.title };
+                  if (isDifferent) {
+                    delete next.opening;
+                  }
+                  return next;
+                });
+              }
+              if (isDifferent) {
+                setCompletedStages((prev) => prev.filter((s) => !['opening', 'story', 'script', 'video'].includes(s)));
               }
               const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
               if (hasDownstream) {
@@ -3059,7 +3088,17 @@ export default function App() {
               }
             }}
             customDirection={customDirection}
-            setCustomDirection={setCustomDirection}
+            setCustomDirection={(cd) => {
+              setCustomDirection(cd);
+              if (cd && cd.trim()) {
+                setExplicitChoices((prev) => {
+                  const next = { ...prev, idea: cd.trim() };
+                  delete next.opening;
+                  return next;
+                });
+                setCompletedStages((prev) => prev.filter((s) => !['opening', 'story', 'script', 'video'].includes(s)));
+              }
+            }}
             isLoadingDirections={isLoadingDirections}
             onContinue={async () => {
               const activeD = selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0]);
@@ -3070,11 +3109,33 @@ export default function App() {
                 }
                 setExplicitChoices((prev) => ({ ...prev, idea: activeD.title || customDirection }));
               }
+
+              const currentIdeaKey = activeD?.id || activeD?.title || '';
+              const ideaChanged = !loadedHooksDirectionKeyRef.current || loadedHooksDirectionKeyRef.current !== currentIdeaKey;
+
               markStageComplete('idea');
               setStudioStage('opening');
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              if (!hooksList.length) {
-                await loadHooks();
+
+              if (ideaChanged || !hooksList.length) {
+                // Clear downstream stale state when the idea has changed
+                setSelectedHook(null);
+                setCustomHook('');
+                setPlotsList([]);
+                setSelectedPlot(null);
+                setCustomPlot('');
+                setStoryWorldData(null);
+                setScenes([]);
+                setScriptPayloadData(null);
+                setHasStaleWarning(false);
+                setCompletedStages((prev) => prev.filter((s) => !['opening', 'story', 'script', 'video'].includes(s)));
+                setExplicitChoices((prev) => {
+                  const next = { ...prev };
+                  delete next.opening;
+                  return next;
+                });
+
+                await loadHooks(true, null, activeD);
               }
             }}
             onBack={() => {
@@ -3115,7 +3176,7 @@ export default function App() {
               markStageComplete('opening');
               setStudioStage('story');
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              await loadStoryWorld(true);
+              await loadStoryWorld(true, null, null, activeH);
             }}
             onBack={() => {
               setStudioStage('idea');
