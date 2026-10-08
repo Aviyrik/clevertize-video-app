@@ -919,3 +919,24 @@ test('Brand Reset Test: resetting brand profile immediately closes modal and nav
   assert.equal(completedStages.length, 0, 'Completed stages MUST be cleared');
 });
 
+test('Studio Stage 02 Brief: Suggestion chips replace brief text instead of appending', () => {
+  let brief = '';
+  const handleApplySuggestion = (starter) => {
+    brief = starter;
+  };
+
+  handleApplySuggestion('Announce a special limited-time festive discount: ');
+  assert.equal(brief, 'Announce a special limited-time festive discount: ');
+
+  handleApplySuggestion('Showcase our signature handcrafted collection: ');
+  assert.equal(brief, 'Showcase our signature handcrafted collection: ', 'Subsequent suggestion click MUST replace previous text rather than concatenating');
+
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.equal(
+    guidedStudioSource.includes('${current.trim()} — ${starter}'),
+    false,
+    'GuidedStudio should never concatenate suggestions with em-dash'
+  );
+});
+
+

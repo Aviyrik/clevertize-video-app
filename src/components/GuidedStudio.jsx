@@ -584,12 +584,8 @@ export function Screen02Brief({
   ];
 
   const handleApplySuggestion = (starter) => {
-    const current = userContext.brief || '';
-    if (!current.trim()) {
-      updateUserContext('brief', starter);
-    } else {
-      updateUserContext('brief', `${current.trim()} — ${starter}`);
-    }
+    updateUserContext('brief', starter);
+    if (errorMsg) setErrorMsg('');
   };
 
   const handleNext = () => {
@@ -725,7 +721,10 @@ export function Screen02Brief({
                   <button
                     key={sIdx}
                     type="button"
-                    onClick={() => updateUserContext('brief', sug)}
+                    onClick={() => {
+                      updateUserContext('brief', sug);
+                      if (errorMsg) setErrorMsg('');
+                    }}
                     style={{
                       textAlign: 'left',
                       padding: '7px 12px',
