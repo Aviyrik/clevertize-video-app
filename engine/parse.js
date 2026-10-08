@@ -94,13 +94,33 @@ function sceneForGeneration(scene, ctx = {}) {
   return `${lock.join("\n")}\n\n${body}`;
 }
 
-// Stage 1–3 answers: JSON between @@JSON@@ and @@END@@ (falls back to the first {...} block).
+// Stage 1–3 answers: JSON between @@JSON@@ and @@END@@ (supports objects and arrays).
 function parseJSONBlock(text) {
   const t = String(text || "");
   const m = t.match(/@@JSON@@([\s\S]*?)(?:@@END@@|$)/);
   let body = (m ? m[1] : t).replace(/```[a-z]*\n?/gi, "").trim();
-  const brace = body.match(/\{[\s\S]*\}/);
-  if (brace) body = brace[0];
+
+  // Try direct parse first
+  try {
+    return JSON.parse(body);
+  } catch {}
+
+  // If body is an array: match from first [ to last ]
+  const arrayMatch = body.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    try {
+      return JSON.parse(arrayMatch[0]);
+    } catch {}
+  }
+
+  // If body is an object: match from first { to last }
+  const objMatch = body.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      return JSON.parse(objMatch[0]);
+    } catch {}
+  }
+
   return JSON.parse(body);
 }
 
