@@ -170,7 +170,8 @@ UPCOMING OCCASION: ${festival?.name || "None"}`;
 /**
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
-async function generateHooks({ businessName, businessType, brief, direction, language = "Hindi" }) {
+async function generateHooks({ businessName, businessType, brief, direction, language = "English" }) {
+  const isEng = !language || /eng/i.test(language);
   const system = `You are a short-form video viral hook specialist for Instagram Reels and YouTube Shorts.
 Generate 5 to 7 high-impact commercial opening hooks (first 3 seconds).
 Each hook must span a distinct archetype:
@@ -183,7 +184,7 @@ Each hook must span a distinct archetype:
 
 Provide:
 - archetype (name of the hook style)
-- hookLine: spoken line in ${language} (write in Devanagari for Hindi/Hinglish/Marathi, English for English)
+- hookLine: spoken line in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"})
 - visualAction: vivid physical opening action in English (1-2 sentences)
 - recommended: true for the top option
 
@@ -219,7 +220,7 @@ LANGUAGE: ${language}`;
     {
       id: "hook_1",
       archetype: "Problem / Everyday Crisis",
-      hookLine: language.toLowerCase().includes("eng") ? "Wait, did you run out of this again?" : "अरे, ये फिर से ख़त्म हो गया?!",
+      hookLine: isEng ? "Wait, did you run out of this again?" : "अरे, ये फिर से ख़त्म हो गया?!",
       visualAction: "A person checks an empty container or shelf with sudden realization and turns around in urgency.",
       angle: "Everyday household panic",
       recommended: true,
@@ -227,7 +228,7 @@ LANGUAGE: ${language}`;
     {
       id: "hook_2",
       archetype: "Curiosity / Counter-Intuitive",
-      hookLine: language.toLowerCase().includes("eng") ? "Most people get this completely wrong." : "ज्यादातर लोग यहाँ गलती करते हैं।",
+      hookLine: isEng ? "Most people get this completely wrong." : "ज्यादातर लोग यहाँ गलती करते हैं।",
       visualAction: "The speaker holds up two contrasting items directly to the camera lens, gesturing emphatically.",
       angle: "Knowledge gap reveal",
       recommended: false,
@@ -235,7 +236,7 @@ LANGUAGE: ${language}`;
     {
       id: "hook_3",
       archetype: "Creator / UGC Secret",
-      hookLine: language.toLowerCase().includes("eng") ? "If you live in this area, you need to know this." : "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
+      hookLine: isEng ? "If you live in this area, you need to know this." : "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
       visualAction: "Creator leans in closely towards the phone camera with a knowing smile, pointing over their shoulder.",
       angle: "Insider recommendation",
       recommended: false,
@@ -243,9 +244,17 @@ LANGUAGE: ${language}`;
     {
       id: "hook_4",
       archetype: "Visual Action",
-      hookLine: language.toLowerCase().includes("eng") ? "Stop doing this right now!" : "रुको, ये मत करना!",
+      hookLine: isEng ? "Stop doing this right now!" : "रुको, ये मत करना!",
       visualAction: "Hands rush in to catch a slipping product just before it hits the counter, freezing the frame.",
       angle: "Immediate motion stop",
+      recommended: false,
+    },
+    {
+      id: "hook_5",
+      archetype: "Demonstration / Proof",
+      hookLine: isEng ? "See the difference in literally three seconds." : "सिर्फ तीन सेकंड में असली फर्क देखिए।",
+      visualAction: "Split screen action contrasting slow ordinary result with instant premium result.",
+      angle: "Immediate visual proof",
       recommended: false,
     },
   ];
@@ -254,15 +263,27 @@ LANGUAGE: ${language}`;
 /**
  * 4. PLOT LINES (3-5 Structured Narrative Arcs)
  */
-async function generatePlots({ businessName, businessType, brief, direction, hook, language = "Hindi" }) {
+async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English" }) {
+  const isEng = !language || /eng/i.test(language);
+  const formatGuidelines = format === "UGC / Creator-style" || format === "UGC"
+    ? "UGC / Creator format: conversational direct-to-camera or peer recommendation, instant hook in first 2 seconds, fast-paced authentic social energy."
+    : format === "Product Demo"
+    ? "Product Demo format: the product must be physically introduced early, tactile hands-on demonstration is central, fewer spoken lines, sensory proof."
+    : format === "Situational Comedy" || format === "Comedy"
+    ? "Situational Comedy format: clear humorous setup, comedic escalation, situational misunderstanding, exaggerated relatable reactions, and funny payoff."
+    : "Storytelling format: dramatic character dilemma, genuine interpersonal relationship, emotional progression, and earned resolution.";
+
   const system = `You are a narrative screenwriter for commercial advertising.
 Generate 3 distinct 4-scene narrative plot lines for a commercial video.
+FORMAT INFLUENCE (${format}):
+${formatGuidelines}
+
 Each plot must have:
 - title: punchy creative title
 - coreIdea: 1-2 sentence narrative summary
-- hookBeat: opening situation
-- conflictBeat: how the tension deepens
-- payoffBeat: how the brand/product resolves it delightfully
+- hookBeat: opening situation (1 short line)
+- conflictBeat: how the tension deepens (1 short line)
+- payoffBeat: how the brand/product resolves it delightfully (1 short line)
 - recommended: boolean (mark the best one)
 
 Return valid JSON between @@JSON@@ and @@END@@:
@@ -329,19 +350,32 @@ LANGUAGE: ${language}`;
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, language = "Hindi" }) {
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "Storytelling", language = "English" }) {
+  const isEng = !language || /eng/i.test(language);
+  const formatGuidelines = format === "UGC / Creator-style" || format === "UGC"
+    ? "UGC / Creator format: conversational direct-to-camera, fast hook within 2s, peer recommendation, authentic mobile camera."
+    : format === "Product Demo"
+    ? "Product Demo format: the product must be physically introduced early, hands-on demonstration central, tactile textures, fewer spoken lines."
+    : format === "Situational Comedy" || format === "Comedy"
+    ? "Situational Comedy format: clear humorous setup, escalation, misunderstanding, witty banter, funny punchline payoff."
+    : "Storytelling format: character-driven emotional dilemma, interpersonal relationship, emotional progression, earned resolution.";
+
   const system = `You are a film director setting up the visual world, 2 characters, and 4 story beats for a commercial film.
+FORMAT INFLUENCE (${format}):
+${formatGuidelines}
+
 Requirements:
 1. Exactly ONE single continuous location (Rule M13) — authentic Indian middle/upper-middle class setting.
 2. Exactly TWO recurring characters with vivid appearance, clothing, and chemistry.
 3. Exactly FOUR story beats: HOOK, BUILD, TURN, PAYOFF.
-4. Recommended format (UGC / Creator-style, Storytelling, Product Demo, or Situational Comedy).
+4. Format: ${format}.
+5. Dialogue in beats: spoken in ${language} (${isEng ? "write natural spoken conversational English, NO Hindi" : "write in Devanagari script for Hindi/Hinglish/Marathi"}).
 
 Return valid JSON between @@JSON@@ and @@END@@:
 @@JSON@@
 {
-  "format": "Storytelling",
-  "formatReason": "Warm two-character dialogue builds the highest trust.",
+  "format": "${format}",
+  "formatReason": "Two-character commercial chemistry provides natural, relatable persuasion.",
   "location": {
     "name": "Single Room Setting",
     "details": "Vivid description of room, lighting, counters, props, surfaces"
@@ -374,7 +408,9 @@ TOWN: ${town || "Universal"}
 BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || ""}
 HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
-PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}`;
+PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
+FORMAT: ${format}
+LANGUAGE: ${language}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -385,7 +421,7 @@ PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}`;
       const rawLoc = parsed.location || parsed.setting;
       const settingStr = typeof rawLoc === "string" ? rawLoc : (rawLoc?.details || rawLoc?.name || "Store interior");
       return {
-        format: parsed.format || "Storytelling",
+        format: format || parsed.format || "Storytelling",
         formatReason: parsed.formatReason || "Two-character commercial chemistry provides natural, relatable persuasion.",
         location: typeof parsed.location === "object" ? parsed.location : { name: "Single Room Setting", details: settingStr },
         setting: settingStr,
@@ -401,7 +437,7 @@ PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}`;
   }
 
   return {
-    format: "Storytelling",
+    format: format || "Storytelling",
     formatReason: "Two-character commercial chemistry provides natural, relatable persuasion.",
     location: {
       name: `Authentic ${businessType} Interior`,
@@ -423,10 +459,10 @@ PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}`;
       personality: "Smart shopper, values quality and genuine attention",
     },
     beats: [
-      { beat: "HOOK", title: "Scene 1: Scroll-Stopping Hook", action: hook?.visualAction || "Customer hurries in looking for an urgent solution.", dialogue: hook?.hookLine || "क्या आपके साथ भी ऐसा होता है?" },
-      { beat: "BUILD", title: "Scene 2: Problem Deepens", action: "Customer explains their specific requirement at the counter.", dialogue: "मुझे बिलकुल सही और भरोसेमंद चीज़ चाहिए।" },
-      { beat: "TURN", title: "Scene 3: Solution Revealed", action: "Owner presents the featured product with clear visual demonstration.", dialogue: "यह देखिए, यही तो हमारी ख़ासियत है।" },
-      { beat: "PAYOFF", title: "Scene 4: Delight & Call to Action", action: "Customer smiles in satisfaction, holding the product. Clean end card transition.", dialogue: "अब से हर बार यहीं से लेंगे!" },
+      { beat: "HOOK", title: "Scene 1: Scroll-Stopping Hook", action: hook?.visualAction || "Customer hurries in looking for an urgent solution.", dialogue: hook?.hookLine || (isEng ? "Has this ever happened to you?" : "क्या आपके साथ भी ऐसा होता है?") },
+      { beat: "BUILD", title: "Scene 2: Problem Deepens", action: "Customer explains their specific requirement at the counter.", dialogue: isEng ? "I need something genuine and completely reliable." : "मुझे बिलकुल सही और भरोसेमंद चीज़ चाहिए।" },
+      { beat: "TURN", title: "Scene 3: Solution Revealed", action: "Owner presents the featured product with clear visual demonstration.", dialogue: isEng ? "Look at this—this is exactly what makes our craft special." : "यह देखिए, यही तो हमारी ख़ासियत है।" },
+      { beat: "PAYOFF", title: "Scene 4: Delight & Call to Action", action: "Customer smiles in satisfaction, holding the product. Clean end card transition.", dialogue: isEng ? "From now on, I'm coming straight here every time!" : "अब से हर बार यहीं से लेंगे!" },
     ],
   };
 }
@@ -439,6 +475,26 @@ PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}`;
 async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], options = {} }) {
   const fest = await getFestivals();
   const system = buildSystem(form.scriptMode);
+  const format = creativeDNA?.story?.format || form.creativeStyle || "Storytelling";
+  const isEng = !form.language || /eng/i.test(form.language);
+
+  const formatExecutionRules = format.includes("UGC")
+    ? `FORMAT EXECUTION (UGC / CREATOR-STYLE):
+- Conversational direct-to-camera delivery or authentic peer interaction.
+- Fast scroll-stopping hook within 2 seconds.
+- Natural handheld camera feel and high social energy.`
+    : format.includes("Demo")
+    ? `FORMAT EXECUTION (PRODUCT DEMO):
+- Featured product MUST be introduced and in focus within the first 4 seconds.
+- Physical demonstration is central: hands-on tactile interaction and sensory proof.
+- Fewer spoken dialogue lines; visual demonstration leads the persuasion.`
+    : format.includes("Comedy")
+    ? `FORMAT EXECUTION (SITUATIONAL COMEDY):
+- Humorous setup in Scene 1, comedic escalation in Scene 2, witty misunderstanding in Scene 3, and funny punchline in Scene 4.
+- Exaggerated facial reactions and comedic timing.`
+    : `FORMAT EXECUTION (STORYTELLING):
+- Character-driven narrative tension between two characters.
+- Natural eye-line contact, emotional dilemma, and heartwarming payoff.`;
 
   // Compile detailed instructions carrying all creative decisions into Claude
   const dnaInstructions = [
@@ -446,10 +502,10 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     creativeDNA.direction ? `- Approved Direction: "${creativeDNA.direction.title}": ${creativeDNA.direction.description}` : null,
     creativeDNA.hook ? `- Approved Hook: Line: "${creativeDNA.hook.hookLine}" | Opening Action: "${creativeDNA.hook.visualAction}"` : null,
     creativeDNA.plot ? `- Approved Plot: "${creativeDNA.plot.title}": ${creativeDNA.plot.coreIdea} (Conflict: ${creativeDNA.plot.conflictBeat} -> Payoff: ${creativeDNA.plot.payoffBeat})` : null,
-    creativeDNA.story ? `- Approved Story Format: ${creativeDNA.story.format || "Storytelling"}` : null,
+    `- Approved Format: ${format}`,
     creativeDNA.location ? `- Approved Single Location: ${creativeDNA.location.name} (${creativeDNA.location.details || ""})` : null,
-    creativeDNA.character1 ? `- Character 1: ${creativeDNA.character1.name} (${creativeDNA.character1.role}, ${creativeDNA.character1.age || ""}, ${creativeDNA.character1.appearance || ""})` : null,
-    creativeDNA.character2 ? `- Character 2: ${creativeDNA.character2.name} (${creativeDNA.character2.role}, ${creativeDNA.character2.age || ""}, ${creativeDNA.character2.appearance || ""})` : null,
+    creativeDNA.character1 ? `- Character 1: ${typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : creativeDNA.character1.name + " (" + (creativeDNA.character1.role || "") + ")"}` : null,
+    creativeDNA.character2 ? `- Character 2: ${typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : creativeDNA.character2.name + " (" + (creativeDNA.character2.role || "") + ")"}` : null,
     constraints.length ? `- MANDATORY INCLUSIONS (User constraints):\n${constraints.map((c) => `  * ${c}`).join("\n")}` : null,
     avoid.length ? `- MANDATORY EXCLUSIONS (Things to avoid):\n${avoid.map((a) => `  * ${a}`).join("\n")}` : null,
   ].filter(Boolean).join("\n");
@@ -458,20 +514,22 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
 Write the complete 4-scene broadcast script synthesizing the approved creative decisions below.
 ${dnaInstructions}
 
+${formatExecutionRules}
+
 Follow all Product Spine Section 8 rules:
 - Exactly 4 scenes titled SCENE 1 – HOOK / SCENE 2 – BUILD / SCENE 3 – TURN / SCENE 4 – RESOLUTION.
 - Scene 1 MUST open with the approved hook line and action.
 - Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13).
 - Exactly 2 characters throughout with consistent look and wardrobe.
 - Maximum 2 spoken dialogue lines per character per scene.
-- Dialogue language: ${form.language}${/hindi|hinglish|marathi/i.test(form.language) ? ", written fully in Devanagari script (M4)" : ""}.
+- Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)."}
 - Vary camera shot size and movement across scenes (at least 3 different camera setups).
 - When characters talk, they look at each other with natural eye contact.
 - Return ONLY the standard @@HEADER@@, @@CHARACTER1@@, @@CHARACTER2@@, @@SETTING@@, @@SCENE@@, and @@RECORD@@ markers.`;
 
   const base = buildUserContent(form, fest, [], todayIST(), stageInst);
   const festName = creativeDNA?.direction?.festival?.name || form.occasion || "";
-  const gateOpts = { scriptMode: form.scriptMode, previous: [], approvedFormat: creativeDNA.story?.format || "Storytelling", festival: festName };
+  const gateOpts = { scriptMode: form.scriptMode, previous: [], approvedFormat: format, festival: festName };
 
   let content = base, parsed, failures = [], attempts = 0;
   for (let i = 0; i <= 3; i++) {
@@ -492,6 +550,9 @@ Follow all Product Spine Section 8 rules:
 
   // Compile structured shot specifications
   const shotSpec = compileShotSpecification(parsed, form);
+  if (shotSpec) {
+    shotSpec.format = format;
+  }
 
   return {
     script: parsed.raw,
@@ -503,7 +564,7 @@ Follow all Product Spine Section 8 rules:
     character2: parsed.character2,
     setting: parsed.setting,
     scenes: parsed.scenes,
-    record: { ...parsed.record, business_name: form.businessName, business_type: form.businessType, town: form.town, date: todayIST(), format: parsed.record?.format || "Storytelling", scenes: parsed.scenes.length },
+    record: { ...parsed.record, business_name: form.businessName, business_type: form.businessType, town: form.town, date: todayIST(), format, scenes: parsed.scenes.length },
   };
 }
 
@@ -512,6 +573,7 @@ Follow all Product Spine Section 8 rules:
  * Rewrites a single scene according to user instruction while preserving continuity.
  */
 async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting }) {
+  const isEng = !form?.language || /eng/i.test(form?.language);
   const system = `You are a precision scene script editor for a 4-scene commercial ad film.
 Your task is to rewrite ONLY this specific scene based on the user's creative note (e.g. "make it funnier", "make dialogue shorter", "use Hinglish", "feature product earlier").
 
@@ -520,7 +582,7 @@ Rules:
 - Visual MUST start with "Same setting:" preserving the approved room: ${setting || "Same room"}.
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
-- Dialogue in ${form?.language || "Hindi"} (Devanagari script if Hindi/Hinglish/Marathi).
+- Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : "Devanagari script if Hindi/Hinglish/Marathi"}).
 - Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.`;
 
   const content = `ORIGINAL SCENE:

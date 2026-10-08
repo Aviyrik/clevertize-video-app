@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   ArrowRight,
@@ -13,28 +12,32 @@ import {
   Trash2,
   Lightbulb,
   Tag,
-  Store,
   Layers,
-  HelpCircle,
   Camera,
   Quote,
   ShieldCheck,
   Clapperboard,
   RefreshCw,
-  Film
+  Film,
+  MessageSquare,
+  Smile,
+  Package,
+  Eye,
+  AlertCircle,
+  HelpCircle,
+  User,
+  MapPin,
+  Lock
 } from 'lucide-react';
 
 /**
- * 1. RESEARCH INSIGHTS BANNER
- * Compact "Here's what we found" card with Footprint Tier, Audience Insight,
- * Creative Opportunity, Competitive Pattern, and Smart Gap Question.
+ * 1. RESEARCH INSIGHTS BANNER (V3: Lightweight & Condensed)
  */
 export function ResearchInsightsBanner({
   researchData,
   isResearching,
   dismissed,
   onDismiss,
-  onApplyInsights,
   selectedGapOption,
   setSelectedGapOption,
   customGapAnswer,
@@ -45,19 +48,18 @@ export function ResearchInsightsBanner({
   if (isResearching) {
     return (
       <div style={{
-        padding: '12px 16px',
+        padding: '10px 14px',
         borderRadius: 8,
         backgroundColor: 'var(--bg-surface)',
         border: '1px dashed var(--accent-primary)',
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        marginBottom: 16,
-        animation: 'pulse 2s infinite'
+        marginBottom: 14,
       }}>
-        <Sparkles size={16} className="icon-spinner" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+        <Sparkles size={15} className="icon-spinner" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
         <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-          <strong style={{ color: 'var(--text-primary)' }}>AI Creative Director:</strong> Analyzing public brand footprint and category opportunities in the background…
+          <strong style={{ color: 'var(--text-primary)' }}>Researching the brand & category…</strong> Analyzing audience footprint in the background.
         </div>
       </div>
     );
@@ -68,258 +70,158 @@ export function ResearchInsightsBanner({
   return (
     <div style={{
       backgroundColor: 'var(--bg-surface)',
-      border: '1px solid rgba(99, 102, 241, 0.35)',
-      borderRadius: 12,
-      padding: '18px 20px',
-      marginBottom: 20,
-      boxShadow: '0 4px 18px rgba(99, 102, 241, 0.08)',
+      border: '1px solid rgba(99, 102, 241, 0.3)',
+      borderRadius: 10,
+      padding: '14px 16px',
+      marginBottom: 16,
+      boxShadow: '0 2px 12px rgba(99, 102, 241, 0.05)',
       position: 'relative'
     }}>
-      {/* Header with Tier badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            width: 28,
-            height: 28,
-            borderRadius: 6,
-            backgroundColor: 'var(--accent-subtle)',
+          <Sparkles size={15} style={{ color: 'var(--accent-primary)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+            Research Complete
+          </span>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '2px 6px',
+            borderRadius: 4,
+            backgroundColor: 'var(--bg-elevated)',
             color: 'var(--accent-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            border: '1px solid var(--border-subtle)'
           }}>
-            <Sparkles size={16} />
-          </div>
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Here’s what we found
-            </span>
-            <span style={{
-              marginLeft: 8,
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '2px 8px',
-              borderRadius: 4,
-              backgroundColor: 'var(--bg-elevated)',
-              color: 'var(--accent-primary)',
-              border: '1px solid var(--border-subtle)'
-            }}>
-              {researchData.tierLabel || `Tier ${researchData.tier ?? 0}`}
-            </span>
-          </div>
+            {researchData.tierLabel || `Tier ${researchData.tier ?? 0}`}
+          </span>
         </div>
 
         <button
           type="button"
           onClick={onDismiss}
-          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }}
           title="Dismiss insights"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
       </div>
 
-      {/* 3 Core Insights Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 14 }}>
-        <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: 12, border: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 4 }}>
-            🎯 Audience Insight
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+      {/* Condensed 2-column cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: researchData.informationGap ? 10 : 0 }}>
+        {researchData.audienceInsight && (
+          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', fontSize: 10, display: 'block', marginBottom: 2 }}>
+              Audience Insight
+            </span>
             {researchData.audienceInsight}
           </div>
-        </div>
-
-        <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: 12, border: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--success)', marginBottom: 4 }}>
-            💡 Creative Opportunity
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        )}
+        {researchData.creativeOpportunity && (
+          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', fontSize: 10, display: 'block', marginBottom: 2 }}>
+              Creative Opportunity
+            </span>
             {researchData.creativeOpportunity}
           </div>
-        </div>
-
-        <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: 12, border: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
-            ⚡ Competitive Pattern
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            {researchData.competitivePattern}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Single Smart Gap Question if present */}
-      {researchData.informationGap && researchData.informationGap.question && (
-        <div style={{
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px dashed var(--accent-primary)',
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 14
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-            ❓ {researchData.informationGap.question}
+      {/* Single High-Value Gap Question */}
+      {researchData.informationGap?.question && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+            {researchData.informationGap.question}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            {(researchData.informationGap.options || []).map((opt, oIdx) => {
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {researchData.informationGap.options?.map((opt, idx) => {
               const isSelected = selectedGapOption === opt;
               return (
                 <button
-                  key={oIdx}
+                  key={idx}
                   type="button"
                   onClick={() => setSelectedGapOption(opt)}
                   style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
+                    padding: '4px 10px',
+                    borderRadius: 14,
                     fontSize: 11,
                     fontWeight: isSelected ? 700 : 500,
-                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
                     color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                    border: '1px solid var(--border-subtle)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.1s ease'
                   }}
                 >
                   {opt}
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => setSelectedGapOption('Other')}
-              style={{
-                padding: '5px 10px',
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: selectedGapOption === 'Other' ? 700 : 500,
-                backgroundColor: selectedGapOption === 'Other' ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                color: selectedGapOption === 'Other' ? '#ffffff' : 'var(--text-secondary)',
-                border: selectedGapOption === 'Other' ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                cursor: 'pointer'
-              }}
-            >
-              Other
-            </button>
           </div>
-          {selectedGapOption === 'Other' && (
-            <input
-              type="text"
-              value={customGapAnswer}
-              onChange={(e) => setCustomGapAnswer(e.target.value)}
-              placeholder="Specify your target audience or primary goal..."
-              style={{ width: '100%', marginTop: 8, padding: '6px 10px', fontSize: 12 }}
-            />
-          )}
         </div>
       )}
-
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-        <button
-          type="button"
-          onClick={onDismiss}
-          style={{
-            padding: '6px 12px',
-            borderRadius: 6,
-            backgroundColor: 'transparent',
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-secondary)',
-            fontSize: 11,
-            cursor: 'pointer'
-          }}
-        >
-          Ignore
-        </button>
-        <button
-          type="button"
-          onClick={onApplyInsights}
-          style={{
-            padding: '6px 14px',
-            borderRadius: 6,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
-            border: 'none',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            boxShadow: '0 1px 4px var(--accent-glow)'
-          }}
-        >
-          <Check size={12} />
-          <span>Use These Insights</span>
-        </button>
-      </div>
     </div>
   );
 }
 
 /**
- * 2. CREATIVE DNA BAR
- * Persistent compact widget tracking approved choices with [Edit] triggers.
+ * 2. YOUR CREATIVE PLAN (V3: Compact Chips beneath Stage Stepper)
  */
 export function CreativeDNABar({ creativeDNA, onEditPanel }) {
-  const { direction, hook, plot, story, constraints } = creativeDNA;
-  const hasAnyDNA = direction || hook || plot || story;
-
-  if (!hasAnyDNA) return null;
+  const { direction, hook, plot, story } = creativeDNA || {};
+  const hasAny = Boolean(direction || hook || plot || story);
+  if (!hasAny) return null;
 
   return (
     <div style={{
       backgroundColor: 'var(--bg-surface)',
-      border: '1px solid var(--border-default)',
-      borderRadius: 10,
-      padding: '10px 14px',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 8,
+      padding: '8px 12px',
       marginBottom: 16,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      flexWrap: 'wrap'
+      gap: 10,
+      flexWrap: 'wrap',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Layers size={12} />
-          <span>Creative DNA:</span>
-        </span>
+      <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Layers size={11} />
+        <span>Your Creative Plan:</span>
+      </span>
 
-        {/* Direction Chip */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {direction && (
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '3px 8px',
+            gap: 5,
+            padding: '2px 8px',
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
             fontSize: 11,
             color: 'var(--text-primary)'
           }}>
-            <span style={{ color: 'var(--text-tertiary)' }}>Direction:</span>
-            <strong style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-tertiary)' }}>Dir:</span>
+            <strong style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {direction.title}
             </strong>
             <button
               type="button"
               onClick={() => onEditPanel('direction')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              title="Edit Direction"
             >
               Edit
             </button>
           </div>
         )}
 
-        {/* Hook Chip */}
         {hook && (
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '3px 8px',
+            gap: 5,
+            padding: '2px 8px',
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -327,26 +229,26 @@ export function CreativeDNABar({ creativeDNA, onEditPanel }) {
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Hook:</span>
-            <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-              "{hook.hookLine || hook.visualAction}"
+            <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+              {hook.archetype || hook.hookLine || 'Hook'}
             </span>
             <button
               type="button"
               onClick={() => onEditPanel('hook')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              title="Edit Hook"
             >
               Edit
             </button>
           </div>
         )}
 
-        {/* Plot Chip */}
         {plot && (
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '3px 8px',
+            gap: 5,
+            padding: '2px 8px',
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -354,26 +256,26 @@ export function CreativeDNABar({ creativeDNA, onEditPanel }) {
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Plot:</span>
-            <strong style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <strong style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {plot.title}
             </strong>
             <button
               type="button"
               onClick={() => onEditPanel('plot')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              title="Edit Plot"
             >
               Edit
             </button>
           </div>
         )}
 
-        {/* Format & World Chip */}
         {story && (
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '3px 8px',
+            gap: 5,
+            padding: '2px 8px',
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -381,13 +283,12 @@ export function CreativeDNABar({ creativeDNA, onEditPanel }) {
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Format:</span>
-            <strong style={{ fontWeight: 600 }}>
-              {story.format || 'Storytelling'}
-            </strong>
+            <strong>{story.format || 'Storytelling'}</strong>
             <button
               type="button"
               onClick={() => onEditPanel('story')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              title="Edit Story & Format"
             >
               Edit
             </button>
@@ -399,8 +300,121 @@ export function CreativeDNABar({ creativeDNA, onEditPanel }) {
 }
 
 /**
- * 3. PROGRESSIVE CREATIVE PANELS (STEP 3 WORKSPACE)
- * Direction -> Hook -> Plot -> Story/World -> Constraints & Production
+ * 3. PROGRESSIVE STEPPER HEADER (01 Direction → 02 Hook → 03 Plot → 04 Story & Format → 05 Script)
+ */
+function CreativeProgressiveStepper({
+  currentStage,
+  completedStages,
+  onNavigateStage
+}) {
+  const STAGES = [
+    { id: 'direction', num: '01', label: 'Direction' },
+    { id: 'hook', num: '02', label: 'Hook' },
+    { id: 'plot', num: '03', label: 'Plot' },
+    { id: 'story', num: '04', label: 'Story & Format' },
+    { id: 'script', num: '05', label: 'Script Review' },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      overflowX: 'auto',
+      paddingBottom: 4,
+      marginBottom: 10,
+    }}>
+      {STAGES.map((st, idx) => {
+        const isCurrent = currentStage === st.id;
+        const isCompleted = completedStages.includes(st.id);
+        const canClick = isCompleted || isCurrent;
+
+        return (
+          <React.Fragment key={st.id}>
+            <button
+              type="button"
+              disabled={!canClick}
+              onClick={() => canClick && onNavigateStage(st.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                backgroundColor: isCurrent
+                  ? 'var(--bg-active)'
+                  : isCompleted
+                  ? 'var(--bg-elevated)'
+                  : 'transparent',
+                color: isCurrent
+                  ? 'var(--accent-primary)'
+                  : isCompleted
+                  ? 'var(--text-primary)'
+                  : 'var(--text-tertiary)',
+                opacity: canClick ? 1 : 0.45,
+                cursor: canClick ? 'pointer' : 'not-allowed',
+                fontSize: 12,
+                fontWeight: isCurrent ? 700 : 500,
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {isCompleted && !isCurrent ? (
+                <Check size={12} style={{ color: 'var(--success)' }} />
+              ) : (
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  opacity: 0.75
+                }}>
+                  {st.num}
+                </span>
+              )}
+              <span>{st.label}</span>
+            </button>
+
+            {idx < STAGES.length - 1 && (
+              <span style={{ color: 'var(--border-default)', fontSize: 11, userSelect: 'none' }}>
+                →
+              </span>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * 4. LOADING SKELETON
+ */
+function CreativeLoadingState({ message }) {
+  return (
+    <div style={{
+      padding: '36px 20px',
+      textAlign: 'center',
+      backgroundColor: 'var(--bg-surface)',
+      border: '1px solid var(--border-default)',
+      borderRadius: 10,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 12,
+    }}>
+      <Sparkles size={24} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+        {message}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 360 }}>
+        Synthesizing high-retention commercial patterns specifically for your audience…
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 5. MAIN CREATIVE WORKSPACE (ONE CREATIVE DECISION AT A TIME)
  */
 export function CreativePanelsWorkspace({
   creativePanel,
@@ -412,6 +426,7 @@ export function CreativePanelsWorkspace({
   customDirection,
   setCustomDirection,
   isLoadingDirections,
+  onLoadDirections,
   // Hooks
   hooksList,
   selectedHook,
@@ -419,6 +434,7 @@ export function CreativePanelsWorkspace({
   customHook,
   setCustomHook,
   isLoadingHooks,
+  onLoadHooks,
   // Plots
   plotsList,
   selectedPlot,
@@ -426,10 +442,12 @@ export function CreativePanelsWorkspace({
   customPlot,
   setCustomPlot,
   isLoadingPlots,
-  // Story World
+  onLoadPlots,
+  // Story World & Format
   storyWorldData,
   setStoryWorldData,
   isLoadingStory,
+  onLoadStory,
   // Constraints
   constraintsList,
   setConstraintsList,
@@ -439,126 +457,159 @@ export function CreativePanelsWorkspace({
   setNewConstraintInput,
   newAvoidInput,
   setNewAvoidInput,
-  // Production options
+  // Production / Brand Options
   userContext,
   updateUserContext,
-  handleFileUpload,
-  PLATFORM_PRESETS,
   // Actions
   onSynthesizeMasterScript,
   isBusy,
-  onBackToBrief
+  onBackToBrief,
 }) {
-  const PANELS = [
-    { id: 'direction', label: '1. Direction', icon: Lightbulb },
-    { id: 'hook', label: '2. Hook', icon: Sparkles },
-    { id: 'plot', label: '3. Plot Line', icon: Film },
-    { id: 'story', label: '4. Story & World', icon: Store },
-    { id: 'constraints', label: '5. Production', icon: Layers },
+  const [isConstraintsExpanded, setIsConstraintsExpanded] = useState(false);
+  const [downstreamWarning, setDownstreamWarning] = useState(false);
+  const [previousDirectionId, setPreviousDirectionId] = useState(selectedDirection?.id);
+
+  // Manage completed stages
+  const completedStages = [];
+  if (selectedDirection || customDirection) completedStages.push('direction');
+  if (selectedHook || customHook) completedStages.push('hook');
+  if (selectedPlot || customPlot) completedStages.push('plot');
+  if (storyWorldData) completedStages.push('story');
+
+  // Handle stage change from stepper
+  const handleNavigateStage = (stageId) => {
+    setCreativePanel(stageId);
+  };
+
+  // Helper when advancing from Direction to Hook
+  const handleProceedToHook = () => {
+    if (downstreamWarning) {
+      // Invalidate downstream
+      onLoadHooks?.(true);
+      setDownstreamWarning(false);
+    } else if (!hooksList.length) {
+      onLoadHooks?.(false);
+    }
+    setCreativePanel('hook');
+  };
+
+  // Helper when advancing from Hook to Plot
+  const handleProceedToPlot = () => {
+    if (!plotsList.length) {
+      onLoadPlots?.(false);
+    }
+    setCreativePanel('plot');
+  };
+
+  // Helper when advancing from Plot to Story
+  const handleProceedToStory = () => {
+    if (!storyWorldData) {
+      onLoadStory?.(false);
+    }
+    setCreativePanel('story');
+  };
+
+  // Detect backward edit on Direction
+  const handleSelectDirection = (dir) => {
+    setSelectedDirection(dir);
+    if (completedStages.includes('hook') && dir.id !== previousDirectionId) {
+      setDownstreamWarning(true);
+    }
+  };
+
+  // Format presets for Stage 4
+  const FORMAT_PRESETS = [
+    {
+      id: 'UGC / Creator-style',
+      label: 'UGC / Creator',
+      icon: Camera,
+      tagline: 'Direct-to-camera, fast hook & authentic mobile energy',
+    },
+    {
+      id: 'Storytelling',
+      label: 'Storytelling',
+      icon: Clapperboard,
+      tagline: '2-character emotional dilemma & relatable narrative arc',
+    },
+    {
+      id: 'Product Demo',
+      label: 'Product Demo',
+      icon: Package,
+      tagline: 'Product in focus within 4s, tactile sensory proof',
+    },
+    {
+      id: 'Situational Comedy',
+      label: 'Comedy',
+      icon: Smile,
+      tagline: 'Humorous setup, comic escalation & punchline payoff',
+    },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Fast Path Banner */}
-      <div style={{
-        backgroundColor: 'rgba(99, 102, 241, 0.08)',
-        border: '1px solid var(--accent-primary)',
-        borderRadius: 10,
-        padding: '14px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
-          <Sparkles size={18} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              AI Creative Director Fast Path (~30s)
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-              Best-in-class strategic direction, hook, and plot are pre-recommended. Synthesize now or customize below.
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 1. Progressive Stepper Header */}
+      <CreativeProgressiveStepper
+        currentStage={creativePanel}
+        completedStages={completedStages}
+        onNavigateStage={handleNavigateStage}
+      />
+
+      {/* Downstream Invalidation Notice */}
+      {downstreamWarning && (
+        <div style={{
+          backgroundColor: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.4)',
+          borderRadius: 8,
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-primary)' }}>
+            <AlertCircle size={15} style={{ color: '#eab308' }} />
+            <span>Changing this territory will update downstream hooks, plot, and story options.</span>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              onLoadHooks?.(true);
+              setDownstreamWarning(false);
+              setCreativePanel('hook');
+            }}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 6,
+              backgroundColor: 'var(--accent-primary)',
+              color: '#ffffff',
+              border: 'none',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Update Downstream
+          </button>
         </div>
-
-        <button
-          type="button"
-          disabled={isBusy}
-          onClick={() => onSynthesizeMasterScript()}
-          style={{
-            padding: '10px 20px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
-            border: 'none',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: isBusy ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: '0 2px 8px var(--accent-glow)'
-          }}
-        >
-          <Sparkles size={14} />
-          <span>Synthesize Script (Recommended Choices)</span>
-          <ArrowRight size={14} />
-        </button>
-      </div>
-
-      {/* Progressive Panel Tabs */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', borderBottom: '1px solid var(--border-default)', paddingBottom: 6 }}>
-        {PANELS.map((p) => {
-          const isActive = creativePanel === p.id;
-          const Icon = p.icon;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setCreativePanel(p.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 6,
-                border: 'none',
-                backgroundColor: isActive ? 'var(--bg-active)' : 'transparent',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: isActive ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Icon size={14} />
-              <span>{p.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      )}
 
       {/* ========================================================
-          PANEL 1: CREATIVE DIRECTION (3-5 Territories)
+          STAGE 1: DIRECTION (3 Visual Cards)
           ======================================================== */}
       {creativePanel === 'direction' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-              Creative Direction Territories
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+              Choose Creative Direction
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Based on your brief and research, these are the strongest commercial angles for your video.
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+              The strategic territory and customer tension for your video.
             </p>
           </div>
 
           {isLoadingDirections ? (
-            <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-              Formulating strategic territories…
-            </div>
+            <CreativeLoadingState message="Finding strong creative territories…" />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
               {directionsList.map((dir, idx) => {
@@ -566,7 +617,7 @@ export function CreativePanelsWorkspace({
                 return (
                   <div
                     key={dir.id || idx}
-                    onClick={() => setSelectedDirection(dir)}
+                    onClick={() => handleSelectDirection(dir)}
                     style={{
                       backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
                       border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
@@ -576,21 +627,36 @@ export function CreativePanelsWorkspace({
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 8,
+                      position: 'relative',
                       transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
-                        0{idx + 1}
-                      </span>
-                      {dir.recommended && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{
                           fontSize: 10,
                           fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          backgroundColor: 'var(--bg-elevated)',
+                          color: 'var(--text-tertiary)',
+                          fontFamily: "'JetBrains Mono', monospace"
+                        }}>
+                          0{idx + 1}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {dir.title}
+                        </span>
+                      </div>
+
+                      {dir.recommended && (
+                        <span style={{
+                          fontSize: 9,
+                          fontWeight: 800,
                           textTransform: 'uppercase',
                           backgroundColor: 'rgba(99, 102, 241, 0.15)',
                           color: 'var(--accent-primary)',
-                          padding: '2px 8px',
+                          padding: '2px 6px',
                           borderRadius: 4
                         }}>
                           Recommended
@@ -598,11 +664,7 @@ export function CreativePanelsWorkspace({
                       )}
                     </div>
 
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {dir.title}
-                    </div>
-
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, flex: 1 }}>
                       {dir.description || dir.concept}
                     </div>
 
@@ -615,21 +677,21 @@ export function CreativePanelsWorkspace({
             </div>
           )}
 
-          {/* Manual Direction Override */}
-          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              + Add My Own Creative Direction / Note
+          {/* Custom Direction Override */}
+          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              + Create my own direction
             </div>
             <input
               type="text"
               value={customDirection}
               onChange={(e) => setCustomDirection(e.target.value)}
-              placeholder='e.g. Make this about small kitchens, not pricing... or Use a more humorous angle'
+              placeholder="e.g. Focus on small kitchen storage, or highlight zero hidden charges"
               style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <button
               type="button"
               onClick={onBackToBrief}
@@ -639,10 +701,10 @@ export function CreativePanelsWorkspace({
             </button>
             <button
               type="button"
-              onClick={() => setCreativePanel('hook')}
+              onClick={handleProceedToHook}
               style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <span>Next: Hook Intelligence</span>
+              <span>Continue to Hook</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -650,25 +712,23 @@ export function CreativePanelsWorkspace({
       )}
 
       {/* ========================================================
-          PANEL 2: HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
+          STAGE 2: HOOK (5-8 Multi-Archetype Cards)
           ======================================================== */}
       {creativePanel === 'hook' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-              Opening Hook Intelligence (First 3 Seconds)
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+              Scroll-Stopping Hook
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              The hook stops the scroll on Instagram Reels and YouTube Shorts. Select the opening line and physical action.
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+              Opening 3-second moment across multi-archetype viral styles.
             </p>
           </div>
 
           {isLoadingHooks ? (
-            <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-              Formulating scroll-stopping viral hooks…
-            </div>
+            <CreativeLoadingState message="Finding scroll-stopping hooks…" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
               {hooksList.map((h, idx) => {
                 const isSelected = selectedHook?.id === h.id || (!selectedHook && h.recommended);
                 return (
@@ -683,82 +743,77 @@ export function CreativePanelsWorkspace({
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 8,
+                      gap: 6,
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--accent-primary)',
+                      }}>
+                        {h.archetype || 'Viral Hook'}
+                      </span>
+                      {h.recommended && (
                         <span style={{
-                          fontSize: 10,
-                          fontWeight: 700,
+                          fontSize: 9,
+                          fontWeight: 800,
                           textTransform: 'uppercase',
-                          backgroundColor: 'var(--bg-elevated)',
+                          backgroundColor: 'rgba(99, 102, 241, 0.15)',
                           color: 'var(--accent-primary)',
-                          padding: '2px 8px',
+                          padding: '2px 6px',
                           borderRadius: 4
                         }}>
-                          {h.archetype || h.type || 'Hook'}
+                          Recommended
                         </span>
-                        {h.recommended && (
-                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: 4 }}>
-                            Recommended
-                          </span>
-                        )}
-                      </div>
-                      <div style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        border: isSelected ? '5px solid var(--accent-primary)' : '2px solid var(--border-default)',
-                        backgroundColor: '#ffffff'
-                      }} />
+                      )}
                     </div>
 
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
                       "{h.hookLine || h.text}"
                     </div>
 
-                    {h.visualAction && (
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                        <Camera size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--accent-primary)' }} />
-                        <span>Action: {h.visualAction}</span>
-                      </div>
-                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                      <strong>Opening Action:</strong> {h.visualAction || h.visual}
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Custom Hook */}
-          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              + Add Custom Opening Hook
+          {/* Custom Hook Override */}
+          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              + Add custom hook
             </div>
             <input
               type="text"
               value={customHook}
               onChange={(e) => setCustomHook(e.target.value)}
-              placeholder="e.g. Write your custom first spoken line or visual gag..."
+              placeholder="e.g. Write your own opening hook line..."
               style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <button
               type="button"
               onClick={() => setCreativePanel('direction')}
               style={{ padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
             >
-              Back to Direction
+              ← Back to Direction
             </button>
             <button
               type="button"
-              onClick={() => setCreativePanel('plot')}
+              onClick={handleProceedToPlot}
               style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <span>Next: Plot Line</span>
+              <span>Continue to Plot</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -766,25 +821,23 @@ export function CreativePanelsWorkspace({
       )}
 
       {/* ========================================================
-          PANEL 3: PLOT LINE (3-5 Narrative Arcs)
+          STAGE 3: PLOT (3 Miniature Story Strips)
           ======================================================== */}
       {creativePanel === 'plot' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-              Narrative Plot Lines
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+              Select Narrative Plot Line
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Each plot connects the hook to a relatable conflict and satisfying commercial resolution.
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+              3 structured story arcs resolving the customer friction.
             </p>
           </div>
 
           {isLoadingPlots ? (
-            <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-              Formulating structured 4-scene narrative arcs…
-            </div>
+            <CreativeLoadingState message="Building story options…" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
               {plotsList.map((p, idx) => {
                 const isSelected = selectedPlot?.id === p.id || (!selectedPlot && p.recommended);
                 return (
@@ -803,37 +856,47 @@ export function CreativePanelsWorkspace({
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {p.title}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {p.title}
+                      </span>
+                      {p.recommended && (
+                        <span style={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                          color: 'var(--accent-primary)',
+                          padding: '2px 6px',
+                          borderRadius: 4
+                        }}>
+                          Recommended
                         </span>
-                        {p.recommended && (
-                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 4 }}>
-                            Recommended
-                          </span>
-                        )}
-                      </div>
-                      <div style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        border: isSelected ? '5px solid var(--accent-primary)' : '2px solid var(--border-default)',
-                        backgroundColor: '#ffffff'
-                      }} />
+                      )}
                     </div>
 
-                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                      <strong>Core Idea:</strong> {p.coreIdea}
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      {p.coreIdea}
                     </div>
 
-                    {/* Beats preview */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
-                      <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: 6 }}>
-                        <strong>Conflict:</strong> {p.conflictBeat || p.conflict || 'Relatable friction'}
+                    {/* Miniature 3-Frame Story Strip */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-elevated)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                      border: '1px solid var(--border-subtle)'
+                    }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--accent-primary)' }}>01 Hook:</strong> {p.hookBeat || 'Opening tension'}
                       </div>
-                      <div style={{ backgroundColor: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: 6 }}>
-                        <strong>Payoff:</strong> {p.payoffBeat || p.payoff || 'Earned brand relief'}
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--warning)' }}>02 Conflict:</strong> {p.conflictBeat || 'Problem deepens'}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--success)' }}>03 Payoff:</strong> {p.payoffBeat || 'Delightful resolution'}
                       </div>
                     </div>
                   </div>
@@ -842,34 +905,34 @@ export function CreativePanelsWorkspace({
             </div>
           )}
 
-          {/* Custom Plot */}
-          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              + Add Custom Plot Arc
+          {/* Custom Plot Override */}
+          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              + Add custom plot
             </div>
             <input
               type="text"
               value={customPlot}
               onChange={(e) => setCustomPlot(e.target.value)}
-              placeholder="e.g. Two friends argue over where to eat until one shows the secret..."
+              placeholder="e.g. A skeptic friend visits and gets convinced by a quick live comparison"
               style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <button
               type="button"
               onClick={() => setCreativePanel('hook')}
               style={{ padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
             >
-              Back to Hook
+              ← Back to Hook
             </button>
             <button
               type="button"
-              onClick={() => setCreativePanel('story')}
+              onClick={handleProceedToStory}
               style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <span>Next: Story & World</span>
+              <span>Continue to Story & Format</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -877,353 +940,311 @@ export function CreativePanelsWorkspace({
       )}
 
       {/* ========================================================
-          PANEL 4: STORY & WORLD (Format, Beats, Characters, Location)
+          STAGE 4: STORY & FORMAT (Visual Format Tiles + 4 Beats)
           ======================================================== */}
       {creativePanel === 'story' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-              Story Format & Visual World
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+              Story & Format Architecture
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Locks 1 continuous room (Rule M13) and 2 characters for high AI video stability.
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+              Video format, 4 continuous story beats, and character world.
             </p>
           </div>
 
-          {/* Format Selector */}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              Storytelling Format
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-              {['Storytelling', 'UGC / Creator-style', 'Product Demo', 'Situational Comedy'].map((fmt) => {
-                const isSelected = (storyWorldData?.format || userContext.creativeStyle) === fmt;
-                return (
-                  <button
-                    key={fmt}
-                    type="button"
-                    onClick={() => {
-                      updateUserContext('creativeStyle', fmt);
-                      if (storyWorldData) setStoryWorldData({ ...storyWorldData, format: fmt });
-                    }}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      fontSize: 12,
-                      fontWeight: isSelected ? 700 : 500,
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    {fmt}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Single Continuous Location Card */}
-          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Store size={16} style={{ color: 'var(--accent-primary)' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                Locked Single Room Setting (Rule M13)
-              </span>
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', margin: '0 0 8px' }}>
-              All 4 scenes share the same room layout and lighting so video generative models maintain continuous physical consistency.
-            </p>
-            <textarea
-              rows={2}
-              value={storyWorldData?.setting || userContext.environment || `A bright, clean ${userContext.businessType || 'store'} interior in ${userContext.town || 'the city'} with warm lighting and wooden service counters.`}
-              onChange={(e) => {
-                updateUserContext('environment', e.target.value);
-                if (storyWorldData) setStoryWorldData({ ...storyWorldData, setting: e.target.value });
-              }}
-              style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
-            />
-          </div>
-
-          {/* 4 Beats Preview */}
-          {storyWorldData?.beats && Array.isArray(storyWorldData.beats) && (
-            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>
-                4-Beat Narrative Choreography
+          {isLoadingStory ? (
+            <CreativeLoadingState message="Shaping the story & format…" />
+          ) : (
+            <>
+              {/* Decision A: Visual Format Tiles */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                  1. Video Format
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                  {FORMAT_PRESETS.map((fmt) => {
+                    const currentFmt = storyWorldData?.format || userContext.creativeStyle || 'Storytelling';
+                    const isSelected = currentFmt === fmt.id;
+                    const Icon = fmt.icon;
+                    return (
+                      <div
+                        key={fmt.id}
+                        onClick={() => {
+                          updateUserContext('creativeStyle', fmt.id);
+                          setStoryWorldData((prev) => ({ ...prev, format: fmt.id }));
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
+                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                          borderRadius: 8,
+                          padding: 12,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 10,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 6,
+                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Icon size={14} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {fmt.label}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 2 }}>
+                            {fmt.tagline}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
-                {storyWorldData.beats.map((b, bIdx) => (
-                  <div key={bIdx} style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', fontSize: 11 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 2 }}>
-                      Beat 0{bIdx + 1}: {b.beat || b.name || `Scene ${bIdx + 1}`}
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                      {b.action || b.description || b.dialogue}
-                    </div>
+
+              {/* Decision B: 4 Story Beats */}
+              {storyWorldData?.beats && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                    2. 4 Story Beats Preview
                   </div>
-                ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+                    {storyWorldData.beats.map((b, idx) => (
+                      <div key={idx} style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            0{idx + 1}
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {b.beat}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                          {b.action}
+                        </div>
+                        {b.dialogue && (
+                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 4 }}>
+                            "{b.dialogue}"
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Compact Casting & Location Lock Summary */}
+              <div style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 8,
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
+                fontSize: 11,
+                color: 'var(--text-secondary)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <MapPin size={13} style={{ color: 'var(--accent-primary)' }} />
+                  <span><strong>Room:</strong> {storyWorldData?.location?.name || userContext.area || 'Single Studio Setting'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <User size={13} style={{ color: 'var(--accent-primary)' }} />
+                  <span><strong>Lead:</strong> {typeof storyWorldData?.character1 === 'object' ? storyWorldData.character1.name : (userContext.leadCharacter || 'Owner')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <User size={13} style={{ color: 'var(--accent-primary)' }} />
+                  <span><strong>Customer:</strong> {typeof storyWorldData?.character2 === 'object' ? storyWorldData.character2.name : (userContext.supportingCharacter || 'Customer')}</span>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          {/* Collapsible Creative Constraints */}
+          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => setIsConstraintsExpanded(!isConstraintsExpanded)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-primary)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ShieldCheck size={14} style={{ color: 'var(--accent-primary)' }} />
+                <span>Customize / Creative Constraints (Optional)</span>
+              </div>
+              {isConstraintsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {isConstraintsExpanded && (
+              <div style={{ padding: '10px 14px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Language Selector */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Spoken Dialogue Language
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {['English', 'Hindi', 'Hinglish', 'Marathi', 'Tamil', 'Telugu', 'Gujarati', 'Bengali'].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => updateUserContext('language', lang)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          backgroundColor: userContext.language === lang ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                          color: userContext.language === lang ? '#ffffff' : 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Things to Include */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Things I want to include
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                    {constraintsList.map((c, i) => (
+                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {c}
+                        <X size={10} style={{ cursor: 'pointer' }} onClick={() => setConstraintsList(constraintsList.filter((_, idx) => idx !== i))} />
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="text"
+                      value={newConstraintInput}
+                      onChange={(e) => setNewConstraintInput(e.target.value)}
+                      placeholder="e.g. mention festive 20% discount"
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 11 }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newConstraintInput.trim()) {
+                          setConstraintsList([...constraintsList, newConstraintInput.trim()]);
+                          setNewConstraintInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newConstraintInput.trim()) {
+                          setConstraintsList([...constraintsList, newConstraintInput.trim()]);
+                          setNewConstraintInput('');
+                        }
+                      }}
+                      style={{ padding: '6px 12px', fontSize: 11, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Things to Avoid */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Things to avoid
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                    {avoidList.map((a, i) => (
+                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {a}
+                        <X size={10} style={{ cursor: 'pointer' }} onClick={() => setAvoidList(avoidList.filter((_, idx) => idx !== i))} />
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="text"
+                      value={newAvoidInput}
+                      onChange={(e) => setNewAvoidInput(e.target.value)}
+                      placeholder="e.g. do not show competitor names, no dance sequences"
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 11 }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newAvoidInput.trim()) {
+                          setAvoidList([...avoidList, newAvoidInput.trim()]);
+                          setNewAvoidInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newAvoidInput.trim()) {
+                          setAvoidList([...avoidList, newAvoidInput.trim()]);
+                          setNewAvoidInput('');
+                        }
+                      }}
+                      style={{ padding: '6px 12px', fontSize: 11, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <button
               type="button"
               onClick={() => setCreativePanel('plot')}
               style={{ padding: '8px 16px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
             >
-              Back to Plot
+              ← Back to Plot
             </button>
-            <button
-              type="button"
-              onClick={() => setCreativePanel('constraints')}
-              style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <span>Next: Constraints & Production</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          PANEL 5: CONSTRAINTS & PRODUCTION OPTIONS
-          ======================================================== */}
-      {creativePanel === 'constraints' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-              Creative Constraints & Production Settings
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Specify strict guardrails for what must appear or be avoided in the script.
-            </p>
-          </div>
-
-          {/* Constraints Lists: "Things I want" & "Things to avoid" */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
-            {/* Things I want */}
-            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', marginBottom: 8 }}>
-                ✓ Things I Want in the Video
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                {constraintsList.map((item, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '3px 8px',
-                      borderRadius: 4,
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      color: 'var(--success)',
-                      fontSize: 11
-                    }}
-                  >
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setConstraintsList(constraintsList.filter((_, i) => i !== idx))}
-                      style={{ background: 'none', border: 'none', color: 'var(--success)', cursor: 'pointer', padding: 0 }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  type="text"
-                  value={newConstraintInput}
-                  onChange={(e) => setNewConstraintInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newConstraintInput.trim()) {
-                      e.preventDefault();
-                      setConstraintsList([...constraintsList, newConstraintInput.trim()]);
-                      setNewConstraintInput('');
-                    }
-                  }}
-                  placeholder="e.g. Show fresh packaging, mention 100% pure"
-                  style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (newConstraintInput.trim()) {
-                      setConstraintsList([...constraintsList, newConstraintInput.trim()]);
-                      setNewConstraintInput('');
-                    }
-                  }}
-                  style={{ padding: '6px 12px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {/* Things to avoid */}
-            <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--error)', marginBottom: 8 }}>
-                ✕ Things to Avoid
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                {avoidList.map((item, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '3px 8px',
-                      borderRadius: 4,
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      color: 'var(--error)',
-                      fontSize: 11
-                    }}
-                  >
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setAvoidList(avoidList.filter((_, i) => i !== idx))}
-                      style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 0 }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  type="text"
-                  value={newAvoidInput}
-                  onChange={(e) => setNewAvoidInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newAvoidInput.trim()) {
-                      e.preventDefault();
-                      setAvoidList([...avoidList, newAvoidInput.trim()]);
-                      setNewAvoidInput('');
-                    }
-                  }}
-                  placeholder="e.g. No corporate jargon, don't mention price"
-                  style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (newAvoidInput.trim()) {
-                      setAvoidList([...avoidList, newAvoidInput.trim()]);
-                      setNewAvoidInput('');
-                    }
-                  }}
-                  style={{ padding: '6px 12px', borderRadius: 6, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Platform & Duration */}
-          <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                  Platform
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                  {PLATFORM_PRESETS.slice(0, 4).map((p) => {
-                    const isSelected = (userContext.platform || 'Instagram Reels / 9:16') === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => updateUserContext('platform', p.id)}
-                        style={{
-                          padding: '6px 8px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: isSelected ? 700 : 500,
-                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                          border: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {p.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                  Duration
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                  {['10s', '15s', '20s', '25s'].map((d) => {
-                    const isSelected = (userContext.duration || '15s') === d;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => updateUserContext('duration', d)}
-                        style={{
-                          padding: '6px 4px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: isSelected ? 700 : 500,
-                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                          border: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {d}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Master Synthesis Trigger */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, flexWrap: 'wrap', gap: 12 }}>
-            <button
-              type="button"
-              onClick={() => setCreativePanel('story')}
-              style={{ padding: '10px 16px', borderRadius: 8, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', fontSize: 13, cursor: 'pointer' }}
-            >
-              Back to Story
-            </button>
-
             <button
               type="button"
               disabled={isBusy}
-              onClick={() => onSynthesizeMasterScript()}
+              onClick={onSynthesizeMasterScript}
               style={{
-                padding: '14px 28px',
-                background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                padding: '10px 24px',
+                borderRadius: 8,
+                backgroundColor: 'var(--accent-primary)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: 10,
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: 700,
                 cursor: isBusy ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)'
+                gap: 8,
+                boxShadow: '0 2px 8px var(--accent-glow)'
               }}
             >
-              <Sparkles size={18} />
-              <span>Synthesize Master Script & Review</span>
-              <ArrowRight size={18} />
+              {isBusy && <RefreshCw size={14} className="icon-spinner" />}
+              <span>{isBusy ? 'Synthesizing Broadcast Script…' : 'Synthesize Script →'}</span>
             </button>
           </div>
         </div>
@@ -1233,8 +1254,7 @@ export function CreativePanelsWorkspace({
 }
 
 /**
- * 4. SCENE-LEVEL AI REWRITE MODAL
- * Targeted precision scene rewriting with single room & character locking.
+ * 6. SCENE-LEVEL AI REWRITE MODAL
  */
 export function SceneAIRewriteModal({
   isOpen,
@@ -1300,7 +1320,7 @@ export function SceneAIRewriteModal({
         </div>
 
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.5 }}>
-          Give the AI a creative note to rewrite only Scene {sceneIndex + 1}. Room and character continuity will stay strictly locked.
+          Give the AI a creative note to rewrite only Scene {sceneIndex + 1}. Room and character continuity stay locked.
         </p>
 
         {/* Quick Presets */}
@@ -1370,8 +1390,7 @@ export function SceneAIRewriteModal({
 }
 
 /**
- * 5. PRODUCTION SHOT SPECIFICATION VIEW (IN SCRIPT REVIEW)
- * Renders technical breakdown (Static World vs Motion Vectors) for engineers & DPs.
+ * 7. PRODUCTION SHOT SPECIFICATION VIEW (IN SCRIPT REVIEW)
  */
 export function ProductionShotSpecView({ shotSpec, scenes }) {
   if (!shotSpec || !shotSpec.shots) {

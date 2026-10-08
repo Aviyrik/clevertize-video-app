@@ -65,7 +65,7 @@ function validateForm(b) {
     businessName: s(b.businessName),
     businessType: s(b.businessType),
     town: s(b.town),
-    language: s(b.language) || "Hindi",
+    language: s(b.language) || "English",
     area: s(b.area),
     specialty: s(b.specialty),
     offer: s(b.offer),
@@ -435,7 +435,7 @@ app.post("/api/creative/hooks", async (req, res) => {
       businessType,
       brief,
       direction,
-      language,
+      language: language || "English",
     });
     res.json(result);
   } catch (e) {
@@ -447,14 +447,15 @@ app.post("/api/creative/hooks", async (req, res) => {
 // 4) Plot Generation
 app.post("/api/creative/plots", async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, language } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language } = req.body || {};
     const result = await creative.generatePlots({
       businessName,
       businessType,
       brief,
       direction,
       hook,
-      language,
+      format: format || "Storytelling",
+      language: language || "English",
     });
     res.json(result);
   } catch (e) {
@@ -466,7 +467,7 @@ app.post("/api/creative/plots", async (req, res) => {
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, language } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language } = req.body || {};
     const result = await creative.generateStoryWorld({
       businessName,
       businessType,
@@ -475,7 +476,8 @@ app.post("/api/creative/story", async (req, res) => {
       direction,
       hook,
       plot,
-      language,
+      format: format || "Storytelling",
+      language: language || "English",
     });
     res.json(result);
   } catch (e) {

@@ -262,3 +262,55 @@ test("8. End-to-end API: /api/research endpoint handles request and returns JSON
   assert.strictEqual(data.tier, 2);
   assert.ok(data.audienceInsight.includes("Tech professionals"));
 });
+
+test("9. generateHooks and generatePlots default to English and handle neutral language", async () => {
+  // Test fallback returns English dialogue when no language or English is specified
+  const hooks = await creative.generateHooks({
+    businessName: "Urban Brew",
+    businessType: "Coffee Shop",
+    brief: "Promote cold brew",
+    language: "English"
+  });
+
+  assert.ok(hooks.length >= 4);
+  assert.strictEqual(hooks[0].hookLine, "Wait, did you run out of this again?");
+  // Confirm NO Devanagari in English hook line
+  assert.strictEqual(/[\u0900-\u097F]/.test(hooks[0].hookLine), false);
+
+  const plots = await creative.generatePlots({
+    businessName: "Urban Brew",
+    businessType: "Coffee Shop",
+    brief: "Promote cold brew",
+    format: "Product Demo",
+    language: "English"
+  });
+
+  assert.ok(plots.length >= 3);
+  assert.strictEqual(plots[0].title, "THE LAST-MINUTE RESCUE");
+});
+
+test("10. synthesizeMasterScript sets shotSpec.format correctly based on chosen format", async () => {
+  anthropicQueue.push(GOOD_SCRIPT);
+
+  const res = await creative.synthesizeMasterScript({
+    form: {
+      businessName: "Ramesh Kirana",
+      businessType: "Kirana Store",
+      town: "Indore",
+      language: "Hindi",
+      resolvedProduct: "Sabudana & Pooja Essentials",
+      duration: "15s",
+      platform: "Instagram Reels / 9:16",
+      creativeStyle: "Storytelling"
+    },
+    creativeDNA: {
+      direction: { title: "Everyday Frustration" },
+      hook: { hookLine: "अरे, व्रत का साबूदाना ख़त्म!", visualAction: "Looking at empty shelf" },
+      plot: { title: "The Navratri Emergency", coreIdea: "Customer finds fresh sabudana", conflictBeat: "Late evening rush", payoffBeat: "Reliable store owner delivers" },
+      story: { format: "Storytelling" },
+    }
+  });
+
+  assert.strictEqual(res.shotSpec.format, "Storytelling");
+  assert.strictEqual(res.record.format, "Storytelling");
+});

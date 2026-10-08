@@ -631,7 +631,7 @@ export default function App() {
       duration: '15s',
       platform: 'Instagram Reels / 9:16',
       creativeStyle: 'UGC / Creator-style',
-      language: 'Hindi',
+      language: 'English',
       scriptMode: 'devanagari',
       selectedGoalId: 'offer',
       shopPhoto: null,
@@ -1180,7 +1180,7 @@ export default function App() {
           businessType: bType,
           brief: userContext.brief || '',
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
-          language: userContext.language || 'Hindi',
+          language: userContext.language || 'English',
         }),
       });
       if (res.ok) {
@@ -1215,8 +1215,9 @@ export default function App() {
           businessType: bType,
           brief: userContext.brief || '',
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
-          hook: selectedHook || { hookLine: customHook || 'अरे, ये ख़त्म हो गया!' },
-          language: userContext.language || 'Hindi',
+          hook: selectedHook || { hookLine: customHook || '' },
+          format: userContext.creativeStyle || 'Storytelling',
+          language: userContext.language || 'English',
         }),
       });
       if (res.ok) {
@@ -1254,7 +1255,8 @@ export default function App() {
           direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
           hook: selectedHook || { hookLine: customHook || '' },
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
-          language: userContext.language || 'Hindi',
+          format: userContext.creativeStyle || 'Storytelling',
+          language: userContext.language || 'English',
         }),
       });
       if (res.ok) {
@@ -3776,6 +3778,7 @@ export default function App() {
                       customDirection={customDirection}
                       setCustomDirection={setCustomDirection}
                       isLoadingDirections={isLoadingDirections}
+                      onLoadDirections={loadDirections}
                       // Hooks
                       hooksList={hooksList}
                       selectedHook={selectedHook}
@@ -3786,6 +3789,7 @@ export default function App() {
                       customHook={customHook}
                       setCustomHook={setCustomHook}
                       isLoadingHooks={isLoadingHooks}
+                      onLoadHooks={loadHooks}
                       // Plots
                       plotsList={plotsList}
                       selectedPlot={selectedPlot}
@@ -3796,6 +3800,7 @@ export default function App() {
                       customPlot={customPlot}
                       setCustomPlot={setCustomPlot}
                       isLoadingPlots={isLoadingPlots}
+                      onLoadPlots={loadPlots}
                       // Story World
                       storyWorldData={storyWorldData}
                       setStoryWorldData={(sw) => {
@@ -3803,6 +3808,7 @@ export default function App() {
                         setCreativeDNA((prev) => ({ ...prev, story: sw }));
                       }}
                       isLoadingStory={isLoadingStory}
+                      onLoadStory={loadStoryWorld}
                       // Constraints
                       constraintsList={constraintsList}
                       setConstraintsList={setConstraintsList}
