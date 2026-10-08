@@ -1517,6 +1517,7 @@ export default function App() {
       setScenes(data.scenes || []);
       setShotSpec(data.shotSpec || null);
       setCreativeDNA(activeDNA);
+      setHasStaleWarning(false);
 
       stopTimer();
       setIsBusy(false);

@@ -852,3 +852,18 @@ test('Studio Stage 06 Story: Continue button loading state references Script, no
   );
 });
 
+test('Studio Stage 07 Script: Headline says "Here\'s your script", not "Here\'s your video"', () => {
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.equal(
+    guidedStudioSource.includes("Here's your video\n          </h1>") ||
+    guidedStudioSource.includes("Here's your video</h1>"),
+    false,
+    'Stage 07 Script headline should not say "Here\'s your video"'
+  );
+  assert.equal(
+    guidedStudioSource.includes("Here's your script"),
+    true,
+    'Stage 07 Script headline should say "Here\'s your script"'
+  );
+});
+
