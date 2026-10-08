@@ -44,6 +44,14 @@ import {
   Play
 } from 'lucide-react';
 
+import {
+  ResearchInsightsBanner,
+  CreativeDNABar,
+  CreativePanelsWorkspace,
+  SceneAIRewriteModal,
+  ProductionShotSpecView,
+} from './components/CreativeWorkspace';
+
 // Ad Focus Goal Presets — defines creative objectives & CTA angles
 const AD_GOAL_PRESETS = [
   {
@@ -710,6 +718,51 @@ export default function App() {
     return 'setup';
   });
 
+  // Creative Intelligence Workspace V2 State
+  const [researchData, setResearchData] = useState(null);
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchDismissed, setResearchDismissed] = useState(false);
+  const [selectedGapOption, setSelectedGapOption] = useState('');
+  const [customGapAnswer, setCustomGapAnswer] = useState('');
+  const lastResearchedBrandRef = useRef('');
+
+  // Creative Decision Panels: 'direction' | 'hook' | 'plot' | 'story' | 'constraints'
+  const [creativePanel, setCreativePanel] = useState('direction');
+  const [directionsList, setDirectionsList] = useState([]);
+  const [selectedDirection, setSelectedDirection] = useState(null);
+  const [customDirection, setCustomDirection] = useState('');
+  const [isLoadingDirections, setIsLoadingDirections] = useState(false);
+
+  const [hooksList, setHooksList] = useState([]);
+  const [selectedHook, setSelectedHook] = useState(null);
+  const [customHook, setCustomHook] = useState('');
+  const [isLoadingHooks, setIsLoadingHooks] = useState(false);
+
+  const [plotsList, setPlotsList] = useState([]);
+  const [selectedPlot, setSelectedPlot] = useState(null);
+  const [customPlot, setCustomPlot] = useState('');
+  const [isLoadingPlots, setIsLoadingPlots] = useState(false);
+
+  const [storyWorldData, setStoryWorldData] = useState(null);
+  const [isLoadingStory, setIsLoadingStory] = useState(false);
+
+  const [constraintsList, setConstraintsList] = useState([]);
+  const [avoidList, setAvoidList] = useState([]);
+  const [newConstraintInput, setNewConstraintInput] = useState('');
+  const [newAvoidInput, setNewAvoidInput] = useState('');
+
+  const [creativeDNA, setCreativeDNA] = useState({
+    direction: null,
+    hook: null,
+    plot: null,
+    story: null,
+  });
+
+  const [isSceneRewriteOpen, setIsSceneRewriteOpen] = useState(false);
+  const [rewriteTargetSceneIndex, setRewriteTargetSceneIndex] = useState(0);
+  const [isRewritingScene, setIsRewritingScene] = useState(false);
+  const [scriptReviewMode, setScriptReviewMode] = useState('creative'); // 'creative' | 'production'
+
   // Backend Checkpoint Session State
   const [sessionId, setSessionId] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -1017,6 +1070,322 @@ export default function App() {
       logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
     };
   };
+
+  // 1. Adaptive Public Web Research (Non-blocking background runner)
+  const triggerAdaptiveResearch = async (force = false) => {
+    const brand = userContext.businessName.trim();
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+    if (!brand || !bType) return;
+
+    const brandKey = `${brand}_${bType}_${userContext.town || ''}_${userContext.websiteUrl || ''}`;
+    if (!force && lastResearchedBrandRef.current === brandKey) return;
+    lastResearchedBrandRef.current = brandKey;
+
+    setIsResearching(true);
+    setResearchDismissed(false);
+    try {
+      const res = await fetch('/api/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: brand,
+          businessType: bType,
+          town: userContext.town || '',
+          area: userContext.area || '',
+          websiteUrl: userContext.websiteUrl || '',
+          brief: userContext.brief || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResearchData(data);
+      }
+    } catch (err) {
+      console.warn('[research] background research error:', err);
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  const handleApplyResearchInsights = () => {
+    if (!researchData) return;
+    const additions = [];
+    if (researchData.audienceInsight) additions.push(`Target audience: ${researchData.audienceInsight}`);
+    if (researchData.creativeOpportunity) additions.push(`Opportunity: ${researchData.creativeOpportunity}`);
+    if (selectedGapOption) {
+      const ans = selectedGapOption === 'Other' ? customGapAnswer : selectedGapOption;
+      if (ans) additions.push(`Audience focus: ${ans}`);
+    }
+
+    if (additions.length) {
+      const current = userContext.brief ? userContext.brief.trim() + '\n\n' : '';
+      updateUserContext('brief', current + additions.join('\n'));
+    }
+    setResearchDismissed(true);
+  };
+
+  // 2. Fetching Creative Direction Territories
+  const loadCreativeDirections = async (force = false) => {
+    if (directionsList.length && !force) return;
+    const brand = userContext.businessName.trim();
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+    if (!brand) return;
+
+    setIsLoadingDirections(true);
+    try {
+      const res = await fetch('/api/creative/directions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: brand,
+          businessType: bType,
+          town: userContext.town || '',
+          brief: userContext.brief || '',
+          research: researchData,
+        }),
+      });
+      if (res.ok) {
+        const list = await res.json();
+        setDirectionsList(list);
+        const rec = list.find((d) => d.recommended) || list[0];
+        setSelectedDirection(rec);
+        setCreativeDNA((prev) => ({ ...prev, direction: rec }));
+      }
+    } catch (e) {
+      console.warn('[directions] load error:', e);
+    } finally {
+      setIsLoadingDirections(false);
+    }
+  };
+
+  // 3. Fetching Hooks
+  const loadHooks = async (force = false) => {
+    if (hooksList.length && !force) return;
+    const brand = userContext.businessName.trim();
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+
+    setIsLoadingHooks(true);
+    try {
+      const res = await fetch('/api/creative/hooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: brand,
+          businessType: bType,
+          brief: userContext.brief || '',
+          direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
+          language: userContext.language || 'Hindi',
+        }),
+      });
+      if (res.ok) {
+        const list = await res.json();
+        setHooksList(list);
+        const rec = list.find((h) => h.recommended) || list[0];
+        setSelectedHook(rec);
+        setCreativeDNA((prev) => ({ ...prev, hook: rec }));
+      }
+    } catch (e) {
+      console.warn('[hooks] load error:', e);
+    } finally {
+      setIsLoadingHooks(false);
+    }
+  };
+
+  // 4. Fetching Plots
+  const loadPlots = async (force = false) => {
+    if (plotsList.length && !force) return;
+    const brand = userContext.businessName.trim();
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+
+    setIsLoadingPlots(true);
+    try {
+      const res = await fetch('/api/creative/plots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: brand,
+          businessType: bType,
+          brief: userContext.brief || '',
+          direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
+          hook: selectedHook || { hookLine: customHook || 'अरे, ये ख़त्म हो गया!' },
+          language: userContext.language || 'Hindi',
+        }),
+      });
+      if (res.ok) {
+        const list = await res.json();
+        setPlotsList(list);
+        const rec = list.find((p) => p.recommended) || list[0];
+        setSelectedPlot(rec);
+        setCreativeDNA((prev) => ({ ...prev, plot: rec }));
+      }
+    } catch (e) {
+      console.warn('[plots] load error:', e);
+    } finally {
+      setIsLoadingPlots(false);
+    }
+  };
+
+  // 5. Fetching Story & World
+  const loadStoryWorld = async (force = false) => {
+    if (storyWorldData && !force) return;
+    const brand = userContext.businessName.trim();
+    const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
+      ? userContext.customBusinessType.trim()
+      : userContext.businessType;
+
+    setIsLoadingStory(true);
+    try {
+      const res = await fetch('/api/creative/story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: brand,
+          businessType: bType,
+          town: userContext.town || '',
+          brief: userContext.brief || '',
+          direction: selectedDirection || { title: customDirection || 'Everyday Relatable' },
+          hook: selectedHook || { hookLine: customHook || '' },
+          plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
+          language: userContext.language || 'Hindi',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStoryWorldData(data);
+        setCreativeDNA((prev) => ({ ...prev, story: data }));
+        if (data.characters?.character1 && !userContext.leadCharacter) {
+          updateUserContext('leadCharacter', data.characters.character1);
+        }
+        if (data.characters?.character2 && !userContext.supportingCharacter) {
+          updateUserContext('supportingCharacter', data.characters.character2);
+        }
+        if (data.setting && !userContext.environment) {
+          updateUserContext('environment', data.setting);
+        }
+      }
+    } catch (e) {
+      console.warn('[story] load error:', e);
+    } finally {
+      setIsLoadingStory(false);
+    }
+  };
+
+  // 6. Master Script Synthesis via /api/creative/synthesize-script
+  const handleSynthesizeMasterScript = async () => {
+    if (!userContext.businessName.trim()) {
+      setValidationError('Please enter your business or brand name.');
+      return;
+    }
+
+    setValidationError('');
+    setErrorMessage('');
+    setQualityFailures([]);
+    setIsBusy(true);
+    startTimer();
+    setCurrentStep('generating');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const form = buildSessionPayload();
+    const activeDNA = {
+      direction: selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended)),
+      hook: selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended)),
+      plot: selectedPlot || (customPlot ? { title: customPlot } : plotsList.find((p) => p.recommended)),
+      story: storyWorldData || { format: userContext.creativeStyle || 'Storytelling' },
+    };
+
+    try {
+      const res = await fetch('/api/creative/synthesize-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          form,
+          creativeDNA: activeDNA,
+          constraints: constraintsList,
+          avoid: avoidList,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        if (res.status === 422 && data.failures) {
+          setQualityFailures(data.failures);
+        }
+        throw new Error(data.error || 'Quality gate validation failed on synthesis.');
+      }
+
+      setScriptPayloadData(data);
+      setCharacter1(data.character1 || '');
+      setCharacter2(data.character2 || '');
+      setSetting(data.setting || '');
+      setScenes(data.scenes || []);
+      setShotSpec(data.shotSpec || null);
+      setCreativeDNA(activeDNA);
+
+      stopTimer();
+      setIsBusy(false);
+      setCurrentStep('storyboard');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      stopTimer();
+      setIsBusy(false);
+      setCurrentStep('input');
+      setCreationStep(3);
+      setErrorMessage(err.message || 'Error occurred while synthesizing master script.');
+    }
+  };
+
+  // 7. Targeted Scene-Level AI Rewriter via /api/creative/rewrite-scene
+  const handleApplySceneRewrite = async (instruction) => {
+    if (!scenes[rewriteTargetSceneIndex] || !instruction) return;
+    setIsRewritingScene(true);
+    try {
+      const res = await fetch('/api/creative/rewrite-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sceneText: scenes[rewriteTargetSceneIndex],
+          sceneIndex: rewriteTargetSceneIndex,
+          totalScenes: scenes.length,
+          instruction,
+          form: buildSessionPayload(),
+          characters: `${character1} | ${character2}`,
+          setting,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to rewrite scene.');
+      }
+      if (data.scene) {
+        const updated = [...scenes];
+        updated[rewriteTargetSceneIndex] = data.scene;
+        setScenes(updated);
+        setIsSceneRewriteOpen(false);
+      }
+    } catch (err) {
+      alert(err.message || 'Scene rewrite error.');
+    } finally {
+      setIsRewritingScene(false);
+    }
+  };
+
+  // Auto-trigger options loading based on creativePanel
+  useEffect(() => {
+    if (creationStep === 3) {
+      if (creativePanel === 'direction') loadCreativeDirections();
+      else if (creativePanel === 'hook') loadHooks();
+      else if (creativePanel === 'plot') loadPlots();
+      else if (creativePanel === 'story') loadStoryWorld();
+    }
+  }, [creationStep, creativePanel]);
 
   // START: POST /api/session -> CHECKPOINT 1 (DIRECTION)
   const handleStartCreativeEngine = async () => {
@@ -3029,6 +3398,7 @@ export default function App() {
                           }
                           setValidationError('');
                           setCreationStep(2);
+                          triggerAdaptiveResearch();
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         style={{
@@ -3136,6 +3506,19 @@ export default function App() {
                 {creationStep === 2 ? (
                   /* Expanded Brief Input */
                   <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--accent-primary)', borderRadius: 12, padding: 24, boxShadow: '0 4px 20px rgba(99, 102, 241, 0.08)' }}>
+                    {/* Adaptive Research Insights Banner */}
+                    <ResearchInsightsBanner
+                      researchData={researchData}
+                      isResearching={isResearching}
+                      dismissed={researchDismissed}
+                      onDismiss={() => setResearchDismissed(true)}
+                      onApplyInsights={handleApplyResearchInsights}
+                      selectedGapOption={selectedGapOption}
+                      setSelectedGapOption={setSelectedGapOption}
+                      customGapAnswer={customGapAnswer}
+                      setCustomGapAnswer={setCustomGapAnswer}
+                    />
+
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 2 }}>
@@ -3372,386 +3755,76 @@ export default function App() {
                     STEP 3: PRODUCTION OPTIONS + ASSETS + ADVANCED
                     ======================================================== */}
                 {creationStep === 3 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {/* Production Options */}
-                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 22 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 16 }}>
-                        3. Production Options
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Persistent Creative DNA Bar */}
+                    <CreativeDNABar
+                      creativeDNA={creativeDNA}
+                      onEditPanel={(panelKey) => setCreativePanel(panelKey)}
+                    />
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                        {/* Row 1: Platform & Duration */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-                          {/* Platform */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                              Platform
-                            </label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6 }}>
-                              {PLATFORM_PRESETS.map((p) => {
-                                const isSelected = (userContext.platform || 'Instagram Reels / 9:16') === p.id;
-                                return (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => updateUserContext('platform', p.id)}
-                                    style={{
-                                      padding: '8px 10px',
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: isSelected ? 700 : 500,
-                                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                                      cursor: 'pointer',
-                                      textAlign: 'center',
-                                    }}
-                                  >
-                                    <div>{p.label}</div>
-                                    <div style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>{p.sub}</div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Duration */}
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 4 }}>
-                              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                Duration
-                              </label>
-                              <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace", backgroundColor: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
-                                4 scenes · ~{(parseInt(userContext.duration || '15', 10) / 4).toFixed(1)}s per scene
-                              </span>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                              {[
-                                { id: '10s', label: '10 sec', sub: 'Snappy' },
-                                { id: '15s', label: '15 sec', sub: 'Standard' },
-                                { id: '20s', label: '20 sec', sub: 'Extended' },
-                                { id: '25s', label: '25 sec', sub: 'Story' },
-                              ].map((d) => {
-                                const isSelected = (userContext.duration || '15s') === d.id;
-                                return (
-                                  <button
-                                    key={d.id}
-                                    type="button"
-                                    onClick={() => updateUserContext('duration', d.id)}
-                                    style={{
-                                      padding: '8px 6px',
-                                      borderRadius: 6,
-                                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                                      cursor: 'pointer',
-                                      textAlign: 'center',
-                                    }}
-                                  >
-                                    <div style={{ fontSize: 12, fontWeight: 700 }}>{d.label}</div>
-                                    <div style={{ fontSize: 10, opacity: isSelected ? 0.9 : 0.65 }}>({d.sub})</div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Row 2: Language & Creative Style */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-                          {/* Language */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                              Language
-                            </label>
-                            <div className="tab-group" style={{ width: '100%' }}>
-                              {['Hindi', 'Hinglish', 'English', 'Marathi'].map((lang) => (
-                                <button
-                                  key={lang}
-                                  type="button"
-                                  onClick={() => updateUserContext('language', lang)}
-                                  className={`tab-pill ${userContext.language === lang ? 'active-accent' : ''}`}
-                                  style={{ fontSize: 12, padding: '8px 10px' }}
-                                >
-                                  {lang}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Creative Format / Style */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                              Creative Style / Format
-                            </label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                              {CREATIVE_STYLE_PRESETS.map((st) => {
-                                const isSelected = (userContext.creativeStyle || 'UGC / Creator-style') === st.id;
-                                return (
-                                  <button
-                                    key={st.id}
-                                    type="button"
-                                    onClick={() => updateUserContext('creativeStyle', st.id)}
-                                    style={{
-                                      padding: '8px 10px',
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: isSelected ? 700 : 500,
-                                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                                      cursor: 'pointer',
-                                      textAlign: 'left',
-                                    }}
-                                    title={st.desc}
-                                  >
-                                    {st.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Assets (Optional) */}
-                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 22 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: 4 }}>
-                        Brand & Product Assets <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                      </div>
-                      <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px' }}>
-                        Uploaded assets guide video scenes and end frame branding.
-                      </p>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12 }}>
-                        <UploadTile
-                          id="productPhotoInput"
-                          label="Hero Product Photo"
-                          hint="Guides video product appearance"
-                          accept="image/*"
-                          file={userContext.productPhoto}
-                          onChange={(f) => handleFileUpload(f, 'productPhoto')}
-                          icon={ImageIcon}
-                        />
-                        <UploadTile
-                          id="brandLogoInput"
-                          label="Brand Logo"
-                          hint="PNG or JPG for end frame card"
-                          accept="image/*"
-                          file={userContext.logo}
-                          onChange={(f) => handleFileUpload(f, 'logo')}
-                          icon={Building2}
-                        />
-                        <UploadTile
-                          id="shopPhotoInput"
-                          label="Business / Store Photos"
-                          hint="Signboard, interior, storefront"
-                          accept="image/*"
-                          capture="environment"
-                          file={userContext.shopPhoto}
-                          onChange={(f) => handleFileUpload(f, 'shopPhoto')}
-                          icon={Store}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Advanced Creative Options (Collapsible) */}
-                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 12, overflow: 'hidden' }}>
-                      <button
-                        type="button"
-                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                        style={{
-                          width: '100%',
-                          padding: '16px 22px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            Advanced Creative Options <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                            Casting characters, single-room setting, commercial angle, and script dialect.
-                          </div>
-                        </div>
-                        <div style={{ color: 'var(--text-secondary)' }}>
-                          {isAdvancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        </div>
-                      </button>
-
-                      {isAdvancedOpen && (
-                        <div style={{ padding: '0 22px 22px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
-                          {/* Casting & Location */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                                Lead Character / Speaker
-                              </label>
-                              <input
-                                type="text"
-                                value={userContext.leadCharacter}
-                                onChange={(e) => updateUserContext('leadCharacter', e.target.value)}
-                                placeholder="e.g. Relatable working mother in her 30s"
-                                style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                              />
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                                Supporting Character
-                              </label>
-                              <input
-                                type="text"
-                                value={userContext.supportingCharacter}
-                                onChange={(e) => updateUserContext('supportingCharacter', e.target.value)}
-                                placeholder="e.g. Smiling shop assistant, or spouse"
-                                style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                              />
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                                Setting / Environment
-                              </label>
-                              <input
-                                type="text"
-                                value={userContext.environment}
-                                onChange={(e) => updateUserContext('environment', e.target.value)}
-                                placeholder="e.g. Modern kitchen with warm daylight"
-                                style={{ width: '100%', padding: '8px 10px', fontSize: 12 }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Ad Focus Goal & Script Mode */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                                Commercial Goal & CTA Angle
-                              </label>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                                {AD_GOAL_PRESETS.map((g) => {
-                                  const isSelected = userContext.selectedGoalId === g.id;
-                                  return (
-                                    <button
-                                      key={g.id}
-                                      type="button"
-                                      onClick={() => updateUserContext('selectedGoalId', g.id)}
-                                      style={{
-                                        padding: '6px 8px',
-                                        borderRadius: 6,
-                                        border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                                        backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                                        color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                        fontSize: 11,
-                                        fontWeight: isSelected ? 700 : 500,
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                      }}
-                                    >
-                                      {g.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                                Dialogue Script Mode
-                              </label>
-                              <div className="tab-group" style={{ width: '100%' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => updateUserContext('scriptMode', 'devanagari')}
-                                  className={`tab-pill ${userContext.scriptMode === 'devanagari' ? 'active-accent' : ''}`}
-                                  style={{ fontSize: 11, padding: '6px 8px' }}
-                                >
-                                  Devanagari (Standard)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => updateUserContext('scriptMode', 'roman')}
-                                  className={`tab-pill ${userContext.scriptMode === 'roman' ? 'active-accent' : ''}`}
-                                  style={{ fontSize: 11, padding: '6px 8px' }}
-                                >
-                                  Romanized (Test)
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Step 3 Actions: Back & Generate Script CTA */}
-                    {validationError && (
-                      <div style={{ padding: '10px 14px', backgroundColor: 'var(--error-subtle)', border: '1px solid var(--error)', borderRadius: 8, color: 'var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <AlertCircle size={15} />
-                        <span>{validationError}</span>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 4 }}>
-                      <button
-                        type="button"
-                        onClick={() => setCreationStep(2)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '12px 18px',
-                          borderRadius: 8,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
-                          color: 'var(--text-secondary)',
-                          fontSize: 13,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <ArrowLeft size={14} />
-                        <span>Back to Brief</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleGenerateVideo({ previewOnly: true })}
-                        style={{
-                          padding: '16px 32px',
-                          background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: 10,
-                          fontSize: 16,
-                          fontWeight: 700,
-                          cursor: isBusy ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <Sparkles size={18} />
-                        <span>Generate Script</span>
-                        <ArrowRight size={18} />
-                      </button>
-                    </div>
-
-                    <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: -6 }}>
-                      ~20-second setup · Clevertize creates your story, scenes, and spoken dialogue for review
-                    </div>
+                    {/* Progressive Creative Decision Panels */}
+                    <CreativePanelsWorkspace
+                      creativePanel={creativePanel}
+                      setCreativePanel={setCreativePanel}
+                      // Directions
+                      directionsList={directionsList}
+                      selectedDirection={selectedDirection}
+                      setSelectedDirection={(d) => {
+                        setSelectedDirection(d);
+                        setCreativeDNA((prev) => ({ ...prev, direction: d }));
+                      }}
+                      customDirection={customDirection}
+                      setCustomDirection={setCustomDirection}
+                      isLoadingDirections={isLoadingDirections}
+                      // Hooks
+                      hooksList={hooksList}
+                      selectedHook={selectedHook}
+                      setSelectedHook={(h) => {
+                        setSelectedHook(h);
+                        setCreativeDNA((prev) => ({ ...prev, hook: h }));
+                      }}
+                      customHook={customHook}
+                      setCustomHook={setCustomHook}
+                      isLoadingHooks={isLoadingHooks}
+                      // Plots
+                      plotsList={plotsList}
+                      selectedPlot={selectedPlot}
+                      setSelectedPlot={(p) => {
+                        setSelectedPlot(p);
+                        setCreativeDNA((prev) => ({ ...prev, plot: p }));
+                      }}
+                      customPlot={customPlot}
+                      setCustomPlot={setCustomPlot}
+                      isLoadingPlots={isLoadingPlots}
+                      // Story World
+                      storyWorldData={storyWorldData}
+                      setStoryWorldData={(sw) => {
+                        setStoryWorldData(sw);
+                        setCreativeDNA((prev) => ({ ...prev, story: sw }));
+                      }}
+                      isLoadingStory={isLoadingStory}
+                      // Constraints
+                      constraintsList={constraintsList}
+                      setConstraintsList={setConstraintsList}
+                      avoidList={avoidList}
+                      setAvoidList={setAvoidList}
+                      newConstraintInput={newConstraintInput}
+                      setNewConstraintInput={setNewConstraintInput}
+                      newAvoidInput={newAvoidInput}
+                      setNewAvoidInput={setNewAvoidInput}
+                      // Production options
+                      userContext={userContext}
+                      updateUserContext={updateUserContext}
+                      handleFileUpload={handleFileUpload}
+                      PLATFORM_PRESETS={PLATFORM_PRESETS}
+                      // Actions
+                      onSynthesizeMasterScript={handleSynthesizeMasterScript}
+                      isBusy={isBusy}
+                      onBackToBrief={() => setCreationStep(2)}
+                    />
                   </div>
                 )}
+
               </div>
             )}
 
@@ -4379,30 +4452,69 @@ export default function App() {
                 </p>
               </div>
 
-              {/* View Switcher: Structured vs Raw Script */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* View Switcher: Creative View vs Production Shot Specs vs Raw Script */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => { setScriptReviewMode('creative'); setIsRawScriptMode(false); }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: scriptReviewMode === 'creative' && !isRawScriptMode ? 700 : 500,
+                    backgroundColor: scriptReviewMode === 'creative' && !isRawScriptMode ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                    color: scriptReviewMode === 'creative' && !isRawScriptMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    border: '1px solid var(--border-default)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Creative View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setScriptReviewMode('production'); setIsRawScriptMode(false); }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: scriptReviewMode === 'production' && !isRawScriptMode ? 700 : 500,
+                    backgroundColor: scriptReviewMode === 'production' && !isRawScriptMode ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                    color: scriptReviewMode === 'production' && !isRawScriptMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    border: '1px solid var(--border-default)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Production Shot Specs
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsRawScriptMode(!isRawScriptMode)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '8px 12px',
+                    padding: '6px 12px',
                     borderRadius: 6,
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
                     fontSize: 12,
-                    fontWeight: 500,
-                    cursor: 'pointer',
+                    fontWeight: isRawScriptMode ? 700 : 500,
+                    backgroundColor: isRawScriptMode ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                    color: isRawScriptMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    border: '1px solid var(--border-default)',
+                    cursor: 'pointer'
                   }}
                 >
-                  <FileCode2 size={13} />
-                  <span>{isRawScriptMode ? 'Storyboard View' : 'Raw Script'}</span>
+                  <FileCode2 size={12} style={{ display: 'inline', marginRight: 4 }} />
+                  {isRawScriptMode ? 'Cards View' : 'Raw Script'}
                 </button>
               </div>
             </div>
+
+            {/* Persistent Creative DNA Summary */}
+            <CreativeDNABar
+              creativeDNA={creativeDNA}
+              onEditPanel={(panelKey) => {
+                setCurrentStep('input');
+                setCreationStep(3);
+                setCreativePanel(panelKey);
+              }}
+            />
 
             {/* CREATIVE FOUNDATION: CHARACTERS & SETTING */}
             <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 20 }}>
@@ -4497,6 +4609,8 @@ export default function App() {
                   style={{ width: '100%', padding: 12, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1.6 }}
                 />
               </div>
+            ) : scriptReviewMode === 'production' ? (
+              <ProductionShotSpecView shotSpec={shotSpec} scenes={scenes} />
             ) : (
               /* STRUCTURED 4-SCENE STORYBOARD WORKSPACE */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -4534,7 +4648,7 @@ export default function App() {
                   const sc = parseScene(scenes[activeSceneIndex], activeSceneIndex);
                   return (
                     <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', pb: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12, flexWrap: 'wrap', gap: 10 }}>
                         <div>
                           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
                             {sc.title} · {sc.purpose}
@@ -4543,6 +4657,30 @@ export default function App() {
                             {activeSceneIndex === 0 ? 'Scroll-Stopping Hook (0–3s)' : activeSceneIndex === 1 ? 'Problem & Conflict Escalation' : activeSceneIndex === 2 ? 'Business Solution & Proof' : 'Payoff & Callback Resolution'}
                           </h2>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRewriteTargetSceneIndex(activeSceneIndex);
+                            setIsSceneRewriteOpen(true);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '6px 12px',
+                            borderRadius: 6,
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            border: '1px solid var(--accent-primary)',
+                            color: 'var(--accent-primary)',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Sparkles size={13} />
+                          <span>AI Rewrite Scene</span>
+                        </button>
                       </div>
 
                       {/* Visual Description */}
@@ -4761,6 +4899,16 @@ export default function App() {
                 <ArrowRight size={18} />
               </button>
             </div>
+
+            {/* Scene-Level AI Rewrite Modal */}
+            <SceneAIRewriteModal
+              isOpen={isSceneRewriteOpen}
+              onClose={() => setIsSceneRewriteOpen(false)}
+              sceneIndex={rewriteTargetSceneIndex}
+              currentSceneText={scenes[rewriteTargetSceneIndex]}
+              onApplyRewrite={handleApplySceneRewrite}
+              isRewriting={isRewritingScene}
+            />
           </div>
         )}
 

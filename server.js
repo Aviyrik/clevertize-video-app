@@ -12,6 +12,7 @@ const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
 const { compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
+const creative = require("./engine/creative");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -383,6 +384,144 @@ app.post("/api/session/:id/approve", (req, res) => {
     }
     res.json({ ok: true });
   } catch (e) { sendErr(res, e, "approve"); }
+});
+
+// ---- Creative Intelligence Workspace V2 Endpoints ----
+
+// 1) Adaptive Research (Tiers 0-3)
+app.post("/api/research", async (req, res) => {
+  try {
+    const { businessName, businessType, town, area, websiteUrl, brief } = req.body || {};
+    const result = await creative.performAdaptiveResearch({
+      businessName,
+      businessType,
+      town,
+      area,
+      websiteUrl,
+      brief,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/research]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 2) Creative Direction
+app.post("/api/creative/directions", async (req, res) => {
+  try {
+    const { businessName, businessType, town, brief, research, festival } = req.body || {};
+    const result = await creative.generateDirections({
+      businessName,
+      businessType,
+      town,
+      brief,
+      research,
+      festival,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/creative/directions]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 3) Hook Intelligence
+app.post("/api/creative/hooks", async (req, res) => {
+  try {
+    const { businessName, businessType, brief, direction, language } = req.body || {};
+    const result = await creative.generateHooks({
+      businessName,
+      businessType,
+      brief,
+      direction,
+      language,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/creative/hooks]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4) Plot Generation
+app.post("/api/creative/plots", async (req, res) => {
+  try {
+    const { businessName, businessType, brief, direction, hook, language } = req.body || {};
+    const result = await creative.generatePlots({
+      businessName,
+      businessType,
+      brief,
+      direction,
+      hook,
+      language,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/creative/plots]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 5) Story Architecture & World Building
+app.post("/api/creative/story", async (req, res) => {
+  try {
+    const { businessName, businessType, town, brief, direction, hook, plot, language } = req.body || {};
+    const result = await creative.generateStoryWorld({
+      businessName,
+      businessType,
+      town,
+      brief,
+      direction,
+      hook,
+      plot,
+      language,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/creative/story]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 6) Master Script Synthesis & Quality Gate
+app.post("/api/creative/synthesize-script", async (req, res) => {
+  try {
+    const { form, creativeDNA, constraints, avoid } = req.body || {};
+    if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
+    const validated = validateForm(form);
+    const result = await creative.synthesizeMasterScript({
+      form: validated,
+      creativeDNA: creativeDNA || {},
+      constraints: constraints || [],
+      avoid: avoid || [],
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[api/creative/synthesize-script]", e.message);
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// 7) Scene-Level AI Rewriter
+app.post("/api/creative/rewrite-scene", async (req, res) => {
+  try {
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting } = req.body || {};
+    if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
+    const rewritten = await creative.rewriteScene({
+      sceneText,
+      sceneIndex: Number(sceneIndex) || 0,
+      totalScenes: Number(totalScenes) || 4,
+      instruction,
+      form,
+      characters,
+      setting,
+    });
+    res.json({ scene: rewritten });
+  } catch (e) {
+    console.error("[api/creative/rewrite-scene]", e.message);
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
 // ---- 2) start the Magnific flow ----
