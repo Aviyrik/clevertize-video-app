@@ -1631,7 +1631,10 @@ export default function App() {
     setApprovedSummary([]);
     setIsBrandModalOpen(false);
     setCurrentStep('input');
+    setCreationStep(1);
     setBrandFlowState('setup');
+    setValidationError('');
+    setErrorMessage('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -2283,6 +2286,9 @@ export default function App() {
                   onClick={() => {
                     setIsBrandModalOpen(false);
                     setBrandFlowState('create');
+                    if (userContext.businessName.trim() && creationStep === 1) {
+                      setCreationStep(2);
+                    }
                   }}
                   style={{
                     padding: '8px 18px',
