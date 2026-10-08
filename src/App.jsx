@@ -2114,7 +2114,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setCurrentStep('input');
-                    setBrandFlowState('create');
+                    setCreationStep(2);
                     setErrorMessage('');
                     setQualityFailures([]);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2123,10 +2123,10 @@ export default function App() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    padding: '6px 14px',
+                    padding: '7px 14px',
                     borderRadius: 6,
-                    backgroundColor: '#ffffff',
-                    color: '#000000',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: '#ffffff',
                     border: 'none',
                     fontSize: 12,
                     fontWeight: 600,
@@ -2136,27 +2136,57 @@ export default function App() {
                   <ArrowLeft size={13} />
                   <span>Return to Video Brief</span>
                 </button>
-                {currentStep !== 'input' && (
-                  <button
-                    type="button"
-                    onClick={handleGoBack}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 14px',
-                      borderRadius: 6,
-                      backgroundColor: 'transparent',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-default)',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span>Previous Screen</span>
-                  </button>
-                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep('input');
+                    setCreationStep(1);
+                    setErrorMessage('');
+                    setQualityFailures([]);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '7px 14px',
+                    borderRadius: 6,
+                    backgroundColor: 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-default)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Edit3 size={13} />
+                  <span>Edit Brand Details</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleStartNewProject();
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '7px 14px',
+                    borderRadius: 6,
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-default)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Start Fresh Film</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -2164,7 +2194,7 @@ export default function App() {
                     setQualityFailures([]);
                   }}
                   style={{
-                    padding: '6px 12px',
+                    padding: '7px 12px',
                     borderRadius: 6,
                     backgroundColor: 'transparent',
                     color: 'var(--text-tertiary)',
@@ -2381,8 +2411,35 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ marginTop: 20, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
-              Elapsed Time: {elapsedTime}
+            <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+              <span style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                Elapsed Time: {elapsedTime}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  stopTimer();
+                  setIsBusy(false);
+                  setCurrentStep('input');
+                  setCreationStep(3);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <ArrowLeft size={13} />
+                <span>Cancel & Return to Editor</span>
+              </button>
             </div>
           </div>
         ) : isBusy ? (
@@ -2969,7 +3026,8 @@ export default function App() {
                       </button>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                        <span style={{ fontSize: 11, color: userContext.brief.trim().length >= 15 ? 'var(--success)' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {userContext.brief.trim().length >= 15 && <span>✓ Sufficient detail ·</span>}
                           {userContext.brief.length} characters
                         </span>
                         <button
@@ -4402,6 +4460,27 @@ export default function App() {
 
                 <button
                   type="button"
+                  onClick={handleGoBack}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '12px 18px',
+                    borderRadius: 8,
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                  <span>Back to Options</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsRawScriptMode(!isRawScriptMode)}
                   style={{
                     display: 'flex',
@@ -4543,8 +4622,34 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 20, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
-                  Elapsed GPU Time: {elapsedTime}
+                <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  <span style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-tertiary)' }}>
+                    Elapsed GPU Time: {elapsedTime}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopTimer();
+                      setIsRendering(false);
+                      setCurrentStep('storyboard');
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <ArrowLeft size={13} />
+                    <span>Return to Script Review</span>
+                  </button>
                 </div>
               </div>
             ) : videoUrl ? (
@@ -4754,7 +4859,75 @@ export default function App() {
                   </div>
                 )}
               </div>
-            ) : null}
+            ) : (
+              /* EMPTY RENDER STATE / RECOVERY */
+              <div
+                style={{
+                  maxWidth: 580,
+                  margin: '40px auto',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 14,
+                  padding: '36px 28px',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', backgroundColor: 'var(--accent-subtle)', color: 'var(--accent-primary)', marginBottom: 14 }}>
+                  <Film size={26} />
+                </div>
+                <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
+                  Ready to Produce Video
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
+                  {scenes.length > 0
+                    ? `Your ${scenes.length}-scene storyboard is approved and ready for GPU production.`
+                    : 'Start by providing your brand and creative brief to generate your film script.'}
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  {scenes.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep('storyboard')}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: 8,
+                        backgroundColor: 'var(--accent-primary)',
+                        color: '#ffffff',
+                        border: 'none',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <ArrowLeft size={14} />
+                      <span>Review Script & Storyboard</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep('input');
+                      setCreationStep(scenes.length > 0 ? 3 : 2);
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span>{scenes.length > 0 ? 'Edit Options' : 'Go to Brief'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         </>

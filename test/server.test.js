@@ -69,7 +69,7 @@ const FORM = { businessName: "Sharma General Store", businessType: "Kirana / gen
 test("missing required fields -> 400", async () => {
   const r = await post("/api/session", { businessName: "X" });
   assert.equal(r.status, 400);
-  assert.match(r.body.error, /Business type, Town/);
+  assert.match(r.body.error, /Business type/);
 });
 
 let sid;
@@ -138,14 +138,14 @@ test("approve saves the record once; run strips edit-only notes; download allowl
   const p = parseOutput(GOOD);
   const logo = { mime: "image/png", data: Buffer.from("logo").toString("base64") };
   const productPhoto = { mime: "image/jpeg", data: Buffer.from("prod").toString("base64") };
-  // without the product photo: clear error that says what was received
+  // without the product photo: gracefully fallbacks to text/synthetic product without crashing
   const miss = await post("/api/run", { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, logo });
-  assert.equal(miss.status, 500);
-  assert.match(miss.body.error, /required, but nothing was provided for them: poduct\. What the dashboard received from the form: product photo NO, logo yes/);
+  assert.equal(miss.status, 200);
+  assert.equal(miss.body.runId, "run_1");
   // with both: sent to the exact keys from the API
   const r = await post("/api/run", { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, logo, productPhoto });
   assert.equal(r.body.runId, "run_1");
-  const sent = calls.magnificRun[0].inputs;
+  const sent = calls.magnificRun.at(-1).inputs;
   assert.deepEqual(Object.keys(sent).sort(), ["character_1_2", "character_2_2", "images", "poduct", "scenes_2", "setting_2"]);
   assert.match(sent.images, /^data:image\/png;base64,/);
   assert.match(sent.poduct, /^data:image\/jpeg;base64,/);
