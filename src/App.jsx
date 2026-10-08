@@ -3997,7 +3997,7 @@ export default function App() {
                           <span>Target Film Duration</span>
                         </label>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          {['15s', '30s', '45s'].map((dur) => {
+                          {['15s', '20s', '30s', '45s'].map((dur) => {
                             const isSelected = (userContext.duration || '15s') === dur;
                             return (
                               <button
