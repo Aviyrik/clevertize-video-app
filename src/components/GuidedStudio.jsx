@@ -38,7 +38,8 @@ import {
   Download,
   Share2,
   CheckCircle2,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 
 /**
@@ -3002,14 +3003,60 @@ export function Screen08Video({
   errorMessage = '',
 }) {
   const [showVideoDetails, setShowVideoDetails] = useState(false);
+  const [showScriptPreview, setShowScriptPreview] = useState(false);
+  const [videoTipIdx, setVideoTipIdx] = useState(0);
 
-  // Friendly rendering progress stages
-  const renderStages = [
-    'Preparing your video…',
-    'Creating scenes…',
-    'Putting everything together…',
-    'Finishing your video…',
+  const videoProductionStages = [
+    {
+      title: 'Scene & Brand Calibration',
+      desc: 'Locking characters, continuous store setting, and brand anchors',
+      timeRange: '0–35s',
+    },
+    {
+      title: 'Neural Keyframe Synthesis',
+      desc: 'Generating visual anchors and camera framing for all 4 broadcast scenes',
+      timeRange: '35–95s',
+    },
+    {
+      title: 'Motion & Temporal Interpolation',
+      desc: 'Synthesizing cinematic camera moves, eye contact, and character continuity',
+      timeRange: '95–165s',
+    },
+    {
+      title: 'Audio Mastering & Broadcast Assembly',
+      desc: 'Synchronizing dialogue cadence, sound mix, and high-definition MP4 encoding',
+      timeRange: '165s+',
+    },
   ];
+
+  const videoProductionTips = [
+    'Character Continuity: Neural seed locks ensure actor faces, clothing, and shop details stay identical across every scene.',
+    'First 3-Second Retention: Fast visual hooks and immediate context stop users from swiping past your ad on social feeds.',
+    'Colloquial Realism: Conversational dialogue and eye contact make AI-generated commercials feel warm and natural.',
+    'Mobile Audio Mastering: Spoken frequencies are enhanced to remain crystal clear even on noisy smartphone speakers.',
+    'Continuous Setting: Using one consistent, well-lit store environment builds familiarity and long-term customer trust.',
+    'Broadcast Bitrate: Frames are encoded for maximum resolution with ultra-fast streaming playback on WhatsApp & Instagram.'
+  ];
+
+  const parseSeconds = (str) => {
+    if (!str || typeof str !== 'string') return 0;
+    const parts = str.split(':').map(Number);
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 0;
+  };
+
+  const elapsedSec = parseSeconds(elapsedTime);
+  const activeStageIdx = elapsedSec < 35 ? 0 : elapsedSec < 95 ? 1 : elapsedSec < 165 ? 2 : 3;
+
+  useEffect(() => {
+    if (!isRendering) return;
+    const t = setInterval(() => {
+      setVideoTipIdx((prev) => (prev + 1) % videoProductionTips.length);
+    }, 6000);
+    return () => clearInterval(t);
+  }, [isRendering]);
 
   if (isRendering) {
     return (
@@ -3017,54 +3064,252 @@ export function Screen08Video({
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-default)',
         borderRadius: 16,
-        padding: 40,
+        padding: '36px 28px',
         textAlign: 'center',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 18,
-        maxWidth: 600,
+        gap: 20,
+        maxWidth: 620,
         margin: '20px auto',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
       }}>
+        {/* Pulsing Cinematic Icon */}
         <div style={{
-          width: 60,
-          height: 60,
+          width: 64,
+          height: 64,
           borderRadius: '50%',
           backgroundColor: 'var(--bg-elevated)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '2px solid var(--accent-primary)'
+          border: '2px solid var(--accent-primary)',
+          boxShadow: '0 0 24px var(--accent-glow)'
         }}>
-          <Sparkles size={28} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+          <Film size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
         </div>
 
+        {/* Title & Subtitle */}
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            Making your video…
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            Producing your commercial…
           </h2>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            {renderStatusText || 'Creating scenes and assembling final broadcast cut…'}
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4, maxWidth: 500 }}>
+            {renderStatusText || `Rendering 4 broadcast-quality scenes for ${userContext.businessName || 'your business'} via neural production engine.`}
           </p>
         </div>
 
-        <div style={{
-          fontSize: 12,
-          fontFamily: "'JetBrains Mono', monospace",
-          color: 'var(--accent-primary)',
-          backgroundColor: 'var(--bg-elevated)',
-          padding: '4px 12px',
-          borderRadius: 20,
-          border: '1px solid var(--border-subtle)'
-        }}>
-          Elapsed: {elapsedTime}
+        {/* Time badges row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{
+            fontSize: 12,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: 'var(--accent-primary)',
+            backgroundColor: 'var(--bg-elevated)',
+            padding: '5px 14px',
+            borderRadius: 20,
+            border: '1px solid var(--border-subtle)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
+            Elapsed: {elapsedTime || '00:00'}
+          </div>
+
+          <div style={{
+            fontSize: 11,
+            color: 'var(--text-tertiary)',
+            backgroundColor: 'var(--bg-elevated)',
+            padding: '5px 12px',
+            borderRadius: 20,
+            border: '1px solid var(--border-subtle)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5
+          }}>
+            <span>Typical render: ~2–4 mins</span>
+          </div>
         </div>
 
-        <div style={{ width: '100%', maxWidth: 360, marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
-            Please keep this window open while the video renders.
+        {/* Dynamic 4-Stage Production Pipeline */}
+        <div style={{
+          width: '100%',
+          maxWidth: 520,
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 12,
+          padding: '16px 18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          textAlign: 'left'
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: -2 }}>
+            Neural Video Pipeline
           </div>
+          {videoProductionStages.map((s, idx) => {
+            const isDone = activeStageIdx > idx;
+            const isCurrent = activeStageIdx === idx;
+            return (
+              <div key={idx} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                opacity: isDone ? 0.7 : isCurrent ? 1 : 0.4,
+                transition: 'opacity 0.3s ease'
+              }}>
+                <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isDone ? 'rgba(16, 185, 129, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
+                  border: isDone ? '1px solid #10b981' : isCurrent ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  flexShrink: 0
+                }}>
+                  {isDone ? (
+                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                  ) : isCurrent ? (
+                    <RefreshCw size={12} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      {s.title}
+                    </div>
+                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {s.timeRange}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1, lineHeight: 1.3 }}>
+                    {s.desc}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Live Production Formula Snippet */}
+        <div style={{
+          width: '100%',
+          maxWidth: 520,
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 10,
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
+          fontSize: 11,
+          textAlign: 'left'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clapperboard size={13} style={{ color: 'var(--accent-primary)' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Rendering:</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userContext.businessName || 'Brand Film'}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-active)', color: 'var(--accent-primary)', fontWeight: 600 }}>
+              {userContext.creativeStyle || 'Storytelling'}
+            </span>
+            <span style={{ padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+              {userContext.language || 'English'}
+            </span>
+          </div>
+        </div>
+
+        {/* Rotating Filmmaking & AI Insight Card */}
+        <div style={{
+          width: '100%',
+          maxWidth: 520,
+          backgroundColor: 'rgba(59, 130, 246, 0.06)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: 10,
+          padding: '12px 14px',
+          textAlign: 'left',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'flex-start'
+        }}>
+          <Lightbulb size={16} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700, color: '#3b82f6' }}>Filmmaking Insight: </span>
+            {videoProductionTips[videoTipIdx]}
+          </div>
+        </div>
+
+        {/* Read Script While You Wait (Collapsible Accordion) */}
+        {scenes && scenes.length > 0 && (
+          <div style={{ width: '100%', maxWidth: 520 }}>
+            <button
+              type="button"
+              onClick={() => setShowScriptPreview(!showScriptPreview)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FileText size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>Read the 4 approved scenes while video renders</span>
+              </span>
+              {showScriptPreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {showScriptPreview && (
+              <div style={{
+                marginTop: 8,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                textAlign: 'left',
+                maxHeight: 240,
+                overflowY: 'auto',
+                paddingRight: 4
+              }}>
+                {scenes.map((sc, i) => (
+                  <div key={i} style={{
+                    padding: '8px 12px',
+                    backgroundColor: 'var(--bg-elevated)',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: 11
+                  }}>
+                    <div style={{ fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 2 }}>
+                      Scene {i + 1}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.3, maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {sc}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reassurance Footer */}
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 440, lineHeight: 1.4 }}>
+          ☕ Feel free to keep this tab open. Your finished video will automatically load and begin playing the moment generation completes.
         </div>
       </div>
     );

@@ -1087,3 +1087,12 @@ test('Creative Engine: Master Script Synthesis enforces UGC Section 6 and M13d E
   assert.ok(creativeSrc.includes('EYE-LINE RULE (Rule M13d)'), 'Prompt must explicitly require eye contact');
   assert.ok(creativeSrc.includes('sanitizeParsedScript'), 'Must sanitize parsed script immediately in synthesis loop');
 });
+
+test('Studio Stage 08 Video: Enhanced video production loading screen has pipeline, insights & script preview', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('videoProductionStages'), 'Must contain 4-stage video production pipeline');
+  assert.ok(guidedStudioSrc.includes('Neural Video Pipeline'), 'Must show pipeline label');
+  assert.ok(guidedStudioSrc.includes('videoProductionTips'), 'Must include rotating video production insights');
+  assert.ok(guidedStudioSrc.includes('Typical render: ~2–4 mins'), 'Must display realistic render duration');
+  assert.ok(guidedStudioSrc.includes('Read the 4 approved scenes while video renders'), 'Must provide interactive script accordion during render');
+});
