@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import {
+  ResearchInsightsBanner,
   CreativeDNABar,
   CreativePanelsWorkspace,
   SceneAIRewriteModal,
