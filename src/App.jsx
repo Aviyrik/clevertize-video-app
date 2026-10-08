@@ -4677,30 +4677,6 @@ export default function App() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setCurrentStep('input');
-                    setCreationStep(3);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '12px 18px',
-                    borderRadius: 8,
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <ArrowLeft size={14} />
-                  <span>Back to Options</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={handleGoBack}
                   style={{
                     display: 'flex',
@@ -4708,7 +4684,7 @@ export default function App() {
                     gap: 6,
                     padding: '12px 18px',
                     borderRadius: 8,
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'var(--bg-elevated)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-secondary)',
                     fontSize: 13,
