@@ -1096,3 +1096,22 @@ test('Studio Stage 08 Video: Enhanced video production loading screen has pipeli
   assert.ok(guidedStudioSrc.includes('Typical render: ~2–4 mins'), 'Must display realistic render duration');
   assert.ok(guidedStudioSrc.includes('Read the 4 approved scenes while video renders'), 'Must provide interactive script accordion during render');
 });
+
+test('Studio Stage 08 Video: Share button exists with clipboard copy and share sheet fallback', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('handleShareVideo'), 'Screen08Video must implement handleShareVideo');
+  assert.ok(guidedStudioSrc.includes('navigator.clipboard.writeText'), 'Must have clipboard writeText fallback');
+  assert.ok(guidedStudioSrc.includes('Link Copied!'), 'Must display Link Copied confirmation');
+  assert.ok(guidedStudioSrc.includes('<span>Share</span>'), 'Must display Share button label');
+});
+
+test('Studio Reset: New Film and Create Another Video restart process and open editable Business stage', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('setBrandResetKey((prev) => prev + 1)'), 'handleStartNewProject must increment brandResetKey');
+  assert.ok(appSrc.includes("setStudioStage('business')"), 'handleStartNewProject must reset studioStage to business');
+  assert.ok(appSrc.includes('autoEdit={brandResetKey > 0}'), 'App must pass autoEdit to Screen01Business when reset');
+
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('autoEdit = false'), 'Screen01Business must accept autoEdit prop');
+  assert.ok(guidedStudioSrc.includes('setIsEditingExisting(true)'), 'autoEdit must switch Screen01Business to editable mode');
+});

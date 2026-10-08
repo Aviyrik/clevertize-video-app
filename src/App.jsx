@@ -2088,20 +2088,15 @@ export default function App() {
     }
   };
 
-  // Clean Reset for New Ad Film Project (Preserves Brand Profile)
+  // Clean Reset for New Ad Film Project (Restarts from Beginning)
   const handleStartNewProject = () => {
-    const hasWorkInProgress = Boolean(
-      (userContext.brief && userContext.brief.trim().length > 0) ||
-      scenes.length > 0 ||
-      videoUrl
+    const confirmed = window.confirm(
+      'Start a new film from the beginning? This will restart the studio process.'
     );
+    if (!confirmed) return;
 
-    if (hasWorkInProgress) {
-      const confirmed = window.confirm(
-        'Start a new film? Your current brand profile will remain saved.'
-      );
-      if (!confirmed) return;
-    }
+    // Increment brandResetKey to force clean remount of Screen01Business
+    setBrandResetKey((prev) => prev + 1);
 
     // Reset film-specific explicit choices & creative pipeline
     setExplicitChoices({
@@ -2172,7 +2167,7 @@ export default function App() {
     setStudioStage('business');
     setCurrentStep('input');
     setCreationStep(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   // Safe Back Navigation to Previous Stage
@@ -2969,6 +2964,7 @@ export default function App() {
             updateUserContext={updateUserContext}
             handleFileUpload={handleFileUpload}
             BUSINESS_TYPES={BUSINESS_TYPE_PRESETS}
+            autoEdit={brandResetKey > 0}
             onContinue={() => {
               if (!userContext.businessName.trim()) {
                 setValidationError('Please enter your business or brand name.');

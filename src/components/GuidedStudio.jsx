@@ -262,21 +262,22 @@ export function Screen01Business({
   handleFileUpload,
   onContinue,
   BUSINESS_TYPES = [],
+  autoEdit = false,
 }) {
-  const [hasInitialBrand, setHasInitialBrand] = useState(() => Boolean(userContext.businessName?.trim()));
-  const [isEditingExisting, setIsEditingExisting] = useState(() => !Boolean(userContext.businessName?.trim()));
+  const [hasInitialBrand, setHasInitialBrand] = useState(() => !autoEdit && Boolean(userContext.businessName?.trim()));
+  const [isEditingExisting, setIsEditingExisting] = useState(() => autoEdit || !Boolean(userContext.businessName?.trim()));
   const [showOptionalFields, setShowOptionalFields] = useState(
     Boolean(userContext.specialty || userContext.offer)
   );
   const [errorMsg, setErrorMsg] = useState('');
 
-  // When businessName is cleared (e.g. via reset brand), immediately reveal fresh input form
+  // When businessName is cleared (e.g. via reset brand) or autoEdit is requested, immediately reveal input form
   React.useEffect(() => {
-    if (!userContext.businessName?.trim()) {
+    if (!userContext.businessName?.trim() || autoEdit) {
       setHasInitialBrand(false);
       setIsEditingExisting(true);
     }
-  }, [userContext.businessName]);
+  }, [userContext.businessName, autoEdit]);
 
   // Show Current Brand card ONLY if brand existed on mount, user hasn't chosen to edit, and name is non-empty
   const showCurrentBrandCard = Boolean(hasInitialBrand && !isEditingExisting && userContext.businessName?.trim());
@@ -3005,6 +3006,37 @@ export function Screen08Video({
   const [showVideoDetails, setShowVideoDetails] = useState(false);
   const [showScriptPreview, setShowScriptPreview] = useState(false);
   const [videoTipIdx, setVideoTipIdx] = useState(0);
+  const [hasCopiedShare, setHasCopiedShare] = useState(false);
+
+  const handleShareVideo = async () => {
+    if (!videoUrl) return;
+    const shareData = {
+      title: `${userContext.businessName || 'Clevertize'} Commercial`,
+      text: `Watch our commercial for ${userContext.businessName || 'our brand'} created with Clevertize!`,
+      url: videoUrl,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.warn('[share] navigator.share error:', err);
+        } else {
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(videoUrl);
+      setHasCopiedShare(true);
+      setTimeout(() => setHasCopiedShare(false), 2500);
+    } catch (err) {
+      console.warn('[share] clipboard error:', err);
+    }
+  };
 
   const videoProductionStages = [
     {
@@ -3372,13 +3404,48 @@ export function Screen08Video({
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
-              color: 'var(--text-primary)'
+              color: 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
             }}
           >
-            Create Another Video
+            <RotateCcw size={13} />
+            <span>Create Another Video</span>
           </button>
 
           <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              onClick={handleShareVideo}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {hasCopiedShare ? (
+                <>
+                  <Check size={14} style={{ color: 'var(--success)' }} />
+                  <span style={{ color: 'var(--success)' }}>Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 size={14} />
+                  <span>Share</span>
+                </>
+              )}
+            </button>
+
             <a
               href={videoUrl}
               download={`${userContext.businessName || 'clevertize'}-video.mp4`}
