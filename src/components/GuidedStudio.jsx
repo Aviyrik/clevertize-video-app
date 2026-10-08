@@ -149,21 +149,31 @@ export function StudioProgressHeader({
  * 2. YOUR CHOICES (Compact Persistent Strip)
  */
 export function StudioChoicesBar({
-  userContext = {},
-  creativeDNA = {},
+  explicitChoices = {},
   onNavigateStage,
   hasStaleWarning,
   onApplyUpdate,
 }) {
-  const { direction, hook, story } = creativeDNA || {};
-  const activeIdea = direction?.title;
-  const activeOpening = hook?.archetype || hook?.hookLine;
-  const activeStyle = userContext.creativeStyle || creativeDNA?.format || 'UGC / Creator';
-  const cleanStyle = activeStyle.includes('UGC') ? 'UGC' : activeStyle.includes('Demo') ? 'Product Demo' : activeStyle.includes('Comedy') ? 'Funny' : 'Story';
-  const activeLang = userContext.language || 'English';
+  const {
+    style,
+    language,
+    duration,
+    platform,
+    idea,
+    opening,
+  } = explicitChoices || {};
 
-  const hasAnyChoice = Boolean(activeIdea || activeOpening || activeStyle);
-  if (!hasAnyChoice) return null;
+  // Form list of active confirmed explicit choices
+  const activeChoices = [];
+  if (style) activeChoices.push({ type: 'style', label: style, stage: 'settings' });
+  if (language) activeChoices.push({ type: 'language', label: language, stage: 'settings' });
+  if (duration) activeChoices.push({ type: 'duration', label: duration, stage: 'settings' });
+  if (platform) activeChoices.push({ type: 'platform', label: platform, stage: 'settings' });
+  if (idea) activeChoices.push({ type: 'idea', label: idea, prefix: 'Idea', stage: 'idea' });
+  if (opening) activeChoices.push({ type: 'opening', label: opening, prefix: 'Opening', stage: 'opening' });
+
+  // STRICT RULE: If zero explicit choices, hide the entire strip!
+  if (activeChoices.length === 0) return null;
 
   return (
     <div style={{
@@ -184,93 +194,36 @@ export function StudioChoicesBar({
           <span>Your Choices:</span>
         </span>
 
-        {activeIdea && (
-          <button
-            type="button"
-            onClick={() => onNavigateStage('idea')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: '2px 8px',
-              borderRadius: 6,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: 11,
-              color: 'var(--text-primary)',
-              cursor: 'pointer'
-            }}
-          >
-            <span style={{ color: 'var(--text-tertiary)' }}>Idea:</span>
-            <strong style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeIdea}
-            </strong>
-          </button>
-        )}
-
-        {activeOpening && (
-          <button
-            type="button"
-            onClick={() => onNavigateStage('opening')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: '2px 8px',
-              borderRadius: 6,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: 11,
-              color: 'var(--text-primary)',
-              cursor: 'pointer'
-            }}
-          >
-            <span style={{ color: 'var(--text-tertiary)' }}>Opening:</span>
-            <strong style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeOpening}
-            </strong>
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => onNavigateStage('settings')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '2px 8px',
-            borderRadius: 6,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: 11,
-            color: 'var(--text-primary)',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ color: 'var(--text-tertiary)' }}>Style:</span>
-          <strong>{cleanStyle}</strong>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateStage('settings')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '2px 8px',
-            borderRadius: 6,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: 11,
-            color: 'var(--text-primary)',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ color: 'var(--text-tertiary)' }}>Lang:</span>
-          <strong>{activeLang}</strong>
-        </button>
+        {activeChoices.map((item, idx) => (
+          <React.Fragment key={item.type}>
+            <button
+              type="button"
+              onClick={() => onNavigateStage && onNavigateStage(item.stage)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 6,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 11,
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title={`Click to edit ${item.prefix || item.type}`}
+            >
+              {item.prefix && <span style={{ color: 'var(--text-tertiary)' }}>{item.prefix}:</span>}
+              <strong style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.label}
+              </strong>
+            </button>
+            {idx < activeChoices.length - 1 && (
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>·</span>
+            )}
+          </React.Fragment>
+        ))}
       </div>
 
       {hasStaleWarning && (
@@ -841,6 +794,8 @@ export function Screen03Settings({
   updateUserContext,
   onLanguageChange,
   onStyleChange,
+  onPlatformChange,
+  onDurationChange,
   onContinue,
   onBack,
 }) {
@@ -971,7 +926,10 @@ export function Screen03Settings({
                   <button
                     key={plat.id}
                     type="button"
-                    onClick={() => updateUserContext('platform', plat.id)}
+                    onClick={() => {
+                      if (onPlatformChange) onPlatformChange(plat.label, plat.id);
+                      else updateUserContext('platform', plat.id);
+                    }}
                     style={{
                       padding: '6px 12px',
                       borderRadius: 6,
@@ -1002,7 +960,10 @@ export function Screen03Settings({
                   <button
                     key={dur}
                     type="button"
-                    onClick={() => updateUserContext('targetDuration', dur)}
+                    onClick={() => {
+                      if (onDurationChange) onDurationChange(dur);
+                      else updateUserContext('targetDuration', dur);
+                    }}
                     style={{
                       padding: '6px 16px',
                       borderRadius: 6,
@@ -1043,7 +1004,7 @@ export function Screen03Settings({
                 <div
                   key={st.id}
                   onClick={() => {
-                    if (onStyleChange) onStyleChange(st.id);
+                    if (onStyleChange) onStyleChange(st.id, st.label);
                     else updateUserContext('creativeStyle', st.id);
                   }}
                   style={{

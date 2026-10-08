@@ -655,6 +655,39 @@ export default function App() {
     };
   }, []);
 
+  // Helper to isolate brand profile from film-specific ephemeral settings
+  const extractBrandProfile = (ctx) => {
+    if (!ctx) return {};
+    const {
+      businessName = '',
+      businessType = 'Saree, Ethnic Wear & Bridal Store',
+      customBusinessType = '',
+      town = '',
+      area = '',
+      websiteUrl = '',
+      specialty = '',
+      offer = '',
+      occasion = '',
+      contact = '',
+      ownerName = '',
+      scriptMode = 'devanagari',
+    } = ctx;
+    return {
+      businessName,
+      businessType,
+      customBusinessType,
+      town,
+      area,
+      websiteUrl,
+      specialty,
+      offer,
+      occasion,
+      contact,
+      ownerName,
+      scriptMode,
+    };
+  };
+
   // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
   const [userContext, setUserContext] = useState(() => {
     let base = {
@@ -688,11 +721,8 @@ export default function App() {
       const saved = localStorage.getItem('clevertize_user_context');
       if (saved) {
         const parsed = JSON.parse(saved);
-        const isExplicitLang = localStorage.getItem('clevertize_lang_explicit');
-        if (!isExplicitLang && parsed.language === 'Hindi') {
-          parsed.language = 'English';
-        }
-        base = { ...base, ...parsed };
+        const brandProfile = extractBrandProfile(parsed);
+        base = { ...base, ...brandProfile };
       }
     } catch {
       // fallback
@@ -709,9 +739,9 @@ export default function App() {
     setUserContext((prev) => {
       const next = { ...prev, [key]: val };
       try {
-        // Strip heavy base64 data from localStorage to stay well under browser 5MB storage limit
-        const { shopPhoto, productPhoto, logo, brandFile, ...meta } = next;
-        localStorage.setItem('clevertize_user_context', JSON.stringify(meta));
+        // Persist only clean Brand Profile to localStorage so film settings never bleed into new films
+        const brandProfile = extractBrandProfile(next);
+        localStorage.setItem('clevertize_user_context', JSON.stringify(brandProfile));
       } catch (err) {
         console.warn('LocalStorage save failed:', err);
       }
@@ -762,6 +792,16 @@ export default function App() {
   });
 
   const [hasStaleWarning, setHasStaleWarning] = useState(false);
+
+  // V4 Guided Studio: Explicit confirmed choices only (defaults are not choices!)
+  const [explicitChoices, setExplicitChoices] = useState({
+    style: null,
+    language: null,
+    platform: null,
+    duration: null,
+    idea: null,
+    opening: null,
+  });
 
   const markStageComplete = (stageId) => {
     setCompletedStages((prev) => (prev.includes(stageId) ? prev : [...prev, stageId]));
@@ -1394,6 +1434,7 @@ export default function App() {
     }));
     // Invalidate downstream script because format changed
     setGeneratedScript(null);
+    setHasStaleWarning(true);
     await loadStoryWorld(true, null, newFormat);
   };
 
@@ -2014,6 +2055,28 @@ export default function App() {
       if (!confirmed) return;
     }
 
+    // Reset film-specific explicit choices & creative pipeline
+    setExplicitChoices({
+      style: null,
+      language: null,
+      platform: null,
+      duration: null,
+      idea: null,
+      opening: null,
+    });
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setGeneratedScript(null);
+    setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+
     setSessionId(null);
     setDirectionData(null);
     setPlotData(null);
@@ -2031,20 +2094,25 @@ export default function App() {
     setIsEditingBrandInline(false);
     setHasStaleWarning(false);
 
-    // Reset film-specific inputs while preserving brand profile
+    // Reset film-specific inputs while strictly preserving brand profile
     setUserContext((prev) => {
+      const brand = extractBrandProfile(prev);
       const next = {
         ...prev,
+        ...brand,
         brief: '',
         productPhoto: null,
         leadCharacter: '',
         supportingCharacter: '',
         environment: '',
         selectedGoalId: 'offer',
+        creativeStyle: 'UGC / Creator-style',
+        language: 'English',
+        platform: 'Instagram Reels / 9:16',
+        duration: '15s',
       };
       try {
-        const { shopPhoto, productPhoto, logo, brandFile, ...meta } = next;
-        localStorage.setItem('clevertize_user_context', JSON.stringify(meta));
+        localStorage.setItem('clevertize_user_context', JSON.stringify(brand));
       } catch (err) {
         // ignore
       }
@@ -2139,9 +2207,31 @@ export default function App() {
       localStorage.removeItem('clevertize_user_context');
       localStorage.removeItem('clevertize_brand_name');
       localStorage.removeItem('clevertize_website_url');
+      localStorage.removeItem('clevertize_lang_explicit');
     } catch (e) {
       console.warn('Storage unavailable', e);
     }
+    setExplicitChoices({
+      style: null,
+      language: null,
+      platform: null,
+      duration: null,
+      idea: null,
+      opening: null,
+    });
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setGeneratedScript(null);
+    setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+
     setUserContext({
       businessName: '',
       businessType: 'Saree, Ethnic Wear & Bridal Store',
@@ -2175,6 +2265,7 @@ export default function App() {
     setStoryData(null);
     setScriptPayloadData(null);
     setScenes([]);
+    setShotSpec(null);
     setVideoUrl('');
     setApprovedSummary([]);
     setIsBrandModalOpen(false);
@@ -2444,8 +2535,7 @@ export default function App() {
           onNavigateStage={handleNavigateStage}
         />
         <StudioChoicesBar
-          userContext={userContext}
-          creativeDNA={creativeDNA}
+          explicitChoices={explicitChoices}
           onNavigateStage={handleNavigateStage}
           hasStaleWarning={hasStaleWarning}
           onApplyUpdate={handleApplyUpdate}
@@ -2863,9 +2953,23 @@ export default function App() {
           <Screen03Settings
             userContext={userContext}
             updateUserContext={updateUserContext}
-            onLanguageChange={handleLanguageChange}
-            onStyleChange={(st) => {
-              handleFormatChange(st);
+            onLanguageChange={(lang) => {
+              setExplicitChoices((prev) => ({ ...prev, language: lang }));
+              handleLanguageChange(lang);
+            }}
+            onStyleChange={(stId, stLabel) => {
+              const cleanLabel = stLabel || (stId.includes('UGC') ? 'UGC' : stId.includes('Story') ? 'Story' : stId.includes('Demo') ? 'Product Demo' : 'Funny');
+              setExplicitChoices((prev) => ({ ...prev, style: cleanLabel }));
+              handleFormatChange(stId);
+            }}
+            onPlatformChange={(platLabel, platId) => {
+              setExplicitChoices((prev) => ({ ...prev, platform: platLabel }));
+              updateUserContext('platform', platId);
+            }}
+            onDurationChange={(dur) => {
+              setExplicitChoices((prev) => ({ ...prev, duration: dur }));
+              updateUserContext('targetDuration', dur);
+              updateUserContext('duration', dur);
             }}
             onContinue={async () => {
               markStageComplete('settings');
@@ -2889,12 +2993,23 @@ export default function App() {
             setSelectedDirection={(d) => {
               setSelectedDirection(d);
               setCreativeDNA((prev) => ({ ...prev, direction: d }));
+              if (d?.title) {
+                setExplicitChoices((prev) => ({ ...prev, idea: d.title }));
+              }
               setHasStaleWarning(true);
             }}
             customDirection={customDirection}
             setCustomDirection={setCustomDirection}
             isLoadingDirections={isLoadingDirections}
             onContinue={async () => {
+              const activeD = selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0]);
+              if (activeD) {
+                if (!selectedDirection) {
+                  setSelectedDirection(activeD);
+                  setCreativeDNA((prev) => ({ ...prev, direction: activeD }));
+                }
+                setExplicitChoices((prev) => ({ ...prev, idea: activeD.title || customDirection }));
+              }
               markStageComplete('idea');
               setStudioStage('opening');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2916,12 +3031,24 @@ export default function App() {
             setSelectedHook={(h) => {
               setSelectedHook(h);
               setCreativeDNA((prev) => ({ ...prev, hook: h }));
+              const hookLabel = h?.archetype || h?.hookLine;
+              if (hookLabel) {
+                setExplicitChoices((prev) => ({ ...prev, opening: hookLabel }));
+              }
               setHasStaleWarning(true);
             }}
             customHook={customHook}
             setCustomHook={setCustomHook}
             isLoadingHooks={isLoadingHooks}
             onContinue={async () => {
+              const activeH = selectedHook || (customHook ? { hookLine: customHook, archetype: 'Custom Hook' } : hooksList.find((h) => h.recommended) || hooksList[0]);
+              if (activeH) {
+                if (!selectedHook) {
+                  setSelectedHook(activeH);
+                  setCreativeDNA((prev) => ({ ...prev, hook: activeH }));
+                }
+                setExplicitChoices((prev) => ({ ...prev, opening: activeH.archetype || activeH.hookLine || customHook }));
+              }
               markStageComplete('opening');
               setStudioStage('story');
               window.scrollTo({ top: 0, behavior: 'smooth' });
