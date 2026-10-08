@@ -44,6 +44,18 @@ function sectionOf(scene, label, next) {
   return m ? m[1] : "";
 }
 
+function formatMatches(hFormat, approved) {
+  if (!approved || !hFormat) return true;
+  const h = String(hFormat).toLowerCase().trim();
+  const a = String(approved).toLowerCase().trim();
+  if (h === a) return true;
+  if ((h.includes("ugc") || h.includes("creator")) && (a.includes("ugc") || a.includes("creator"))) return true;
+  if ((h.includes("story") || h.includes("storytelling")) && (a.includes("story") || a.includes("storytelling"))) return true;
+  if (h.includes("demo") && a.includes("demo")) return true;
+  if (h.includes("comedy") && a.includes("comedy")) return true;
+  return h.startsWith(a) || a.startsWith(h);
+}
+
 /**
  * parsed: output of parseOutput; f: validated form; opts: { scriptMode, previous }
  * Returns an array of failure strings (empty = pass).
@@ -57,8 +69,9 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
     if (!h[k]) fails.push(`Header is missing "${k[0].toUpperCase() + k.slice(1)}:".`);
   }
   const format = (h.format || "").toLowerCase();
-  if (h.format && !/^(ugc|storytelling)\b/.test(format)) fails.push(`Format must be UGC or Storytelling (VO-led is switched off); got "${h.format}".`);
-  if (approvedFormat && h.format && !format.startsWith(approvedFormat.toLowerCase())) fails.push(`Format "${h.format}" differs from the owner-approved format "${approvedFormat}" (Checkpoint 3).`);
+  const isValidFormat = /^(ugc|storytelling|demo|product demo|comedy|situational comedy)\b/.test(format);
+  if (h.format && !isValidFormat) fails.push(`Format must be UGC or Storytelling (VO-led is switched off); got "${h.format}".`);
+  if (approvedFormat && h.format && !formatMatches(format, approvedFormat)) fails.push(`Format "${h.format}" differs from the owner-approved format "${approvedFormat}" (Checkpoint 3).`);
 
   // context block
   for (const [k, v] of [["CHARACTER1", parsed.character1], ["CHARACTER2", parsed.character2]]) {
@@ -218,4 +231,4 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   return [...new Set(fails)];
 }
 
-module.exports = { runGate, speakerMatches };
+module.exports = { runGate, speakerMatches, formatMatches };

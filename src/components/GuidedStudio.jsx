@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Check,
@@ -1908,6 +1908,7 @@ export function Screen06Story({
   onContinue,
   onBack,
   isBusy = false,
+  elapsedTime = '00:00',
 }) {
   const [editingCard, setEditingCard] = useState(null);
   const [editLeadName, setEditLeadName] = useState('');
@@ -1920,6 +1921,41 @@ export function Screen06Story({
   const [newConstraint, setNewConstraint] = useState('');
   const [newAvoid, setNewAvoid] = useState('');
 
+  const [activeStepIdx, setActiveStepIdx] = useState(0);
+  const [tipIdx, setTipIdx] = useState(0);
+
+  const synthesisSteps = [
+    { label: 'Structuring 4-scene narrative arc', desc: 'Hook → Build → Turn → Resolution beat flow' },
+    { label: 'Writing spoken dialogue', desc: `Authentic conversational ${userContext.language || 'English'} without ad-speak` },
+    { label: 'Directing camera setups & scene blocking', desc: 'Calibrating shot sizes, angles & actor continuity' },
+    { label: 'Validating Section 8 Quality Gate', desc: 'Verifying hook retention, pace, and commercial broadcast standards' },
+  ];
+
+  const filmmakingTips = [
+    'The first 3 seconds decide whether someone stops scrolling or keeps swiping.',
+    'A clear emotional dilemma in Scene 2 makes the brand payoff in Scene 4 feel truly earned.',
+    'Conversational colloquial lines convert 3x better than generic promotional claims.',
+    'Varying camera angles across cuts keeps viewers visually engaged until the final CTA.',
+    'Authentic local context creates instant familiarity and trust with your audience.'
+  ];
+
+  useEffect(() => {
+    if (!isBusy) {
+      setActiveStepIdx(0);
+      return;
+    }
+    const stepTimer = setInterval(() => {
+      setActiveStepIdx((prev) => (prev < synthesisSteps.length - 1 ? prev + 1 : prev));
+    }, 4000);
+    const tipTimer = setInterval(() => {
+      setTipIdx((prev) => (prev + 1) % filmmakingTips.length);
+    }, 5000);
+    return () => {
+      clearInterval(stepTimer);
+      clearInterval(tipTimer);
+    };
+  }, [isBusy]);
+
   const beats = storyWorldData?.beats || [];
   const beatStages = [
     { key: 'START', label: 'START', color: '#3b82f6' },
@@ -1929,6 +1965,148 @@ export function Screen06Story({
   ];
 
   const dur = parseInt(userContext.targetDuration, 10) || 20;
+
+  if (isBusy) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 16,
+        padding: '36px 28px',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 20,
+        maxWidth: 580,
+        margin: '20px auto',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
+      }}>
+        {/* Animated Icon */}
+        <div style={{
+          width: 64,
+          height: 64,
+          borderRadius: '50%',
+          backgroundColor: 'var(--bg-elevated)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '2px solid var(--accent-primary)',
+          boxShadow: '0 0 20px var(--accent-glow)'
+        }}>
+          <Sparkles size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+        </div>
+
+        {/* Title & Subtitle */}
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            Writing and polishing your script…
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+            Directing 4 broadcast-ready scenes with spoken dialogue and camera setups for {userContext.businessName || 'your brand'}.
+          </p>
+        </div>
+
+        {/* Stopwatch badge */}
+        <div style={{
+          fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace",
+          color: 'var(--accent-primary)',
+          backgroundColor: 'var(--bg-elevated)',
+          padding: '5px 14px',
+          borderRadius: 20,
+          border: '1px solid var(--border-subtle)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6
+        }}>
+          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
+          Elapsed: {elapsedTime || '00:00'}
+        </div>
+
+        {/* Dynamic Pipeline Steps */}
+        <div style={{
+          width: '100%',
+          maxWidth: 480,
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 12,
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          textAlign: 'left'
+        }}>
+          {synthesisSteps.map((s, idx) => {
+            const isDone = activeStepIdx > idx;
+            const isCurrent = activeStepIdx === idx;
+            return (
+              <div key={idx} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                opacity: isDone ? 0.7 : isCurrent ? 1 : 0.4,
+                transition: 'opacity 0.3s ease'
+              }}>
+                <div style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isDone ? 'rgba(16, 185, 129, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
+                  border: isDone ? '1px solid #10b981' : isCurrent ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  flexShrink: 0
+                }}>
+                  {isDone ? (
+                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                  ) : isCurrent ? (
+                    <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+                  ) : (
+                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                    {s.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {s.desc}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Creative Filmmaking Tip */}
+        <div style={{
+          width: '100%',
+          maxWidth: 480,
+          backgroundColor: 'rgba(59, 130, 246, 0.06)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: 10,
+          padding: '12px 14px',
+          textAlign: 'left',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'flex-start'
+        }}>
+          <Lightbulb size={16} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700, color: '#3b82f6' }}>Filmmaking Tip: </span>
+            {filmmakingTips[tipIdx]}
+          </div>
+        </div>
+
+        {/* Reassurance footer */}
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+          Running multi-pass script synthesis and quality gate verification (~15–25s)
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -2365,6 +2543,7 @@ export function Screen07Script({
   onTryAnotherVersion,
   onOpenRewriteModal,
   isBusy = false,
+  elapsedTime = '00:00',
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
@@ -2373,6 +2552,58 @@ export function Screen07Script({
   const duration = userContext.targetDuration || '20s';
   const platform = (userContext.platform || 'Instagram').split('/')[0].trim();
   const lang = userContext.language || 'English';
+
+  if (isBusy && (!scenes || scenes.length === 0)) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 16,
+        padding: '36px 28px',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 20,
+        maxWidth: 580,
+        margin: '20px auto',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
+      }}>
+        <div style={{
+          width: 64,
+          height: 64,
+          borderRadius: '50%',
+          backgroundColor: 'var(--bg-elevated)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '2px solid var(--accent-primary)',
+          boxShadow: '0 0 20px var(--accent-glow)'
+        }}>
+          <Sparkles size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+        </div>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            Writing and polishing your script…
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+            Directing 4 broadcast-ready scenes with spoken dialogue and camera setups for {userContext.businessName || 'your brand'}.
+          </p>
+        </div>
+        <div style={{
+          fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace",
+          color: 'var(--accent-primary)',
+          backgroundColor: 'var(--bg-elevated)',
+          padding: '5px 14px',
+          borderRadius: 20,
+          border: '1px solid var(--border-subtle)'
+        }}>
+          Elapsed: {elapsedTime || '00:00'}
+        </div>
+      </div>
+    );
+  }
 
   const parseSceneData = (rawText, idx) => {
     // Extract dialogue and visual

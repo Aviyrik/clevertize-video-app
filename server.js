@@ -501,7 +501,7 @@ app.post("/api/creative/synthesize-script", async (req, res) => {
     res.json(result);
   } catch (e) {
     console.error("[api/creative/synthesize-script]", e.message);
-    res.status(e.status || 500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message, failures: e.failures || [] });
   }
 });
 

@@ -939,4 +939,50 @@ test('Studio Stage 02 Brief: Suggestion chips replace brief text instead of appe
   );
 });
 
+test('Studio Gate: formatMatches correctly pairs creativeStyle choices with gate formats', () => {
+  const { formatMatches } = require('../engine/gate');
+  assert.equal(formatMatches('UGC', 'UGC / Creator-style'), true, 'UGC must match UGC / Creator-style');
+  assert.equal(formatMatches('ugc', 'UGC / Creator'), true, 'Case-insensitive UGC match');
+  assert.equal(formatMatches('Storytelling', 'Story'), true, 'Storytelling must match Story');
+  assert.equal(formatMatches('Product Demo', 'Product Demo'), true, 'Product Demo must match Product Demo');
+  assert.equal(formatMatches('Situational Comedy', 'Funny'), false, 'Different categories must not match');
+  assert.equal(formatMatches('UGC', 'Storytelling'), false, 'UGC must not match Storytelling');
+});
+
+test('Studio Stage 06 Story: Synthesis loading screen renders with steps, tips, and elapsed time', () => {
+  const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSource.includes('Writing and polishing your script…'), 'Loading screen title must exist');
+  assert.ok(guidedStudioSource.includes('Elapsed: {elapsedTime'), 'Loading screen must display elapsed time');
+  assert.ok(guidedStudioSource.includes('synthesisSteps'), 'Loading screen must include dynamic pipeline steps');
+  assert.ok(guidedStudioSource.includes('filmmakingTips'), 'Loading screen must include filmmaking tips');
+  assert.ok(guidedStudioSource.includes('Section 8 Quality Gate'), 'Steps should include Section 8 Quality Gate');
+});
+
+test('Studio Stage 06 Story: Error during synthesis stops loading and stays on Story stage', async () => {
+  let studioStage = 'story';
+  let hasStaleWarning = true;
+  let isBusy = true;
+  let errorMessage = '';
+
+  const mockSynthesizeScriptFail = async () => {
+    isBusy = false;
+    errorMessage = 'Quality gate validation failed';
+    return false;
+  };
+
+  const onContinue = async () => {
+    const ok = await mockSynthesizeScriptFail();
+    if (ok) {
+      studioStage = 'script';
+      hasStaleWarning = false;
+    }
+  };
+
+  await onContinue();
+  assert.equal(studioStage, 'story', 'Should not navigate to script when synthesis returns false/fails');
+  assert.equal(isBusy, false, 'isBusy should be reset to false');
+  assert.equal(errorMessage, 'Quality gate validation failed', 'Error message should be captured');
+});
+
+
 

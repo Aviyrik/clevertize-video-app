@@ -1524,12 +1524,14 @@ export default function App() {
       setIsBusy(false);
       setCurrentStep('storyboard');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
     } catch (err) {
       stopTimer();
       setIsBusy(false);
       setCurrentStep('input');
       setCreationStep(3);
       setErrorMessage(err.message || 'Error occurred while synthesizing master script.');
+      return false;
     }
   };
 
@@ -3141,12 +3143,15 @@ export default function App() {
             avoidList={avoidList}
             setAvoidList={setAvoidList}
             isBusy={isBusy}
+            elapsedTime={elapsedTime}
             onContinue={async () => {
               markStageComplete('story');
-              await handleSynthesizeMasterScript();
-              setStudioStage('script');
-              setHasStaleWarning(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              const ok = await handleSynthesizeMasterScript();
+              if (ok) {
+                setStudioStage('script');
+                setHasStaleWarning(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
             }}
             onBack={() => {
               setStudioStage('opening');
@@ -3164,6 +3169,7 @@ export default function App() {
             character2={character2}
             userContext={userContext}
             isBusy={isBusy}
+            elapsedTime={elapsedTime}
             onApproveScript={() => {
               markStageComplete('script');
               setStudioStage('video');
