@@ -374,3 +374,41 @@ test("H: preflight catches empty scenes or missing setting immediately", () => {
   );
 });
 
+test("I: buildUserContent without town marks brand as universal / location-independent", () => {
+  const { buildUserContent } = require("../engine/prompt");
+  const content = buildUserContent(
+    {
+      businessName: "Global Kitchens",
+      businessType: "Modular Kitchen",
+      town: "",
+      language: "English",
+    },
+    { source: "seed", checked: "x", moments: [] },
+    [],
+    "2026-10-08",
+    "direction"
+  );
+  const text = content.map((c) => c.text).join("\n");
+  assert.match(text, /Universal brand/);
+  assert.match(text, /video production does not depend on any specific city/);
+});
+
+test("J: buildUserContent with town provides optional contextual guide without force-fitting", () => {
+  const { buildUserContent } = require("../engine/prompt");
+  const content = buildUserContent(
+    {
+      businessName: "Kanti Sweets",
+      businessType: "Sweet shop",
+      town: "Bangalore",
+      language: "Hindi",
+    },
+    { source: "seed", checked: "x", moments: [] },
+    [],
+    "2026-10-08",
+    "direction"
+  );
+  const text = content.map((c) => c.text).join("\n");
+  assert.match(text, /Bangalore/);
+  assert.match(text, /DO NOT force-fit city names/);
+});
+

@@ -395,7 +395,7 @@ export default function App() {
       businessName: '',
       businessType: 'Sweet shop / bakery',
       customBusinessType: '',
-      town: 'Bangalore',
+      town: '',
       area: '',
       brief: '',
       specialty: '',
@@ -784,7 +784,7 @@ export default function App() {
     return {
       businessName: userContext.businessName.trim(),
       businessType: bType || 'Retail Store',
-      town: userContext.town.trim() || 'Metro',
+      town: userContext.town?.trim() || '',
       language: userContext.language || 'Hindi',
       duration: targetDur,
       platform: userContext.platform || 'Instagram Reels / 9:16',
@@ -809,10 +809,6 @@ export default function App() {
   const handleStartCreativeEngine = async () => {
     if (!userContext.businessName.trim()) {
       setValidationError('Please enter your business or brand name.');
-      return;
-    }
-    if (!userContext.town.trim()) {
-      setValidationError('Please enter your town or city (e.g. Bangalore, Indore, Mumbai).');
       return;
     }
     if (!userContext.brief.trim() && !userContext.specialty.trim()) {
@@ -1070,10 +1066,6 @@ export default function App() {
   const handleGenerateVideo = async (options = { previewOnly: false }) => {
     if (!userContext.businessName.trim()) {
       setValidationError('Please enter your business or brand name.');
-      return;
-    }
-    if (!userContext.town.trim()) {
-      setValidationError('Please enter your town or city (e.g. Bangalore, Indore, Mumbai).');
       return;
     }
     if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
@@ -1384,7 +1376,7 @@ export default function App() {
       businessName: '',
       businessType: 'Sweet shop / bakery',
       customBusinessType: '',
-      town: 'Bangalore',
+      town: '',
       area: '',
       brief: '',
       specialty: '',
@@ -1901,13 +1893,13 @@ export default function App() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Town / City
+                    Town / City <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
                   </label>
                   <input
                     type="text"
                     value={userContext.town}
                     onChange={(e) => updateUserContext('town', e.target.value)}
-                    placeholder="e.g. Bangalore, Indore, Mumbai"
+                    placeholder="e.g. Bangalore, Mumbai (leave blank if global)"
                     style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                   />
                 </div>
@@ -2630,8 +2622,8 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                          Town / City <span style={{ color: 'var(--error)' }}>*</span>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          Town / City <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
                         </label>
                         <input
                           type="text"
@@ -2640,7 +2632,7 @@ export default function App() {
                             updateUserContext('town', e.target.value);
                             setValidationError('');
                           }}
-                          placeholder="e.g. Bangalore, Indore, Mumbai"
+                          placeholder="e.g. Bangalore, Mumbai (leave blank if global/national)"
                           style={{ width: '100%', padding: '10px 12px', fontSize: 13, backgroundColor: 'var(--bg-elevated)' }}
                         />
                       </div>
@@ -2719,10 +2711,6 @@ export default function App() {
                             setValidationError('Please enter your business or brand name.');
                             return;
                           }
-                          if (!userContext.town.trim()) {
-                            setValidationError('Please enter your town or city.');
-                            return;
-                          }
                           setValidationError('');
                           setCreationStep(2);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2786,9 +2774,11 @@ export default function App() {
                           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                             {userContext.businessName}
                           </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            · {userContext.town}{userContext.area ? `, ${userContext.area}` : ''}
-                          </span>
+                          {(userContext.town || userContext.area) && (
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                              · {[userContext.town, userContext.area].filter(Boolean).join(', ')}
+                            </span>
+                          )}
                           <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)' }}>
                             {userContext.businessType === 'Other' && userContext.customBusinessType ? userContext.customBusinessType : userContext.businessType}
                           </span>

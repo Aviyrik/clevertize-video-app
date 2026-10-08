@@ -63,12 +63,15 @@ function buildUserContent(f, fest, previous, today, stageText = STAGE_FALLBACK) 
   }
 
   const v = (x, d) => (x && String(x).trim()) || d;
+  const townDirective = (f.town && String(f.town).trim())
+    ? `${String(f.town).trim()} (Optional context: if natural, let the characters, subtle ambiance, and setting feel authentically suited to this place, but DO NOT force-fit city names, local clichés, or regional stereotypes)`
+    : "(Not specified / Universal brand: video production does not depend on any specific city; keep characters, environment, and story universally relatable)";
   const form = [
     `BUSINESS_NAME: ${f.businessName}`,
     `BUSINESS_TYPE: ${f.businessType}`,
-    `TOWN: ${f.town}`,
+    `TOWN: ${townDirective}`,
     `LANGUAGE: ${f.language}`,
-    `AREA: ${v(f.area, "(blank — use the default)")}`,
+    `AREA: ${v(f.area, "(blank — no specific neighborhood)")}`,
     `SPECIALTY: ${v(f.specialty, "(blank — use the default)")}`,
     `OFFER: ${v(f.offer, "(blank — no offer; sell the business itself)")}`,
     `OCCASION: ${v(f.occasion, "(blank — decide via the festival section)")}`,

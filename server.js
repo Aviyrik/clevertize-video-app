@@ -79,7 +79,7 @@ function validateForm(b) {
     productName: s(b.productName),
     brief: s(b.brief),
   };
-  const missing = [["businessName", "Business name"], ["businessType", "Business type"], ["town", "Town"]]
+  const missing = [["businessName", "Business name"], ["businessType", "Business type"]]
     .filter(([k]) => !f[k]).map(([, l]) => l);
   if (missing.length) throw Object.assign(new Error(`Please fill in: ${missing.join(", ")}`), { status: 400 });
   f.shopPhoto = cleanImage(b.shopPhoto, "Shop photo");
