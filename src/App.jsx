@@ -935,6 +935,7 @@ export default function App() {
   const [storyData, setStoryData] = useState(null); // { format, format_owner, core_idea, through_line, location, characters, scenes, hook_line, visual_world, ending }
 
   const [scriptPayloadData, setScriptPayloadData] = useState(null); // { header, character1, character2, setting, scenes, record, endFrame, meta }
+  const [generatedScript, setGeneratedScript] = useState(null);
 
   // Approved Summary History for breadcrumb context
   const [approvedSummary, setApprovedSummary] = useState([]);
@@ -1533,6 +1534,7 @@ export default function App() {
       }
 
       setScriptPayloadData(data);
+      setGeneratedScript(data);
       setCharacter1(data.character1 || '');
       setCharacter2(data.character2 || '');
       setSetting(data.setting || '');
@@ -2104,86 +2106,101 @@ export default function App() {
   };
 
   const handleExecuteNewProject = (clearBrand = false) => {
-    setIsNewFilmConfirmOpen(false);
-    setBrandResetKey((prev) => prev + 1);
+    try {
+      setIsNewFilmConfirmOpen(false);
+      setBrandResetKey((prev) => prev + 1);
 
-    // Reset film-specific explicit choices & creative pipeline
-    setExplicitChoices({
-      style: null,
-      language: null,
-      platform: null,
-      duration: null,
-      idea: null,
-      opening: null,
-    });
-    setDirectionsList([]);
-    setSelectedDirection(null);
-    setCustomDirection('');
-    setHooksList([]);
-    loadedHooksDirectionKeyRef.current = '';
-    setSelectedHook(null);
-    setCustomHook('');
-    setPlotsList([]);
-    setSelectedPlot(null);
-    setCustomPlot('');
-    setStoryWorldData(null);
-    setConstraintsList([]);
-    setAvoidList([]);
-    setGeneratedScript(null);
-    setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+      // Reset film-specific explicit choices & creative pipeline
+      setExplicitChoices({
+        style: null,
+        language: null,
+        platform: null,
+        duration: null,
+        idea: null,
+        opening: null,
+      });
+      setDirectionsList([]);
+      setSelectedDirection(null);
+      setCustomDirection('');
+      setHooksList([]);
+      if (loadedHooksDirectionKeyRef) loadedHooksDirectionKeyRef.current = '';
+      setSelectedHook(null);
+      setCustomHook('');
+      setPlotsList([]);
+      setSelectedPlot(null);
+      setCustomPlot('');
+      setStoryWorldData(null);
+      setConstraintsList([]);
+      setAvoidList([]);
+      setGeneratedScript(null);
+      setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
 
-    setSessionId(null);
-    setDirectionData(null);
-    setPlotData(null);
-    setStoryData(null);
-    setScriptPayloadData(null);
-    setScenes([]);
-    setShotSpec(null);
-    setVideoUrl('');
-    setApprovedSummary([]);
-    setErrorMessage('');
-    setValidationError('');
-    setQualityFailures([]);
-    setIsRendering(false);
-    setIsBusy(false);
-    setIsEditingBrandInline(false);
-    setHasStaleWarning(false);
+      setSessionId(null);
+      setDirectionData(null);
+      setPlotData(null);
+      setStoryData(null);
+      setScriptPayloadData(null);
+      setScenes([]);
+      setShotSpec(null);
+      setVideoUrl('');
+      setApprovedSummary([]);
+      setErrorMessage('');
+      setValidationError('');
+      setQualityFailures([]);
+      setIsRendering(false);
+      setIsBusy(false);
+      setIsEditingBrandInline(false);
+      setHasStaleWarning(false);
 
-    // Reset film-specific inputs while strictly preserving brand profile (or clearing if requested)
-    setUserContext((prev) => {
-      const brand = clearBrand ? {} : extractBrandProfile(prev);
-      const next = {
-        ...prev,
-        ...(clearBrand ? { businessName: '', businessType: 'Retail Store', town: '', websiteUrl: '', logo: null } : brand),
-        brief: '',
-        productPhoto: null,
-        leadCharacter: '',
-        supportingCharacter: '',
-        environment: '',
-        selectedGoalId: 'offer',
-        creativeStyle: 'UGC / Creator-style',
-        language: 'English',
-        platform: 'Instagram Reels / 9:16',
-        duration: '15s',
-        specialty: '',
-        offer: '',
-      };
+      // Reset film-specific inputs while strictly preserving brand profile (or clearing if requested)
+      setUserContext((prev) => {
+        const brand = clearBrand ? {} : (typeof extractBrandProfile === 'function' ? extractBrandProfile(prev) : {});
+        const next = {
+          ...prev,
+          ...(clearBrand ? { businessName: '', businessType: 'Retail Store', town: '', websiteUrl: '', logo: null } : brand),
+          brief: '',
+          productPhoto: null,
+          leadCharacter: '',
+          supportingCharacter: '',
+          environment: '',
+          selectedGoalId: 'offer',
+          creativeStyle: 'UGC / Creator-style',
+          language: 'English',
+          platform: 'Instagram Reels / 9:16',
+          duration: '15s',
+          specialty: '',
+          offer: '',
+        };
+        try {
+          localStorage.setItem('clevertize_user_context', JSON.stringify(clearBrand ? {} : brand));
+        } catch (err) {
+          // ignore
+        }
+        return next;
+      });
+
+      setCompletedStages([]);
+      setStudioStage('business');
+      setCurrentStep('input');
+      setCreationStep(1);
       try {
-        localStorage.setItem('clevertize_user_context', JSON.stringify(clearBrand ? {} : brand));
-      } catch (err) {
-        // ignore
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        window.scrollTo(0, 0);
       }
-      return next;
-    });
 
-    setCompletedStages([]);
-    setStudioStage('business');
-    setCurrentStep('input');
-    setCreationStep(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    setToastMessage('✨ Fresh film project started!');
-    setTimeout(() => setToastMessage(''), 3500);
+      setToastMessage('✨ Fresh film project started!');
+      setTimeout(() => setToastMessage(''), 3500);
+    } catch (err) {
+      console.error('[NewFilm] Error in handleExecuteNewProject:', err);
+      setIsNewFilmConfirmOpen(false);
+      setStudioStage('business');
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
+    }
   };
 
   // Safe Back Navigation to Previous Stage
@@ -3387,7 +3404,11 @@ export default function App() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
                 <button
                   type="button"
-                  onClick={() => setIsNewFilmConfirmOpen(false)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsNewFilmConfirmOpen(false);
+                  }}
                   style={{
                     padding: '8px 16px',
                     borderRadius: 6,
@@ -3403,7 +3424,11 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleExecuteNewProject(false)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExecuteNewProject(false);
+                  }}
                   style={{
                     padding: '8px 18px',
                     borderRadius: 6,
@@ -3419,8 +3444,8 @@ export default function App() {
                     boxShadow: '0 2px 8px var(--accent-glow)',
                   }}
                 >
-                  <RotateCcw size={14} />
-                  <span>Start New Film</span>
+                  <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
+                  <span style={{ pointerEvents: 'none' }}>Start New Film</span>
                 </button>
               </div>
             </div>
