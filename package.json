@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test test/engine.test.js"
+    "test": "node --test test/engine.test.js test/server.test.js test/creative.test.js test/studio.test.js"
   },
   "dependencies": {
     "@astryxdesign/cli": "^0.6.5",
