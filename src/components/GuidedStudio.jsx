@@ -266,9 +266,6 @@ export function Screen01Business({
 }) {
   const [hasInitialBrand, setHasInitialBrand] = useState(() => !autoEdit && Boolean(userContext.businessName?.trim()));
   const [isEditingExisting, setIsEditingExisting] = useState(() => autoEdit || !Boolean(userContext.businessName?.trim()));
-  const [showOptionalFields, setShowOptionalFields] = useState(
-    Boolean(userContext.specialty || userContext.offer)
-  );
   const [errorMsg, setErrorMsg] = useState('');
 
   // When businessName is cleared (e.g. via reset brand) or autoEdit is requested, immediately reveal input form
@@ -594,73 +591,6 @@ export function Screen01Business({
             )}
           </div>
 
-          {/* Optional: Add product or offer toggle */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowOptionalFields(!showOptionalFields)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--accent-primary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: 0
-              }}
-            >
-              {showOptionalFields ? <ChevronUp size={14} /> : <Plus size={14} />}
-              <span>{showOptionalFields ? 'Hide product or offer' : 'Add product or offer (optional)'}</span>
-            </button>
-
-            {showOptionalFields && (
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12, paddingLeft: 4 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Featured Product / Service
-                  </label>
-                  <input
-                    type="text"
-                    value={userContext.specialty || ''}
-                    onChange={(e) => updateUserContext('specialty', e.target.value)}
-                    placeholder="e.g. Pure Desi Ghee Festive Hampers"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid var(--border-default)',
-                      fontSize: 12,
-                      backgroundColor: 'var(--bg-elevated)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Special Offer / Promotion
-                  </label>
-                  <input
-                    type="text"
-                    value={userContext.offer || ''}
-                    onChange={(e) => updateUserContext('offer', e.target.value)}
-                    placeholder="e.g. Flat 15% discount on corporate pre-orders"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid var(--border-default)',
-                      fontSize: 12,
-                      backgroundColor: 'var(--bg-elevated)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       )}
 

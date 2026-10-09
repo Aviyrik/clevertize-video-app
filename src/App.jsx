@@ -976,6 +976,8 @@ export default function App() {
   const [renderTipIndex, setRenderTipIndex] = useState(0);
   const [renderStatusText, setRenderStatusText] = useState('Initializing video render pipeline…');
   const [shareStatus, setShareStatus] = useState('');
+  const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // General UI errors & modals
   const [errorMessage, setErrorMessage] = useState('');
@@ -2092,14 +2094,17 @@ export default function App() {
     }
   };
 
-  // Clean Reset for New Ad Film Project (Restarts from Beginning)
-  const handleStartNewProject = () => {
-    const confirmed = window.confirm(
-      'Start a new film from the beginning? This will restart the studio process.'
-    );
-    if (!confirmed) return;
+  // Trigger New Film Flow: Open in-app confirmation modal (or execute if bypassed)
+  const handleStartNewProject = (bypassConfirm = false) => {
+    if (bypassConfirm === true) {
+      handleExecuteNewProject(false);
+      return;
+    }
+    setIsNewFilmConfirmOpen(true);
+  };
 
-    // Increment brandResetKey to force clean remount of Screen01Business
+  const handleExecuteNewProject = (clearBrand = false) => {
+    setIsNewFilmConfirmOpen(false);
     setBrandResetKey((prev) => prev + 1);
 
     // Reset film-specific explicit choices & creative pipeline
@@ -2144,12 +2149,12 @@ export default function App() {
     setIsEditingBrandInline(false);
     setHasStaleWarning(false);
 
-    // Reset film-specific inputs while strictly preserving brand profile
+    // Reset film-specific inputs while strictly preserving brand profile (or clearing if requested)
     setUserContext((prev) => {
-      const brand = extractBrandProfile(prev);
+      const brand = clearBrand ? {} : extractBrandProfile(prev);
       const next = {
         ...prev,
-        ...brand,
+        ...(clearBrand ? { businessName: '', businessType: 'Retail Store', town: '', websiteUrl: '', logo: null } : brand),
         brief: '',
         productPhoto: null,
         leadCharacter: '',
@@ -2160,9 +2165,11 @@ export default function App() {
         language: 'English',
         platform: 'Instagram Reels / 9:16',
         duration: '15s',
+        specialty: '',
+        offer: '',
       };
       try {
-        localStorage.setItem('clevertize_user_context', JSON.stringify(brand));
+        localStorage.setItem('clevertize_user_context', JSON.stringify(clearBrand ? {} : brand));
       } catch (err) {
         // ignore
       }
@@ -2173,7 +2180,10 @@ export default function App() {
     setStudioStage('business');
     setCurrentStep('input');
     setCreationStep(1);
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    setToastMessage('✨ Fresh film project started!');
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   // Safe Back Navigation to Previous Stage
@@ -3290,6 +3300,158 @@ export default function App() {
           onApplyRewrite={handleApplySceneRewrite}
           isRewriting={isRewritingScene}
         />
+
+        {/* New Film Confirmation Modal */}
+        {isNewFilmConfirmOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: 20,
+            }}
+            onClick={() => setIsNewFilmConfirmOpen(false)}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 12,
+                maxWidth: 480,
+                width: '100%',
+                padding: 24,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      backgroundColor: 'var(--accent-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--accent-primary)',
+                    }}
+                  >
+                    <RotateCcw size={18} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Start a New Film?
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsNewFilmConfirmOpen(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
+                </p>
+                {userContext.businessName ? (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: 12,
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    <span>
+                      Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsNewFilmConfirmOpen(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExecuteNewProject(false)}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 6,
+                    backgroundColor: 'var(--accent-primary)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 2px 8px var(--accent-glow)',
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  <span>Start New Film</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Toast Notification */}
+        {toastMessage && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 24,
+              right: 24,
+              zIndex: 9999,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--accent-primary)',
+              color: 'var(--text-primary)',
+              padding: '12px 20px',
+              borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </main>
     </div>
   );
