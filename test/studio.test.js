@@ -1753,8 +1753,11 @@ test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wiza
   assert.ok(obSrc.includes('Jewellery & Luxury'), 'Must include jewellery card');
   assert.ok(obSrc.includes('Kirana & Supermarket'), 'Must include grocery card');
   assert.ok(obSrc.includes('Other Local Business'), 'Must include other/custom card');
-  assert.ok(obSrc.includes('Specify your business type'), 'Must support specifying custom business type');
-  assert.ok(!obSrc.includes('<select'), 'Must replace select dropdown with interactive cards');
+  assert.ok(obSrc.includes('CATEGORY_AUDIENCES'), 'Must define category-aware audience personas');
+  assert.ok(obSrc.includes('getSuggestedAudiences'), 'Must define getSuggestedAudiences helper');
+  assert.ok(obSrc.includes('Daily car & bike commuters'), 'Must include automobile audience personas');
+  assert.ok(obSrc.includes('Bridal & wedding trousseau'), 'Must include jewellery audience personas');
+  assert.ok(obSrc.includes('Suggested for {selectedCategoryCard'), 'Must display category contextual suggestions header');
 });
 
 test('Script-First Product: App.jsx wires all 4 views and saves/restores projects to/from server', () => {

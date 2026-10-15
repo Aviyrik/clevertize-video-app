@@ -151,13 +151,107 @@ const CATEGORY_CARDS = [
 
 const CATEGORIES = CATEGORY_CARDS.map((c) => c.label);
 
-const AUDIENCE_SUGGESTIONS = [
-  'Local families & everyday buyers',
-  'Young professionals & students',
-  'Bridal & wedding shoppers',
-  'Festive gift buyers',
-  'B2B & corporate clients',
-];
+export const CATEGORY_AUDIENCES = {
+  'Saree, Clothing & Apparel': [
+    'Brides & wedding shopping families',
+    'College students & young trendsetters',
+    'Working women seeking daily office wear',
+    'Festival & celebration gift shoppers',
+    'Family clothing shoppers on a budget',
+  ],
+  'Jewellery & Accessories': [
+    'Bridal & wedding trousseau shoppers',
+    'Modern women seeking lightweight daily wear',
+    'Gold & diamond investment buyers',
+    'Anniversary & milestone gift shoppers',
+    'Festive heirloom collectors',
+  ],
+  'Sweets, Bakery & Restaurant': [
+    'Festive & corporate bulk gifting buyers',
+    'Weekend dining families & groups',
+    'Late-night dessert & sweet cravers',
+    'Office lunch & tea-time crowds',
+    'Health-conscious & sugar-free seekers',
+  ],
+  'Kirana, Grocery & Supermarket': [
+    'Monthly household ration planners',
+    'Working couples needing quick delivery',
+    'Value shoppers seeking weekly discounts',
+    'Health-conscious organic food buyers',
+    'Neighborhood walk-in regulars',
+  ],
+  'Electronics, Mobile & Appliances': [
+    'College students & smartphone upgraders',
+    'Gamers & performance gadget enthusiasts',
+    'Families upgrading home appliances',
+    'Festive deal & No-Cost EMI shoppers',
+    'Work-from-home pros needing gear',
+  ],
+  'Salon, Spa & Beauty': [
+    'Brides-to-be & wedding parties',
+    'Working women seeking regular grooming',
+    'Men looking for sharp beard & hair styling',
+    'Weekend self-care & spa unwinders',
+    'College youth exploring trendy hairstyles',
+  ],
+  'Healthcare, Clinic & Pharmacy': [
+    'Parents seeking pediatric & child care',
+    'Senior citizens managing chronic wellness',
+    'Patients seeking gentle, pain-free dental care',
+    'Local residents needing genuine medicines',
+    'Busy professionals booking preventive checkups',
+  ],
+  'Real Estate & Home Decor': [
+    'First-time home buyers & young families',
+    'High-net-worth & NRI property investors',
+    'Homeowners renovating modular interiors',
+    'Rental property investors & tenants',
+    'Couples furnishing their new home',
+  ],
+  'Gym, Fitness & Yoga': [
+    'Beginners seeking weight loss & transformation',
+    'Desk workers fixing posture & back pain',
+    'Strength & muscle-building enthusiasts',
+    'Women seeking beginner yoga & Pilates',
+    'Seniors focusing on mobility & stamina',
+  ],
+  'Education, Coaching & Tuition': [
+    'School students preparing for board exams',
+    'Competitive exam aspirants (JEE / NEET / UPSC)',
+    'Ambitious parents seeking foundation tuitions',
+    'College grads upskilling in tech & AI',
+    'Professionals seeking career certifications',
+  ],
+  'Automobile & Garage': [
+    'Daily car & bike commuters needing service',
+    'Luxury car owners seeking ceramic detailing',
+    'Commercial fleet & cab drivers needing quick fixes',
+    'Highway travelers booking pre-trip inspections',
+    'Used car buyers needing mechanic checks',
+  ],
+  'Other Local Business': [
+    'Neighborhood families & local residents',
+    'Small business owners & entrepreneurs',
+    'Discerning clients seeking bespoke services',
+    'First-time buyers looking for trusted reviews',
+    'Repeat customers valuing personal service',
+  ],
+};
+
+export function getSuggestedAudiences(category) {
+  if (category && CATEGORY_AUDIENCES[category]) {
+    return CATEGORY_AUDIENCES[category];
+  }
+  const match = Object.keys(CATEGORY_AUDIENCES).find(
+    (k) =>
+      category &&
+      (k.toLowerCase().includes(category.toLowerCase()) || category.toLowerCase().includes(k.toLowerCase()))
+  );
+  if (match) return CATEGORY_AUDIENCES[match];
+  return CATEGORY_AUDIENCES['Other Local Business'];
+}
+
+const AUDIENCE_SUGGESTIONS = CATEGORY_AUDIENCES['Other Local Business'];
 
 const BRAND_TONES = [
   { id: 'warm', label: 'Warm & Authentic', desc: 'Friendly, welcoming neighborhood trust' },
@@ -186,11 +280,17 @@ export default function BusinessOnboardingModal({
       : ''
   );
   const [town, setTown] = useState(initialData.town || '');
-  const [targetAudience, setTargetAudience] = useState(initialData.targetAudience || 'Local families & everyday buyers');
+  const [targetAudience, setTargetAudience] = useState(
+    initialData.targetAudience || getSuggestedAudiences(initialData.businessType || CATEGORIES[0])[0]
+  );
   const [websiteUrl, setWebsiteUrl] = useState(initialData.websiteUrl || '');
   const [brandTone, setBrandTone] = useState(initialData.brandTone || 'Warm & Authentic');
   const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || null);
   const [nameError, setNameError] = useState(false);
+
+  const selectedCategoryCard =
+    CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
+  const currentAudienceSuggestions = getSuggestedAudiences(businessType);
 
   if (!isOpen) return null;
 
@@ -200,6 +300,15 @@ export default function BusinessOnboardingModal({
       return;
     }
     setNameError(false);
+
+    // Auto-update audience if user hasn't explicitly customized it yet
+    const suggestions = getSuggestedAudiences(businessType);
+    if (!targetAudience || targetAudience === 'Local families & everyday buyers') {
+      if (suggestions && suggestions[0]) {
+        setTargetAudience(suggestions[0]);
+      }
+    }
+
     setStep(2);
   };
 
@@ -567,7 +676,16 @@ export default function BusinessOnboardingModal({
 
         {/* Step 2: Location & Customers */}
         {step === 2 && (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div
+            style={{
+              padding: '22px 26px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 18,
+              maxHeight: 'calc(92vh - 145px)',
+              overflowY: 'auto',
+            }}
+          >
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Where are your customers?
@@ -578,7 +696,7 @@ export default function BusinessOnboardingModal({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
                 City or Town
               </label>
               <input
@@ -586,11 +704,14 @@ export default function BusinessOnboardingModal({
                 autoFocus
                 value={town}
                 onChange={(e) => setTown(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setStep(3);
+                }}
                 placeholder="e.g. Bangalore, Indore, Siliguri, Jaipur, Pune"
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   fontSize: 14,
                   borderRadius: 8,
                   border: '1px solid var(--border-default)',
@@ -602,47 +723,123 @@ export default function BusinessOnboardingModal({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                Target Customers
-              </label>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Target Customers
+                </label>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  Type freely or click personas below
+                </span>
+              </div>
               <input
                 type="text"
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="e.g. Young professionals, Homemakers, Festive buyers"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setStep(3);
+                }}
+                placeholder="e.g. Daily car & bike commuters, wedding shoppers, young families..."
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   fontSize: 13,
                   borderRadius: 8,
                   border: '1px solid var(--border-default)',
                   backgroundColor: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
                   outline: 'none',
-                  marginBottom: 8,
+                  marginBottom: 10,
                 }}
               />
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {AUDIENCE_SUGGESTIONS.map((sug, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setTargetAudience(sug)}
-                    style={{
-                      fontSize: 11,
-                      padding: '4px 9px',
-                      borderRadius: 14,
-                      backgroundColor: targetAudience === sug ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-elevated)',
-                      border: `1px solid ${targetAudience === sug ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                      color: targetAudience === sug ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {sug}
-                  </button>
-                ))}
+              {/* Dynamic Suggestions for Selected Category */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 4,
+                        backgroundColor: 'var(--accent-subtle)',
+                        color: 'var(--accent-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Sparkles size={11} />
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: 'var(--accent-primary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      Suggested for {selectedCategoryCard?.shortTitle || businessType}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    Click to apply or combine
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {currentAudienceSuggestions.map((sug, i) => {
+                    const isSelected = targetAudience.toLowerCase().includes(sug.toLowerCase());
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          if (!targetAudience.trim() || targetAudience === 'Local families & everyday buyers') {
+                            setTargetAudience(sug);
+                            return;
+                          }
+                          if (targetAudience.toLowerCase().includes(sug.toLowerCase())) {
+                            // Deselect / remove this chip if part of multiple
+                            const parts = targetAudience
+                              .split(',')
+                              .map((p) => p.trim())
+                              .filter((p) => p && p.toLowerCase() !== sug.toLowerCase());
+                            setTargetAudience(parts.join(', '));
+                          } else {
+                            // If target audience is currently just another single suggestion, switch or combine
+                            const isSingleOtherSuggestion = currentAudienceSuggestions.some(
+                              (s) => s.toLowerCase() === targetAudience.trim().toLowerCase()
+                            );
+                            if (isSingleOtherSuggestion) {
+                              setTargetAudience(sug);
+                            } else {
+                              setTargetAudience(`${targetAudience.trim()}, ${sug}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? 600 : 500,
+                          padding: '6px 12px',
+                          borderRadius: 20,
+                          backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.18)' : 'var(--bg-elevated)',
+                          border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {isSelected && <Check size={11} strokeWidth={3} />}
+                        <span>{sug}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
