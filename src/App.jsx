@@ -21,6 +21,7 @@ import AuthScreen from './components/v2/AuthScreen.jsx';
 import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx';
 import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
 import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
+import AccountModal from './components/v2/AccountModal.jsx';
 import {
   Mic,
   MicOff,
@@ -1176,6 +1177,7 @@ export default function App() {
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const fetchUserData = async (token) => {
     if (!token) return;
@@ -1270,6 +1272,39 @@ export default function App() {
     setIsCurrentProjectSaved(false);
     setToastMessage('Signed out successfully.');
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!authToken) return;
+    const res = await fetch('/api/auth/account', {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete account.');
+    }
+
+    try {
+      localStorage.removeItem('clevertize_token');
+      localStorage.removeItem('clevertize_user');
+      localStorage.removeItem('clevertize_user_context');
+    } catch {}
+
+    setAuthToken(null);
+    setCurrentUser(null);
+    setUserProjects([]);
+    setUserBusinesses([]);
+    setActiveProjectId(null);
+    setIsCurrentProjectSaved(false);
+    setActiveAppView('home');
+    setStudioStage('business');
+
+    setToastMessage('Your CleverCuts account has been permanently deleted.');
+    setTimeout(() => setToastMessage(''), 4500);
   };
 
   const handleSaveCurrentProject = async () => {
@@ -3124,6 +3159,7 @@ export default function App() {
           onApplyUpdate={handleApplyUpdate}
           currentUser={currentUser}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenAccountModal={() => setIsAccountModalOpen(true)}
           onLogout={handleLogout}
           onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
           projectCount={userProjects.length}
@@ -4122,6 +4158,17 @@ export default function App() {
         isOpen={isOnboardingModalOpen}
         onClose={() => setIsOnboardingModalOpen(false)}
         onComplete={handleOnboardingComplete}
+      />
+
+      {/* Account Settings & Delete Account Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
+        projectCount={userProjects.length}
+        businessCount={userBusinesses.length}
       />
     </StudioDispatchContext.Provider>
   </StudioStateContext.Provider>

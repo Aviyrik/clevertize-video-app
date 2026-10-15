@@ -340,6 +340,36 @@ async function authenticateUser({ email, password }) {
   };
 }
 
+async function deleteUser(userId) {
+  if (!userId) return false;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    // Tables have ON DELETE CASCADE so foreign keys are automatically deleted
+    const res = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  // Atomic JSON file-store cascading delete
+  const sessions = readJsonFile('sessions.json', []);
+  writeJsonFile('sessions.json', sessions.filter((s) => s.userId !== userId));
+
+  const businesses = readJsonFile('businesses.json', []);
+  writeJsonFile('businesses.json', businesses.filter((b) => b.userId !== userId));
+
+  const projects = readJsonFile('projects.json', []);
+  writeJsonFile('projects.json', projects.filter((p) => p.userId !== userId));
+
+  const users = readJsonFile('users.json', []);
+  const filteredUsers = users.filter((u) => u.id !== userId);
+  const changed = filteredUsers.length !== users.length;
+  if (changed) {
+    writeJsonFile('users.json', filteredUsers);
+  }
+  return changed;
+}
+
 // ----------------------------------------------------
 // SESSION METHODS
 // ----------------------------------------------------
@@ -756,6 +786,7 @@ module.exports = {
   findUserById,
   createUser,
   authenticateUser,
+  deleteUser,
   createSession,
   getUserBySessionToken,
   deleteSession,

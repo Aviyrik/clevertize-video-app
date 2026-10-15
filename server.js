@@ -1028,6 +1028,23 @@ app.get("/api/auth/me", authRequired, async (req, res) => {
   }
 });
 
+app.delete("/api/auth/account", authRequired, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const deleted = await db.deleteUser(userId);
+    if (!deleted) {
+      return res.status(404).json({ error: "User not found or already deleted." });
+    }
+    res.json({
+      status: "success",
+      message: "Account and all associated projects and brand profiles have been permanently deleted.",
+    });
+  } catch (err) {
+    console.error("[auth] Delete account error:", err);
+    res.status(500).json({ error: err.message || "Failed to delete account." });
+  }
+});
+
 // ---- Business Profile Endpoints (Phase D) ----
 
 app.get("/api/businesses", authRequired, async (req, res) => {

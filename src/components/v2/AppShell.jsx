@@ -55,6 +55,7 @@ export default function AppShell({
   onApplyUpdate,
   currentUser = null,
   onOpenAuthModal,
+  onOpenAccountModal,
   onLogout,
   onOpenOnboarding,
   projectCount = 0,
@@ -426,8 +427,29 @@ export default function AppShell({
           {/* User Account / Login Trigger */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
             {currentUser ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <div
+                  onClick={onOpenAccountModal}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    overflow: 'hidden',
+                    flex: 1,
+                    cursor: onOpenAccountModal ? 'pointer' : 'default',
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    margin: '-4px -6px',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Account Settings & Profile"
+                >
                   <div
                     style={{
                       width: 28,
@@ -455,21 +477,53 @@ export default function AppShell({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  title="Sign Out"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-tertiary)',
-                    cursor: 'pointer',
-                    padding: 4,
-                    borderRadius: 4,
-                  }}
-                >
-                  <LogOut size={14} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                  {onOpenAccountModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenAccountModal}
+                      title="Account Settings & Delete Account"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-tertiary)',
+                        cursor: 'pointer',
+                        padding: 4,
+                        borderRadius: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+                    >
+                      <Settings2 size={14} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    title="Sign Out"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                      padding: 4,
+                      borderRadius: 4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
               </div>
             ) : (
               <button

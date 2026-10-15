@@ -153,3 +153,46 @@ test('Config: reports database driver and server configuration', async () => {
   assert.equal(cfg.body.database, 'file_store');
 });
 
+test('Auth: Delete account cascades and revokes access', async () => {
+  // 1. Signup a user to delete
+  const signupRes = await post('/api/auth/signup', {
+    email: 'delete_me@brand.com',
+    password: 'password123',
+    name: 'Temporary User',
+    businessName: 'Temporary Brand',
+    businessType: 'Retail',
+  });
+  assert.equal(signupRes.status, 200);
+  const token = signupRes.body.token;
+
+  // 2. User creates a project
+  const projRes = await post('/api/projects', {
+    title: 'Temp Project',
+    businessName: 'Temporary Brand',
+    scenes: ['Scene 1'],
+  }, token);
+  assert.equal(projRes.status, 200);
+  const projId = projRes.body.project.id;
+
+  // 3. User deletes account
+  const delAccRes = await del('/api/auth/account', token);
+  assert.equal(delAccRes.status, 200);
+  assert.equal(delAccRes.body.status, 'success');
+
+  // 4. Old session token is now invalid (401)
+  const meRes = await get('/api/auth/me', token);
+  assert.equal(meRes.status, 401);
+
+  // 5. Cannot login with old email/password (401)
+  const loginRes = await post('/api/auth/login', {
+    email: 'delete_me@brand.com',
+    password: 'password123',
+  });
+  assert.equal(loginRes.status, 401);
+
+  // 6. Project is deleted / inaccessible
+  const projGet = await get(`/api/projects/${projId}`, token);
+  assert.equal(projGet.status, 401);
+});
+
+
