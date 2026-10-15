@@ -1741,13 +1741,20 @@ test('Script-First Product: BusinessProfileView supports multi-business profiles
   assert.ok(bizSrc.includes('Save'), 'Must have save action');
 });
 
-test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard', () => {
+test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard with visual category cards', () => {
   const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
   assert.ok(obSrc.includes('Step {step} of 4'), 'Step indicator');
   assert.ok(obSrc.includes('Business Identity'), 'Step 1 business identity');
   assert.ok(obSrc.includes('Location & Customers'), 'Step 2 location & customers');
   assert.ok(obSrc.includes('Brand Voice & Online Presence'), 'Step 3 brand voice & online presence');
   assert.ok(obSrc.includes('Confirm & Launch'), 'Step 4 confirm & launch');
+  assert.ok(obSrc.includes('CATEGORY_CARDS'), 'Must define CATEGORY_CARDS for visual selection');
+  assert.ok(obSrc.includes('Fashion & Apparel'), 'Must include fashion card');
+  assert.ok(obSrc.includes('Jewellery & Luxury'), 'Must include jewellery card');
+  assert.ok(obSrc.includes('Kirana & Supermarket'), 'Must include grocery card');
+  assert.ok(obSrc.includes('Other Local Business'), 'Must include other/custom card');
+  assert.ok(obSrc.includes('Specify your business type'), 'Must support specifying custom business type');
+  assert.ok(!obSrc.includes('<select'), 'Must replace select dropdown with interactive cards');
 });
 
 test('Script-First Product: App.jsx wires all 4 views and saves/restores projects to/from server', () => {

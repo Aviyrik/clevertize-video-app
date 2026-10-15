@@ -1188,7 +1188,11 @@ export default function App() {
       ]);
       if (bizRes.ok) {
         const bData = await bizRes.json();
-        setUserBusinesses(bData.businesses || []);
+        const bizList = bData.businesses || [];
+        setUserBusinesses(bizList);
+        if (bizList.length === 0) {
+          setIsOnboardingModalOpen(true);
+        }
       }
       if (projRes.ok) {
         const pData = await projRes.json();
