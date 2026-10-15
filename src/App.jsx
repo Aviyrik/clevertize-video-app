@@ -1502,7 +1502,9 @@ export default function App() {
       businessName: onboardingData.businessName,
       businessType: onboardingData.businessType,
       town: onboardingData.town,
-      brief: onboardingData.brief || prev.brief,
+      websiteUrl: onboardingData.websiteUrl || prev.websiteUrl,
+      brandTone: onboardingData.brandTone || prev.brandTone,
+      brandLogo: onboardingData.brandLogo || prev.brandLogo,
     }));
 
     if (currentUser && authToken) {
@@ -1518,7 +1520,9 @@ export default function App() {
             category: onboardingData.businessType,
             town: onboardingData.town,
             targetAudience: onboardingData.targetAudience,
-            intendedUse: onboardingData.intendedUse,
+            websiteUrl: onboardingData.websiteUrl,
+            brandTone: onboardingData.brandTone,
+            logo: onboardingData.brandLogo,
           }),
         });
         fetchUserData(authToken);
@@ -1528,10 +1532,9 @@ export default function App() {
     }
 
     markStageComplete('business');
-    setStudioStage('brief');
-    setActiveAppView('studio');
-    setToastMessage(`Business configured! Let's craft your brief.`);
-    setTimeout(() => setToastMessage(''), 4000);
+    setActiveAppView('home');
+    setToastMessage(`Brand profile for "${onboardingData.businessName}" saved! Choose how to start your first video.`);
+    setTimeout(() => setToastMessage(''), 4500);
   };
 
   // Stopwatch Timer
@@ -3151,7 +3154,7 @@ export default function App() {
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
-          onEditBrand={() => setIsBrandModalOpen(true)}
+          onEditBrand={() => setIsOnboardingModalOpen(true)}
           onOpenScriptModal={() => setIsScriptModalOpen(true)}
           onOpenUrlModal={() => setIsUrlModalOpen(true)}
           isOnline={isOnline}
@@ -4158,6 +4161,14 @@ export default function App() {
         isOpen={isOnboardingModalOpen}
         onClose={() => setIsOnboardingModalOpen(false)}
         onComplete={handleOnboardingComplete}
+        initialData={{
+          businessName: userContext.businessName,
+          businessType: userContext.businessType,
+          town: userContext.town,
+          websiteUrl: userContext.websiteUrl,
+          brandTone: userContext.brandTone,
+          brandLogo: userContext.brandLogo,
+        }}
       />
 
       {/* Account Settings & Delete Account Modal */}

@@ -1744,9 +1744,9 @@ test('Script-First Product: BusinessProfileView supports multi-business profiles
 test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard', () => {
   const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
   assert.ok(obSrc.includes('Step {step} of 4'), 'Step indicator');
-  assert.ok(obSrc.includes('Welcome & Video Goal'), 'Step 1 intended use');
-  assert.ok(obSrc.includes('Business Identity'), 'Step 2 business identity');
-  assert.ok(obSrc.includes('Location & Customers'), 'Step 3 location & customers');
+  assert.ok(obSrc.includes('Business Identity'), 'Step 1 business identity');
+  assert.ok(obSrc.includes('Location & Customers'), 'Step 2 location & customers');
+  assert.ok(obSrc.includes('Brand Voice & Online Presence'), 'Step 3 brand voice & online presence');
   assert.ok(obSrc.includes('Confirm & Launch'), 'Step 4 confirm & launch');
 });
 
