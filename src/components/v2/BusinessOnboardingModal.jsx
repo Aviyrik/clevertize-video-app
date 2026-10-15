@@ -25,6 +25,7 @@ import {
   Car,
   Check,
   AlertCircle,
+  Upload,
 } from 'lucide-react';
 
 const CATEGORY_CARDS = [
@@ -968,38 +969,133 @@ export default function BusinessOnboardingModal({
 
             {/* Optional Brand Asset */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Brand Logo (Optional)
               </label>
               {brandLogo ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <img src={brandLogo} alt="Logo" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Brand logo attached</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    backgroundColor: 'var(--bg-elevated)',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-default)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img
+                      src={brandLogo}
+                      alt="Logo"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 8,
+                        objectFit: 'cover',
+                        border: '1px solid var(--border-subtle)',
+                        backgroundColor: '#161922',
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Brand logo attached
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                        Appears on video end-cards & watermark
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setBrandLogo(null)}
-                    style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 12 }}
-                  >
-                    Remove
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label
+                      style={{
+                        background: 'none',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Change
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setBrandLogo(ev.target.result);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setBrandLogo(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--error)',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: '6px 8px',
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '9px 14px',
-                  borderRadius: 8,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px dashed var(--border-default)',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  color: 'var(--text-secondary)',
-                }}>
-                  <Image size={15} style={{ color: 'var(--accent-primary)' }} />
-                  <span>Upload logo or storefront photo (optional)</span>
+                <label
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '18px 16px',
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    border: '1.5px dashed var(--border-default)',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                    e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.04)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-default)';
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      backgroundColor: 'var(--accent-subtle)',
+                      color: 'var(--accent-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Upload size={18} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                    Upload brand logo or storefront photo
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    PNG, JPG, or WebP up to 5MB · Used for end-frame compositing & watermark
+                  </div>
                   <input
                     type="file"
                     accept="image/*"
