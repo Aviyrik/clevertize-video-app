@@ -319,6 +319,17 @@ input::placeholder, textarea::placeholder {
   .auth-brand-column {
     display: none !important;
   }
+  .auth-consumer-card {
+    flex-direction: column !important;
+    max-width: 520px !important;
+  }
+  .auth-left-brand-panel {
+    display: none !important;
+  }
+  .auth-right-form-panel {
+    padding: 36px 24px !important;
+  }
 }
+
 
 
