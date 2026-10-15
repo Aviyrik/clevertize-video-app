@@ -133,7 +133,7 @@ const CATEGORY_CARDS = [
     shortTitle: 'Automobile & Garage',
     subtitle: 'Car & bike service, repairs & detailing',
     icon: Car,
-    image: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80',
     gradient: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(51, 65, 85, 0.5) 100%)',
     accentColor: '#64748B',
   },
