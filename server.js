@@ -30,7 +30,15 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "25mb" }));
-app.use(express.static(path.join(__dirname, "dist")));
+app.use(express.static(path.join(__dirname, "dist"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith("index.html")) {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+}));
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---- form validation ----
@@ -1117,6 +1125,9 @@ app.delete("/api/projects/:id", authRequired, async (req, res) => {
 
 // SPA catch-all fallback for client routing
 app.get("*", (req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
