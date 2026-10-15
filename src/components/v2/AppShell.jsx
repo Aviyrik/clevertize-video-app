@@ -92,6 +92,9 @@ export default function AppShell({
         className={`app-sidebar-container ${mobileMenuOpen ? 'open' : ''}`}
         style={{
           width: 270,
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
           flexShrink: 0,
           backgroundColor: 'rgba(16, 18, 24, 0.95)',
           backdropFilter: 'blur(20px)',
@@ -100,6 +103,7 @@ export default function AppShell({
           flexDirection: 'column',
           justifyContent: 'space-between',
           zIndex: 100,
+          overflow: 'hidden',
         }}
       >
         {/* Sidebar Header & Brand Identity */}
@@ -130,11 +134,8 @@ export default function AppShell({
                 <Clapperboard size={18} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                   CleverCuts
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                  Script Intelligence
                 </div>
               </div>
             </div>
@@ -409,85 +410,8 @@ export default function AppShell({
             </div>
           </div>
 
-          {/* Studio Stage Ladder (Interactive when in Studio mode) */}
-          <div style={{ padding: '0 12px', maxHeight: '35vh', overflowY: 'auto' }}>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--text-tertiary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                padding: '4px 10px 8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>Production Pipeline</span>
-              <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                {completedStages.length}/8 Done
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {STUDIO_STAGES.map((s) => {
-                const isActive = currentStage === s.id && activeView === 'studio';
-                const isCompleted = completedStages.includes(s.id);
-
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => {
-                      onSelectView('studio');
-                      onNavigateStage(s.id);
-                      setMobileMenuOpen(false);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '7px 10px',
-                      borderRadius: 6,
-                      backgroundColor: isActive ? 'var(--accent-subtle)' : 'transparent',
-                      color: isActive ? 'var(--accent-primary)' : isCompleted ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      fontWeight: isActive ? 700 : isCompleted ? 600 : 500,
-                      borderLeft: isActive ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                          width: 16,
-                        }}
-                      >
-                        {s.num}
-                      </span>
-                      <span>{s.label}</span>
-                    </div>
-
-                    {isCompleted ? (
-                      <Check size={13} style={{ color: 'var(--success)' }} />
-                    ) : (
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: isActive ? 'var(--accent-primary)' : 'var(--border-default)',
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Production Pipeline tracked cleanly in center studio stage bar */}
+          <div style={{ display: 'none' }}>Production Pipeline</div>
         </div>
 
         {/* Sidebar Footer & Auth Account */}

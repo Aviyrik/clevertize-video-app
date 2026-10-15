@@ -50,7 +50,7 @@ export default function CreationEntryHub({
           }}
         >
           <Clapperboard size={14} />
-          Clevertize Script Intelligence V2
+          CleverCuts Video Studio V2
         </div>
         <h1
           style={{
