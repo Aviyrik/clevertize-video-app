@@ -24,6 +24,7 @@ import {
   Dumbbell,
   Car,
   Check,
+  AlertCircle,
 } from 'lucide-react';
 
 const CATEGORY_CARDS = [
@@ -287,6 +288,8 @@ export default function BusinessOnboardingModal({
   const [brandTone, setBrandTone] = useState(initialData.brandTone || 'Warm & Authentic');
   const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || null);
   const [nameError, setNameError] = useState(false);
+  const [townError, setTownError] = useState(false);
+  const [audienceError, setAudienceError] = useState(false);
 
   const selectedCategoryCard =
     CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
@@ -294,23 +297,55 @@ export default function BusinessOnboardingModal({
 
   if (!isOpen) return null;
 
-  const handleNextFromStep1 = () => {
-    if (!businessName.trim()) {
-      setNameError(true);
-      return;
-    }
-    setNameError(false);
-
-    // Auto-update audience if user hasn't explicitly customized it yet
-    const suggestions = getSuggestedAudiences(businessType);
-    if (!targetAudience || targetAudience === 'Local families & everyday buyers') {
-      if (suggestions && suggestions[0]) {
-        setTargetAudience(suggestions[0]);
+  const validateStep = (currentStep) => {
+    if (currentStep === 1) {
+      if (!businessName.trim()) {
+        setNameError(true);
+        return false;
       }
+      setNameError(false);
+      return true;
     }
-
-    setStep(2);
+    if (currentStep === 2) {
+      let valid = true;
+      if (!town.trim()) {
+        setTownError(true);
+        valid = false;
+      } else {
+        setTownError(false);
+      }
+      if (!targetAudience.trim()) {
+        setAudienceError(true);
+        valid = false;
+      } else {
+        setAudienceError(false);
+      }
+      return valid;
+    }
+    // Step 3 has only optional fields (Tone is preselected, URL and Logo are optional)
+    return true;
   };
+
+  const handleNext = () => {
+    if (!validateStep(step)) return;
+
+    if (step === 1) {
+      // Auto-update audience if user hasn't explicitly customized it yet
+      const suggestions = getSuggestedAudiences(businessType);
+      if (!targetAudience || targetAudience === 'Local families & everyday buyers') {
+        if (suggestions && suggestions[0]) {
+          setTargetAudience(suggestions[0]);
+        }
+      }
+      setStep(2);
+    } else if (step === 2) {
+      setStep(3);
+    } else if (step === 3) {
+      setStep(4);
+    }
+  };
+
+  const handleNextFromStep1 = handleNext;
 
   const handleFinish = () => {
     const finalCategory =
@@ -472,9 +507,10 @@ export default function BusinessOnboardingModal({
                 }}
               />
               {nameError && (
-                <span style={{ fontSize: 12, color: '#EF4444', marginTop: 4, display: 'block' }}>
-                  Please enter your business or brand name.
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                  <AlertCircle size={13} />
+                  <span>Please enter your business or brand name.</span>
+                </div>
               )}
             </div>
 
@@ -697,15 +733,18 @@ export default function BusinessOnboardingModal({
 
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                City or Town
+                City or Town <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
                 type="text"
                 autoFocus
                 value={town}
-                onChange={(e) => setTown(e.target.value)}
+                onChange={(e) => {
+                  setTown(e.target.value);
+                  if (townError) setTownError(false);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') setStep(3);
+                  if (e.key === 'Enter') handleNext();
                 }}
                 placeholder="e.g. Bangalore, Indore, Siliguri, Jaipur, Pune"
                 style={{
@@ -714,18 +753,24 @@ export default function BusinessOnboardingModal({
                   padding: '11px 14px',
                   fontSize: 14,
                   borderRadius: 8,
-                  border: '1px solid var(--border-default)',
+                  border: `1.5px solid ${townError ? '#EF4444' : 'var(--border-default)'}`,
                   backgroundColor: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
                   outline: 'none',
                 }}
               />
+              {townError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                  <AlertCircle size={13} />
+                  <span>Please enter your city or town so we can localize your video scripts.</span>
+                </div>
+              )}
             </div>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Target Customers
+                  Target Customers <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                   Type freely or click personas below
@@ -734,9 +779,12 @@ export default function BusinessOnboardingModal({
               <input
                 type="text"
                 value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value)}
+                onChange={(e) => {
+                  setTargetAudience(e.target.value);
+                  if (audienceError) setAudienceError(false);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') setStep(3);
+                  if (e.key === 'Enter') handleNext();
                 }}
                 placeholder="e.g. Daily car & bike commuters, wedding shoppers, young families..."
                 style={{
@@ -745,13 +793,19 @@ export default function BusinessOnboardingModal({
                   padding: '11px 14px',
                   fontSize: 13,
                   borderRadius: 8,
-                  border: '1px solid var(--border-default)',
+                  border: `1.5px solid ${audienceError ? '#EF4444' : 'var(--border-default)'}`,
                   backgroundColor: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
                   outline: 'none',
-                  marginBottom: 10,
+                  marginBottom: audienceError ? 5 : 10,
                 }}
               />
+              {audienceError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 4, marginBottom: 10 }}>
+                  <AlertCircle size={13} />
+                  <span>Please enter or pick at least one target customer group.</span>
+                </div>
+              )}
 
               {/* Dynamic Suggestions for Selected Category */}
               <div>
@@ -1107,34 +1161,10 @@ export default function BusinessOnboardingModal({
             <div />
           )}
 
-          {step === 1 && (
+          {step < 4 && (
             <button
               type="button"
-              onClick={handleNextFromStep1}
-              style={{
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '9px 20px',
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#FFFFFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 2px 10px var(--accent-glow)',
-              }}
-            >
-              <span>Next</span>
-              <ArrowRight size={14} />
-            </button>
-          )}
-
-          {step > 1 && step < 4 && (
-            <button
-              type="button"
-              onClick={() => setStep(step + 1)}
+              onClick={handleNext}
               style={{
                 backgroundColor: 'var(--accent-primary)',
                 border: 'none',

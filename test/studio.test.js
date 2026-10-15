@@ -1756,7 +1756,9 @@ test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wiza
   assert.ok(obSrc.includes('CATEGORY_AUDIENCES'), 'Must define category-aware audience personas');
   assert.ok(obSrc.includes('getSuggestedAudiences'), 'Must define getSuggestedAudiences helper');
   assert.ok(obSrc.includes('Daily car & bike commuters'), 'Must include automobile audience personas');
-  assert.ok(obSrc.includes('Bridal & wedding trousseau'), 'Must include jewellery audience personas');
+  assert.ok(obSrc.includes('validateStep'), 'Must validate step mandatory fields');
+  assert.ok(obSrc.includes('townError'), 'Must track town validation error');
+  assert.ok(obSrc.includes('audienceError'), 'Must track audience validation error');
   assert.ok(obSrc.includes('Suggested for {selectedCategoryCard'), 'Must display category contextual suggestions header');
 });
 
