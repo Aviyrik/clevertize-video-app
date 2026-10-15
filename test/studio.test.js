@@ -23,6 +23,15 @@ global.fetch = async (url, opts = {}) => {
 };
 
 const creativeEngine = require('../engine/creative.js');
+const {
+  studioReducer,
+  initialStudioState,
+  createInitialStudioState,
+  StudioActionTypes,
+  isStaleResponse,
+  STAGE_ORDER,
+  STAGE_NUMBER_MAP,
+} = require('../src/context/studioReducer.js');
 
 test('Guided Studio V4 Architecture: 8 Stages Definition & Integrity', () => {
   const expectedStages = [
@@ -1170,4 +1179,589 @@ test('Creative Synthesis: Active DNA passes custom characters, location, product
   assert.ok(appSrc.includes('setConstraintsList([])'), 'handleStartNewProject must clear constraintsList');
   assert.ok(appSrc.includes('setAvoidList([])'), 'handleStartNewProject must clear avoidList');
 });
+
+test('Studio Invalidation: Changing Stage 03 Language invalidates directions and downstream pipeline', () => {
+  let userContext = { language: 'English', businessName: 'Chai Point' };
+  let directionsList = [{ id: 'dir-1', title: 'FAST MORNING CHAI' }];
+  let selectedDirection = directionsList[0];
+  let explicitChoices = { language: 'English', idea: 'FAST MORNING CHAI', opening: 'Morning Rush Hook' };
+  let hooksList = [{ id: 'hk-1', hookLine: 'Late for office?' }];
+  let selectedHook = hooksList[0];
+  let scenes = ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4'];
+  let generatedScript = { scenes };
+  let completedStages = ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'];
+  let hasStaleWarning = false;
+
+  const handleLanguageChange = (newLang) => {
+    if (userContext.language === newLang) return;
+    userContext.language = newLang;
+    explicitChoices.language = newLang;
+
+    const hadDownstream = Boolean(
+      directionsList.length > 0 ||
+      selectedDirection ||
+      hooksList.length > 0 ||
+      selectedHook ||
+      scenes.length > 0 ||
+      generatedScript
+    );
+
+    // Invalidate downstream creative direction territories so they are re-generated in the new language
+    directionsList = [];
+    selectedDirection = null;
+    delete explicitChoices.idea;
+    delete explicitChoices.opening;
+    hooksList = [];
+    selectedHook = null;
+    scenes = [];
+    generatedScript = null;
+    completedStages = completedStages.filter((s) => ['business', 'brief', 'settings'].includes(s));
+
+    if (hadDownstream) {
+      hasStaleWarning = true;
+    }
+  };
+
+  // Initially in English
+  assert.equal(userContext.language, 'English');
+  assert.equal(directionsList.length, 1);
+  assert.equal(explicitChoices.idea, 'FAST MORNING CHAI');
+  assert.equal(hasStaleWarning, false);
+
+  // User changes language to Hindi in Stage 3
+  handleLanguageChange('Hindi');
+
+  assert.equal(userContext.language, 'Hindi');
+  assert.equal(directionsList.length, 0, 'directionsList must be cleared so fresh directions are loaded for Hindi');
+  assert.equal(selectedDirection, null, 'selectedDirection must be reset');
+  assert.equal(explicitChoices.idea, undefined, 'explicitChoices.idea must be cleared');
+  assert.equal(explicitChoices.opening, undefined, 'explicitChoices.opening must be cleared');
+  assert.equal(hooksList.length, 0, 'hooksList must be cleared');
+  assert.equal(selectedHook, null, 'selectedHook must be cleared');
+  assert.equal(scenes.length, 0, 'scenes must be cleared');
+  assert.equal(generatedScript, null, 'generatedScript must be cleared');
+  assert.deepEqual(completedStages, ['business', 'brief', 'settings'], 'Completed stages must rewind to settings');
+  assert.equal(hasStaleWarning, true, 'hasStaleWarning must be flagged');
+});
+
+test('Studio Invalidation: Changing Stage 03 Style invalidates directions and downstream pipeline', () => {
+  let userContext = { creativeStyle: 'UGC', businessName: 'Indore Kirana' };
+  let directionsList = [{ id: 'dir-1', title: 'OWNER POV TALK' }];
+  let selectedDirection = directionsList[0];
+  let explicitChoices = { style: 'UGC', idea: 'OWNER POV TALK' };
+  let completedStages = ['business', 'brief', 'settings', 'idea'];
+  let hasStaleWarning = false;
+
+  const handleFormatChange = (newFormat) => {
+    if (userContext.creativeStyle === newFormat) return;
+    userContext.creativeStyle = newFormat;
+    explicitChoices.style = newFormat;
+
+    const hadDownstream = Boolean(directionsList.length > 0 || selectedDirection);
+
+    // Invalidate downstream creative direction territories so they are re-generated for the new style
+    directionsList = [];
+    selectedDirection = null;
+    delete explicitChoices.idea;
+    completedStages = completedStages.filter((s) => ['business', 'brief', 'settings'].includes(s));
+
+    if (hadDownstream) {
+      hasStaleWarning = true;
+    }
+  };
+
+  // User changes style from UGC to Product Demo
+  handleFormatChange('Product Demo');
+
+  assert.equal(userContext.creativeStyle, 'Product Demo');
+  assert.equal(directionsList.length, 0, 'directionsList must be cleared when style changes');
+  assert.equal(selectedDirection, null, 'selectedDirection must be cleared');
+  assert.equal(explicitChoices.idea, undefined, 'explicitChoices.idea must be cleared');
+  assert.equal(hasStaleWarning, true, 'hasStaleWarning must be flagged');
+});
+
+test('Studio Invalidation: Unrelated changes (duration, platform) do NOT clear creative directions or hooks', () => {
+  let userContext = { duration: '15s', platform: '9:16' };
+  let directionsList = [{ id: 'dir-1', title: 'EVERYDAY RELATABLE' }];
+  let selectedDirection = directionsList[0];
+  let hooksList = [{ id: 'hk-1', hookLine: 'Wait, did you know this?' }];
+  let selectedHook = hooksList[0];
+  let explicitChoices = { duration: '15s', platform: '9:16', idea: 'EVERYDAY RELATABLE' };
+
+  // Changing duration from 15s to 30s
+  const handleDurationChange = (newDur) => {
+    userContext.duration = newDur;
+    explicitChoices.duration = newDur;
+    // Unrelated changes do NOT clear directionsList or hooksList
+  };
+
+  // Changing platform from 9:16 to 16:9
+  const handlePlatformChange = (newPlat) => {
+    userContext.platform = newPlat;
+    explicitChoices.platform = newPlat;
+    // Unrelated changes do NOT clear directionsList or hooksList
+  };
+
+  handleDurationChange('30s');
+  handlePlatformChange('16:9');
+
+  assert.equal(directionsList.length, 1, 'directionsList must NOT be cleared by duration/platform change');
+  assert.equal(selectedDirection.title, 'EVERYDAY RELATABLE', 'selectedDirection must remain intact');
+  assert.equal(hooksList.length, 1, 'hooksList must NOT be cleared by duration/platform change');
+  assert.equal(selectedHook.hookLine, 'Wait, did you know this?');
+  assert.equal(explicitChoices.idea, 'EVERYDAY RELATABLE');
+});
+
+test('Studio Invalidation: User cannot proceed to Stage 5 with invalidated direction', () => {
+  let selectedDirection = null;
+  let customDirection = '';
+  let directionsList = [];
+
+  const canContinueToHooks = Boolean(
+    selectedDirection ||
+    (customDirection && customDirection.trim()) ||
+    (directionsList.length > 0 && (directionsList.find((d) => d.recommended) || directionsList[0]))
+  );
+
+  assert.equal(canContinueToHooks, false, 'User must not be able to proceed to hooks when directions are invalidated and empty');
+});
+
+test('Studio Invalidation: App.jsx handleLanguageChange and handleFormatChange invalidate directionsList and downstream states', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('const handleLanguageChange = (newLang) => {'), 'App.jsx must define handleLanguageChange');
+  assert.ok(appSrc.includes('const handleFormatChange = async (newFormat) => {'), 'App.jsx must define handleFormatChange');
+
+  // Verify that handleLanguageChange clears directions and rewinds completed stages
+  const langFnMatch = appSrc.match(/const handleLanguageChange = \(newLang\) => \{([\s\S]*?)\n  \};/);
+  assert.ok(langFnMatch, 'handleLanguageChange block must be extractable');
+  assert.ok(langFnMatch[1].includes('setDirectionsList([])'), 'handleLanguageChange must reset directionsList');
+  assert.ok(langFnMatch[1].includes('setSelectedDirection(null)'), 'handleLanguageChange must reset selectedDirection');
+  assert.ok(langFnMatch[1].includes('setCompletedStages('), 'handleLanguageChange must rewind completedStages');
+
+  // Verify that handleFormatChange clears directions and rewinds completed stages
+  const formatFnMatch = appSrc.match(/const handleFormatChange = async \(newFormat\) => \{([\s\S]*?)\n  \};/);
+  assert.ok(formatFnMatch, 'handleFormatChange block must be extractable');
+  assert.ok(formatFnMatch[1].includes('setDirectionsList([])'), 'handleFormatChange must reset directionsList');
+  assert.ok(formatFnMatch[1].includes('setSelectedDirection(null)'), 'handleFormatChange must reset selectedDirection');
+  assert.ok(formatFnMatch[1].includes('setCompletedStages('), 'handleFormatChange must rewind completedStages');
+});
+
+test('Centralized Studio State: Initial state has correct defaults, 8 stages, and sequenceId 0', () => {
+  const state = createInitialStudioState();
+  assert.equal(state.currentStage, 'business');
+  assert.equal(state.stageNumber, 1);
+  assert.deepEqual(state.completedStages, []);
+  assert.equal(state.hasStaleWarning, false);
+  assert.equal(state.requestSequence, 0);
+  assert.equal(STAGE_ORDER.length, 8);
+  assert.deepEqual(STAGE_ORDER, ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script', 'video']);
+  assert.deepEqual(state.explicitChoices, {
+    style: null,
+    language: null,
+    platform: null,
+    duration: null,
+    idea: null,
+    opening: null,
+  });
+  assert.deepEqual(state.directionsList, []);
+  assert.deepEqual(state.hooksList, []);
+  assert.deepEqual(state.scenes, []);
+  assert.equal(state.videoStatus, 'idle');
+});
+
+test('Centralized Studio State: SET_STAGE updates currentStage and stageNumber correctly', () => {
+  let state = createInitialStudioState();
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'settings' } });
+  assert.equal(state.currentStage, 'settings');
+  assert.equal(state.stageNumber, 3);
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'script' } });
+  assert.equal(state.currentStage, 'script');
+  assert.equal(state.stageNumber, 7);
+
+  // Invalid stage is ignored
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'invalid_stage' } });
+  assert.equal(state.currentStage, 'script');
+  assert.equal(state.stageNumber, 7);
+});
+
+test('Centralized Studio State: MARK_STAGE_COMPLETE accumulates completed stages idempotently', () => {
+  let state = createInitialStudioState();
+  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'business' } });
+  assert.deepEqual(state.completedStages, ['business']);
+
+  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'brief' } });
+  assert.deepEqual(state.completedStages, ['business', 'brief']);
+
+  // Adding existing stageId does not duplicate
+  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'business' } });
+  assert.deepEqual(state.completedStages, ['business', 'brief']);
+});
+
+test('Centralized Studio State: SET_EXPLICIT_CHOICE records confirmed choices and SET_EXPLICIT_CHOICES replaces them', () => {
+  let state = createInitialStudioState();
+  state = studioReducer(state, {
+    type: StudioActionTypes.SET_EXPLICIT_CHOICE,
+    payload: { key: 'style', value: 'UGC / Creator-style' },
+  });
+  assert.equal(state.explicitChoices.style, 'UGC / Creator-style');
+  assert.equal(state.explicitChoices.language, null);
+
+  state = studioReducer(state, {
+    type: StudioActionTypes.SET_EXPLICIT_CHOICES,
+    payload: { explicitChoices: { style: 'Drama', language: 'Hindi' } },
+  });
+  assert.equal(state.explicitChoices.style, 'Drama');
+  assert.equal(state.explicitChoices.language, 'Hindi');
+  assert.equal(state.explicitChoices.idea, null);
+});
+
+test('Centralized Studio State: Invalidation from Stage 3 (Settings) clears downstream directions, hooks, story world, and script, and increments requestSequence', () => {
+  let state = createInitialStudioState({
+    currentStage: 'settings',
+    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    directionsList: [{ id: 'dir-1', title: 'FAST MORNING CHAI' }],
+    selectedDirection: { id: 'dir-1', title: 'FAST MORNING CHAI' },
+    hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
+    selectedHook: { id: 'hk-1', hookLine: 'Late for office?' },
+    storyWorldData: { character1: 'Ramesh', character2: 'Sunita' },
+    scenes: ['Scene 1', 'Scene 2'],
+    generatedScript: { scenes: ['Scene 1', 'Scene 2'] },
+    explicitChoices: { style: 'UGC', language: 'English', idea: 'FAST MORNING CHAI', opening: 'Late for office?' },
+  });
+
+  const prevSeq = state.requestSequence;
+  state = studioReducer(state, {
+    type: StudioActionTypes.INVALIDATE_DOWNSTREAM,
+    payload: { fromStage: 'settings' },
+  });
+
+  assert.equal(state.requestSequence, prevSeq + 1, 'requestSequence must increment to invalidate pending responses');
+  assert.deepEqual(state.directionsList, [], 'directionsList must be cleared');
+  assert.equal(state.selectedDirection, null, 'selectedDirection must be reset');
+  assert.deepEqual(state.hooksList, [], 'hooksList must be cleared');
+  assert.equal(state.selectedHook, null, 'selectedHook must be reset');
+  assert.equal(state.storyWorldData, null, 'storyWorldData must be cleared');
+  assert.deepEqual(state.scenes, [], 'scenes must be cleared');
+  assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
+  assert.equal(state.explicitChoices.idea, undefined, 'explicitChoices.idea must be deleted');
+  assert.equal(state.explicitChoices.opening, undefined, 'explicitChoices.opening must be deleted');
+  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings'], 'Completed stages must rewind to settings');
+  assert.equal(state.hasStaleWarning, true, 'hasStaleWarning must be set because downstream content existed');
+});
+
+test('Centralized Studio State: Invalidation from Stage 4 (Idea) clears downstream hooks, story world, and script while preserving direction', () => {
+  let state = createInitialStudioState({
+    currentStage: 'idea',
+    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    directionsList: [{ id: 'dir-1', title: 'FAST MORNING CHAI' }],
+    selectedDirection: { id: 'dir-1', title: 'FAST MORNING CHAI' },
+    hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
+    storyWorldData: { character1: 'Ramesh' },
+    scenes: ['Scene 1'],
+    generatedScript: { scenes: ['Scene 1'] },
+    explicitChoices: { style: 'UGC', language: 'English', idea: 'FAST MORNING CHAI', opening: 'Late for office?' },
+  });
+
+  state = studioReducer(state, {
+    type: StudioActionTypes.INVALIDATE_DOWNSTREAM,
+    payload: { fromStage: 'idea' },
+  });
+
+  assert.equal(state.directionsList.length, 1, 'directionsList must be preserved');
+  assert.equal(state.selectedDirection.title, 'FAST MORNING CHAI', 'selectedDirection must be preserved');
+  assert.equal(state.explicitChoices.idea, 'FAST MORNING CHAI', 'explicitChoices.idea must be preserved');
+  assert.deepEqual(state.hooksList, [], 'hooksList must be cleared');
+  assert.equal(state.storyWorldData, null, 'storyWorldData must be cleared');
+  assert.deepEqual(state.scenes, [], 'scenes must be cleared');
+  assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
+  assert.equal(state.explicitChoices.opening, undefined, 'explicitChoices.opening must be cleared');
+  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea'], 'completedStages rewinds to idea');
+});
+
+test('Centralized Studio State: Invalidation from Stage 5 (Opening) clears downstream story world and script while preserving hooks', () => {
+  let state = createInitialStudioState({
+    currentStage: 'opening',
+    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
+    selectedHook: { id: 'hk-1', hookLine: 'Late for office?' },
+    storyWorldData: { character1: 'Ramesh' },
+    scenes: ['Scene 1'],
+    generatedScript: { scenes: ['Scene 1'] },
+  });
+
+  state = studioReducer(state, {
+    type: StudioActionTypes.INVALIDATE_DOWNSTREAM,
+    payload: { fromStage: 'opening' },
+  });
+
+  assert.equal(state.hooksList.length, 1, 'hooksList must be preserved');
+  assert.equal(state.storyWorldData, null, 'storyWorldData must be cleared');
+  assert.deepEqual(state.scenes, [], 'scenes must be cleared');
+  assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
+  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea', 'opening']);
+});
+
+test('Centralized Studio State: Invalidation from Stage 6 (Story) clears downstream script while preserving story world', () => {
+  let state = createInitialStudioState({
+    currentStage: 'story',
+    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    storyWorldData: { character1: 'Ramesh' },
+    scenes: ['Scene 1'],
+    generatedScript: { scenes: ['Scene 1'] },
+  });
+
+  state = studioReducer(state, {
+    type: StudioActionTypes.INVALIDATE_DOWNSTREAM,
+    payload: { fromStage: 'story' },
+  });
+
+  assert.ok(state.storyWorldData !== null, 'storyWorldData must be preserved');
+  assert.deepEqual(state.scenes, [], 'scenes must be cleared');
+  assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
+  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea', 'opening', 'story']);
+});
+
+test('Centralized Studio State: Stale async network response with older requestSequence is ignored', () => {
+  let state = createInitialStudioState();
+  const initialSeq = state.requestSequence; // 0
+
+  // User changes language or triggers invalidation
+  state = studioReducer(state, {
+    type: StudioActionTypes.INVALIDATE_DOWNSTREAM,
+    payload: { fromStage: 'settings' },
+  });
+  assert.equal(state.requestSequence, initialSeq + 1); // 1
+
+  // Late-arriving network response carries older sequenceId (0)
+  const staleAction = {
+    type: StudioActionTypes.SET_DIRECTIONS,
+    payload: {
+      directionsList: [{ id: 'stale-1', title: 'Old English Direction' }],
+      sequenceId: initialSeq, // 0 < 1 => stale!
+    },
+  };
+
+  const nextState = studioReducer(state, staleAction);
+  assert.deepEqual(nextState.directionsList, [], 'Stale response must be rejected by reducer');
+  assert.equal(isStaleResponse(state, initialSeq), true, 'isStaleResponse helper must return true for older seq');
+
+  // Fresh response matching current requestSequence (1) is accepted
+  const freshAction = {
+    type: StudioActionTypes.SET_DIRECTIONS,
+    payload: {
+      directionsList: [{ id: 'fresh-1', title: 'New Hindi Direction' }],
+      sequenceId: state.requestSequence, // 1 == 1 => accepted!
+    },
+  };
+  const updatedState = studioReducer(state, freshAction);
+  assert.equal(updatedState.directionsList.length, 1);
+  assert.equal(updatedState.directionsList[0].title, 'New Hindi Direction');
+});
+
+test('Centralized Studio State: RESET_STUDIO resets all film state, sets stage to business, and increments sequenceId', () => {
+  let state = createInitialStudioState({
+    currentStage: 'script',
+    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    directionsList: [{ id: 'dir-1', title: 'Test Dir' }],
+    hooksList: [{ id: 'hk-1', hookLine: 'Test Hook' }],
+    scenes: ['Scene 1', 'Scene 2'],
+    generatedScript: { scenes: ['Scene 1', 'Scene 2'] },
+    explicitChoices: { style: 'UGC', idea: 'Test Dir' },
+  });
+
+  const prevSeq = state.requestSequence;
+  state = studioReducer(state, {
+    type: StudioActionTypes.RESET_STUDIO,
+    payload: { initialStage: 'business', preserveBrand: true },
+  });
+
+  assert.equal(state.currentStage, 'business');
+  assert.equal(state.stageNumber, 1);
+  assert.deepEqual(state.completedStages, ['business'], 'Brand preserved retains business stage complete');
+  assert.deepEqual(state.directionsList, []);
+  assert.deepEqual(state.hooksList, []);
+  assert.deepEqual(state.scenes, []);
+  assert.equal(state.generatedScript, null);
+  assert.equal(state.explicitChoices.idea, null);
+  assert.equal(state.requestSequence, prevSeq + 1);
+});
+
+test('Centralized Studio State: App.jsx integrates StudioProvider, StudioStateContext, and StudioDispatchContext', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('StudioStateContext.Provider'), 'App.jsx must provide StudioStateContext');
+  assert.ok(appSrc.includes('StudioDispatchContext.Provider'), 'App.jsx must provide StudioDispatchContext');
+  assert.ok(appSrc.includes('useReducer(studioReducer,'), 'App.jsx must use studioReducer');
+  assert.ok(appSrc.includes('StudioActionTypes.INVALIDATE_DOWNSTREAM'), 'App.jsx must dispatch INVALIDATE_DOWNSTREAM');
+  assert.ok(appSrc.includes('StudioActionTypes.RESET_STUDIO'), 'App.jsx must dispatch RESET_STUDIO');
+});
+
+test('V2 Application Shell: App.jsx integrates AppShell, frosted navigation, and view switching', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('<AppShell'), 'App.jsx must render AppShell');
+  assert.ok(appSrc.includes('activeView={activeAppView}'), 'App.jsx must bind activeView to activeAppView');
+  assert.ok(appSrc.includes('onSelectView={setActiveAppView}'), 'App.jsx must pass onSelectView handler');
+  assert.ok(appSrc.includes('onOpenScriptModal='), 'App.jsx must provide script modal handler');
+  assert.ok(appSrc.includes('onOpenUrlModal='), 'App.jsx must provide url modal handler');
+
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+  assert.ok(shellSrc.includes('backdropFilter: \'blur(20px)\''), 'AppShell must implement frosted-glass sidebar');
+  assert.ok(shellSrc.includes('New Film Project'), 'AppShell must prominently provide New Film project action');
+  assert.ok(shellSrc.includes('Creation Hub'), 'AppShell must link to Creation Hub');
+  assert.ok(shellSrc.includes('Creative Studio'), 'AppShell must link to Creative Studio');
+  assert.ok(shellSrc.includes('Production Pipeline'), 'AppShell must show 8-stage production pipeline');
+});
+
+test('V2 Entry Points: CreationEntryHub exposes Brief, Existing Script, and Website URL entry points', () => {
+  const hubSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/CreationEntryHub.jsx'), 'utf8');
+  assert.ok(hubSrc.includes('Start with a Brief'), 'Hub must feature Start with a Brief');
+  assert.ok(hubSrc.includes('Start with an Existing Script'), 'Hub must feature Start with an Existing Script');
+  assert.ok(hubSrc.includes('Start with a Website URL'), 'Hub must feature Start with a Website URL');
+  assert.ok(hubSrc.includes('18-Point Continuity Gate'), 'Hub must highlight 18-point continuity gate');
+  assert.ok(hubSrc.includes('Devanagari script support'), 'Hub must highlight regional script support');
+  assert.ok(hubSrc.includes('Magnific GPU Rendering'), 'Hub must highlight video GPU rendering');
+});
+
+test('V2 Entry Point 1 (Brief): Start with Brief navigates into studio workflow', () => {
+  let activeAppView = 'hub';
+  let studioStage = 'business';
+  let userContext = { businessName: 'Chai Point' };
+
+  const handleStartBrief = () => {
+    activeAppView = 'studio';
+    if (userContext.businessName && userContext.businessName.trim().length > 0) {
+      studioStage = 'brief';
+    } else {
+      studioStage = 'business';
+    }
+  };
+
+  handleStartBrief();
+  assert.equal(activeAppView, 'studio', 'Starting brief must switch view to studio');
+  assert.equal(studioStage, 'brief', 'Existing brand should advance to brief stage');
+});
+
+test('V2 Entry Point 2 (Script): ExistingScriptModal validates and fast-tracks directly to Stage 07', () => {
+  const scriptModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ExistingScriptModal.jsx'), 'utf8');
+  assert.ok(scriptModalSrc.includes('Kirana UGC (Hindi)'), 'Must include Kirana sample');
+  assert.ok(scriptModalSrc.includes('Chai Point Quick Rush (English)'), 'Must include Chai Point sample');
+  assert.ok(scriptModalSrc.includes('/api/script/validate-and-import'), 'Must call validation endpoint');
+  assert.ok(scriptModalSrc.includes('Proceed to Script Studio (Stage 07)'), 'Must offer direct path to Stage 07');
+
+  let studioStage = 'business';
+  let completedStages = [];
+  let scenes = [];
+  let generatedScript = null;
+  let activeAppView = 'hub';
+
+  const handleImportScript = (payload) => {
+    scenes = payload.scenes;
+    generatedScript = payload.generatedScript;
+    completedStages = ['business', 'brief', 'settings', 'idea', 'opening', 'story'];
+    studioStage = 'script';
+    activeAppView = 'studio';
+  };
+
+  handleImportScript({
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+    generatedScript: { scenes: ['S1', 'S2', 'S3', 'S4'] },
+  });
+
+  assert.equal(activeAppView, 'studio');
+  assert.equal(studioStage, 'script', 'Must land on Stage 7 (Script)');
+  assert.equal(scenes.length, 4, 'Must load 4 scenes');
+  assert.ok(completedStages.includes('story'), 'Must mark stages up to story as completed');
+});
+
+test('V2 Entry Point 3 (URL): UrlResearchModal handles URL extraction and pre-populates Stage 02 brief', () => {
+  const urlModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
+  assert.ok(urlModalSrc.includes('/api/research/url'), 'Must call /api/research/url endpoint');
+  assert.ok(urlModalSrc.includes('Scan Website'), 'Must have scan website button');
+  assert.ok(urlModalSrc.includes('Proceed to Studio with Brief'), 'Must have proceed to studio action');
+
+  let userContext = { businessName: '', brief: '', websiteUrl: '' };
+  let studioStage = 'business';
+  let activeAppView = 'hub';
+  let completedStages = [];
+
+  const handleApplyUrlData = ({ websiteUrl, businessName, brief }) => {
+    userContext.websiteUrl = websiteUrl;
+    userContext.businessName = businessName;
+    userContext.brief = brief;
+    completedStages = ['business'];
+    studioStage = 'brief';
+    activeAppView = 'studio';
+  };
+
+  handleApplyUrlData({
+    websiteUrl: 'https://ratnamjewellers.com',
+    businessName: 'Ratnam Jewellers',
+    brief: 'High-converting video highlighting hallmark lightweight bridal jewellery.',
+  });
+
+  assert.equal(activeAppView, 'studio');
+  assert.equal(studioStage, 'brief', 'Must navigate to Stage 2 (Brief)');
+  assert.equal(userContext.businessName, 'Ratnam Jewellers');
+  assert.ok(userContext.brief.includes('bridal jewellery'));
+  assert.deepEqual(completedStages, ['business']);
+});
+
+test('Script-First Product: Screen07Script includes Section 8 Gate Passed badge, Copy Script, and Save Script', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('Section 8 Gate: Passed'), 'Must display Section 8 Gate Passed badge');
+  assert.ok(guidedStudioSrc.includes('Copy Script'), 'Must have Copy Script action');
+  assert.ok(guidedStudioSrc.includes('Save Script'), 'Must have Save Script action');
+  assert.ok(guidedStudioSrc.includes('onSaveProject'), 'Must support onSaveProject callback');
+});
+
+test('Script-First Product: AppShell navigation includes Script Library, Business Profiles, and Auth integration', () => {
+  const appShellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+  assert.ok(appShellSrc.includes('Script Library'), 'Must have Script Library navigation');
+  assert.ok(appShellSrc.includes('Business Profile'), 'Must have Business Profile navigation');
+  assert.ok(appShellSrc.includes('currentUser'), 'Must support currentUser state');
+  assert.ok(appShellSrc.includes('onOpenAuthModal'), 'Must support auth modal open trigger');
+  assert.ok(appShellSrc.includes('onLogout'), 'Must support logout action');
+  assert.ok(appShellSrc.includes('onOpenOnboarding'), 'Must support business onboarding trigger');
+});
+
+test('Script-First Product: ScriptLibraryView renders search, copy, open, delete, and empty states', () => {
+  const libSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScriptLibraryView.jsx'), 'utf8');
+  assert.ok(libSrc.includes('Script Library'), 'Must have header title');
+  assert.ok(libSrc.includes('Search'), 'Must have search input');
+  assert.ok(libSrc.includes('handleCopyScript') && libSrc.includes('Copy 4 Scenes'), 'Must have copy script button for each project');
+  assert.ok(libSrc.includes('Open in Studio'), 'Must have Open in Studio button');
+  assert.ok(libSrc.includes('onDeleteProject'), 'Must support deleting projects');
+});
+
+test('Script-First Product: BusinessProfileView supports multi-business profiles, editing, and switching', () => {
+  const bizSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessProfileView.jsx'), 'utf8');
+  assert.ok(bizSrc.includes('Business Profiles'), 'Must list businesses');
+  assert.ok(bizSrc.includes('Add Another Business'), 'Must allow adding new business');
+  assert.ok(bizSrc.includes('City / Town'), 'Must include location fields');
+  assert.ok(bizSrc.includes('Save'), 'Must have save action');
+});
+
+test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard', () => {
+  const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  assert.ok(obSrc.includes('Step {step} of 4'), 'Step indicator');
+  assert.ok(obSrc.includes('Welcome & Video Goal'), 'Step 1 intended use');
+  assert.ok(obSrc.includes('Business Identity'), 'Step 2 business identity');
+  assert.ok(obSrc.includes('Location & Customers'), 'Step 3 location & customers');
+  assert.ok(obSrc.includes('Confirm & Launch'), 'Step 4 confirm & launch');
+});
+
+test('Script-First Product: App.jsx wires all 4 views and saves/restores projects to/from server', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes('handleSaveCurrentProject'), 'App.jsx must define handleSaveCurrentProject');
+  assert.ok(appSrc.includes('handleOpenProject'), 'App.jsx must define handleOpenProject');
+  assert.ok(appSrc.includes('handleDeleteProject'), 'App.jsx must define handleDeleteProject');
+  assert.ok(appSrc.includes('handleSaveBusiness'), 'App.jsx must define handleSaveBusiness');
+  assert.ok(appSrc.includes('handleOnboardingComplete'), 'App.jsx must define handleOnboardingComplete');
+  assert.ok(appSrc.includes('<ScriptLibraryView'), 'App.jsx must render ScriptLibraryView');
+  assert.ok(appSrc.includes('<BusinessProfileView'), 'App.jsx must render BusinessProfileView');
+  assert.ok(appSrc.includes('<AuthModal'), 'App.jsx must render AuthModal');
+  assert.ok(appSrc.includes('<BusinessOnboardingModal'), 'App.jsx must render BusinessOnboardingModal');
+});
+
+
 

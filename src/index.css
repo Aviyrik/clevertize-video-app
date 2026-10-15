@@ -271,3 +271,54 @@ input::placeholder, textarea::placeholder {
     flex-shrink: 0;
   }
 }
+
+/* Mobile responsive drawer and header adaptations */
+@media (max-width: 768px) {
+  .app-sidebar-container {
+    position: fixed !important;
+    left: -290px;
+    top: 0;
+    bottom: 0;
+    width: 280px !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000 !important;
+  }
+  .app-sidebar-container.open {
+    transform: translateX(290px) !important;
+  }
+  .app-sidebar-backdrop {
+    display: block !important;
+  }
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  .desktop-header-actions {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .app-sidebar-backdrop {
+    display: none !important;
+  }
+  .mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+/* Full-screen Authentication Entry Screen responsive layout */
+@media (max-width: 960px) {
+  .auth-screen-container {
+    flex-direction: column !important;
+  }
+  .auth-form-column {
+    max-width: 100% !important;
+    padding: 36px 24px !important;
+    border-right: none !important;
+  }
+  .auth-brand-column {
+    display: none !important;
+  }
+}
+
+

@@ -1,4 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
+import {
+  studioReducer,
+  initialStudioState,
+  createInitialStudioState,
+  StudioActionTypes,
+  isStaleResponse,
+} from './context/studioReducer.js';
+import {
+  StudioStateContext,
+  StudioDispatchContext,
+  useStudioState,
+  useStudioDispatch,
+} from './context/studioState.jsx';
+import AppShell from './components/v2/AppShell.jsx';
+import CreationEntryHub from './components/v2/CreationEntryHub.jsx';
+import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
+import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
+import AuthModal from './components/v2/AuthModal.jsx';
+import AuthScreen from './components/v2/AuthScreen.jsx';
+import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx';
+import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
+import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
 import {
   Mic,
   MicOff,
@@ -791,44 +813,60 @@ export default function App() {
   // 'render' -> Video Rendering & Delivery
   // V4 Guided Creative Studio Stage:
   // 'business' | 'brief' | 'settings' | 'idea' | 'opening' | 'story' | 'script' | 'video'
-  const [studioStage, setStudioStage] = useState(() => {
+  // Centralized Studio State via Reducer (Milestone 2B)
+  const [studioState, studioDispatch] = useReducer(studioReducer, initialStudioState, () => {
+    let savedStage = 'business';
+    let savedCompleted = [];
     try {
       const savedContext = localStorage.getItem('clevertize_user_context');
       if (savedContext) {
         const parsed = JSON.parse(savedContext);
         if (parsed.businessName && parsed.businessName.trim().length > 0) {
-          return 'brief';
+          savedStage = 'brief';
+          savedCompleted = ['business'];
         }
       }
     } catch {}
-    return 'business';
+    return createInitialStudioState({
+      currentStage: savedStage,
+      completedStages: savedCompleted,
+    });
   });
 
-  const [completedStages, setCompletedStages] = useState(() => {
-    try {
-      const savedContext = localStorage.getItem('clevertize_user_context');
-      if (savedContext) {
-        const parsed = JSON.parse(savedContext);
-        if (parsed.businessName && parsed.businessName.trim().length > 0) {
-          return ['business'];
-        }
-      }
-    } catch {}
-    return [];
-  });
+  const studioStage = studioState.currentStage;
+  const setStudioStage = (stage) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_STAGE,
+      payload: { stage: typeof stage === 'function' ? stage(studioState.currentStage) : stage },
+    });
 
-  const [hasStaleWarning, setHasStaleWarning] = useState(false);
+  const completedStages = studioState.completedStages;
+  const setCompletedStages = (updater) => {
+    const nextVal = typeof updater === 'function' ? updater(studioState.completedStages) : updater;
+    studioDispatch({
+      type: StudioActionTypes.SET_COMPLETED_STAGES,
+      payload: { completedStages: nextVal },
+    });
+  };
+
+  const hasStaleWarning = studioState.hasStaleWarning;
+  const setHasStaleWarning = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_STALE_WARNING,
+      payload: { hasStaleWarning: typeof val === 'function' ? val(studioState.hasStaleWarning) : val },
+    });
+
   const [brandResetKey, setBrandResetKey] = useState(0);
 
   // V4 Guided Studio: Explicit confirmed choices only (defaults are not choices!)
-  const [explicitChoices, setExplicitChoices] = useState({
-    style: null,
-    language: null,
-    platform: null,
-    duration: null,
-    idea: null,
-    opening: null,
-  });
+  const explicitChoices = studioState.explicitChoices;
+  const setExplicitChoices = (updater) => {
+    const nextVal = typeof updater === 'function' ? updater(studioState.explicitChoices) : updater;
+    studioDispatch({
+      type: StudioActionTypes.SET_EXPLICIT_CHOICES,
+      payload: { explicitChoices: nextVal },
+    });
+  };
 
   const markStageComplete = (stageId) => {
     setCompletedStages((prev) => (prev.includes(stageId) ? prev : [...prev, stageId]));
@@ -882,14 +920,50 @@ export default function App() {
 
   // Creative Decision Panels: 'direction' | 'hook' | 'plot' | 'story' | 'constraints'
   const [creativePanel, setCreativePanel] = useState('direction');
-  const [directionsList, setDirectionsList] = useState([]);
-  const [selectedDirection, setSelectedDirection] = useState(null);
-  const [customDirection, setCustomDirection] = useState('');
+  const directionsList = studioState.directionsList;
+  const setDirectionsList = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_DIRECTIONS,
+      payload: { directionsList: typeof val === 'function' ? val(studioState.directionsList) : val },
+    });
+
+  const selectedDirection = studioState.selectedDirection;
+  const setSelectedDirection = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SELECT_DIRECTION,
+      payload: { direction: typeof val === 'function' ? val(studioState.selectedDirection) : val },
+    });
+
+  const customDirection = studioState.customDirection;
+  const setCustomDirection = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_CUSTOM_DIRECTION,
+      payload: { customDirection: typeof val === 'function' ? val(studioState.customDirection) : val },
+    });
+
   const [isLoadingDirections, setIsLoadingDirections] = useState(false);
 
-  const [hooksList, setHooksList] = useState([]);
-  const [selectedHook, setSelectedHook] = useState(null);
-  const [customHook, setCustomHook] = useState('');
+  const hooksList = studioState.hooksList;
+  const setHooksList = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_HOOKS,
+      payload: { hooksList: typeof val === 'function' ? val(studioState.hooksList) : val },
+    });
+
+  const selectedHook = studioState.selectedHook;
+  const setSelectedHook = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SELECT_HOOK,
+      payload: { hook: typeof val === 'function' ? val(studioState.selectedHook) : val },
+    });
+
+  const customHook = studioState.customHook;
+  const setCustomHook = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_CUSTOM_HOOK,
+      payload: { customHook: typeof val === 'function' ? val(studioState.customHook) : val },
+    });
+
   const [isLoadingHooks, setIsLoadingHooks] = useState(false);
 
   const [plotsList, setPlotsList] = useState([]);
@@ -897,11 +971,28 @@ export default function App() {
   const [customPlot, setCustomPlot] = useState('');
   const [isLoadingPlots, setIsLoadingPlots] = useState(false);
 
-  const [storyWorldData, setStoryWorldData] = useState(null);
+  const storyWorldData = studioState.storyWorldData;
+  const setStoryWorldData = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_STORY_WORLD,
+      payload: { storyWorldData: typeof val === 'function' ? val(studioState.storyWorldData) : val },
+    });
+
   const [isLoadingStory, setIsLoadingStory] = useState(false);
 
-  const [constraintsList, setConstraintsList] = useState([]);
-  const [avoidList, setAvoidList] = useState([]);
+  const constraintsList = studioState.customConstraints;
+  const setConstraintsList = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_CONSTRAINTS,
+      payload: { constraints: typeof val === 'function' ? val(studioState.customConstraints) : val },
+    });
+
+  const avoidList = studioState.customAvoidDetails;
+  const setAvoidList = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_AVOID_DETAILS,
+      payload: { avoidDetails: typeof val === 'function' ? val(studioState.customAvoidDetails) : val },
+    });
   const [newConstraintInput, setNewConstraintInput] = useState('');
   const [newAvoidInput, setNewAvoidInput] = useState('');
 
@@ -935,7 +1026,12 @@ export default function App() {
   const [storyData, setStoryData] = useState(null); // { format, format_owner, core_idea, through_line, location, characters, scenes, hook_line, visual_world, ending }
 
   const [scriptPayloadData, setScriptPayloadData] = useState(null); // { header, character1, character2, setting, scenes, record, endFrame, meta }
-  const [generatedScript, setGeneratedScript] = useState(null);
+  const generatedScript = studioState.generatedScript;
+  const setGeneratedScript = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_GENERATED_SCRIPT,
+      payload: { script: typeof val === 'function' ? val(studioState.generatedScript) : val },
+    });
 
   // Approved Summary History for breadcrumb context
   const [approvedSummary, setApprovedSummary] = useState([]);
@@ -949,8 +1045,18 @@ export default function App() {
   const [character1, setCharacter1] = useState('');
   const [character2, setCharacter2] = useState('');
   const [setting, setSetting] = useState('');
-  const [scenes, setScenes] = useState([]);
-  const [activeSceneIndex, setActiveSceneIndex] = useState(0);
+  const scenes = studioState.scenes;
+  const setScenes = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_SCENES,
+      payload: { scenes: typeof val === 'function' ? val(studioState.scenes) : val },
+    });
+  const activeSceneIndex = studioState.activeSceneIndex;
+  const setActiveSceneIndex = (val) =>
+    studioDispatch({
+      type: StudioActionTypes.SET_ACTIVE_SCENE_INDEX,
+      payload: { index: typeof val === 'function' ? val(studioState.activeSceneIndex) : val },
+    });
   const [isRawScriptMode, setIsRawScriptMode] = useState(false);
   const [isFoundationCollapsed, setIsFoundationCollapsed] = useState(false);
 
@@ -985,6 +1091,413 @@ export default function App() {
   const [validationError, setValidationError] = useState('');
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [qualityFailures, setQualityFailures] = useState([]);
+
+  // Clevertize V2 Application Shell & Entry Point State
+  const [activeAppView, setActiveAppView] = useState(() => {
+    try {
+      const savedContext = localStorage.getItem('clevertize_user_context');
+      if (savedContext) {
+        const parsed = JSON.parse(savedContext);
+        if (parsed.businessName && parsed.businessName.trim().length > 0) {
+          return 'studio';
+        }
+      }
+    } catch {}
+    return 'hub';
+  });
+  const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+
+  const handleImportExistingScript = ({
+    scenes: importedScenes,
+    generatedScript: importedScript,
+    character1: c1,
+    character2: c2,
+    setting: st,
+    language: lang,
+    creativeStyle: stl,
+  }) => {
+    if (c1) setCharacter1(c1);
+    if (c2) setCharacter2(c2);
+    if (st) setSetting(st);
+    if (lang) updateUserContext('language', lang);
+    if (stl) updateUserContext('creativeStyle', stl);
+
+    setScenes(importedScenes);
+    setGeneratedScript(importedScript);
+
+    // Fast-track past stages 1-6 straight into Stage 7 (Script Studio)
+    setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story']);
+    setStudioStage('script');
+    setActiveAppView('studio');
+    setToastMessage('Script validated and imported into Stage 07!');
+    setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  const handleApplyUrlData = ({
+    websiteUrl: url,
+    businessName: bName,
+    businessType: bType,
+    town: tw,
+    brief: br,
+  }) => {
+    if (bName) updateUserContext('businessName', bName);
+    if (bType) updateUserContext('businessType', bType);
+    if (tw) updateUserContext('town', tw);
+    if (url) updateUserContext('websiteUrl', url);
+    if (br) updateUserContext('brief', br);
+
+    markStageComplete('business');
+    setStudioStage('brief');
+    setActiveAppView('studio');
+    setToastMessage('Website analyzed! Brief generated in Stage 02.');
+    setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  // Clevertize V2 Authentication & Server Persistence State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authToken, setAuthToken] = useState(() => {
+    try {
+      return localStorage.getItem('clevertize_token') || null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthChecking, setIsAuthChecking] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem('clevertize_token'));
+    } catch {
+      return false;
+    }
+  });
+  const [userProjects, setUserProjects] = useState([]);
+  const [userBusinesses, setUserBusinesses] = useState([]);
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+
+  const fetchUserData = async (token) => {
+    if (!token) return;
+    try {
+      const [bizRes, projRes] = await Promise.all([
+        fetch('/api/businesses', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/projects', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (bizRes.ok) {
+        const bData = await bizRes.json();
+        setUserBusinesses(bData.businesses || []);
+      }
+      if (projRes.ok) {
+        const pData = await projRes.json();
+        setUserProjects(pData.projects || []);
+      }
+    } catch (err) {
+      console.error('Failed to load user projects/businesses:', err);
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('clevertize_token');
+    if (token) {
+      setIsAuthChecking(true);
+      fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Session invalid');
+          return res.json();
+        })
+        .then((data) => {
+          if (data.user) {
+            setCurrentUser(data.user);
+            setAuthToken(token);
+            fetchUserData(token);
+          } else {
+            throw new Error('No user data');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('clevertize_token');
+          setAuthToken(null);
+          setCurrentUser(null);
+        })
+        .finally(() => {
+          setIsAuthChecking(false);
+        });
+    } else {
+      setIsAuthChecking(false);
+    }
+  }, []);
+
+  const handleAuthSuccess = (userDataOrUser, possibleToken, authMode) => {
+    const user = userDataOrUser?.user || userDataOrUser;
+    const token = possibleToken || userDataOrUser?.token;
+    if (user) setCurrentUser(user);
+    if (token) {
+      setAuthToken(token);
+      try {
+        localStorage.setItem('clevertize_token', token);
+      } catch {}
+      fetchUserData(token);
+    }
+    setToastMessage(`Welcome, ${user?.fullName || user?.name || user?.email || 'User'}!`);
+    setTimeout(() => setToastMessage(''), 3000);
+
+    // If new registration, open business onboarding
+    if (authMode === 'signup') {
+      setIsOnboardingModalOpen(true);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (authToken) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+      } catch {}
+    }
+    try {
+      localStorage.removeItem('clevertize_token');
+    } catch {}
+    setAuthToken(null);
+    setCurrentUser(null);
+    setUserProjects([]);
+    setUserBusinesses([]);
+    setActiveProjectId(null);
+    setIsCurrentProjectSaved(false);
+    setToastMessage('Signed out successfully.');
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleSaveCurrentProject = async () => {
+    if (!currentUser || !authToken) {
+      setIsAuthModalOpen(true);
+      setToastMessage('Please sign in or create an account to save your project.');
+      setTimeout(() => setToastMessage(''), 4000);
+      return;
+    }
+
+    try {
+      const title = userContext.businessName
+        ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || 'Ad Film'}`
+        : 'Untitled Script';
+
+      const payload = {
+        id: activeProjectId || undefined,
+        title,
+        businessName: userContext.businessName || '',
+        businessType: userContext.businessType || '',
+        town: userContext.town || '',
+        language: userContext.language || 'English',
+        creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+        status: scenes && scenes.length > 0 ? 'script_ready' : 'draft',
+        brief: userContext.brief || '',
+        scenes: scenes || [],
+        setting: setting || '',
+        character1: character1 || '',
+        character2: character2 || '',
+        stages: {
+          directionsList,
+          selectedDirectionIndex,
+          hookAngles,
+          selectedHookIndex,
+          storyWorlds,
+          selectedStoryWorldIndex,
+          generatedScript,
+          completedStages,
+        },
+        brandContext: extractBrandProfile(userContext),
+      };
+
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok && (data.success || data.project)) {
+        setActiveProjectId(data.project.id);
+        setIsCurrentProjectSaved(true);
+        setUserProjects((prev) => {
+          const idx = prev.findIndex((p) => p.id === data.project.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = data.project;
+            return next;
+          }
+          return [data.project, ...prev];
+        });
+        setToastMessage('Script and project saved to your library!');
+        setTimeout(() => setToastMessage(''), 4000);
+      } else {
+        setToastMessage(`Failed to save: ${data.error || 'Server error'}`);
+        setTimeout(() => setToastMessage(''), 4000);
+      }
+    } catch (err) {
+      console.error('Error saving project:', err);
+      setToastMessage('Failed to save project. Check your connection.');
+      setTimeout(() => setToastMessage(''), 4000);
+    }
+  };
+
+  const handleOpenProject = (proj) => {
+    if (!proj) return;
+    setActiveProjectId(proj.id);
+    setIsCurrentProjectSaved(true);
+
+    if (proj.brandContext) {
+      setUserContext((prev) => ({ ...prev, ...proj.brandContext }));
+    } else {
+      if (proj.businessName) updateUserContext('businessName', proj.businessName);
+      if (proj.businessType) updateUserContext('businessType', proj.businessType);
+      if (proj.town) updateUserContext('town', proj.town);
+      if (proj.language) updateUserContext('language', proj.language);
+      if (proj.creativeStyle) updateUserContext('creativeStyle', proj.creativeStyle);
+      if (proj.brief) updateUserContext('brief', proj.brief);
+    }
+
+    if (proj.scenes && Array.isArray(proj.scenes) && proj.scenes.length > 0) {
+      setScenes(proj.scenes);
+    }
+    if (proj.setting) setSetting(proj.setting);
+    if (proj.character1) setCharacter1(proj.character1);
+    if (proj.character2) setCharacter2(proj.character2);
+
+    if (proj.stages) {
+      if (proj.stages.directionsList) setDirectionsList(proj.stages.directionsList);
+      if (typeof proj.stages.selectedDirectionIndex === 'number') {
+        setSelectedDirectionIndex(proj.stages.selectedDirectionIndex);
+      }
+      if (proj.stages.hookAngles) setHookAngles(proj.stages.hookAngles);
+      if (typeof proj.stages.selectedHookIndex === 'number') {
+        setSelectedHookIndex(proj.stages.selectedHookIndex);
+      }
+      if (proj.stages.storyWorlds) setStoryWorlds(proj.stages.storyWorlds);
+      if (typeof proj.stages.selectedStoryWorldIndex === 'number') {
+        setSelectedStoryWorldIndex(proj.stages.selectedStoryWorldIndex);
+      }
+      if (proj.stages.generatedScript) setGeneratedScript(proj.stages.generatedScript);
+      if (proj.stages.completedStages) setCompletedStages(proj.stages.completedStages);
+    } else {
+      setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script']);
+    }
+
+    setStudioStage('script');
+    setActiveAppView('studio');
+    setToastMessage(`Loaded "${proj.title || 'Project'}" into Script Studio.`);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!authToken) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      if (res.ok) {
+        setUserProjects((prev) => prev.filter((p) => p.id !== projectId));
+        if (activeProjectId === projectId) {
+          setActiveProjectId(null);
+          setIsCurrentProjectSaved(false);
+        }
+        setToastMessage('Project removed from library.');
+        setTimeout(() => setToastMessage(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    }
+  };
+
+  const handleSaveBusiness = async (bizData) => {
+    if (!currentUser || !authToken) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    try {
+      const res = await fetch('/api/businesses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(bizData),
+      });
+      const data = await res.json();
+      if (res.ok && (data.success || data.business)) {
+        setUserBusinesses((prev) => {
+          const idx = prev.findIndex((b) => b.id === data.business.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = data.business;
+            return next;
+          }
+          return [data.business, ...prev];
+        });
+        setUserContext((prev) => ({
+          ...prev,
+          businessName: data.business.name || prev.businessName,
+          businessType: data.business.category || prev.businessType,
+          town: data.business.town || prev.town,
+          area: data.business.area || prev.area,
+          websiteUrl: data.business.websiteUrl || prev.websiteUrl,
+          specialty: data.business.specialty || prev.specialty,
+        }));
+        setToastMessage('Business profile saved.');
+        setTimeout(() => setToastMessage(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving business:', err);
+    }
+  };
+
+  const handleOnboardingComplete = async (onboardingData) => {
+    setIsOnboardingModalOpen(false);
+    setUserContext((prev) => ({
+      ...prev,
+      businessName: onboardingData.businessName,
+      businessType: onboardingData.businessType,
+      town: onboardingData.town,
+      brief: onboardingData.brief || prev.brief,
+    }));
+
+    if (currentUser && authToken) {
+      try {
+        await fetch('/api/businesses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            name: onboardingData.businessName,
+            category: onboardingData.businessType,
+            town: onboardingData.town,
+            targetAudience: onboardingData.targetAudience,
+            intendedUse: onboardingData.intendedUse,
+          }),
+        });
+        fetchUserData(authToken);
+      } catch (err) {
+        console.error('Error auto-saving onboarded business:', err);
+      }
+    }
+
+    markStageComplete('business');
+    setStudioStage('brief');
+    setActiveAppView('studio');
+    setToastMessage(`Business configured! Let's craft your brief.`);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
 
   // Stopwatch Timer
   const [elapsedTime, setElapsedTime] = useState('00:00');
@@ -1325,13 +1838,51 @@ export default function App() {
   const handleLanguageChange = (newLang) => {
     if (userContext.language === newLang) return;
     updateUserContext('language', newLang);
-    if (hooksList.length > 0 || selectedHook) {
-      setLanguageChangedNotice(`Language changed to ${newLang}. Regenerating creative copy and script...`);
+
+    const hadDownstream = Boolean(
+      directionsList.length > 0 ||
+      selectedDirection ||
+      hooksList.length > 0 ||
+      selectedHook ||
+      scenes.length > 0 ||
+      generatedScript ||
+      completedStages.includes('idea') ||
+      completedStages.includes('script')
+    );
+
+    // Invalidate creative directions so fresh ones are loaded for the new language
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setExplicitChoices((prev) => {
+      const next = { ...prev };
+      delete next.idea;
+      delete next.opening;
+      return next;
+    });
+
+    if (loadedHooksDirectionKeyRef) loadedHooksDirectionKeyRef.current = '';
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setScenes([]);
+    setScriptPayloadData(null);
+    setGeneratedScript(null);
+    setShotSpec(null);
+    setVideoUrl('');
+
+    // Rewind completed stages downstream of settings
+    setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
+    studioDispatch({ type: StudioActionTypes.INVALIDATE_DOWNSTREAM, payload: { fromStage: 'settings' } });
+
+    if (hadDownstream) {
+      setHasStaleWarning(true);
+      setLanguageChangedNotice(`Language changed to ${newLang}. Creative copy and directions will refresh.`);
       setTimeout(() => setLanguageChangedNotice(''), 5000);
-      setPlotsList([]);
-      setSelectedPlot(null);
-      setStoryWorldData(null);
-      loadHooks(true, newLang);
     }
   };
 
@@ -1471,19 +2022,57 @@ export default function App() {
   };
 
   const handleFormatChange = async (newFormat) => {
+    if (userContext.creativeStyle === newFormat) return;
     updateUserContext('creativeStyle', newFormat);
     setCreativeDNA((prev) => ({
       ...prev,
       format: newFormat,
       story: prev?.story ? { ...prev.story, format: newFormat } : { format: newFormat },
     }));
-    // Invalidate downstream script because format changed
-    const hadDownstream = Boolean(generatedScript || scenes.length > 0 || completedStages.includes('script'));
+
+    const hadDownstream = Boolean(
+      directionsList.length > 0 ||
+      selectedDirection ||
+      hooksList.length > 0 ||
+      selectedHook ||
+      scenes.length > 0 ||
+      generatedScript ||
+      completedStages.includes('idea') ||
+      completedStages.includes('script')
+    );
+
+    // Invalidate downstream creative direction territories so they are tailored to the new format
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setExplicitChoices((prev) => {
+      const next = { ...prev };
+      delete next.idea;
+      delete next.opening;
+      return next;
+    });
+
+    if (loadedHooksDirectionKeyRef) loadedHooksDirectionKeyRef.current = '';
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setScenes([]);
+    setScriptPayloadData(null);
     setGeneratedScript(null);
+    setShotSpec(null);
+    setVideoUrl('');
+
+    // Rewind completed stages downstream of settings
+    setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
+    studioDispatch({ type: StudioActionTypes.INVALIDATE_DOWNSTREAM, payload: { fromStage: 'settings' } });
+
     if (hadDownstream) {
       setHasStaleWarning(true);
     }
-    await loadStoryWorld(true, null, newFormat);
   };
 
   // 6. Master Script Synthesis via /api/creative/synthesize-script
@@ -2110,6 +2699,12 @@ export default function App() {
       setIsNewFilmConfirmOpen(false);
       setBrandResetKey((prev) => prev + 1);
 
+      // Reset studio centralized state via atomic action
+      studioDispatch({
+        type: StudioActionTypes.RESET_STUDIO,
+        payload: { initialStage: 'business', preserveBrand: !clearBrand },
+      });
+
       // Reset film-specific explicit choices & creative pipeline
       setExplicitChoices({
         style: null,
@@ -2181,6 +2776,7 @@ export default function App() {
 
       setCompletedStages([]);
       setStudioStage('business');
+      setActiveAppView('hub');
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -2459,153 +3055,157 @@ export default function App() {
     </div>
   );
 
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-app)' }}>
-      {/* Offline Connectivity Notification Banner */}
-      {!isOnline && (
+  // 1. Initial auth token verification loading screen
+  if (isAuthChecking) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          width: '100vw',
+          backgroundColor: '#0B0C0F',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          color: '#F5F7FA',
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}
+      >
         <div
           style={{
-            backgroundColor: '#DC2626',
-            color: '#FFFFFF',
-            padding: '8px 16px',
-            fontSize: 13,
-            fontWeight: 600,
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
-            zIndex: 9999,
+            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.4)',
           }}
         >
-          <WifiOff size={16} />
-          <span>You're offline. Your progress is safe. Reconnect to continue.</span>
+          <Clapperboard size={22} color="#FFFFFF" />
         </div>
-      )}
+        <div style={{ fontSize: 13, color: '#A6ACB8', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Sparkles size={14} className="icon-spinner" style={{ color: '#6366F1' }} />
+          <span>Starting Clevertize...</span>
+        </div>
+      </div>
+    );
+  }
 
-      {/* TOP APPLICATION HEADER */}
-      <header
-        style={{
-          borderBottom: '1px solid var(--border-subtle)',
-          backgroundColor: 'rgba(11, 12, 15, 0.92)',
-          backdropFilter: 'blur(12px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          padding: '12px 24px',
-        }}
-      >
-        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+  // 2. Unauthenticated user: show full-screen AuthScreen
+  if (!currentUser || !authToken) {
+    return (
+      <AuthScreen
+        onAuthSuccess={handleAuthSuccess}
+      />
+    );
+  }
+
+  return (
+    <StudioStateContext.Provider value={studioState}>
+      <StudioDispatchContext.Provider value={studioDispatch}>
+        <AppShell
+          activeView={activeAppView}
+          onSelectView={setActiveAppView}
+          currentStage={studioStage}
+          completedStages={completedStages}
+          onNavigateStage={handleNavigateStage}
+          onStartNewFilm={() => handleStartNewProject(false)}
+          businessName={userContext.businessName}
+          businessType={userContext.businessType}
+          town={userContext.town}
+          onEditBrand={() => setIsBrandModalOpen(true)}
+          onOpenScriptModal={() => setIsScriptModalOpen(true)}
+          onOpenUrlModal={() => setIsUrlModalOpen(true)}
+          isOnline={isOnline}
+          hasStaleWarning={hasStaleWarning}
+          onApplyUpdate={handleApplyUpdate}
+          currentUser={currentUser}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+          onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
+          projectCount={userProjects.length}
+        >
+          {/* Offline Connectivity Notification Banner */}
+          {!isOnline && (
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)',
+                backgroundColor: '#DC2626',
+                color: '#FFFFFF',
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#ffffff',
-                boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
+                gap: 8,
               }}
             >
-              <Clapperboard size={20} />
+              <WifiOff size={16} />
+              <span>You're offline. Your progress is safe. Reconnect to continue.</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                Clevertize
-              </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-primary)',
-                  backgroundColor: 'var(--accent-subtle)',
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Video Intelligence
-              </span>
-            </div>
-          </div>
+          )}
 
-          {/* Right Action: Active Brand Summary Pill & Profile Switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {userContext.businessName ? (
-              <button
-                type="button"
-                onClick={() => setIsBrandModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  fontSize: 12,
-                }}
-                title="Manage reusable brand profile"
-              >
-                <Store size={14} style={{ color: 'var(--accent-primary)' }} />
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userContext.businessName}</span>
-                {userContext.town && <span style={{ color: 'var(--text-tertiary)' }}>· {userContext.town}</span>}
-                <span style={{ color: 'var(--accent-primary)', fontSize: 11, fontWeight: 500 }}>· Brand Profile</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsBrandModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--accent-subtle)',
-                  border: '1px solid var(--accent-primary)',
-                  color: 'var(--accent-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-                title="Configure reusable brand profile"
-              >
-                <Building2 size={13} />
-                <span>+ Set up brand</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleStartNewProject}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 12px',
-                borderRadius: 6,
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
+          {(activeAppView === 'home' || activeAppView === 'hub') ? (
+            <CreationEntryHub
+              onStartBrief={() => {
+                setActiveAppView('studio');
+                if (userContext.businessName && userContext.businessName.trim().length > 0) {
+                  setStudioStage('brief');
+                } else {
+                  setStudioStage('business');
+                }
               }}
-              title="Start a fresh film project"
-            >
-              <RotateCcw size={13} />
-              <span>New Film</span>
-            </button>
-          </div>
-        </div>
-      </header>
+              onOpenScriptModal={() => setIsScriptModalOpen(true)}
+              onOpenUrlModal={() => setIsUrlModalOpen(true)}
+              businessName={userContext.businessName}
+              businessType={userContext.businessType}
+              town={userContext.town}
+              hasActiveScript={Boolean(scenes.length > 0 || generatedScript)}
+              onContinueActiveProject={() => setActiveAppView('studio')}
+              recentProjects={userProjects}
+              onOpenProject={handleOpenProject}
+              currentUser={currentUser}
+              onNavigateProjects={() => setActiveAppView('projects')}
+            />
+          ) : (activeAppView === 'projects' || activeAppView === 'library') ? (
+            <ScriptLibraryView
+              projects={userProjects}
+              currentProjectId={activeProjectId}
+              onOpenProject={handleOpenProject}
+              onDeleteProject={handleDeleteProject}
+              onNewProject={() => {
+                handleStartNewProject(false);
+                setActiveAppView('studio');
+              }}
+              onSignIn={() => setIsAuthModalOpen(true)}
+              currentUser={currentUser}
+            />
+          ) : (activeAppView === 'businesses' || activeAppView === 'business') ? (
+            <BusinessProfileView
+              businesses={userBusinesses}
+              activeBusiness={userContext}
+              onSelectBusiness={(biz) => {
+                setUserContext((prev) => ({
+                  ...prev,
+                  businessName: biz.name || biz.businessName,
+                  businessType: biz.category || biz.businessType,
+                  town: biz.town || '',
+                  area: biz.area || '',
+                  websiteUrl: biz.websiteUrl || '',
+                  specialty: biz.specialty || '',
+                }));
+                setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
+                setTimeout(() => setToastMessage(''), 3000);
+              }}
+              onSaveBusiness={handleSaveBusiness}
+              currentUser={currentUser}
+              onSignIn={() => setIsAuthModalOpen(true)}
+            />
+          ) : (
+            <>
 
       {/* V4 GUIDED STUDIO PROGRESS HEADER & YOUR CHOICES */}
       <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px' }}>
@@ -3286,6 +3886,8 @@ export default function App() {
               setRewriteTargetSceneIndex(idx);
               setIsSceneRewriteOpen(true);
             }}
+            onSaveProject={handleSaveCurrentProject}
+            isProjectSaved={isCurrentProjectSaved}
           />
         )}
 
@@ -3477,7 +4079,47 @@ export default function App() {
             <span>{toastMessage}</span>
           </div>
         )}
-      </main>
-    </div>
+        </main>
+          </>
+        )}
+      </AppShell>
+
+      {/* Existing Script Modal (V2 Entry Point) */}
+      <ExistingScriptModal
+        isOpen={isScriptModalOpen}
+        onClose={() => setIsScriptModalOpen(false)}
+        onImportScript={handleImportExistingScript}
+        businessName={userContext.businessName}
+        businessType={userContext.businessType}
+        language={userContext.language}
+        creativeStyle={userContext.creativeStyle}
+      />
+
+      {/* URL Research Modal (V2 Entry Point) */}
+      <UrlResearchModal
+        isOpen={isUrlModalOpen}
+        onClose={() => setIsUrlModalOpen(false)}
+        onApplyUrlData={handleApplyUrlData}
+        initialUrl={userContext.websiteUrl}
+        businessName={userContext.businessName}
+        businessType={userContext.businessType}
+        town={userContext.town}
+      />
+
+      {/* Auth Modal (Sign in / Sign up) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Business Onboarding Wizard Modal */}
+      <BusinessOnboardingModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+        onComplete={handleOnboardingComplete}
+      />
+    </StudioDispatchContext.Provider>
+  </StudioStateContext.Provider>
   );
 }

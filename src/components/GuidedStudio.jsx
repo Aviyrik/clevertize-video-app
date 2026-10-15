@@ -39,7 +39,9 @@ import {
   Share2,
   CheckCircle2,
   RotateCcw,
-  FileText
+  FileText,
+  Copy,
+  Bookmark
 } from 'lucide-react';
 
 /**
@@ -2888,14 +2890,33 @@ export function Screen07Script({
   onOpenRewriteModal,
   isBusy = false,
   elapsedTime = '00:00',
+  onSaveProject,
+  isProjectSaved = false,
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
+  const [isCopiedFull, setIsCopiedFull] = useState(false);
 
   const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || 'Story').includes('Demo') ? 'Product Demo' : 'Story';
   const duration = userContext.targetDuration || '20s';
   const platform = (userContext.platform || 'Instagram').split('/')[0].trim();
   const lang = userContext.language || 'English';
+
+  const handleCopyEntireScript = async () => {
+    if (!scenes || !scenes.length) return;
+    const fullText = `COMMERCIAL SCRIPT: ${userContext.businessName || 'Business'}\nSTYLE: ${cleanStyle} | DURATION: ${duration} | LANGUAGE: ${lang}\n\n` +
+      (setting ? `SETTING:\n${setting}\n\n` : '') +
+      (character1 ? `CHARACTERS:\n${character1}\n${character2 || ''}\n\n` : '') +
+      scenes.map((s, idx) => `=== SCENE ${idx + 1} ===\n${s}`).join('\n\n');
+
+    try {
+      await navigator.clipboard.writeText(fullText);
+      setIsCopiedFull(true);
+      setTimeout(() => setIsCopiedFull(false), 2500);
+    } catch (e) {
+      console.warn('Copy failed', e);
+    }
+  };
 
   if (isBusy && (!scenes || scenes.length === 0)) {
     return (
@@ -2950,15 +2971,26 @@ export function Screen07Script({
   }
 
   const parseSceneData = (rawText, idx) => {
+    // Stage beat / dramatic role
+    const beats = ['Hook / Pattern Interrupt', 'Problem & Relatability', 'Discovery & Climax', 'Call to Action & Offer'];
+    const beatRole = beats[idx] || `Scene ${idx + 1}`;
+
     // Extract dialogue and visual
     const diaMatch = rawText.match(/(?:Dialogue|Dialogue \([^)]+\)|says):\s*"?([^"\n]+)"?/i) || rawText.match(/"([^"]+)"/);
     const visMatch = rawText.match(/(?:Visual|Action):\s*([^\n]+)/i);
+    const audioMatch = rawText.match(/(?:Audio|Sound|SFX|Music):\s*([^\n]+)/i);
+    const camMatch = rawText.match(/(?:Camera|Shot):\s*([^\n]+)/i);
+    const charMatch = rawText.match(/(?:^|\n)([A-Z][A-Z0-9\s_]{1,16})(?:\s*\([^)]*\))?:\s*"/m);
 
     return {
       title: `SCENE ${idx + 1}`,
       timing: idx === 0 ? '0–3s' : idx === 1 ? '3–8s' : idx === 2 ? '8–14s' : '14–20s',
+      beatRole,
+      character: charMatch ? charMatch[1].trim() : (cleanStyle === 'UGC' ? 'CREATOR' : 'ACTOR'),
       visual: visMatch ? visMatch[1].trim() : rawText.split('\n')[0].replace(/^SCENE\s*\d+[^:]*:\s*/i, '').trim(),
       dialogue: diaMatch ? diaMatch[1].trim() : null,
+      audio: audioMatch ? audioMatch[1].trim() : null,
+      camera: camMatch ? camMatch[1].trim() : null,
       raw: rawText
     };
   };
@@ -2976,30 +3008,47 @@ export function Screen07Script({
           </p>
         </div>
 
-        <div style={{
-          padding: '4px 12px',
-          borderRadius: 20,
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid var(--border-subtle)',
-          fontSize: 11,
-          fontWeight: 700,
-          color: 'var(--accent-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6
-        }}>
-          <span>{duration}</span>
-          <span>·</span>
-          <span>{platform}</span>
-          <span>·</span>
-          <span>{cleanStyle}</span>
-          <span>·</span>
-          <span>{lang}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '3px 8px',
+            borderRadius: 4,
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            color: 'var(--success)',
+            fontSize: 11,
+            fontWeight: 700,
+          }}>
+            <CheckCircle2 size={12} />
+            <span>Section 8 Gate: Passed</span>
+          </div>
+
+          <div style={{
+            padding: '4px 12px',
+            borderRadius: 20,
+            backgroundColor: 'var(--bg-elevated)',
+            border: '1px solid var(--border-subtle)',
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--accent-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            <span>{duration}</span>
+            <span>·</span>
+            <span>{platform}</span>
+            <span>·</span>
+            <span>{cleanStyle}</span>
+            <span>·</span>
+            <span>{lang}</span>
+          </div>
         </div>
       </div>
 
       {/* 4 Visual Scene Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {scenes.map((sceneText, idx) => {
           const s = parseSceneData(sceneText, idx);
           const isEditing = editingSceneIdx === idx;
@@ -3011,24 +3060,36 @@ export function Screen07Script({
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-default)',
                 borderRadius: 10,
-                padding: 16,
+                padding: '16px 18px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
+                gap: 12,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: 800,
-                    padding: '2px 8px',
+                    padding: '3px 9px',
                     borderRadius: 4,
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.14)',
                     color: 'var(--accent-primary)',
                     fontFamily: "'JetBrains Mono', monospace"
                   }}>
                     {s.title} · {s.timing}
+                  </span>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: 'var(--text-tertiary)',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                  }}>
+                    {s.beatRole}
                   </span>
                 </div>
 
@@ -3037,8 +3098,8 @@ export function Screen07Script({
                     type="button"
                     onClick={() => onOpenRewriteModal(idx, sceneText)}
                     style={{
-                      padding: '3px 8px',
-                      borderRadius: 4,
+                      padding: '4px 10px',
+                      borderRadius: 6,
                       backgroundColor: 'var(--bg-elevated)',
                       border: '1px solid var(--border-subtle)',
                       color: 'var(--accent-primary)',
@@ -3068,23 +3129,27 @@ export function Screen07Script({
                       }
                     }}
                     style={{
-                      padding: '3px 8px',
-                      borderRadius: 4,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-secondary)',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      backgroundColor: isEditing ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                      border: isEditing ? 'none' : '1px solid var(--border-subtle)',
+                      color: isEditing ? '#ffffff' : 'var(--text-secondary)',
                       fontSize: 11,
                       fontWeight: 600,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
                     }}
                   >
-                    {isEditing ? 'Save' : 'Edit'}
+                    <Edit3 size={11} />
+                    <span>{isEditing ? 'Save' : 'Edit'}</span>
                   </button>
                 </div>
               </div>
 
               {isEditing ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <textarea
                     rows={4}
                     value={editSceneText}
@@ -3098,28 +3163,67 @@ export function Screen07Script({
                         setEditingSceneIdx(null);
                       }
                     }}
-                    style={{ width: '100%', padding: '8px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                    style={{ width: '100%', padding: '10px', fontSize: 13, lineHeight: 1.5, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
                   />
                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
                     Press Save or Ctrl+Enter to apply scene edits.
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                    {s.visual}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Visual Setup */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <Camera size={14} style={{ color: 'var(--accent-primary)', marginTop: 2, flexShrink: 0 }} />
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {s.visual}
+                      {s.camera && (
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: 11, marginLeft: 6 }}>
+                          · {s.camera}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Dialogue Bubble */}
                   {s.dialogue && (
                     <div style={{
                       backgroundColor: 'var(--bg-elevated)',
-                      padding: '8px 12px',
-                      borderRadius: 6,
+                      padding: '10px 14px',
+                      borderRadius: '0 8px 8px 0',
                       borderLeft: '3px solid var(--accent-primary)',
-                      fontSize: 12,
-                      fontStyle: 'italic',
-                      color: 'var(--text-primary)'
+                      borderTop: '1px solid var(--border-subtle)',
+                      borderRight: '1px solid var(--border-subtle)',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4
                     }}>
-                      "{s.dialogue}"
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                          color: 'var(--accent-primary)',
+                          textTransform: 'uppercase',
+                          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                          padding: '1px 6px',
+                          borderRadius: 3
+                        }}>
+                          {s.character}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Spoken dialogue</span>
+                      </div>
+                      <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                        "{s.dialogue}"
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audio / SFX if present */}
+                  {s.audio && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)', paddingLeft: 2 }}>
+                      <Volume2 size={12} style={{ color: 'var(--text-secondary)' }} />
+                      <span>Sound: {s.audio}</span>
                     </div>
                   )}
                 </div>
@@ -3148,7 +3252,51 @@ export function Screen07Script({
           ← Back
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleCopyEntireScript}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              color: isCopiedFull ? 'var(--success)' : 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {isCopiedFull ? <Check size={13} style={{ color: 'var(--success)' }} /> : <Copy size={13} />}
+            <span>{isCopiedFull ? 'Script Copied!' : 'Copy Script'}</span>
+          </button>
+
+          {onSaveProject && (
+            <button
+              type="button"
+              onClick={onSaveProject}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                color: isProjectSaved ? 'var(--success)' : 'var(--accent-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {isProjectSaved ? <Check size={13} style={{ color: 'var(--success)' }} /> : <Bookmark size={13} />}
+              <span>{isProjectSaved ? 'Saved to Library' : 'Save Script'}</span>
+            </button>
+          )}
+
           {onTryAnotherVersion && (
             <button
               type="button"

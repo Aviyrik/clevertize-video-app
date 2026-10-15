@@ -2,17 +2,27 @@ services:
   - type: web
     name: clevertize-video-app
     env: node
-    plan: free
+    plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clevertize-postgres
+          property: connectionString
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: MAGNIFIC_API_KEY
         sync: false
       - key: MAGNIFIC_FLOW_ID
         value: UJAMwnyikX
+
+databases:
+  - name: clevertize-postgres
+    plan: free
+    databaseName: clevertize
+    user: clevertize_user

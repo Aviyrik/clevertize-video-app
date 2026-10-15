@@ -192,3 +192,58 @@ test("plots with no text at all are retried", async () => {
   const r = await post(`/api/session/${s4}/next`, { checkpoint: "direction", choice: 0 });
   assert.equal(r.body.data.plots[0].owner, "प्लॉट 1");
 });
+
+test("V2 Entry Point: /api/research/url validates input and returns structured extraction", async () => {
+  // Empty URL -> 400
+  const badRes = await post("/api/research/url", { url: "" });
+  assert.equal(badRes.status, 400);
+
+  // SSRF Protection tests: blocked hosts
+  const localRes = await post("/api/research/url", { url: "http://localhost:3000/api/config" });
+  assert.equal(localRes.status, 400);
+  assert.ok(/restricted|permitted/i.test(localRes.body.error));
+
+  const ipRes = await post("/api/research/url", { url: "http://127.0.0.1/admin" });
+  assert.equal(ipRes.status, 400);
+
+  const metaRes = await post("/api/research/url", { url: "http://169.254.169.254/latest/meta-data/" });
+  assert.equal(metaRes.status, 400);
+
+  const privRes = await post("/api/research/url", { url: "http://192.168.1.1/router" });
+  assert.equal(privRes.status, 400);
+
+  // Valid URL -> structured result with fallback or success
+  const res = await post("/api/research/url", {
+    url: "https://indorekirana.example.com",
+    businessName: "Indore Kirana Store",
+    businessType: "Kirana, Grocery & Supermarket",
+    town: "Indore",
+  });
+  assert.equal(res.status, 200);
+  assert.ok(res.body.brandName, "brandName must be returned");
+  assert.ok(res.body.suggestedBrief, "suggestedBrief must be formulated");
+  assert.ok(Array.isArray(res.body.products), "products must be an array");
+});
+
+test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs quality gate", async () => {
+  // Empty script -> 400
+  const badRes = await post("/api/script/validate-and-import", { rawScript: "" });
+  assert.equal(badRes.status, 400);
+
+  // Valid script -> parses 4 scenes and returns gate verdict
+  const validRes = await post("/api/script/validate-and-import", {
+    rawScript: GOOD,
+    businessName: "Palasia Kirana",
+    businessType: "Kirana, Grocery & Supermarket",
+    language: "Hindi",
+    creativeStyle: "Storytelling",
+  });
+  assert.equal(validRes.status, 200);
+  assert.equal(validRes.body.status, "success");
+  assert.equal(validRes.body.scenes.length, 4, "Must parse exactly 4 scenes");
+  assert.ok(typeof validRes.body.passedGate === "boolean", "passedGate must be a boolean");
+  assert.ok(validRes.body.character1, "character1 must be extracted");
+  assert.ok(validRes.body.character2, "character2 must be extracted");
+  assert.ok(validRes.body.setting, "setting must be extracted");
+});
+

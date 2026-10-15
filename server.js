@@ -13,6 +13,7 @@ const store = require("./engine/store");
 const magnific = require("./engine/magnific");
 const { compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
+const db = require("./engine/db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -407,6 +408,279 @@ app.post("/api/research", async (req, res) => {
   }
 });
 
+function isDisallowedUrl(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "Only HTTP and HTTPS protocols are permitted.";
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
+      return "Access to local or private hostnames is restricted.";
+    }
+    // Check IPv4 addresses
+    const ipv4Match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (ipv4Match) {
+      const [, o1, o2, o3, o4] = ipv4Match.map(Number);
+      if (o1 > 255 || o2 > 255 || o3 > 255 || o4 > 255) return "Invalid IP address.";
+      if (o1 === 0 || o1 === 127) return "Access to loopback/local IP addresses is restricted.";
+      if (o1 === 10) return "Access to private 10.x.x.x addresses is restricted.";
+      if (o1 === 172 && o2 >= 16 && o2 <= 31) return "Access to private 172.16-31.x.x addresses is restricted.";
+      if (o1 === 192 && o2 === 168) return "Access to private 192.168.x.x addresses is restricted.";
+      if (o1 === 169 && o2 === 254) return "Access to cloud metadata / link-local addresses is restricted.";
+    }
+    // Check IPv6 loopback and link-local
+    if (host === "::1" || host === "[::1]" || host.startsWith("fe80:") || host.startsWith("fc00:") || host.startsWith("fd00:")) {
+      return "Access to local or private IPv6 addresses is restricted.";
+    }
+    return null;
+  } catch (err) {
+    return "Invalid URL format.";
+  }
+}
+
+// 1B) URL Web Scraping & Structured Business Analysis (V2 Entry Point)
+app.post("/api/research/url", async (req, res) => {
+  const { url, businessName, businessType, town } = req.body || {};
+  if (!url || typeof url !== "string" || !url.trim()) {
+    return res.status(400).json({ error: "Please enter a valid website URL." });
+  }
+
+  let targetUrl = url.trim();
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = `https://${targetUrl}`;
+  }
+
+  // SSRF Protection: Block localhost, private subnets, cloud metadata
+  const disallowed = isDisallowedUrl(targetUrl);
+  if (disallowed) {
+    return res.status(400).json({ error: disallowed });
+  }
+
+  let fetchedHtml = "";
+  let fetchSucceeded = false;
+  let fetchError = null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const response = await global.fetch(targetUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Clevertize-Bot/2.0",
+        "Accept": "text/html,application/xhtml+xml,text/plain",
+      },
+    });
+    clearTimeout(timeout);
+
+    if (response && response.ok) {
+      const text = await response.text();
+      fetchedHtml = text.slice(0, 60000);
+      fetchSucceeded = true;
+    } else {
+      fetchError = `HTTP ${response ? response.status : "unknown"} from target server`;
+    }
+  } catch (err) {
+    fetchError = err.message || "Network request failed";
+  }
+
+  // Extract meta tags from HTML
+  let pageTitle = "";
+  let metaDescription = "";
+  let headings = [];
+
+  if (fetchSucceeded && fetchedHtml) {
+    const titleMatch = fetchedHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (titleMatch) pageTitle = titleMatch[1].replace(/\s+/g, " ").trim();
+
+    const descMatch =
+      fetchedHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i) ||
+      fetchedHtml.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["']/i) ||
+      fetchedHtml.match(/<meta[^>]*content=["']([^"']*)["'][^>]*name=["']description["']/i);
+    if (descMatch) metaDescription = descMatch[1].trim();
+
+    const h1Matches = [...fetchedHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
+    headings = h1Matches.map((m) => m[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 3);
+  }
+
+  // If fetch succeeded, use Claude or fallback heuristic to analyze the business
+  if (fetchSucceeded) {
+    try {
+      const systemPrompt = `You are an AI brand and business researcher for commercial video advertising.
+Given the HTML title, description, and key headings from a company's website, extract structured information for a 15-30 second video commercial:
+Output JSON between @@JSON@@ and @@END@@ markers:
+@@JSON@@
+{
+  "brandName": "Extracted brand/company name",
+  "businessType": "Closest business category (e.g. Saree, Jewellery, Sweet Shop, Clothing, Electronics, Restaurant, Salon, etc.)",
+  "town": "City/town if detected, or empty string",
+  "suggestedBrief": "Compelling 2-3 sentence creative video brief describing key products, target audience, and customer appeal",
+  "products": ["Product/Service 1", "Product/Service 2"],
+  "keyOffer": "USP or main value proposition detected",
+  "brandTone": "Brand tone (e.g. Premium traditional, Relatable everyday, Trendy youth)",
+  "pageTitle": "The page title"
+}
+@@END@@`;
+
+      const promptContent = `WEBSITE URL: ${targetUrl}
+PAGE TITLE: ${pageTitle || "None"}
+META DESCRIPTION: ${metaDescription || "None"}
+HEADINGS: ${headings.join(" | ") || "None"}
+USER PROVIDED BRAND: ${businessName || "Not specified"}
+USER PROVIDED CATEGORY: ${businessType || "Not specified"}
+USER PROVIDED TOWN: ${town || "Not specified"}`;
+
+      const raw = await callClaude({
+        system: systemPrompt,
+        content: promptContent,
+        maxTokens: 1000,
+        thinking: false,
+      });
+
+      const parsed = parseJSONBlock(raw);
+      return res.json({
+        status: "success",
+        url: targetUrl,
+        fetchSucceeded: true,
+        brandName: parsed.brandName || businessName || pageTitle.split(/[-–|]/)[0].trim() || "My Business",
+        businessType: parsed.businessType || businessType || "Retail Business",
+        town: parsed.town || town || "",
+        suggestedBrief: parsed.suggestedBrief || metaDescription || `High-converting commercial video showcasing the products and services of ${pageTitle || targetUrl}`,
+        products: Array.isArray(parsed.products) ? parsed.products : [pageTitle || "Featured Products"],
+        keyOffer: parsed.keyOffer || "",
+        brandTone: parsed.brandTone || "Relatable & Trustworthy",
+        pageTitle,
+        metaDescription,
+      });
+    } catch (e) {
+      console.warn("[api/research/url] Claude parsing fallback:", e.message);
+      return res.json({
+        status: "success",
+        url: targetUrl,
+        fetchSucceeded: true,
+        brandName: businessName || pageTitle.split(/[-–|]/)[0].trim() || "My Business",
+        businessType: businessType || "Retail Business",
+        town: town || "",
+        suggestedBrief: metaDescription || `Specialized video showcasing authentic quality from ${pageTitle || targetUrl}`,
+        products: [pageTitle || "Featured Products"],
+        keyOffer: "",
+        brandTone: "Warm & Trustworthy",
+        pageTitle,
+        metaDescription,
+      });
+    }
+  }
+
+  // Graceful Fallback if URL is unreachable:
+  return res.json({
+    status: "fallback",
+    url: targetUrl,
+    fetchSucceeded: false,
+    message: `Could not connect to ${targetUrl} (${fetchError || "Unreachable"}). You can enter your details manually or continue with category defaults.`,
+    brandName: businessName || targetUrl.replace(/^https?:\/\/(www\.)?/, "").split(/[\/.]/)[0].toUpperCase(),
+    businessType: businessType || "Retail Business",
+    town: town || "",
+    suggestedBrief: `High-converting commercial highlighting the authentic quality and personalized customer care of our business.`,
+    products: ["Featured Products"],
+  });
+});
+
+// 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
+app.post("/api/script/validate-and-import", async (req, res) => {
+  try {
+    const { rawScript, businessName, businessType, language, creativeStyle } = req.body || {};
+    if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
+      return res.status(400).json({ error: "Please enter or paste script text to validate." });
+    }
+
+    const brand = String(businessName || "My Business").trim();
+    const bType = String(businessType || "Retail Business").trim();
+    const lang = String(language || "English").trim();
+    const style = String(creativeStyle || "UGC / Creator-style").trim();
+
+    // 1. Parse or segment into 4 scenes
+    let parsed = parseOutput(rawScript);
+    let sceneTexts = [];
+
+    if (parsed.scenes && parsed.scenes.length >= 4) {
+      sceneTexts = parsed.scenes.slice(0, 4);
+    } else {
+      // Split on common scene demarcators: "Scene 1", "SCENE 1", "ANNEX A", "\n\n\n", or 4 paragraph chunks
+      const chunks = rawScript
+        .split(/(?:ANNEX\s+A|SCENE\s+[1-4]|Scene\s+[1-4]|---|\n\s*\n\s*\n)/i)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (chunks.length >= 4) {
+        sceneTexts = chunks.slice(0, 4).map((c, idx) => `ANNEX A\nSCENE ${idx + 1}\n${c}`);
+      } else {
+        // Divide script into 4 structured narrative beats
+        const lines = rawScript.split("\n").map((l) => l.trim()).filter(Boolean);
+        const perScene = Math.max(1, Math.ceil(lines.length / 4));
+        const beats = ["Scene 1 · Hook", "Scene 2 · Build", "Scene 3 · Turn", "Scene 4 · Resolution"];
+        sceneTexts = [0, 1, 2, 3].map((i) => {
+          const slice = lines.slice(i * perScene, (i + 1) * perScene).join("\n") || `Scene ${i + 1} action and dialogue`;
+          return `ANNEX A\n${beats[i]}\nVisual:\nBalanced medium shot in steady room lighting.\nAnimation Elements:\nCamera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${slice}\nSound Design:\nNatural ambient room tone.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
+        });
+      }
+    }
+
+    // 2. Extract or infer characters & setting
+    const char1 = parsed.character1 || `${brand} Representative — confident, friendly, relatable presentation`;
+    const char2 = parsed.character2 || `Customer — relatable everyday buyer seeking authentic quality`;
+    const setting = parsed.setting || `Clean, inviting shop / studio space with warm natural lighting and clear product display`;
+
+    // 3. Construct synthetic full script for gate check if needed
+    let fullScriptText = rawScript;
+    let gateParsed = parsed;
+    if (!parsed.header || !parsed.header.business || !parsed.character1 || !parsed.character2 || !parsed.setting) {
+      fullScriptText = `@@HEADER@@\nBusiness: ${brand}\nFormat: ${style}\nLens: 2, Everyday Moments\nHook: Relatable Hook\nMoment: Everyday\n\n@@CHARACTER1@@\n${char1}\n\n@@CHARACTER2@@\n${char2}\n\n@@SETTING@@\n${setting}\n\n` +
+        sceneTexts.map((s) => `@@SCENE@@\n${s}`).join("\n\n") +
+        `\n\n@@RECORD@@\n{"format":"${style}","characters":"${char1} & ${char2}","setting":"${setting}"}`;
+      gateParsed = parseOutput(fullScriptText);
+    }
+
+    // 4. Run Section 8 Quality Gate
+    const mockForm = {
+      businessName: brand,
+      businessType: bType,
+      language: lang,
+      creativeStyle: style,
+      scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
+      product: brand,
+    };
+
+    let fails = [];
+    try {
+      fails = runGate(gateParsed, mockForm, {
+        scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
+        approvedFormat: style,
+      }) || [];
+    } catch (gErr) {
+      console.warn("[runGate check warn]", gErr.message);
+      fails = [gErr.message];
+    }
+
+    const passedGate = Array.isArray(fails) && fails.length === 0;
+
+    return res.json({
+      status: "success",
+      passedGate,
+      gatePassed: passedGate,
+      failures: fails,
+      scenes: sceneTexts,
+      character1: char1,
+      character2: char2,
+      setting: setting,
+      fullScriptText,
+      totalScenes: sceneTexts.length,
+    });
+  } catch (err) {
+    console.error("[api/script/validate-and-import]", err.message);
+    res.status(500).json({ error: err.message || "Failed to validate script." });
+  }
+});
+
 // 2) Creative Direction
 app.post("/api/creative/directions", async (req, res) => {
   try {
@@ -631,7 +905,197 @@ app.get("/api/config", (req, res) => {
     anthropic: !!process.env.ANTHROPIC_API_KEY,
     magnific: !!process.env.MAGNIFIC_API_KEY,
     hooksPulled: HOOKS_PULLED,
+    database: db.isPostgresConfigured() ? "postgresql" : "file_store",
   });
+});
+
+// ---- Auth Middleware & Helpers (Phase C & E) ----
+
+function extractToken(req) {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  if (req.headers["x-session-token"]) {
+    return String(req.headers["x-session-token"]).trim();
+  }
+  return null;
+}
+
+async function authRequired(req, res, next) {
+  try {
+    const token = extractToken(req);
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required. Please log in." });
+    }
+    const user = await db.getUserBySessionToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Session expired or invalid. Please log in again." });
+    }
+    req.user = user;
+    req.sessionToken = token;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Authentication error." });
+  }
+}
+
+async function optionalAuth(req, res, next) {
+  try {
+    const token = extractToken(req);
+    if (token) {
+      const user = await db.getUserBySessionToken(token);
+      if (user) {
+        req.user = user;
+        req.sessionToken = token;
+      }
+    }
+    next();
+  } catch (err) {
+    next();
+  }
+}
+
+// ---- Authentication Endpoints (Phase C) ----
+
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const { email, password, name, businessName, businessType, town } = req.body || {};
+    const user = await db.createUser({ email, password, name });
+    const token = await db.createSession(user.id);
+
+    let defaultBusiness = null;
+    if (businessName && String(businessName).trim()) {
+      defaultBusiness = await db.saveBusiness({
+        businessName,
+        businessType: businessType || "Retail Store",
+        town: town || "",
+      }, user.id);
+    }
+
+    res.json({
+      status: "success",
+      user,
+      token,
+      business: defaultBusiness,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Failed to create account." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const user = await db.authenticateUser({ email, password });
+    const token = await db.createSession(user.id);
+    const businesses = await db.getBusinessesForUser(user.id);
+    const projects = await db.getProjectsForUser(user.id);
+
+    res.json({
+      status: "success",
+      user,
+      token,
+      businesses,
+      projects,
+    });
+  } catch (err) {
+    res.status(401).json({ error: err.message || "Login failed." });
+  }
+});
+
+app.post("/api/auth/logout", authRequired, async (req, res) => {
+  try {
+    await db.deleteSession(req.sessionToken);
+    res.json({ status: "success", message: "Logged out successfully." });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Logout failed." });
+  }
+});
+
+app.get("/api/auth/me", authRequired, async (req, res) => {
+  try {
+    const businesses = await db.getBusinessesForUser(req.user.id);
+    const projects = await db.getProjectsForUser(req.user.id);
+    res.json({
+      status: "success",
+      user: req.user,
+      businesses,
+      projects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Business Profile Endpoints (Phase D) ----
+
+app.get("/api/businesses", authRequired, async (req, res) => {
+  try {
+    const businesses = await db.getBusinessesForUser(req.user.id);
+    res.json({ status: "success", businesses });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/businesses", authRequired, async (req, res) => {
+  try {
+    const saved = await db.saveBusiness(req.body, req.user.id);
+    res.json({ success: true, status: "success", business: saved });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Failed to save business profile." });
+  }
+});
+
+app.get("/api/businesses/:id", authRequired, async (req, res) => {
+  try {
+    const b = await db.getBusinessById(req.params.id, req.user.id);
+    if (!b) return res.status(404).json({ error: "Business profile not found." });
+    res.json({ success: true, status: "success", business: b });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Project & Script Library Endpoints (Phase E) ----
+
+app.get("/api/projects", authRequired, async (req, res) => {
+  try {
+    const projects = await db.getProjectsForUser(req.user.id);
+    res.json({ success: true, status: "success", projects });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/projects", authRequired, async (req, res) => {
+  try {
+    const saved = await db.saveProject(req.body, req.user.id);
+    res.json({ success: true, status: "success", project: saved });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Failed to save project." });
+  }
+});
+
+app.get("/api/projects/:id", authRequired, async (req, res) => {
+  try {
+    const p = await db.getProjectById(req.params.id, req.user.id);
+    if (!p) return res.status(404).json({ error: "Project not found." });
+    res.json({ status: "success", project: p });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/projects/:id", authRequired, async (req, res) => {
+  try {
+    const ok = await db.deleteProject(req.params.id, req.user.id);
+    if (!ok) return res.status(404).json({ error: "Project not found." });
+    res.json({ status: "success", message: "Project deleted." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // SPA catch-all fallback for client routing
