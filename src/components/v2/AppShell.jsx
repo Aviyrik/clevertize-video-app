@@ -131,7 +131,7 @@ export default function AppShell({
               </div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  Clevertize V2
+                  CleverCuts
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
                   Script Intelligence

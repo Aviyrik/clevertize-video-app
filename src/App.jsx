@@ -3088,7 +3088,7 @@ export default function App() {
         </div>
         <div style={{ fontSize: 13, color: '#A6ACB8', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Sparkles size={14} className="icon-spinner" style={{ color: '#6366F1' }} />
-          <span>Starting Clevertize...</span>
+          <span>Starting CleverCuts...</span>
         </div>
       </div>
     );

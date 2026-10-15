@@ -170,8 +170,8 @@ export default function AuthScreen({
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 40,
+                  height: 40,
                   borderRadius: 12,
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   backdropFilter: 'blur(10px)',
@@ -180,25 +180,26 @@ export default function AuthScreen({
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#FFFFFF',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
                 }}
               >
-                <Clapperboard size={20} />
+                <Clapperboard size={22} />
               </div>
               <span
                 style={{
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 800,
                   letterSpacing: '-0.02em',
                   color: '#FFFFFF',
                 }}
               >
-                clevertize
+                CleverCuts
               </span>
             </div>
           </div>
 
-          {/* Middle Value Proposition */}
-          <div style={{ position: 'relative', zIndex: 2, margin: '48px 0 32px' }}>
+          {/* Value Proposition Content (Clean & Breathable) */}
+          <div style={{ position: 'relative', zIndex: 2, marginTop: 'auto', paddingTop: 40 }}>
             <div
               style={{
                 display: 'inline-flex',
@@ -215,151 +216,33 @@ export default function AuthScreen({
                 marginBottom: 20,
               }}
             >
-              <span>✨ Create Commercials to Sell</span>
+              <span>✨ AI Video Commercials</span>
             </div>
 
             <h2
               style={{
-                fontSize: 32,
+                fontSize: 34,
                 fontWeight: 800,
-                lineHeight: 1.25,
+                lineHeight: 1.22,
                 color: '#FFFFFF',
                 letterSpacing: '-0.03em',
-                margin: '0 0 14px',
+                margin: '0 0 16px',
               }}
             >
-              {mode === 'signup' ? 'Start your Journey' : 'Welcome back to Clevertize'}
+              {mode === 'signup' ? 'Create Videos That Sell in Minutes' : 'Welcome back to CleverCuts'}
             </h2>
 
             <p
               style={{
-                fontSize: 14,
+                fontSize: 15,
                 lineHeight: 1.6,
                 color: 'rgba(255, 255, 255, 0.82)',
                 margin: 0,
-                maxWidth: 380,
+                maxWidth: 400,
               }}
             >
-              Turn your business ideas and products into high-converting video ad scripts in minutes.
+              Turn your business ideas, products, and offers into customer-ready video scripts without complex editing.
             </p>
-          </div>
-
-          {/* Bottom Stepper Journey Pills (Matching References 2 & 5) */}
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            {/* Step 1: Active Pill */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                borderRadius: 14,
-                backgroundColor: mode === 'signup' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.18)',
-                color: mode === 'signup' ? '#0F1016' : '#FFFFFF',
-                boxShadow: mode === 'signup' ? '0 8px 24px rgba(0, 0, 0, 0.25)' : 'none',
-                backdropFilter: 'blur(10px)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  backgroundColor: mode === 'signup' ? '#4F46E5' : 'rgba(255, 255, 255, 0.3)',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  flexShrink: 0,
-                }}
-              >
-                1
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>
-                {mode === 'signup' ? 'Register your account' : 'Sign in to workspace'}
-              </span>
-            </div>
-
-            {/* Step 2: Inactive Frosted Pill */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                borderRadius: 14,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                2
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>
-                Tell us about your business & offer
-              </span>
-            </div>
-
-            {/* Step 3: Inactive Frosted Pill */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                borderRadius: 14,
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                color: 'rgba(255, 255, 255, 0.6)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                3
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>
-                Generate customer-converting ad films
-              </span>
-            </div>
           </div>
         </div>
 
@@ -791,7 +674,7 @@ export default function AuthScreen({
                 lineHeight: 1.4,
               }}
             >
-              By continuing, you agree to Clevertize's Terms of Service and Privacy Policy.
+              By continuing, you agree to CleverCuts's Terms of Service and Privacy Policy.
             </div>
           </div>
         </div>
