@@ -616,71 +616,32 @@ export default function AppShell({
             )}
           </div>
 
-          <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Quick trigger buttons for the 3 entry points */}
-            <button
-              type="button"
-              onClick={onOpenScriptModal}
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <FileCode2 size={13} style={{ color: '#10B981' }} />
-              <span>Paste Script</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenUrlModal}
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <Globe size={13} style={{ color: '#38BDF8' }} />
-              <span>Scan URL</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onStartNewFilm}
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 6,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>New Film</span>
-            </button>
-          </div>
+          {activeView === 'studio' && (
+            <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                onClick={onStartNewFilm}
+                style={{
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+                title="Restart from Stage 1 to make a new film"
+              >
+                <RotateCcw size={13} />
+                <span>Restart Film</span>
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Dynamic Canvas Workspace */}

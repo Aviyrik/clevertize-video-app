@@ -3598,6 +3598,7 @@ export default function App() {
             handleFileUpload={handleFileUpload}
             BUSINESS_TYPES={BUSINESS_TYPE_PRESETS}
             autoEdit={brandResetKey > 0}
+            onOpenUrlModal={() => setIsUrlModalOpen(true)}
             onContinue={() => {
               if (!userContext.businessName.trim()) {
                 setValidationError('Please enter your business or brand name.');
@@ -3621,6 +3622,8 @@ export default function App() {
             userContext={userContext}
             updateUserContext={updateUserContext}
             handleFileUpload={handleFileUpload}
+            onOpenScriptModal={() => setIsScriptModalOpen(true)}
+            onOpenUrlModal={() => setIsUrlModalOpen(true)}
             onContinue={() => {
               if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
@@ -3888,6 +3891,7 @@ export default function App() {
             }}
             onSaveProject={handleSaveCurrentProject}
             isProjectSaved={isCurrentProjectSaved}
+            onOpenScriptModal={() => setIsScriptModalOpen(true)}
           />
         )}
 

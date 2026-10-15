@@ -40,6 +40,8 @@ import {
   CheckCircle2,
   RotateCcw,
   FileText,
+  FileCode2,
+  Globe,
   Copy,
   Bookmark
 } from 'lucide-react';
@@ -265,6 +267,7 @@ export function Screen01Business({
   onContinue,
   BUSINESS_TYPES = [],
   autoEdit = false,
+  onOpenUrlModal,
 }) {
   const [hasInitialBrand, setHasInitialBrand] = useState(() => !autoEdit && Boolean(userContext.businessName?.trim()));
   const [isEditingExisting, setIsEditingExisting] = useState(() => autoEdit || !Boolean(userContext.businessName?.trim()));
@@ -293,13 +296,40 @@ export function Screen01Business({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Title & One Short Explanation */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          Tell us about your business
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          We'll use this to understand your market and craft relevant commercial ideas.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            Tell us about your business
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+            We'll use this to understand your market and craft relevant commercial ideas.
+          </p>
+        </div>
+
+        {onOpenUrlModal && (
+          <button
+            type="button"
+            onClick={onOpenUrlModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 13px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
+              color: '#60A5FA',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Scan your store or website to auto-fill brand details"
+          >
+            <Globe size={14} />
+            <span>Autofill from Website</span>
+          </button>
+        )}
       </div>
 
       {/* Existing Brand Profile Banner */}
@@ -638,6 +668,8 @@ export function Screen02Brief({
   briefSuggestions = [],
   researchData,
   isResearching,
+  onOpenScriptModal,
+  onOpenUrlModal,
 }) {
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -667,14 +699,69 @@ export function Screen02Brief({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Title & Short Explanation */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          What do you want this video to say?
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Tell us what you want to promote, explain, announce or show. Write it in your own words.
-        </p>
+      {/* Title & Short Explanation with Contextual Actions */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            What do you want this video to say?
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+            Tell us what you want to promote, explain, announce or show. Write it in your own words.
+          </p>
+        </div>
+
+        {(onOpenScriptModal || onOpenUrlModal) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {onOpenScriptModal && (
+              <button
+                type="button"
+                onClick={onOpenScriptModal}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 13px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  color: '#34D399',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Paste an existing script draft to auto-import scenes"
+              >
+                <FileCode2 size={14} />
+                <span>Paste Script</span>
+              </button>
+            )}
+            {onOpenUrlModal && (
+              <button
+                type="button"
+                onClick={onOpenUrlModal}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 13px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  color: '#60A5FA',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Scan your store or landing page to extract products & offers"
+              >
+                <Globe size={14} />
+                <span>Scan URL</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Hero Textarea Box */}
@@ -2892,6 +2979,7 @@ export function Screen07Script({
   elapsedTime = '00:00',
   onSaveProject,
   isProjectSaved = false,
+  onOpenScriptModal,
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
@@ -3009,6 +3097,31 @@ export function Screen07Script({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {onOpenScriptModal && (
+            <button
+              type="button"
+              onClick={onOpenScriptModal}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#34D399',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Import or paste an existing script"
+            >
+              <FileCode2 size={13} />
+              <span>Paste Script</span>
+            </button>
+          )}
+
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
