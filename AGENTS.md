@@ -2,6 +2,8 @@
 
 Project-specific guidance for AI coding agents.
 
+> **CRITICAL CONTEXT**: Always read `PROJECT_CONTEXT.md` at the workspace root before starting work. It contains the complete architectural map, git setup, credentials guide, and recent milestone status.
+
 <!-- ASTRYX:START -->
 Astryx v0.6.5 · 166 components
 CLI: run every command as `npx astryx <cmd>` (shown below as `astryx ...`).
