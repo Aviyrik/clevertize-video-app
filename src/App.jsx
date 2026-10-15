@@ -1094,18 +1094,17 @@ export default function App() {
   const [qualityFailures, setQualityFailures] = useState([]);
 
   // Clevertize V2 Application Shell & Entry Point State
-  const [activeAppView, setActiveAppView] = useState(() => {
-    try {
-      const savedContext = localStorage.getItem('clevertize_user_context');
-      if (savedContext) {
-        const parsed = JSON.parse(savedContext);
-        if (parsed.businessName && parsed.businessName.trim().length > 0) {
-          return 'studio';
-        }
+  const [activeAppView, setActiveAppViewState] = useState('hub');
+  const setActiveAppView = (viewOrUpdater) => {
+    setActiveAppViewState((prev) => {
+      const nextView = typeof viewOrUpdater === 'function' ? viewOrUpdater(prev) : viewOrUpdater;
+      if (nextView === 'studio' && userContext.businessName && userContext.businessName.trim().length > 0 && studioStage === 'business') {
+        markStageComplete('business');
+        setStudioStage('brief');
       }
-    } catch {}
-    return 'hub';
-  });
+      return nextView;
+    });
+  };
   const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
 
@@ -2853,7 +2852,13 @@ export default function App() {
     else if (studioStage === 'opening') setStudioStage('idea');
     else if (studioStage === 'idea') setStudioStage('settings');
     else if (studioStage === 'settings') setStudioStage('brief');
-    else if (studioStage === 'brief') setStudioStage('business');
+    else if (studioStage === 'brief') {
+      if (userContext.businessName && userContext.businessName.trim().length > 0) {
+        setActiveAppView('home');
+      } else {
+        setStudioStage('business');
+      }
+    }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -3196,6 +3201,7 @@ export default function App() {
               onStartBrief={() => {
                 setActiveAppView('studio');
                 if (userContext.businessName && userContext.businessName.trim().length > 0) {
+                  markStageComplete('business');
                   setStudioStage('brief');
                 } else {
                   setStudioStage('business');
@@ -3207,7 +3213,14 @@ export default function App() {
               businessType={userContext.businessType}
               town={userContext.town}
               hasActiveScript={Boolean(scenes.length > 0 || generatedScript)}
-              onContinueActiveProject={() => setActiveAppView('studio')}
+              onContinueActiveProject={() => {
+                setActiveAppView('studio');
+                if (userContext.businessName && userContext.businessName.trim().length > 0) {
+                  markStageComplete('business');
+                  setStudioStage('brief');
+                }
+              }}
+              onEditBrand={() => setIsOnboardingModalOpen(true)}
               recentProjects={userProjects}
               onOpenProject={handleOpenProject}
               currentUser={currentUser}
@@ -3667,6 +3680,7 @@ export default function App() {
             handleFileUpload={handleFileUpload}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             onOpenUrlModal={() => setIsUrlModalOpen(true)}
+            onEditBrand={() => setIsOnboardingModalOpen(true)}
             onContinue={() => {
               if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
@@ -3678,7 +3692,11 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onBack={() => {
-              setStudioStage('business');
+              if (userContext.businessName && userContext.businessName.trim().length > 0) {
+                setActiveAppView('home');
+              } else {
+                setStudioStage('business');
+              }
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             isRecording={isListening}

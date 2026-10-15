@@ -27,11 +27,12 @@ export default function CreationEntryHub({
   onOpenProject,
   currentUser = null,
   onNavigateProjects,
+  onEditBrand,
 }) {
   return (
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '36px 24px 60px' }}>
       {/* Welcome Banner */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div
           style={{
             display: 'inline-flex',
@@ -50,7 +51,7 @@ export default function CreationEntryHub({
           }}
         >
           <Clapperboard size={14} />
-          CleverCuts Video Studio V2
+          CleverCuts Video Studio
         </div>
         <h1
           style={{
@@ -72,44 +73,49 @@ export default function CreationEntryHub({
             lineHeight: 1.6,
           }}
         >
-          Move from an idea, existing script, or store link to an authentic 4-scene video ad with AI visual continuity and quality verification.
+          Select one of the 3 starting points below to produce an authentic 4-scene video ad with AI visual continuity and quality verification.
         </p>
       </div>
 
-      {/* Existing Project Continuity Banner (if brand exists) */}
+      {/* Active Brand Context Banner (Confirmation Only - Not an Entry Point) */}
       {businessName && (
         <div
           style={{
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
-            borderRadius: 10,
-            padding: '16px 20px',
+            borderRadius: 12,
+            padding: '14px 20px',
             marginBottom: 32,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 14,
+            gap: 12,
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                backgroundColor: 'var(--accent-subtle)',
+                width: 38,
+                height: 38,
+                borderRadius: 9,
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
                 color: 'var(--accent-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Store size={20} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+                  Active Brand
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                   {businessName}
                 </span>
                 <span
@@ -120,6 +126,7 @@ export default function CreationEntryHub({
                     padding: '2px 8px',
                     borderRadius: 4,
                     color: 'var(--text-secondary)',
+                    fontWeight: 600,
                   }}
                 >
                   {businessType || 'Retail Store'}
@@ -128,82 +135,109 @@ export default function CreationEntryHub({
                   <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {town}</span>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-                Brand profile saved. You can start a new film or continue where you left off.
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                Your business details are set. Choose an entry point below to create your commercial.
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onContinueActiveProject}
-            style={{
-              backgroundColor: 'var(--bg-active)',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              padding: '8px 16px',
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span>Open Studio for {businessName}</span>
-            <ArrowRight size={14} />
-          </button>
+          {onEditBrand && (
+            <button
+              type="button"
+              onClick={onEditBrand}
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 6,
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--accent-primary)';
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
+            >
+              Edit Brand Details
+            </button>
+          )}
         </div>
       )}
 
-      {/* The Three Creation Entry Points Grid */}
+      {/* The Three Creation Entry Points Grid (Exclusive Starting Points) */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-          gap: 20,
-          marginBottom: 36,
+          gap: 22,
+          marginBottom: 40,
         }}
       >
-        {/* Entry Point 1: Start with a Brief */}
+        {/* Entry Point 1: Start with a Brief (Hero / Recommended) */}
         <div
           onClick={onStartBrief}
           style={{
             backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 12,
+            border: '2px solid var(--accent-primary)',
+            borderRadius: 14,
             padding: 24,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 6px 24px rgba(99, 102, 241, 0.18)',
+            position: 'relative',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--accent-primary)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 30px rgba(99, 102, 241, 0.28)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
             e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 6px 24px rgba(99, 102, 241, 0.18)';
           }}
         >
+          {/* Recommended Badge */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 14,
+              right: 14,
+              backgroundColor: 'var(--accent-primary)',
+              color: '#FFFFFF',
+              fontSize: 10,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '3px 8px',
+              borderRadius: 12,
+            }}
+          >
+            ★ Recommended
+          </div>
+
           <div>
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 borderRadius: 10,
                 backgroundColor: 'rgba(99, 102, 241, 0.15)',
                 color: 'var(--accent-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 18,
+                marginBottom: 16,
               }}
             >
-              <Sparkles size={22} />
+              <Sparkles size={24} />
             </div>
             <div
               style={{
@@ -215,42 +249,36 @@ export default function CreationEntryHub({
                 marginBottom: 6,
               }}
             >
-              Guided Workflow
+              Guided Creation
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Brief
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Describe your business, offer, or customer story. Our creative engine drafts ranked consumer tensions, creator hooks, and a 4-scene video script.
+              Describe what you want to promote, offer, or announce. Our creative engine drafts ranked consumer tensions, creator hooks, and a 4-scene video script.
             </p>
           </div>
 
-          <div
-            style={{
-              marginTop: 24,
-              paddingTop: 16,
-              borderTop: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-primary)' }}>
-              Launch Studio Flow
-            </span>
+          <div style={{ marginTop: 24 }}>
             <div
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--accent-primary)',
+                width: '100%',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#FFFFFF',
+                borderRadius: 8,
+                padding: '11px 16px',
+                fontSize: 13,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 8,
+                boxShadow: '0 2px 10px var(--accent-glow)',
+                transition: 'all 0.15s ease',
               }}
             >
-              <ArrowRight size={14} />
+              <span>Start with Brief</span>
+              <ArrowRight size={15} />
             </div>
           </div>
         </div>
@@ -261,7 +289,7 @@ export default function CreationEntryHub({
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: 12,
+            borderRadius: 14,
             padding: 24,
             display: 'flex',
             flexDirection: 'column',
@@ -272,28 +300,30 @@ export default function CreationEntryHub({
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#10B981';
-            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 8px 26px rgba(16, 185, 129, 0.2)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border-default)';
             e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
           }}
         >
           <div>
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 borderRadius: 10,
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
                 color: '#10B981',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 18,
+                marginBottom: 16,
               }}
             >
-              <FileCode2 size={22} />
+              <FileCode2 size={24} />
             </div>
             <div
               style={{
@@ -307,40 +337,34 @@ export default function CreationEntryHub({
             >
               Fast Track
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with an Existing Script
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Already have a script or concept? Paste your 4 scenes. We'll run the 18-point Section 8 Quality Gate and take you straight to Script Studio ready for video.
+              Already have a script or concept? Paste your 4 scenes to run quality validation and jump directly to Script Studio ready for video.
             </p>
           </div>
 
-          <div
-            style={{
-              marginTop: 24,
-              paddingTop: 16,
-              borderTop: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>
-              Import & Validate Script
-            </span>
+          <div style={{ marginTop: 24 }}>
             <div
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
+                width: '100%',
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: '#10B981',
+                border: '1px solid #10B981',
+                color: '#34D399',
+                borderRadius: 8,
+                padding: '11px 16px',
+                fontSize: 13,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.15s ease',
               }}
             >
-              <ArrowRight size={14} />
+              <span>Import Script</span>
+              <ArrowRight size={15} />
             </div>
           </div>
         </div>
@@ -351,7 +375,7 @@ export default function CreationEntryHub({
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: 12,
+            borderRadius: 14,
             padding: 24,
             display: 'flex',
             flexDirection: 'column',
@@ -362,28 +386,30 @@ export default function CreationEntryHub({
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#38BDF8';
-            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 8px 26px rgba(56, 189, 248, 0.2)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border-default)';
             e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
           }}
         >
           <div>
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 borderRadius: 10,
                 backgroundColor: 'rgba(56, 189, 248, 0.15)',
                 color: '#38BDF8',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 18,
+                marginBottom: 16,
               }}
             >
-              <Globe size={22} />
+              <Globe size={24} />
             </div>
             <div
               style={{
@@ -397,7 +423,7 @@ export default function CreationEntryHub({
             >
               Automated Intelligence
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Website URL
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
@@ -405,32 +431,26 @@ export default function CreationEntryHub({
             </p>
           </div>
 
-          <div
-            style={{
-              marginTop: 24,
-              paddingTop: 16,
-              borderTop: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#38BDF8' }}>
-              Scan & Analyze Website
-            </span>
+          <div style={{ marginTop: 24 }}>
             <div
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
+                width: '100%',
                 backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
+                border: '1px solid #38BDF8',
+                color: '#60A5FA',
+                borderRadius: 8,
+                padding: '11px 16px',
+                fontSize: 13,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.15s ease',
               }}
             >
-              <ArrowRight size={14} />
+              <span>Scan Website</span>
+              <ArrowRight size={15} />
             </div>
           </div>
         </div>

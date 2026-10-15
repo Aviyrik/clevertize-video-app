@@ -1775,5 +1775,25 @@ test('Script-First Product: App.jsx wires all 4 views and saves/restores project
   assert.ok(appSrc.includes('<BusinessOnboardingModal'), 'App.jsx must render BusinessOnboardingModal');
 });
 
+test('V2 Single Starting Point: CreationEntryHub has exactly 3 creation entry points and no duplicate Open Studio button', () => {
+  const hubSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/CreationEntryHub.jsx'), 'utf8');
+  assert.ok(!hubSrc.includes('Open Studio for'), 'Must not render redundant Open Studio button banner');
+  assert.ok(hubSrc.includes('Active Brand'), 'Must render active brand confirmation context');
+  assert.ok(hubSrc.includes('Start with a Brief'), 'Must include Start with a Brief');
+  assert.ok(hubSrc.includes('Start with an Existing Script'), 'Must include Start with an Existing Script');
+  assert.ok(hubSrc.includes('Start with a Website URL'), 'Must include Start with a Website URL');
+  assert.ok(hubSrc.includes('★ Recommended'), 'Brief card must feature prominent Recommended badge');
+});
+
+test('V2 Creation Flow: Screen02Brief confirms active brand and does not re-ask business registration', () => {
+  const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(studioSrc.includes('Creating Video For'), 'Screen02Brief must display active brand confirmation');
+  assert.ok(studioSrc.includes('Change Brand'), 'Screen02Brief must offer brand edit/change action');
+  
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(appSrc.includes("setActiveAppView('home')"), 'Back from Brief must return to Creation Hub when brand exists');
+});
+
+
 
 

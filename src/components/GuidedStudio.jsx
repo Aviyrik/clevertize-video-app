@@ -299,10 +299,12 @@ export function Screen01Business({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            Tell us about your business
+            {userContext.businessName?.trim() ? `Brand Profile: ${userContext.businessName}` : 'Tell us about your business'}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            We'll use this to understand your market and craft relevant commercial ideas.
+            {userContext.businessName?.trim()
+              ? 'Your brand identity is configured. You can edit details below or proceed directly to your video brief.'
+              : "We'll use this to understand your market and craft relevant commercial ideas."}
           </p>
         </div>
 
@@ -670,6 +672,7 @@ export function Screen02Brief({
   isResearching,
   onOpenScriptModal,
   onOpenUrlModal,
+  onEditBrand,
 }) {
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -699,6 +702,89 @@ export function Screen02Brief({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Active Brand Confirmation Banner */}
+      {userContext.businessName && (
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 10,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                color: 'var(--accent-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Store size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+                  Creating Video For
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {userContext.businessName}
+                </span>
+                {userContext.businessType && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      color: 'var(--text-secondary)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {userContext.businessType}
+                  </span>
+                )}
+                {userContext.town && (
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {userContext.town}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {onEditBrand && (
+            <button
+              type="button"
+              onClick={onEditBrand}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                textDecoration: 'underline',
+              }}
+            >
+              Change Brand
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Title & Short Explanation with Contextual Actions */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
