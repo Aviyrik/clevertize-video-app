@@ -24,6 +24,8 @@ scratch/
 .vscode/
 .idea/
 .DS_Store
+._*
+**/._*
 Thumbs.db
 
 # Archives & runtime cache
