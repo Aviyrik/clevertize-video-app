@@ -53,7 +53,7 @@ export default function CreationEntryHub({
             lineHeight: 1.5,
           }}
         >
-          Select how you'd like to start your 4-scene commercial.
+          Choose how you'd like to create your video ad.
         </p>
       </div>
 
@@ -230,7 +230,7 @@ export default function CreationEntryHub({
               Start with a Brief
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Describe what you want to promote. Our AI drafts high-converting hooks and a full 4-scene video script.
+              Describe what you want to promote. Our AI drafts high-converting hooks and a complete video script.
             </p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
               <span style={{ fontSize: 11, backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
@@ -324,14 +324,14 @@ export default function CreationEntryHub({
               Start with an Existing Script
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Have your scenes written? Paste your text to run quality checks and jump straight to video rendering.
+              Have your script written? Paste your text to run quality checks and jump straight to video rendering.
             </p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
               <span style={{ fontSize: 11, backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#34D399', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
                 ⚡ Direct to Stage 7
               </span>
               <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                📋 Paste 4 scenes
+                📋 Paste script
               </span>
             </div>
           </div>
