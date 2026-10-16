@@ -195,4 +195,127 @@ test('Auth: Delete account cascades and revokes access', async () => {
   assert.equal(projGet.status, 401);
 });
 
+test('Auth Redesign: Video assets exist and are optimized', () => {
+  const publicVideosDir = path.join(__dirname, '../public/videos');
+  const optVideo = path.join(publicVideosDir, 'background-optimized.mp4');
+  const origVideo = path.join(publicVideosDir, 'background.mp4');
+  const poster = path.join(publicVideosDir, 'background-poster.jpg');
+
+  assert.ok(fs.existsSync(optVideo), 'Optimized video file must exist');
+  assert.ok(fs.existsSync(origVideo), 'Original video file must exist');
+  assert.ok(fs.existsSync(poster), 'Poster image file must exist');
+
+  const optStat = fs.statSync(optVideo);
+  const origStat = fs.statSync(origVideo);
+  const posterStat = fs.statSync(poster);
+
+  assert.ok(optStat.size > 0 && optStat.size < origStat.size, 'Optimized video should be compressed and smaller than original');
+  assert.ok(posterStat.size > 0, 'Poster image must have non-zero size');
+});
+
+test('Auth Redesign: AuthVideoShowcase component structure and video requirements', () => {
+  const showcasePath = path.join(__dirname, '../src/components/v2/AuthVideoShowcase.jsx');
+  assert.ok(fs.existsSync(showcasePath), 'AuthVideoShowcase component must exist');
+
+  const code = fs.readFileSync(showcasePath, 'utf8');
+
+  // Video element requirements from specification
+  assert.ok(code.includes('<video'), 'Must contain HTML video element');
+  assert.ok(code.includes('autoPlay'), 'Video must have autoPlay attribute');
+  assert.ok(code.includes('muted'), 'Video must be muted');
+  assert.ok(code.includes('loop'), 'Video must loop');
+  assert.ok(code.includes('playsInline'), 'Video must have playsInline');
+  assert.ok(code.includes('preload="metadata"'), 'Video must preload metadata');
+  assert.ok(code.includes("objectFit: 'cover'") || code.includes('objectFit: "cover"'), 'Video must use objectFit: cover');
+  assert.ok(code.includes('poster='), 'Video must specify a poster image');
+  assert.ok(code.includes('prefers-reduced-motion'), 'Video must respect prefers-reduced-motion');
+  assert.ok(code.includes('onError='), 'Video must handle errors gracefully');
+  assert.ok(!code.match(/<video[^>]*\bcontrols\b/), 'Video tag must not display playback controls');
+
+  // Logo in upper-left
+  assert.ok(code.includes('CleverCuts'), 'Showcase must display CleverCuts logo');
+  assert.ok(code.includes('Clapperboard'), 'Showcase must include Clapperboard brand icon');
+});
+
+test('Auth Redesign: AuthScreen layout, fields, and states', () => {
+  const authScreenPath = path.join(__dirname, '../src/components/v2/AuthScreen.jsx');
+  assert.ok(fs.existsSync(authScreenPath), 'AuthScreen component must exist');
+
+  const code = fs.readFileSync(authScreenPath, 'utf8');
+
+  // Architecture: Imports AuthVideoShowcase
+  assert.ok(code.includes("import AuthVideoShowcase from './AuthVideoShowcase.jsx'"), 'AuthScreen must import AuthVideoShowcase');
+  assert.ok(code.includes('<AuthVideoShowcase'), 'AuthScreen must render AuthVideoShowcase in left section');
+
+  // 2-column layout (~55% left, ~45% right)
+  assert.ok(code.includes('auth-left-column'), 'Must define left column class');
+  assert.ok(code.includes('auth-right-column'), 'Must define right column class');
+  assert.ok(code.includes('55%'), 'Left column must occupy ~55% width');
+  assert.ok(code.includes('45%'), 'Right column must occupy ~45% width');
+
+  // Form width constraint (~440-480px)
+  assert.ok(code.includes('460px') || code.includes('440px') || code.includes('480px'), 'Form inner container must have max-width ~440-480px');
+
+  // Headers and titles
+  assert.ok(code.includes('Create an account'), 'Must support "Create an account" for signup');
+  assert.ok(code.includes('Welcome back'), 'Must support "Welcome back" for signin');
+
+  // Google OAuth button
+  assert.ok(code.includes('Sign up with Google'), 'Must have "Sign up with Google"');
+  assert.ok(code.includes('Continue with Google'), 'Must have "Continue with Google"');
+  assert.ok(code.includes('Or with email'), 'Must have "Or with email" divider');
+
+  // Fields
+  assert.ok(code.includes('Your name'), 'Must have "Your name" field for signup');
+  assert.ok(code.includes('Email address'), 'Must have "Email address" field');
+  assert.ok(code.includes('Password'), 'Must have "Password" field');
+
+  // Password visibility toggle
+  assert.ok(code.includes('showPassword'), 'Must have password visibility state');
+  assert.ok(code.includes('Eye') && code.includes('EyeOff'), 'Must render Eye/EyeOff toggle buttons');
+
+  // Remember me & Forgot password
+  assert.ok(code.includes('Remember me'), 'Must have "Remember me" option');
+  assert.ok(code.includes('clevertize_remember_email'), 'Must persist remembered email to localStorage');
+  assert.ok(code.includes('Forgot password?'), 'Must have "Forgot password?" option');
+
+  // Loading state & buttons
+  assert.ok(code.includes('Please wait...'), 'Must render loading state during submission');
+  assert.ok(code.includes('Create Account'), 'Must have submit button text for signup');
+  assert.ok(code.includes('Log In'), 'Must have submit button text for login');
+
+  // Footers
+  assert.ok(code.includes("Already have an account?"), 'Must have mode switch for sign in');
+  assert.ok(code.includes("Don't have an account?"), 'Must have mode switch for sign up');
+  assert.ok(code.includes('Terms of Service') && code.includes('Privacy Policy'), 'Must have Terms and Privacy footnote');
+});
+
+test('Auth Redesign: AuthModal incorporates AuthVideoShowcase and modal controls', () => {
+  const authModalPath = path.join(__dirname, '../src/components/v2/AuthModal.jsx');
+  assert.ok(fs.existsSync(authModalPath), 'AuthModal component must exist');
+
+  const code = fs.readFileSync(authModalPath, 'utf8');
+
+  // Imports and renders AuthVideoShowcase
+  assert.ok(code.includes("import AuthVideoShowcase from './AuthVideoShowcase.jsx'"), 'AuthModal must import AuthVideoShowcase');
+  assert.ok(code.includes('<AuthVideoShowcase'), 'AuthModal must render AuthVideoShowcase');
+
+  // Two column layout and close button
+  assert.ok(code.includes('auth-modal-card'), 'Must define modal card layout');
+  assert.ok(code.includes('Close modal') || code.includes('onClose'), 'Must include close trigger');
+  assert.ok(code.includes('Create an account') && code.includes('Welcome back'), 'Must support both signup and login modes');
+  assert.ok(code.includes('Sign up with Google') && code.includes('Continue with Google'), 'Must support Google OAuth buttons');
+});
+
+test('Auth Redesign: Responsive styles in index.css for mobile and tablet', () => {
+  const cssPath = path.join(__dirname, '../src/index.css');
+  const css = fs.readFileSync(cssPath, 'utf8');
+
+  assert.ok(css.includes('.auth-screen-card'), 'CSS must define .auth-screen-card');
+  assert.ok(css.includes('.auth-left-column'), 'CSS must define .auth-left-column');
+  assert.ok(css.includes('.auth-right-column'), 'CSS must define .auth-right-column');
+  assert.ok(css.includes('@media (max-width: 1024px)'), 'CSS must include tablet media query');
+  assert.ok(css.includes('@media (max-width: 640px)'), 'CSS must include mobile media query');
+});
+
 

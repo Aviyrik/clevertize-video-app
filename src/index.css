@@ -306,28 +306,52 @@ input::placeholder, textarea::placeholder {
   }
 }
 
-/* Full-screen Authentication Entry Screen responsive layout */
-@media (max-width: 960px) {
-  .auth-screen-container {
+/* Full-screen Authentication Entry Screen & Modal responsive layout */
+@media (max-width: 1024px) {
+  .auth-screen-card {
+    height: auto !important;
+    min-height: auto !important;
+    max-width: 620px !important;
     flex-direction: column !important;
+    gap: 16px !important;
   }
-  .auth-form-column {
-    max-width: 100% !important;
-    padding: 36px 24px !important;
-    border-right: none !important;
+  .auth-left-column {
+    flex: 0 0 240px !important;
+    width: 100% !important;
+    height: 240px !important;
   }
-  .auth-brand-column {
-    display: none !important;
+  .auth-right-column {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    padding: 24px 20px !important;
   }
-  .auth-consumer-card {
+  .auth-modal-card {
     flex-direction: column !important;
     max-width: 520px !important;
   }
-  .auth-left-brand-panel {
-    display: none !important;
+  .auth-modal-video-column {
+    flex: 0 0 190px !important;
+    width: 100% !important;
+    min-height: 190px !important;
+    height: 190px !important;
   }
-  .auth-right-form-panel {
-    padding: 36px 24px !important;
+}
+
+@media (max-width: 640px) {
+  .auth-screen-viewport {
+    padding: 12px !important;
+  }
+  .auth-screen-card {
+    border-radius: 20px !important;
+    padding: 8px !important;
+  }
+  .auth-left-column {
+    flex: 0 0 170px !important;
+    height: 170px !important;
+    border-radius: 16px !important;
+  }
+  .auth-right-column {
+    padding: 20px 14px !important;
   }
 }
 

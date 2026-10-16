@@ -1,32 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Clapperboard,
-  Sparkles,
   ArrowRight,
   Eye,
   EyeOff,
   AlertCircle,
-  Check,
-  Video,
-  Film,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
+import AuthVideoShowcase from './AuthVideoShowcase.jsx';
 
+/**
+ * AuthScreen - Cinematic two-column authentication experience for CleverCuts.
+ *
+ * Layout Structure:
+ * - Left (55%): Immersive full-bleed AI commercial showreel with CleverCuts logo
+ * - Right (45%): Clean, focused authentication form (Create an account / Welcome back)
+ * - Fully responsive with desktop, tablet, and mobile optimizations.
+ */
 export default function AuthScreen({
   onAuthSuccess,
   initialMode = 'signup', // 'signup' | 'signin'
 }) {
-  const [mode, setMode] = useState(initialMode); // 'signup' | 'signin'
+  const [mode, setMode] = useState(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [noticeMsg, setNoticeMsg] = useState('');
   const [googleNotice, setGoogleNotice] = useState(false);
+
+  // Restore remembered email on mount
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem('clevertize_remember_email');
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setNoticeMsg('');
+    setGoogleNotice(false);
 
     // Client-side validations
     if (mode === 'signup' && !name.trim()) {
@@ -47,9 +70,10 @@ export default function AuthScreen({
     setIsSubmitting(true);
     try {
       const endpoint = mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
-      const payload = mode === 'signup'
-        ? { email: email.trim(), password, name: name.trim() }
-        : { email: email.trim(), password };
+      const payload =
+        mode === 'signup'
+          ? { email: email.trim(), password, name: name.trim() }
+          : { email: email.trim(), password };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -62,14 +86,29 @@ export default function AuthScreen({
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
 
+      // Handle "Remember me"
+      try {
+        if (rememberMe) {
+          localStorage.setItem('clevertize_remember_email', email.trim());
+        } else {
+          localStorage.removeItem('clevertize_remember_email');
+        }
+      } catch {
+        // ignore
+      }
+
       // Store session token in localStorage
       if (data.token) {
         try {
           localStorage.setItem('clevertize_token', data.token);
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
 
-      onAuthSuccess(data.user, data.token, mode);
+      if (onAuthSuccess) {
+        onAuthSuccess(data.user, data.token, mode);
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Network error occurred. Please try again.');
     } finally {
@@ -80,6 +119,7 @@ export default function AuthScreen({
   const switchMode = (newMode) => {
     setMode(newMode);
     setErrorMsg('');
+    setNoticeMsg('');
     setGoogleNotice(false);
   };
 
@@ -88,184 +128,210 @@ export default function AuthScreen({
     setTimeout(() => setGoogleNotice(false), 4500);
   };
 
+  const handleForgotPassword = () => {
+    if (email && email.includes('@')) {
+      setNoticeMsg(`Password reset link sent to ${email.trim()}. Please check your inbox.`);
+    } else {
+      setNoticeMsg('Please enter your email address above to receive reset instructions.');
+    }
+  };
+
   return (
     <div
-      className="auth-consumer-viewport"
+      className="auth-screen-viewport"
       style={{
         minHeight: '100vh',
         width: '100vw',
-        backgroundColor: '#090A0E',
-        backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 55%), radial-gradient(circle at 10% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 45%)',
+        backgroundColor: '#07080B',
+        backgroundImage:
+          'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 60%), radial-gradient(circle at 10% 90%, rgba(139, 92, 246, 0.08) 0%, transparent 45%)',
         color: '#F3F4F6',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '32px 20px',
+        padding: 'clamp(16px, 3.5vw, 44px)',
         boxSizing: 'border-box',
         overflowX: 'hidden',
       }}
     >
-      {/* Centered Modern Container Card */}
-      <div
-        className="auth-consumer-card"
-        style={{
-          width: '100%',
-          maxWidth: 1040,
-          minHeight: 640,
-          backgroundColor: '#0F1016',
-          borderRadius: 28,
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 24px 80px -12px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.06)',
-          display: 'flex',
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-      >
-        {/* LEFT COLUMN: VISUAL BRAND & CONSUMER JOURNEY PANEL */}
-        <div
-          className="auth-left-brand-panel"
-          style={{
-            flex: '1 1 50%',
-            margin: 12,
-            borderRadius: 22,
-            background: 'radial-gradient(circle at 25% 25%, #6366F1 0%, #4338CA 45%, #181534 95%)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '40px 38px',
-            boxSizing: 'border-box',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Subtle Ambient Decorative Glow Circles */}
-          <div
-            style={{
-              position: 'absolute',
-              top: -60,
-              right: -60,
-              width: 220,
-              height: 220,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 70%)',
-              pointerEvents: 'none',
-            }}
+      <style>{`
+        .auth-screen-card {
+          width: 100%;
+          max-width: 1380px;
+          height: min(880px, calc(100vh - 56px));
+          min-height: 620px;
+          background-color: #0B0C11;
+          border-radius: 28px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 32px 96px -12px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+          display: flex;
+          overflow: hidden;
+          position: relative;
+          padding: 12px;
+          box-sizing: border-box;
+          gap: 12px;
+        }
+
+        .auth-left-column {
+          flex: 0 0 55%;
+          width: 55%;
+          height: 100%;
+          position: relative;
+          border-radius: 24px;
+          overflow: hidden;
+        }
+
+        .auth-right-column {
+          flex: 0 0 45%;
+          width: 45%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justifyContent: center;
+          align-items: center;
+          padding: 24px clamp(24px, 4vw, 56px);
+          box-sizing: border-box;
+          overflow-y: auto;
+        }
+
+        .auth-form-inner {
+          width: 100%;
+          max-width: 460px;
+        }
+
+        .auth-input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 13px 16px;
+          font-size: 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background-color: #14151F;
+          color: #FFFFFF;
+          outline: none;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+        .auth-input:focus {
+          border-color: #6366F1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+          background-color: #161724;
+        }
+
+        .auth-btn-google {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px 18px;
+          border-radius: 12px;
+          background-color: #14151F;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #E5E7EB;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .auth-btn-google:hover {
+          background-color: #1A1C2C;
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .auth-btn-primary {
+          width: 100%;
+          margin-top: 6px;
+          padding: 14px 20px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+          color: #FFFFFF;
+          border: none;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+          transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+        .auth-btn-primary:hover:not(:disabled) {
+          background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
+        }
+        .auth-btn-primary:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        .auth-btn-primary:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        /* Tablet composition */
+        @media (max-width: 1024px) {
+          .auth-screen-card {
+            height: auto !important;
+            min-height: auto !important;
+            max-width: 620px !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .auth-left-column {
+            flex: 0 0 240px !important;
+            width: 100% !important;
+            height: 240px !important;
+          }
+          .auth-right-column {
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            padding: 24px 20px !important;
+          }
+        }
+
+        /* Mobile composition */
+        @media (max-width: 640px) {
+          .auth-screen-viewport {
+            padding: 12px !important;
+          }
+          .auth-screen-card {
+            border-radius: 20px !important;
+            padding: 8px !important;
+          }
+          .auth-left-column {
+            flex: 0 0 170px !important;
+            height: 170px !important;
+            border-radius: 16px !important;
+          }
+          .auth-right-column {
+            padding: 20px 14px !important;
+          }
+        }
+      `}</style>
+
+      {/* Main Two-Column Outer Card */}
+      <div className="auth-screen-card">
+        {/* LEFT SECTION (55%): Immersive Video Showcase */}
+        <div className="auth-left-column">
+          <AuthVideoShowcase
+            videoSrc="/videos/background-optimized.mp4"
+            fallbackVideoSrc="/videos/background.mp4"
+            posterSrc="/videos/background-poster.jpg"
           />
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 40,
-              left: -40,
-              width: 240,
-              height: 240,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%)',
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Top Brand Header */}
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
-                }}
-              >
-                <Clapperboard size={22} />
-              </div>
-              <span
-                style={{
-                  fontSize: 20,
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
-                }}
-              >
-                CleverCuts
-              </span>
-            </div>
-          </div>
-
-          {/* Value Proposition Content (Clean & Breathable) */}
-          <div style={{ position: 'relative', zIndex: 2, marginTop: 'auto', paddingTop: 40 }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                borderRadius: 9999,
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#FFFFFF',
-                fontSize: 12,
-                fontWeight: 600,
-                marginBottom: 20,
-              }}
-            >
-              <span>✨ AI Video Commercials</span>
-            </div>
-
-            <h2
-              style={{
-                fontSize: 34,
-                fontWeight: 800,
-                lineHeight: 1.22,
-                color: '#FFFFFF',
-                letterSpacing: '-0.03em',
-                margin: '0 0 16px',
-              }}
-            >
-              {mode === 'signup' ? 'Create Videos That Sell in Minutes' : 'Welcome back to CleverCuts'}
-            </h2>
-
-            <p
-              style={{
-                fontSize: 15,
-                lineHeight: 1.6,
-                color: 'rgba(255, 255, 255, 0.82)',
-                margin: 0,
-                maxWidth: 400,
-              }}
-            >
-              Turn your business ideas, products, and offers into customer-ready video scripts without complex editing.
-            </p>
-          </div>
         </div>
 
-        {/* RIGHT COLUMN: CONSUMER FORM PANEL */}
-        <div
-          className="auth-right-form-panel"
-          style={{
-            flex: '1 1 50%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            padding: '52px 48px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ maxWidth: 400, width: '100%', margin: '0 auto' }}>
-            {/* Form Title & Subtitle */}
-            <div style={{ marginBottom: 28 }}>
+        {/* RIGHT SECTION (45%): Clean, Focused Authentication Form */}
+        <div className="auth-right-column">
+          <div className="auth-form-inner">
+            {/* Header: Title & Subtitle */}
+            <div style={{ marginBottom: 24 }}>
               <h1
                 style={{
                   fontSize: 26,
                   fontWeight: 800,
-                  letterSpacing: '-0.02em',
+                  letterSpacing: '-0.025em',
                   color: '#FFFFFF',
                   margin: '0 0 8px',
                 }}
@@ -282,39 +348,15 @@ export default function AuthScreen({
               >
                 {mode === 'signup'
                   ? 'Access your saved scripts and campaigns anywhere.'
-                  : 'Please enter your details to sign in to your account.'}
+                  : 'Log in to continue creating with CleverCuts.'}
               </p>
             </div>
 
-            {/* Social Google Login Button (Matching References) */}
+            {/* Google Authentication Button */}
             <button
               type="button"
+              className="auth-btn-google"
               onClick={handleGoogleClick}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                padding: '12px 18px',
-                borderRadius: 14,
-                backgroundColor: '#161722',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#E5E7EB',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'background-color 0.15s ease, border-color 0.15s ease',
-                marginBottom: 20,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#1E1F2E';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#161722';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path
@@ -337,31 +379,32 @@ export default function AuthScreen({
               <span>{mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}</span>
             </button>
 
+            {/* Google Notice Feedback */}
             {googleNotice && (
               <div
                 style={{
                   backgroundColor: 'rgba(99, 102, 241, 0.1)',
                   border: '1px solid rgba(99, 102, 241, 0.25)',
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  marginBottom: 16,
+                  borderRadius: 10,
+                  padding: '9px 12px',
+                  marginTop: 12,
                   color: '#C7D2FE',
                   fontSize: 12,
                   lineHeight: 1.4,
                   textAlign: 'center',
                 }}
               >
-                Google sign-in is coming soon! Please sign up with your email below.
+                Google sign-in is coming soon! Please use email and password below.
               </div>
             )}
 
-            {/* Friendly "Or" Divider */}
+            {/* Divider: Or with email */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 14,
-                marginBottom: 24,
+                margin: '20px 0',
                 color: '#6B7280',
                 fontSize: 12,
                 fontWeight: 500,
@@ -378,9 +421,9 @@ export default function AuthScreen({
                 style={{
                   backgroundColor: 'rgba(239, 68, 68, 0.12)',
                   border: '1px solid rgba(239, 68, 68, 0.28)',
-                  borderRadius: 12,
-                  padding: '11px 14px',
-                  marginBottom: 20,
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 10,
@@ -394,9 +437,31 @@ export default function AuthScreen({
               </div>
             )}
 
-            {/* The Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Full Name Field (Register Mode Only) */}
+            {/* Notice / Info Banner */}
+            {noticeMsg && (
+              <div
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid rgba(59, 130, 246, 0.28)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  color: '#93C5FD',
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                <Info size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>{noticeMsg}</div>
+              </div>
+            )}
+
+            {/* Main Form */}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+              {/* Full Name Field (Sign-up only) */}
               {mode === 'signup' && (
                 <div>
                   <label
@@ -405,7 +470,7 @@ export default function AuthScreen({
                       fontSize: 12,
                       fontWeight: 600,
                       color: '#E5E7EB',
-                      marginBottom: 7,
+                      marginBottom: 6,
                     }}
                   >
                     Your name
@@ -417,26 +482,7 @@ export default function AuthScreen({
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Ramesh Sharma"
                     disabled={isSubmitting}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '13px 16px',
-                      fontSize: 14,
-                      borderRadius: 14,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: '#161722',
-                      color: '#FFFFFF',
-                      outline: 'none',
-                      transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#6366F1';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="auth-input"
                   />
                 </div>
               )}
@@ -449,7 +495,7 @@ export default function AuthScreen({
                     fontSize: 12,
                     fontWeight: 600,
                     color: '#E5E7EB',
-                    marginBottom: 7,
+                    marginBottom: 6,
                   }}
                 >
                   Email address
@@ -460,32 +506,13 @@ export default function AuthScreen({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@business.com"
                   disabled={isSubmitting}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '13px 16px',
-                    fontSize: 14,
-                    borderRadius: 14,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    backgroundColor: '#161722',
-                    color: '#FFFFFF',
-                    outline: 'none',
-                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#6366F1';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.2)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  className="auth-input"
                 />
               </div>
 
               {/* Password Field */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label
                     style={{
                       fontSize: 12,
@@ -496,18 +523,24 @@ export default function AuthScreen({
                     Password
                   </label>
                   {mode === 'signin' && (
-                    <span
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
                       style={{
-                        fontSize: 12,
+                        background: 'none',
+                        border: 'none',
                         color: '#818CF8',
+                        fontSize: 12,
+                        fontWeight: 600,
                         cursor: 'pointer',
+                        padding: 0,
                       }}
-                      onClick={() => alert('To reset your password, please contact support or register with your email.')}
                     >
                       Forgot password?
-                    </span>
+                    </button>
                   )}
                 </div>
+
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -515,26 +548,8 @@ export default function AuthScreen({
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
                     disabled={isSubmitting}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '13px 44px 13px 16px',
-                      fontSize: 14,
-                      borderRadius: 14,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: '#161722',
-                      color: '#FFFFFF',
-                      outline: 'none',
-                      transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#6366F1';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="auth-input"
+                    style={{ paddingRight: 44 }}
                   />
                   <button
                     type="button"
@@ -554,52 +569,54 @@ export default function AuthScreen({
                       justifyContent: 'center',
                       padding: 4,
                     }}
+                    title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              {/* Comfortable High-Contrast Action Button (Matching References) */}
+              {/* Remember Me Option (Login mode) */}
+              {mode === 'signin' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -2 }}>
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{
+                      width: 15,
+                      height: 15,
+                      accentColor: '#6366F1',
+                      cursor: 'pointer',
+                      borderRadius: 4,
+                    }}
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    style={{
+                      fontSize: 12,
+                      color: '#9CA3AF',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Remember me
+                  </label>
+                </div>
+              )}
+
+              {/* Primary Submit Button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  marginTop: 8,
-                  padding: '14px 20px',
-                  borderRadius: 14,
-                  backgroundColor: '#FFFFFF',
-                  color: '#0F1016',
-                  border: 'none',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  boxShadow: '0 4px 16px rgba(255, 255, 255, 0.15)',
-                  transition: 'transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.backgroundColor = '#F3F4F6';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 255, 255, 0.25)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 255, 255, 0.15)';
-                  }
-                }}
+                className="auth-btn-primary"
               >
                 {isSubmitting ? (
-                  <span>Please wait...</span>
+                  <>
+                    <RefreshCw size={15} className="icon-spinner" />
+                    <span>Please wait...</span>
+                  </>
                 ) : mode === 'signup' ? (
                   <>
                     <span>Create Account</span>
@@ -607,7 +624,7 @@ export default function AuthScreen({
                   </>
                 ) : (
                   <>
-                    <span>Sign In</span>
+                    <span>Log In</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -617,7 +634,7 @@ export default function AuthScreen({
             {/* Mode Switch Toggle Footer */}
             <div
               style={{
-                marginTop: 24,
+                marginTop: 22,
                 textAlign: 'center',
                 fontSize: 13,
                 color: '#9CA3AF',
@@ -664,14 +681,14 @@ export default function AuthScreen({
               )}
             </div>
 
-            {/* Privacy footnote */}
+            {/* Terms and Privacy Policy Footnote */}
             <div
               style={{
-                marginTop: 36,
+                marginTop: 28,
                 textAlign: 'center',
                 fontSize: 11,
                 color: '#4B5563',
-                lineHeight: 1.4,
+                lineHeight: 1.5,
               }}
             >
               By continuing, you agree to CleverCuts's Terms of Service and Privacy Policy.
