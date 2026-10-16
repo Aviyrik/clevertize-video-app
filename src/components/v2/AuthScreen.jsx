@@ -339,29 +339,28 @@ export default function AuthScreen({
       >
         <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            backgroundColor: 'rgba(99, 102, 241, 0.25)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            width: 42,
+            height: 42,
+            borderRadius: 13,
+            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #312E81 100%)',
+            border: '1px solid rgba(199, 210, 254, 0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#FFFFFF',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+            boxShadow:
+              '0 8px 24px -2px rgba(99, 102, 241, 0.6), 0 0 16px rgba(99, 102, 241, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4)',
           }}
         >
-          <Clapperboard size={20} />
+          <Clapperboard size={22} color="#FFFFFF" strokeWidth={2.2} />
         </div>
         <span
           style={{
             fontSize: 22,
             fontWeight: 800,
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.025em',
             color: '#FFFFFF',
-            textShadow: '0 2px 10px rgba(0, 0, 0, 0.7)',
+            textShadow: '0 2px 12px rgba(0, 0, 0, 0.85)',
           }}
         >
           CleverCuts
