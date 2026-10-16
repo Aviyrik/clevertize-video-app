@@ -23,7 +23,9 @@ import {
   Bookmark,
   Menu,
   X,
+  ChevronsUpDown,
 } from 'lucide-react';
+import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
 
 const STUDIO_STAGES = [
   { id: 'business', num: '01', label: 'Business' },
@@ -47,6 +49,11 @@ export default function AppShell({
   businessName = '',
   businessType = '',
   town = '',
+  brandLogo = null,
+  activeBusiness = null,
+  businesses = [],
+  onSelectBusiness,
+  onAddNewBusiness,
   onEditBrand,
   onOpenScriptModal,
   onOpenUrlModal,
@@ -61,6 +68,7 @@ export default function AppShell({
   projectCount = 0,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [businessDropdownOpen, setBusinessDropdownOpen] = useState(false);
   const currentStageObj = STUDIO_STAGES.find((s) => s.id === currentStage) || STUDIO_STAGES[0];
 
   return (
@@ -184,64 +192,322 @@ export default function AppShell({
           </div>
 
           {/* Current Business / Brand Card */}
-          <div style={{ padding: '0 16px 16px' }}>
-            <div
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 8,
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-                <Store size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                <div style={{ overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: 'var(--text-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {businessName || 'Configure Brand'}
+          {(() => {
+            const activeLogo = resolveLogoUrl(brandLogo || activeBusiness?.brandLogo || activeBusiness?.logo);
+            return (
+              <div style={{ padding: '0 16px 16px', position: 'relative' }}>
+                <div
+                  onClick={() => {
+                    if (businesses && businesses.length > 1) {
+                      setBusinessDropdownOpen((prev) => !prev);
+                    } else if (onSelectView) {
+                      onSelectView('businesses');
+                    }
+                  }}
+                  style={{
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-default)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
+                    {activeLogo ? (
+                      <img
+                        src={activeLogo}
+                        alt={businessName}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: '#151821',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: getAvatarGradient(businessName),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#FFFFFF',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {getInitials(businessName)}
+                      </div>
+                    )}
+                    <div style={{ overflow: 'hidden', flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {businessName || 'Configure Brand'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--text-tertiary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {businessType || 'Retail Store'} {town ? `· ${town}` : ''}
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--text-tertiary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {businessType || 'Retail Store'} {town ? `· ${town}` : ''}
-                  </div>
+
+                  {businesses && businesses.length > 1 ? (
+                    <div
+                      style={{
+                        color: 'var(--text-tertiary)',
+                        padding: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Switch Business"
+                    >
+                      <ChevronsUpDown size={15} />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        color: 'var(--text-tertiary)',
+                        padding: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="View Business Details"
+                    >
+                      <ChevronRight size={15} />
+                    </div>
+                  )}
                 </div>
+
+                {/* Multiple Businesses Floating Switcher Dropdown */}
+                {businessDropdownOpen && businesses && businesses.length > 1 && (
+                  <>
+                    <div
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 998,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBusinessDropdownOpen(false);
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% - 6px)',
+                        left: 16,
+                        right: 16,
+                        backgroundColor: 'var(--bg-surface)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 10,
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.55)',
+                        zIndex: 999,
+                        padding: '8px 0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: 'var(--text-tertiary)',
+                          padding: '4px 14px 6px',
+                        }}
+                      >
+                        Switch Active Business ({businesses.length})
+                      </div>
+
+                      <div style={{ maxHeight: 210, overflowY: 'auto' }}>
+                        {businesses.map((biz, idx) => {
+                          const bName = biz.businessName || biz.name || 'Unnamed Business';
+                          const bType = biz.businessType || biz.category || 'Retail Store';
+                          const bLogo = resolveLogoUrl(biz.brandLogo || biz.logo);
+                          const isCurrent = bName.trim().toLowerCase() === (businessName || '').trim().toLowerCase();
+
+                          return (
+                            <div
+                              key={biz.id || idx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onSelectBusiness) onSelectBusiness(biz);
+                                setBusinessDropdownOpen(false);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '8px 14px',
+                                cursor: 'pointer',
+                                backgroundColor: isCurrent ? 'var(--bg-elevated)' : 'transparent',
+                                transition: 'background 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
+                                {bLogo ? (
+                                  <img
+                                    src={bLogo}
+                                    alt={bName}
+                                    style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 26,
+                                      height: 26,
+                                      borderRadius: 6,
+                                      background: getAvatarGradient(bName),
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#FFFFFF',
+                                      fontSize: 10,
+                                      fontWeight: 800,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {getInitials(bName)}
+                                  </div>
+                                )}
+                                <div style={{ overflow: 'hidden', flex: 1 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: isCurrent ? 700 : 500,
+                                      color: 'var(--text-primary)',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {bName}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 10,
+                                      color: 'var(--text-tertiary)',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {bType}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {isCurrent && (
+                                <Check size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '6px 0 2px' }} />
+
+                      {onAddNewBusiness && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBusinessDropdownOpen(false);
+                            onAddNewBusiness();
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '7px 14px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: 'var(--accent-primary)',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Plus size={14} />
+                          <span>Add Another Business</span>
+                        </div>
+                      )}
+
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBusinessDropdownOpen(false);
+                          if (onSelectView) onSelectView('businesses');
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '7px 14px',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <Building2 size={14} />
+                        <span>Manage All Businesses</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={onEditBrand}
-                title="Edit Brand Profile"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-tertiary)',
-                  cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 4,
-                  display: 'flex',
-                }}
-              >
-                <Settings2 size={14} />
-              </button>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Workspace Views Navigation */}
           <div style={{ padding: '0 12px 16px' }}>

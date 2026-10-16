@@ -1179,6 +1179,7 @@ export default function App() {
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const fetchUserData = async (token, allowAutoOpenOnboarding = false) => {
@@ -1523,18 +1524,20 @@ export default function App() {
 
   const handleOnboardingComplete = async (onboardingData) => {
     setIsOnboardingModalOpen(false);
+    setEditingBusiness(null);
     const resolvedName = onboardingData.businessName || 'My Business';
     const resolvedType = onboardingData.businessType || 'Retail Store';
 
     setUserContext((prev) => ({
       ...prev,
+      businessId: onboardingData.id || prev.businessId,
       businessName: resolvedName,
       businessType: resolvedType,
       town: onboardingData.town || '',
       targetAudience: onboardingData.targetAudience || '',
       websiteUrl: onboardingData.websiteUrl || prev.websiteUrl,
       brandTone: onboardingData.brandTone || prev.brandTone,
-      brandLogo: onboardingData.brandLogo || prev.brandLogo,
+      brandLogo: onboardingData.brandLogo || onboardingData.logo || prev.brandLogo,
     }));
 
     if (currentUser && authToken) {
@@ -1546,6 +1549,7 @@ export default function App() {
             Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
+            id: onboardingData.id || undefined,
             businessName: resolvedName,
             name: resolvedName,
             businessType: resolvedType,
@@ -1554,8 +1558,8 @@ export default function App() {
             targetAudience: onboardingData.targetAudience || '',
             websiteUrl: onboardingData.websiteUrl || '',
             brandTone: onboardingData.brandTone || 'Relatable & Trustworthy',
-            logo: onboardingData.brandLogo || null,
-            brandLogo: onboardingData.brandLogo || null,
+            logo: onboardingData.brandLogo || onboardingData.logo || null,
+            brandLogo: onboardingData.brandLogo || onboardingData.logo || null,
           }),
         });
         if (res.ok) {
@@ -1577,11 +1581,37 @@ export default function App() {
       } catch (err) {
         console.error('Error auto-saving onboarded business:', err);
       }
+    } else {
+      // Local fallback for guest / unauthenticated session
+      const localBiz = {
+        id: onboardingData.id || `biz_${Date.now()}`,
+        businessName: resolvedName,
+        name: resolvedName,
+        businessType: resolvedType,
+        category: resolvedType,
+        town: onboardingData.town || '',
+        targetAudience: onboardingData.targetAudience || '',
+        websiteUrl: onboardingData.websiteUrl || '',
+        brandTone: onboardingData.brandTone || 'Warm & Authentic',
+        logo: onboardingData.brandLogo || onboardingData.logo || null,
+        brandLogo: onboardingData.brandLogo || onboardingData.logo || null,
+      };
+      setUserBusinesses((prev) => {
+        const idx = prev.findIndex((b) => b.id === localBiz.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = localBiz;
+          return next;
+        }
+        return [localBiz, ...prev];
+      });
     }
 
     markStageComplete('business');
-    setActiveAppView('home');
-    setToastMessage(`Brand profile for "${resolvedName}" saved! Choose how to start your first video.`);
+    if (activeAppView !== 'businesses' && activeAppView !== 'business') {
+      setActiveAppView('home');
+    }
+    setToastMessage(`Brand profile for "${resolvedName}" saved!`);
     setTimeout(() => setToastMessage(''), 4500);
   };
 
@@ -3208,7 +3238,34 @@ export default function App() {
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
-          onEditBrand={() => setIsOnboardingModalOpen(true)}
+          brandLogo={userContext.brandLogo}
+          activeBusiness={userContext}
+          businesses={userBusinesses}
+          onSelectBusiness={(biz) => {
+            setUserContext((prev) => ({
+              ...prev,
+              businessId: biz.id,
+              businessName: biz.name || biz.businessName,
+              businessType: biz.category || biz.businessType,
+              town: biz.town || '',
+              area: biz.area || '',
+              websiteUrl: biz.websiteUrl || '',
+              targetAudience: biz.targetAudience || '',
+              brandTone: biz.brandTone || prev.brandTone,
+              brandLogo: biz.logo || biz.brandLogo || null,
+              logo: biz.logo || biz.brandLogo || null,
+            }));
+            setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
+            setTimeout(() => setToastMessage(''), 3000);
+          }}
+          onAddNewBusiness={() => {
+            setEditingBusiness(null);
+            setIsOnboardingModalOpen(true);
+          }}
+          onEditBrand={() => {
+            setEditingBusiness(userContext);
+            setIsOnboardingModalOpen(true);
+          }}
           onOpenScriptModal={() => setIsScriptModalOpen(true)}
           onOpenUrlModal={() => setIsUrlModalOpen(true)}
           isOnline={isOnline}
@@ -3218,7 +3275,10 @@ export default function App() {
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onOpenAccountModal={() => setIsAccountModalOpen(true)}
           onLogout={handleLogout}
-          onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
+          onOpenOnboarding={() => {
+            setEditingBusiness(null);
+            setIsOnboardingModalOpen(true);
+          }}
           projectCount={userProjects.length}
         >
           {/* Offline Connectivity Notification Banner */}
@@ -3291,15 +3351,27 @@ export default function App() {
               onSelectBusiness={(biz) => {
                 setUserContext((prev) => ({
                   ...prev,
+                  businessId: biz.id,
                   businessName: biz.name || biz.businessName,
                   businessType: biz.category || biz.businessType,
                   town: biz.town || '',
                   area: biz.area || '',
                   websiteUrl: biz.websiteUrl || '',
-                  specialty: biz.specialty || '',
+                  targetAudience: biz.targetAudience || '',
+                  brandTone: biz.brandTone || prev.brandTone,
+                  brandLogo: biz.logo || biz.brandLogo || null,
+                  logo: biz.logo || biz.brandLogo || null,
                 }));
                 setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
                 setTimeout(() => setToastMessage(''), 3000);
+              }}
+              onEditBusiness={(biz) => {
+                setEditingBusiness(biz);
+                setIsOnboardingModalOpen(true);
+              }}
+              onAddNewBusiness={() => {
+                setEditingBusiness(null);
+                setIsOnboardingModalOpen(true);
               }}
               onSaveBusiness={handleSaveBusiness}
               currentUser={currentUser}
@@ -4226,16 +4298,22 @@ export default function App() {
       {/* Business Onboarding Wizard Modal */}
       <BusinessOnboardingModal
         isOpen={isOnboardingModalOpen}
-        onClose={() => setIsOnboardingModalOpen(false)}
-        onComplete={handleOnboardingComplete}
-        initialData={{
-          businessName: (userContext.businessName && userContext.businessName.trim().toLowerCase() !== 'kanti sweets') ? userContext.businessName : '',
-          businessType: userContext.businessType,
-          town: userContext.town,
-          websiteUrl: userContext.websiteUrl,
-          brandTone: userContext.brandTone,
-          brandLogo: userContext.brandLogo,
+        onClose={() => {
+          setIsOnboardingModalOpen(false);
+          setEditingBusiness(null);
         }}
+        onComplete={handleOnboardingComplete}
+        initialData={
+          editingBusiness || {
+            businessName: (userContext.businessName && userContext.businessName.trim().toLowerCase() !== 'kanti sweets') ? userContext.businessName : '',
+            businessType: userContext.businessType,
+            town: userContext.town,
+            targetAudience: userContext.targetAudience,
+            websiteUrl: userContext.websiteUrl,
+            brandTone: userContext.brandTone,
+            brandLogo: userContext.brandLogo,
+          }
+        }
       />
 
       {/* Account Settings & Delete Account Modal */}

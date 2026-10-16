@@ -278,10 +278,10 @@ export default function BusinessOnboardingModal({
   // Step 3: Brand Voice & Online Presence
   // Step 4: Confirm & Launch
   const [step, setStep] = useState(1);
-  const rawBusinessName = (initialData.businessName || '').trim();
-  const initialBusinessName = rawBusinessName.toLowerCase() === 'kanti sweets' ? '' : (initialData.businessName || '');
+  const rawBusinessName = (initialData.businessName || initialData.name || '').trim();
+  const initialBusinessName = rawBusinessName.toLowerCase() === 'kanti sweets' ? '' : rawBusinessName;
   const [businessName, setBusinessName] = useState(initialBusinessName);
-  const [businessType, setBusinessType] = useState(initialData.businessType || CATEGORIES[0]);
+  const [businessType, setBusinessType] = useState(initialData.businessType || initialData.category || CATEGORIES[0]);
   const [customCategory, setCustomCategory] = useState(
     initialData.businessType && !CATEGORY_CARDS.some((c) => c.label === initialData.businessType)
       ? initialData.businessType
@@ -289,11 +289,11 @@ export default function BusinessOnboardingModal({
   );
   const [town, setTown] = useState(initialData.town || '');
   const [targetAudience, setTargetAudience] = useState(
-    initialData.targetAudience || getSuggestedAudiences(initialData.businessType || CATEGORIES[0])[0]
+    initialData.targetAudience || getSuggestedAudiences(initialData.businessType || initialData.category || CATEGORIES[0])[0]
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialData.websiteUrl || '');
   const [brandTone, setBrandTone] = useState(initialData.brandTone || 'Warm & Authentic');
-  const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || null);
+  const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || initialData.logo || null);
   const [nameError, setNameError] = useState(false);
   const [townError, setTownError] = useState(false);
   const [audienceError, setAudienceError] = useState(false);
@@ -307,6 +307,25 @@ export default function BusinessOnboardingModal({
       setStep(1);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const raw = (initialData.businessName || initialData.name || '').trim();
+      const isKanti = raw.toLowerCase() === 'kanti sweets';
+      setBusinessName(isKanti ? '' : raw);
+      setBusinessType(initialData.businessType || initialData.category || CATEGORIES[0]);
+      setTown(initialData.town || '');
+      setTargetAudience(
+        initialData.targetAudience || getSuggestedAudiences(initialData.businessType || initialData.category || CATEGORIES[0])[0]
+      );
+      setWebsiteUrl(initialData.websiteUrl || '');
+      setBrandTone(initialData.brandTone || 'Warm & Authentic');
+      setBrandLogo(initialData.brandLogo || initialData.logo || null);
+      setNameError(false);
+      setTownError(false);
+      setAudienceError(false);
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -373,13 +392,17 @@ export default function BusinessOnboardingModal({
         : businessType;
 
     onComplete({
+      id: initialData.id || undefined,
       businessName: businessName.trim() || 'My Business',
+      name: businessName.trim() || 'My Business',
       businessType: finalCategory,
+      category: finalCategory,
       town: town.trim(),
       targetAudience: targetAudience.trim(),
       websiteUrl: websiteUrl.trim(),
       brandTone,
       brandLogo,
+      logo: brandLogo,
     });
     setStep(1);
     onClose();
@@ -500,40 +523,138 @@ export default function BusinessOnboardingModal({
               </p>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                Business or Brand Name <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                autoFocus
-                value={businessName}
-                onChange={(e) => {
-                  setBusinessName(e.target.value);
-                  if (nameError) setNameError(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleNextFromStep1();
-                }}
-                placeholder="e.g. Anand Sweets, Zari Silks, Dental Care Clinic, Urban Kicks"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '11px 14px',
-                  fontSize: 14,
-                  borderRadius: 10,
-                  border: `1.5px solid ${nameError ? '#EF4444' : 'var(--border-default)'}`,
-                  backgroundColor: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  outline: 'none',
-                }}
-              />
-              {nameError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
-                  <AlertCircle size={13} />
-                  <span>Please enter your business or brand name.</span>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              {/* Logo Upload Dropzone / Avatar */}
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Logo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  {brandLogo ? (
+                    <div style={{ position: 'relative', width: 50, height: 50 }}>
+                      <img
+                        src={brandLogo}
+                        alt="Logo"
+                        style={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: 10,
+                          objectFit: 'cover',
+                          border: '1.5px solid var(--accent-primary)',
+                          backgroundColor: '#161922',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBrandLogo(null);
+                        }}
+                        title="Remove Logo"
+                        style={{
+                          position: 'absolute',
+                          top: -6,
+                          right: -6,
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          backgroundColor: '#EF4444',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 10,
+                        border: '1.5px dashed var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-tertiary)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                        e.currentTarget.style.color = 'var(--accent-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border-default)';
+                        e.currentTarget.style.color = 'var(--text-tertiary)';
+                      }}
+                      title="Upload business logo"
+                    >
+                      <Upload size={16} />
+                      <span style={{ fontSize: 9, fontWeight: 700, marginTop: 2, textTransform: 'uppercase' }}>Logo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setBrandLogo(ev.target.result);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Business Name Input */}
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Business or Brand Name <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={businessName}
+                  onChange={(e) => {
+                    setBusinessName(e.target.value);
+                    if (nameError) setNameError(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleNextFromStep1();
+                  }}
+                  placeholder="e.g. Anand Sweets, Zari Silks, Dental Care Clinic, Urban Kicks"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '11px 14px',
+                    fontSize: 14,
+                    borderRadius: 10,
+                    border: `1.5px solid ${nameError ? '#EF4444' : 'var(--border-default)'}`,
+                    backgroundColor: 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                  }}
+                />
+                {nameError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                    <AlertCircle size={13} />
+                    <span>Please enter your business or brand name.</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

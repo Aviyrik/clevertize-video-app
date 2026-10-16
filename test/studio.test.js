@@ -1939,3 +1939,28 @@ test('UrlResearchModal: Exports 12 standard business categories, renders select 
   assert.ok(modalSrc.includes('setDraftCategory(data.businessType || data.category)'), 'Must update draftCategory from response');
 });
 
+test('Business Profiles Redesign: Prominent avatars, card grid with + Add Another Business, unified onboarding modal, and left nav switcher', () => {
+  const profileSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessProfileView.jsx'), 'utf8');
+  const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+
+  // BusinessProfileView structure
+  assert.ok(profileSrc.includes('resolveLogoUrl'), 'Must export resolveLogoUrl');
+  assert.ok(profileSrc.includes('getInitials'), 'Must export getInitials');
+  assert.ok(profileSrc.includes('getAvatarGradient'), 'Must export getAvatarGradient');
+  assert.ok(profileSrc.includes('displayBusinesses.map'), 'Must render business cards grid');
+  assert.ok(profileSrc.includes('Add Another Business'), 'Must have Add Another Business card');
+  assert.ok(!profileSrc.includes('<form'), 'Must not have a default raw form filling the page');
+
+  // BusinessOnboardingModal logo upload and edit support
+  assert.ok(modalSrc.includes('Tell us about your business'), 'Must have Step 1');
+  assert.ok(modalSrc.includes('Logo') && modalSrc.includes('accept="image/*"'), 'Step 1 must offer logo upload');
+  assert.ok(modalSrc.includes('id: initialData.id'), 'Must preserve initialData.id on completion for updates');
+
+  // AppShell left navbar switcher & avatar
+  assert.ok(shellSrc.includes('resolveLogoUrl'), 'AppShell must resolve logo avatar');
+  assert.ok(shellSrc.includes('businessDropdownOpen'), 'AppShell must have switcher dropdown state');
+  assert.ok(shellSrc.includes('ChevronsUpDown'), 'AppShell must show switcher icon for multiple businesses');
+  assert.ok(shellSrc.includes('Switch Active Business'), 'AppShell must render switcher dropdown menu');
+});
+
