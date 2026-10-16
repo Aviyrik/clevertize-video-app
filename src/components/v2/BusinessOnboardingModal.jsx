@@ -26,6 +26,10 @@ import {
   Check,
   AlertCircle,
   Upload,
+  Heart,
+  PartyPopper,
+  Crown,
+  Target,
 } from 'lucide-react';
 
 const CATEGORY_CARDS = [
@@ -156,87 +160,87 @@ const CATEGORIES = CATEGORY_CARDS.map((c) => c.label);
 export const CATEGORY_AUDIENCES = {
   'Saree, Clothing & Apparel': [
     'Brides & wedding shopping families',
-    'College students & young trendsetters',
-    'Working women seeking daily office wear',
-    'Festival & celebration gift shoppers',
-    'Family clothing shoppers on a budget',
+    'College students & young fashion lovers',
+    'Working women looking for daily office wear',
+    'Festival & celebration shoppers',
+    'Budget-friendly family shoppers',
   ],
   'Jewellery & Accessories': [
-    'Bridal & wedding trousseau shoppers',
-    'Modern women seeking lightweight daily wear',
+    'Brides & wedding jewellery buyers',
+    'Women looking for lightweight daily jewellery',
     'Gold & diamond investment buyers',
-    'Anniversary & milestone gift shoppers',
-    'Festive heirloom collectors',
+    'Gift buyers for birthdays & anniversaries',
+    'Festive & traditional gold buyers',
   ],
   'Sweets, Bakery & Restaurant': [
-    'Festive & corporate bulk gifting buyers',
-    'Weekend dining families & groups',
-    'Late-night dessert & sweet cravers',
-    'Office lunch & tea-time crowds',
-    'Health-conscious & sugar-free seekers',
+    'Festival gift box & bulk sweet buyers',
+    'Families & friends dining out on weekends',
+    'Late-night dessert & sweet lovers',
+    'Office lunch & evening snack crowds',
+    'People looking for healthy or sugar-free treats',
   ],
   'Kirana, Grocery & Supermarket': [
-    'Monthly household ration planners',
+    'Families buying monthly home groceries',
     'Working couples needing quick delivery',
-    'Value shoppers seeking weekly discounts',
-    'Health-conscious organic food buyers',
-    'Neighborhood walk-in regulars',
+    'Shoppers looking for weekly discounts & deals',
+    'People buying fresh veggies & organic foods',
+    'Everyday neighborhood walk-in customers',
   ],
   'Electronics, Mobile & Appliances': [
-    'College students & smartphone upgraders',
-    'Gamers & performance gadget enthusiasts',
-    'Families upgrading home appliances',
-    'Festive deal & No-Cost EMI shoppers',
-    'Work-from-home pros needing gear',
+    'Students & youth buying new smartphones',
+    'Gamers & tech gadget lovers',
+    'Families buying TV, fridge & home appliances',
+    'Festive offer & easy EMI shoppers',
+    'Work-from-home pros needing laptop & tech gear',
   ],
   'Salon, Spa & Beauty': [
-    'Brides-to-be & wedding parties',
-    'Working women seeking regular grooming',
-    'Men looking for sharp beard & hair styling',
-    'Weekend self-care & spa unwinders',
-    'College youth exploring trendy hairstyles',
+    'Brides & bridal makeover clients',
+    'Working women for regular haircut & skin care',
+    'Men looking for haircut & beard styling',
+    'Weekend relaxation & massage seekers',
+    'College students wanting trendy hair looks',
   ],
   'Healthcare, Clinic & Pharmacy': [
-    'Parents seeking pediatric & child care',
-    'Senior citizens managing chronic wellness',
-    'Patients seeking gentle, pain-free dental care',
-    'Local residents needing genuine medicines',
-    'Busy professionals booking preventive checkups',
+    'Parents looking for child health & baby care',
+    'Senior citizens needing regular health checkups',
+    'Patients looking for gentle, pain-free dental care',
+    'Local families needing genuine medicines',
+    'Working professionals booking full health checks',
   ],
   'Real Estate & Home Decor': [
     'First-time home buyers & young families',
-    'High-net-worth & NRI property investors',
-    'Homeowners renovating modular interiors',
-    'Rental property investors & tenants',
+    'Property investors & NRI buyers',
+    'Homeowners looking for new interiors & furniture',
+    'People looking for rental homes & flats',
     'Couples furnishing their new home',
   ],
   'Gym, Fitness & Yoga': [
-    'Beginners seeking weight loss & transformation',
+    'Beginners looking to lose weight & get fit',
     'Desk workers fixing posture & back pain',
-    'Strength & muscle-building enthusiasts',
-    'Women seeking beginner yoga & Pilates',
-    'Seniors focusing on mobility & stamina',
+    'Youth training for muscle & body building',
+    'Women looking for yoga & fitness sessions',
+    'Seniors wanting to stay active & healthy',
   ],
   'Education, Coaching & Tuition': [
     'School students preparing for board exams',
-    'Competitive exam aspirants (JEE / NEET / UPSC)',
-    'Ambitious parents seeking foundation tuitions',
-    'College grads upskilling in tech & AI',
-    'Professionals seeking career certifications',
+    'Students preparing for exams like JEE, NEET & UPSC',
+    'Parents looking for after-school tutoring',
+    'College students learning tech & career skills',
+    'Working professionals seeking career growth',
   ],
   'Automobile & Garage': [
     'Daily car & bike commuters needing service',
-    'Luxury car owners seeking ceramic detailing',
-    'Commercial fleet & cab drivers needing quick fixes',
-    'Highway travelers booking pre-trip inspections',
-    'Used car buyers needing mechanic checks',
+    'Car owners looking for wash, polish & detailing',
+    'Cab & commercial drivers needing fast repairs',
+    'Travelers getting vehicles checked before long trips',
+    'Used car & bike buyers wanting a mechanic check',
   ],
   'Other Local Business': [
     'Neighborhood families & local residents',
-    'Small business owners & entrepreneurs',
-    'Discerning clients seeking bespoke services',
-    'First-time buyers looking for trusted reviews',
-    'Repeat customers valuing personal service',
+    'Small business owners & local shops',
+    'Customers looking for custom or handmade work',
+    'First-time buyers looking for trusted local service',
+    'Regular loyal customers',
   ],
 };
 
@@ -256,10 +260,10 @@ export function getSuggestedAudiences(category) {
 const AUDIENCE_SUGGESTIONS = CATEGORY_AUDIENCES['Other Local Business'];
 
 const BRAND_TONES = [
-  { id: 'warm', label: 'Warm & Authentic', desc: 'Friendly, welcoming neighborhood trust' },
-  { id: 'festive', label: 'Festive & Vibrant', desc: 'High-energy celebration & special offers' },
-  { id: 'premium', label: 'Premium & Elegant', desc: 'Refined craftsmanship & exclusivity' },
-  { id: 'direct', label: 'Direct & Problem-Solving', desc: 'Clear, helpful, and value-focused' },
+  { id: 'warm', label: 'Warm & Authentic', desc: 'Friendly, welcoming neighborhood trust', icon: Heart },
+  { id: 'festive', label: 'Festive & Vibrant', desc: 'High-energy celebration & special offers', icon: PartyPopper },
+  { id: 'premium', label: 'Premium & Elegant', desc: 'Refined craftsmanship & exclusivity', icon: Crown },
+  { id: 'direct', label: 'Direct & Problem-Solving', desc: 'Clear, helpful, and value-focused', icon: Target },
 ];
 
 export default function BusinessOnboardingModal({
@@ -333,7 +337,13 @@ export default function BusinessOnboardingModal({
     if (step === 1) {
       // Auto-update audience if user hasn't explicitly customized it yet
       const suggestions = getSuggestedAudiences(businessType);
-      if (!targetAudience || targetAudience === 'Local families & everyday buyers') {
+      const isDefaultOrPreset =
+        !targetAudience ||
+        targetAudience === 'Local families & everyday buyers' ||
+        (!initialData.targetAudience &&
+          Object.values(CATEGORY_AUDIENCES).some((list) => list.includes(targetAudience)));
+
+      if (isDefaultOrPreset) {
         if (suggestions && suggestions[0]) {
           setTargetAudience(suggestions[0]);
         }
@@ -396,7 +406,7 @@ export default function BusinessOnboardingModal({
         }}
       >
         {/* Progress Bar Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
@@ -466,6 +476,8 @@ export default function BusinessOnboardingModal({
               display: 'flex',
               flexDirection: 'column',
               gap: 18,
+              flex: 1,
+              minHeight: 0,
               maxHeight: 'calc(92vh - 145px)',
               overflowY: 'auto',
             }}
@@ -719,6 +731,8 @@ export default function BusinessOnboardingModal({
               display: 'flex',
               flexDirection: 'column',
               gap: 18,
+              flex: 1,
+              minHeight: 0,
               maxHeight: 'calc(92vh - 145px)',
               overflowY: 'auto',
             }}
@@ -845,32 +859,32 @@ export default function BusinessOnboardingModal({
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {currentAudienceSuggestions.map((sug, i) => {
-                    const isSelected = targetAudience.toLowerCase().includes(sug.toLowerCase());
+                    const currentItems = targetAudience
+                      .split(',')
+                      .map((p) => p.trim())
+                      .filter(Boolean);
+                    const isSelected = currentItems.some(
+                      (item) => item.toLowerCase() === sug.toLowerCase()
+                    );
                     return (
                       <button
                         key={i}
                         type="button"
                         onClick={() => {
-                          if (!targetAudience.trim() || targetAudience === 'Local families & everyday buyers') {
-                            setTargetAudience(sug);
-                            return;
-                          }
-                          if (targetAudience.toLowerCase().includes(sug.toLowerCase())) {
-                            // Deselect / remove this chip if part of multiple
-                            const parts = targetAudience
-                              .split(',')
-                              .map((p) => p.trim())
-                              .filter((p) => p && p.toLowerCase() !== sug.toLowerCase());
-                            setTargetAudience(parts.join(', '));
-                          } else {
-                            // If target audience is currently just another single suggestion, switch or combine
-                            const isSingleOtherSuggestion = currentAudienceSuggestions.some(
-                              (s) => s.toLowerCase() === targetAudience.trim().toLowerCase()
+                          if (audienceError) setAudienceError(false);
+
+                          if (isSelected) {
+                            // Deselect / remove this chip from the list
+                            const remaining = currentItems.filter(
+                              (p) => p.toLowerCase() !== sug.toLowerCase()
                             );
-                            if (isSingleOtherSuggestion) {
+                            setTargetAudience(remaining.join(', '));
+                          } else {
+                            // Combine with existing text present in the input box
+                            if (currentItems.length === 0 || targetAudience === 'Local families & everyday buyers') {
                               setTargetAudience(sug);
                             } else {
-                              setTargetAudience(`${targetAudience.trim()}, ${sug}`);
+                              setTargetAudience([...currentItems, sug].join(', '));
                             }
                           }
                         }}
@@ -902,7 +916,18 @@ export default function BusinessOnboardingModal({
 
         {/* Step 3: Brand Voice & Online Presence */}
         {step === 3 && (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div
+            style={{
+              padding: '22px 26px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 18,
+              flex: 1,
+              minHeight: 0,
+              maxHeight: 'calc(92vh - 145px)',
+              overflowY: 'auto',
+            }}
+          >
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Brand Voice & Online Presence
@@ -919,24 +944,56 @@ export default function BusinessOnboardingModal({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {BRAND_TONES.map((t) => {
                   const isSelected = brandTone === t.label;
+                  const Icon = t.icon;
                   return (
                     <div
                       key={t.id}
                       onClick={() => setBrandTone(t.label)}
                       style={{
-                        padding: '10px 12px',
-                        borderRadius: 8,
+                        padding: '12px 14px',
+                        borderRadius: 10,
                         backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-elevated)',
                         border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-default)'}`,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
+                        display: 'flex',
+                        gap: 12,
+                        alignItems: 'center',
                       }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {t.label}
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <Icon size={18} />
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                        {t.desc}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <span>{t.label}</span>
+                          {isSelected && <Check size={13} strokeWidth={2.5} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.3 }}>
+                          {t.desc}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1117,7 +1174,18 @@ export default function BusinessOnboardingModal({
 
         {/* Step 4: Confirm & Launch */}
         {step === 4 && (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div
+            style={{
+              padding: '24px 26px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 20,
+              flex: 1,
+              minHeight: 0,
+              maxHeight: 'calc(92vh - 145px)',
+              overflowY: 'auto',
+            }}
+          >
             <div style={{ textAlign: 'center', padding: '6px 0 0' }}>
               <div
                 style={{
@@ -1230,6 +1298,8 @@ export default function BusinessOnboardingModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
+            backgroundColor: 'var(--bg-surface)',
           }}
         >
           {step > 1 ? (

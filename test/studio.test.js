@@ -1794,6 +1794,46 @@ test('V2 Creation Flow: Screen02Brief confirms active brand and does not re-ask 
   assert.ok(appSrc.includes("setActiveAppView('home')"), 'Back from Brief must return to Creation Hub when brand exists');
 });
 
+test('Business Onboarding: Target customer suggestions use simple language and combine with existing text', () => {
+  const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  
+  // Must avoid complex jargon and difficult vocabulary
+  assert.ok(!obSrc.includes('trousseau'), 'Must not include tough word trousseau');
+  assert.ok(!obSrc.includes('heirloom collectors'), 'Must not include heirloom collectors');
+  assert.ok(!obSrc.includes('pediatric'), 'Must not include pediatric medical jargon');
+  assert.ok(!obSrc.includes('chronic wellness'), 'Must not include chronic wellness');
+  assert.ok(!obSrc.includes('bespoke services'), 'Must not include bespoke services');
+  assert.ok(!obSrc.includes('trendsetters'), 'Must not include trendsetters');
 
+  // Must include simple, accessible replacements
+  assert.ok(obSrc.includes('Brides & wedding jewellery buyers'), 'Must include clear bridal jewellery persona');
+  assert.ok(obSrc.includes('Gold & diamond investment buyers'), 'Must include gold investment persona');
+  assert.ok(obSrc.includes('Parents looking for child health & baby care'), 'Must include simple child healthcare persona');
 
+  // Multi-select combination logic: must combine with existing text instead of replacing
+  assert.ok(obSrc.includes('[...currentItems, sug].join'), 'Must combine newly clicked suggestion with existing items');
+  assert.ok(obSrc.includes('Click to apply or combine'), 'Must retain apply or combine label');
+});
 
+test('Business Onboarding: Brand Tone cards include visual icons for all tones', () => {
+  const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+
+  // Must import tone icons
+  assert.ok(obSrc.includes('Heart,'), 'Must import Heart icon');
+  assert.ok(obSrc.includes('PartyPopper,'), 'Must import PartyPopper icon');
+  assert.ok(obSrc.includes('Crown,'), 'Must import Crown icon');
+  assert.ok(obSrc.includes('Target,'), 'Must import Target icon');
+
+  // BRAND_TONES must specify icons
+  assert.ok(obSrc.includes("icon: Heart"), 'Warm tone must use Heart icon');
+  assert.ok(obSrc.includes("icon: PartyPopper"), 'Festive tone must use PartyPopper icon');
+  assert.ok(obSrc.includes("icon: Crown"), 'Premium tone must use Crown icon');
+  assert.ok(obSrc.includes("icon: Target"), 'Direct tone must use Target icon');
+
+  // Must render the icon in Step 3
+  assert.ok(obSrc.includes("<Icon size={18} />"), 'Must render Icon component in card');
+
+  // Step 3 must be scrollable so footer Next button is never unreachable
+  assert.ok(obSrc.includes("Step 3: Brand Voice & Online Presence") && obSrc.includes("overflowY: 'auto'"), 'Step 3 must have scrollable overflow');
+  assert.ok(obSrc.includes("flexShrink: 0") && obSrc.includes("Footer Navigation"), 'Footer navigation must be pinned with flexShrink 0');
+});
