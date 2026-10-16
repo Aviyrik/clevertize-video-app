@@ -272,6 +272,8 @@ export default function BusinessOnboardingModal({
   onComplete,
   initialData = {},
 }) {
+  if (!initialData) initialData = {};
+
   // 4 Business-Only Steps:
   // Step 1: Business Identity
   // Step 2: Location & Customers
@@ -281,7 +283,7 @@ export default function BusinessOnboardingModal({
   const rawBusinessName = (initialData.businessName || initialData.name || '').trim();
   const initialBusinessName = rawBusinessName.toLowerCase() === 'kanti sweets' ? '' : rawBusinessName;
   const [businessName, setBusinessName] = useState(initialBusinessName);
-  const [businessType, setBusinessType] = useState(initialData.businessType || initialData.category || CATEGORIES[0]);
+  const [businessType, setBusinessType] = useState(initialData.businessType || initialData.category || '');
   const [customCategory, setCustomCategory] = useState(
     initialData.businessType && !CATEGORY_CARDS.some((c) => c.label === initialData.businessType)
       ? initialData.businessType
@@ -289,13 +291,14 @@ export default function BusinessOnboardingModal({
   );
   const [town, setTown] = useState(initialData.town || '');
   const [targetAudience, setTargetAudience] = useState(
-    initialData.targetAudience || getSuggestedAudiences(initialData.businessType || initialData.category || CATEGORIES[0])[0]
+    initialData.targetAudience || ''
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialData.websiteUrl || '');
   const [brandTone, setBrandTone] = useState(initialData.brandTone || 'Warm & Authentic');
   const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || initialData.logo || null);
   const [nameError, setNameError] = useState(false);
   const [townError, setTownError] = useState(false);
+  const [categoryError, setCategoryError] = useState(false);
 
   const selectedCategoryCard =
     CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
@@ -309,19 +312,26 @@ export default function BusinessOnboardingModal({
 
   useEffect(() => {
     if (isOpen) {
-      const raw = (initialData.businessName || initialData.name || '').trim();
+      const data = initialData || {};
+      const raw = (data.businessName || data.name || '').trim();
       const isKanti = raw.toLowerCase() === 'kanti sweets';
       setBusinessName(isKanti ? '' : raw);
-      setBusinessType(initialData.businessType || initialData.category || CATEGORIES[0]);
-      setTown(initialData.town || '');
-      setTargetAudience(
-        initialData.targetAudience || getSuggestedAudiences(initialData.businessType || initialData.category || CATEGORIES[0])[0]
+      setBusinessType(data.businessType || data.category || '');
+      setCustomCategory(
+        data.businessType && !CATEGORY_CARDS.some((c) => c.label === data.businessType)
+          ? data.businessType
+          : ''
       );
-      setWebsiteUrl(initialData.websiteUrl || '');
-      setBrandTone(initialData.brandTone || 'Warm & Authentic');
-      setBrandLogo(initialData.brandLogo || initialData.logo || null);
+      setTown(data.town || '');
+      setTargetAudience(
+        data.targetAudience || ''
+      );
+      setWebsiteUrl(data.websiteUrl || '');
+      setBrandTone(data.brandTone || 'Warm & Authentic');
+      setBrandLogo(data.brandLogo || data.logo || null);
       setNameError(false);
       setTownError(false);
+      setCategoryError(false);
     }
   }, [isOpen, initialData]);
 
@@ -329,12 +339,20 @@ export default function BusinessOnboardingModal({
 
   const validateStep = (currentStep) => {
     if (currentStep === 1) {
+      let valid = true;
       if (!businessName.trim()) {
         setNameError(true);
-        return false;
+        valid = false;
+      } else {
+        setNameError(false);
       }
-      setNameError(false);
-      return true;
+      if (!businessType && !customCategory.trim()) {
+        setCategoryError(true);
+        valid = false;
+      } else {
+        setCategoryError(false);
+      }
+      return valid;
     }
     if (currentStep === 2) {
       if (!town.trim()) {
@@ -658,7 +676,10 @@ export default function BusinessOnboardingModal({
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setBusinessType(cat.label)}
+                      onClick={() => {
+                        setBusinessType(cat.label);
+                        if (categoryError) setCategoryError(false);
+                      }}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
@@ -805,7 +826,10 @@ export default function BusinessOnboardingModal({
                   <input
                     type="text"
                     value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
+                    onChange={(e) => {
+                      setCustomCategory(e.target.value);
+                      if (categoryError) setCategoryError(false);
+                    }}
                     placeholder="e.g. Pet Care & Vet Clinic, Wedding Photography, Interior Design..."
                     style={{
                       width: '100%',
@@ -819,6 +843,14 @@ export default function BusinessOnboardingModal({
                       outline: 'none',
                     }}
                   />
+                </div>
+              )}
+
+              {/* Category Validation Error */}
+              {categoryError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 10 }}>
+                  <AlertCircle size={13} />
+                  <span>Please select a business category to guide your video scripts.</span>
                 </div>
               )}
             </div>
@@ -996,28 +1028,7 @@ export default function BusinessOnboardingModal({
               </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                Website or Social Link (Optional)
-              </label>
-              <input
-                type="text"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="https://myshop.com or instagram.com/mybrand"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '10px 14px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid var(--border-default)',
-                  backgroundColor: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  outline: 'none',
-                }}
-              />
-            </div>
+
 
             {/* Optional Brand Asset */}
             <div>

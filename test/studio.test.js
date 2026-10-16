@@ -1960,3 +1960,36 @@ test('Business Profiles Redesign: Prominent avatars, card grid with + Add Anothe
   assert.ok(shellSrc.includes('Switch Active Business'), 'AppShell must render switcher dropdown menu');
 });
 
+test('Business Onboarding: Adding a new business starts afresh with empty input boxes and does not copy active business', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+
+  // Verify App.jsx passes editingBusiness or empty object, never leaking userContext into new business modal
+  assert.ok(
+    appSrc.includes('initialData={editingBusiness || {}}'),
+    'App.jsx must pass editingBusiness || {} so new businesses start with empty inputs'
+  );
+  assert.ok(
+    !appSrc.includes('initialData={\n          editingBusiness || {\n            businessName:'),
+    'App.jsx must not fall back to userContext when adding a new business'
+  );
+
+  // Verify BusinessOnboardingModal starts empty when initialData is empty
+  assert.ok(
+    modalSrc.includes("useState(initialData.businessType || initialData.category || '')"),
+    'Category must not pre-select a category card when starting afresh'
+  );
+  assert.ok(
+    modalSrc.includes("setBusinessType(data.businessType || data.category || '')"),
+    'useEffect must reset category to empty when initialData has no category'
+  );
+  assert.ok(
+    modalSrc.includes("setBrandLogo(data.brandLogo || data.logo || null)"),
+    'useEffect must reset logo to null when initialData has no logo'
+  );
+  assert.ok(
+    modalSrc.includes("categoryError"),
+    'Must validate that user selects a business category'
+  );
+});
+

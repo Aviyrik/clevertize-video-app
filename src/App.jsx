@@ -3315,7 +3315,10 @@ export default function App() {
                 setActiveAppView('studio');
                 setStudioStage('brief');
               }}
-              onEditBrand={() => setIsOnboardingModalOpen(true)}
+              onEditBrand={() => {
+                setEditingBusiness(userContext);
+                setIsOnboardingModalOpen(true);
+              }}
               recentProjects={userProjects}
               onOpenProject={handleOpenProject}
               currentUser={currentUser}
@@ -3760,7 +3763,10 @@ export default function App() {
             handleFileUpload={handleFileUpload}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             onOpenUrlModal={() => setIsUrlModalOpen(true)}
-            onEditBrand={() => setIsOnboardingModalOpen(true)}
+            onEditBrand={() => {
+              setEditingBusiness(userContext);
+              setIsOnboardingModalOpen(true);
+            }}
             onContinue={() => {
               if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
@@ -4262,17 +4268,7 @@ export default function App() {
           setEditingBusiness(null);
         }}
         onComplete={handleOnboardingComplete}
-        initialData={
-          editingBusiness || {
-            businessName: (userContext.businessName && userContext.businessName.trim().toLowerCase() !== 'kanti sweets') ? userContext.businessName : '',
-            businessType: userContext.businessType,
-            town: userContext.town,
-            targetAudience: userContext.targetAudience,
-            websiteUrl: userContext.websiteUrl,
-            brandTone: userContext.brandTone,
-            brandLogo: userContext.brandLogo,
-          }
-        }
+        initialData={editingBusiness || {}}
       />
 
       {/* Account Settings & Delete Account Modal */}
