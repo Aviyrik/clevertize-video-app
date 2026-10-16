@@ -257,11 +257,12 @@ test('Auth Redesign: AuthScreen layout, floating panel, and independent logo', (
   assert.ok(code.includes('CleverCuts'), 'Must render CleverCuts brand title');
   assert.ok(code.includes('Clapperboard'), 'Must render Clapperboard brand icon');
 
-  // Floating authentication panel on the right
   assert.ok(code.includes('auth-floating-wrapper'), 'Must define floating panel wrapper');
   assert.ok(code.includes('auth-floating-panel'), 'Must define floating panel on the right');
   assert.ok(code.includes('430px') || code.includes('420px') || code.includes('440px'), 'Floating panel must have width ~400-440px');
-  assert.ok(code.includes('rgba(14, 14, 22') || code.includes('backdrop-filter: blur(18px)'), 'Panel must have translucent dark surface with backdrop blur');
+  assert.ok(code.includes('rgba(13, 14, 22') || code.includes('rgba(14, 14, 22') || code.includes('backdrop-filter: blur'), 'Panel must have translucent dark surface with backdrop blur');
+  assert.ok(code.includes('justify-content: flex-end') || code.includes('justifyContent: flex-end'), 'Panel must align to the right');
+  assert.ok(code.includes('margin-left: auto') || code.includes("marginLeft: 'auto'"), 'Panel must anchor firmly to the right side');
 
   // Headers and titles
   assert.ok(code.includes('Create an account'), 'Must support "Create an account" for signup');

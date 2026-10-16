@@ -8,8 +8,10 @@ import { Clapperboard } from 'lucide-react';
  * Implements:
  * - Full-screen background video covering the entire viewport (position: fixed, inset: 0)
  * - Object-fit: cover, un-cropped, zero border radius, zero borders
- * - Asymmetric subtle dark overlay: transparent on left (rich visual showreel),
- *   slightly darker gradient on right behind the floating authentication panel
+ * - Multi-layer dark overlay:
+ *   1. Solid tint layer to dim brightness, glare, and rapid motion so it doesn't disturb the user
+ *   2. Directional gradient overlay (darker on right behind the auth form)
+ *   3. Top & bottom vignettes for logo and edge contrast
  * - Autoplay, muted, loop, playsInline, preload="metadata"
  * - Graceful fallback to poster image on load error or prefers-reduced-motion
  * - Zero playback controls or audio
@@ -56,7 +58,7 @@ export default function AuthVideoShowcase({
         height: '100%',
         zIndex: 0,
         overflow: 'hidden',
-        backgroundColor: '#07080B',
+        backgroundColor: '#05060A',
         pointerEvents: 'none',
         ...style,
       }}
@@ -99,27 +101,51 @@ export default function AuthVideoShowcase({
         />
       )}
 
-      {/* Subtle Cinematic Dark Gradient Overlay (Transparent on left, darker on right behind floating panel) */}
+      {/* 1. Global Dimmer Overlay: Darkens overall video brightness so background motion doesn't distract */}
+      <div
+        className="auth-video-dimmer"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(5, 6, 11, 0.52)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* 2. Directional Gradient Overlay: Muted on left (~40%), deep dark on right behind the auth panel (~88%) */}
       <div
         className="auth-video-overlay"
         style={{
           position: 'absolute',
           inset: 0,
           background:
-            'linear-gradient(90deg, rgba(7, 8, 12, 0.22) 0%, rgba(7, 8, 12, 0.32) 40%, rgba(9, 10, 16, 0.72) 100%)',
+            'linear-gradient(90deg, rgba(6, 7, 12, 0.35) 0%, rgba(6, 7, 12, 0.58) 45%, rgba(7, 8, 14, 0.88) 100%)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* Top subtle vignette for header and logo readability */}
+      {/* 3. Top subtle vignette for logo legibility */}
       <div
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
+          height: 160,
+          background: 'linear-gradient(180deg, rgba(5, 6, 10, 0.65) 0%, transparent 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* 4. Bottom subtle vignette */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
           height: 140,
-          background: 'linear-gradient(180deg, rgba(7, 8, 12, 0.45) 0%, transparent 100%)',
+          background: 'linear-gradient(0deg, rgba(5, 6, 10, 0.65) 0%, transparent 100%)',
           pointerEvents: 'none',
         }}
       />

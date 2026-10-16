@@ -14,9 +14,10 @@ import AuthVideoShowcase from './AuthVideoShowcase.jsx';
  * AuthScreen - SpaceX-inspired full-viewport authentication experience for CleverCuts.
  *
  * Architecture:
- * 1. Background Video covers the ENTIRE viewport (position: fixed, inset: 0, full-bleed).
+ * 1. Background Video covers the ENTIRE viewport (position: fixed, inset: 0, full-bleed)
+ *    with a dark overlay so it doesn't distract or disturb the user.
  * 2. CleverCuts brand logo sits independently in the upper-left corner of the viewport.
- * 3. A refined translucent glass authentication panel FLOATS over the video on the right.
+ * 3. A refined translucent glass authentication panel FLOATS over the video on the RIGHT side.
  * 4. Zero side-by-side card wrappers, zero outer rounded containers, zero split columns.
  */
 export default function AuthScreen({
@@ -143,9 +144,10 @@ export default function AuthScreen({
       style={{
         position: 'relative',
         minHeight: '100vh',
-        width: '100vw',
+        width: '100%',
+        maxWidth: '100vw',
         overflowX: 'hidden',
-        backgroundColor: '#07080B',
+        backgroundColor: '#05060A',
         color: '#F3F4F6',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
@@ -156,24 +158,26 @@ export default function AuthScreen({
           z-index: 10;
           min-height: 100vh;
           width: 100%;
-          display: flex;
-          justifyContent: flex-end;
-          align-items: center;
-          padding: 40px 48px;
-          box-sizing: border-box;
+          display: flex !important;
+          justify-content: flex-end !important;
+          align-items: center !important;
+          padding: 40px clamp(24px, 5vw, 64px) !important;
+          box-sizing: border-box !important;
         }
 
         .auth-floating-panel {
           width: 100%;
           max-width: 430px;
-          background-color: rgba(14, 14, 22, 0.76);
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
+          margin-left: auto !important;
+          margin-right: 0 !important;
+          background-color: rgba(13, 14, 22, 0.88);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           border: 1px solid rgba(255, 255, 255, 0.10);
           border-radius: 20px;
           padding: 30px 32px;
           box-sizing: border-box;
-          box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.75), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+          box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.06);
         }
 
         .auth-input {
@@ -250,10 +254,13 @@ export default function AuthScreen({
         @media (max-width: 1024px) {
           .auth-floating-wrapper {
             padding: 36px 32px !important;
+            justify-content: flex-end !important;
           }
           .auth-floating-panel {
             max-width: 400px !important;
             padding: 26px 28px !important;
+            margin-left: auto !important;
+            margin-right: 0 !important;
           }
           .auth-independent-logo {
             top: 28px !important;
@@ -280,11 +287,13 @@ export default function AuthScreen({
             max-width: 100% !important;
             padding: 24px 20px !important;
             border-radius: 18px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
           }
         }
       `}</style>
 
-      {/* 1. FULL-SCREEN BACKGROUND VIDEO: Covers the entire browser viewport */}
+      {/* 1. FULL-SCREEN BACKGROUND VIDEO: Covers entire viewport with dark overlay */}
       <AuthVideoShowcase
         videoSrc="/videos/background-optimized.mp4"
         fallbackVideoSrc="/videos/background.mp4"
@@ -337,9 +346,38 @@ export default function AuthScreen({
         </span>
       </div>
 
-      {/* 3. FLOATING AUTHENTICATION PANEL: Positioned on the right, floating above full-screen video */}
-      <div className="auth-floating-wrapper">
-        <div className="auth-floating-panel">
+      {/* 3. FLOATING AUTHENTICATION PANEL: Anchored firmly on the RIGHT side of the viewport */}
+      <div
+        className="auth-floating-wrapper"
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          minHeight: '100vh',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          padding: '40px clamp(24px, 5vw, 64px)',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          className="auth-floating-panel"
+          style={{
+            width: '100%',
+            maxWidth: 430,
+            marginLeft: 'auto',
+            marginRight: 0,
+            backgroundColor: 'rgba(13, 14, 22, 0.88)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255, 255, 255, 0.10)',
+            borderRadius: 20,
+            padding: '30px 32px',
+            boxSizing: 'border-box',
+            boxShadow: '0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.06)',
+          }}
+        >
           {/* Header: Title & Subtitle */}
           <div style={{ marginBottom: 22 }}>
             <h1
