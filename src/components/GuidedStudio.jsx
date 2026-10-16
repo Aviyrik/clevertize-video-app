@@ -43,21 +43,22 @@ import {
   FileCode2,
   Globe,
   Copy,
-  Bookmark
+  Bookmark,
+  Users,
 } from 'lucide-react';
+import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 
 /**
- * 8 STAGES DEFINITION FOR GUIDED CREATIVE STUDIO
+ * 7 STAGES DEFINITION FOR GUIDED CREATIVE STUDIO
  */
 export const STUDIO_STAGES = [
-  { id: 'business', num: '01', label: 'Business' },
-  { id: 'brief', num: '02', label: 'Brief' },
-  { id: 'settings', num: '03', label: 'Settings' },
-  { id: 'idea', num: '04', label: 'Idea' },
-  { id: 'opening', num: '05', label: 'Opening' },
-  { id: 'story', num: '06', label: 'Story' },
-  { id: 'script', num: '07', label: 'Script' },
-  { id: 'video', num: '08', label: 'Video' },
+  { id: 'brief', num: '01', label: 'Brief' },
+  { id: 'settings', num: '02', label: 'Settings' },
+  { id: 'idea', num: '03', label: 'Idea' },
+  { id: 'opening', num: '04', label: 'Opening' },
+  { id: 'story', num: '05', label: 'Story' },
+  { id: 'script', num: '06', label: 'Script' },
+  { id: 'video', num: '07', label: 'Video' },
 ];
 
 /**
@@ -982,6 +983,91 @@ export function Screen02Brief({
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Target Audience for this Video (Campaign-Specific) */}
+      <div style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 12,
+        padding: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Users size={15} style={{ color: 'var(--accent-primary)' }} />
+              <span>Who is this video for? (Target Audience)</span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+              Specify the audience or buyers for this specific video. You can change this for each video you make.
+            </p>
+          </div>
+        </div>
+
+        <input
+          type="text"
+          value={userContext.targetAudience || ''}
+          onChange={(e) => updateUserContext('targetAudience', e.target.value)}
+          placeholder="e.g. Festival gift buyers, bridal shoppers, young professionals, neighborhood families..."
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '11px 14px',
+            fontSize: 13,
+            borderRadius: 8,
+            border: '1px solid var(--border-default)',
+            backgroundColor: 'var(--bg-elevated)',
+            color: 'var(--text-primary)',
+            outline: 'none',
+          }}
+        />
+
+        {/* Suggestion Chips for Campaign Audience */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+            Click to apply or combine audience ideas:
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {getSuggestedAudiences(userContext.businessType).map((aud, aIdx) => {
+              const currentAudience = (userContext.targetAudience || '').trim();
+              const currentItems = currentAudience
+                ? currentAudience.split(' · ').map((s) => s.trim()).filter(Boolean)
+                : [];
+              const isSelected = currentItems.some((s) => s.toLowerCase() === aud.toLowerCase());
+
+              return (
+                <button
+                  key={aIdx}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      const next = currentItems.filter((s) => s.toLowerCase() !== aud.toLowerCase());
+                      updateUserContext('targetAudience', next.join(' · '));
+                    } else {
+                      updateUserContext('targetAudience', [...currentItems, aud].join(' · '));
+                    }
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-elevated)',
+                    border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {isSelected ? `✓ ${aud}` : `+ ${aud}`}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

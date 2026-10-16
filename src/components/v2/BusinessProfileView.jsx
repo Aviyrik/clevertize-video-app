@@ -244,14 +244,6 @@ export default function BusinessProfileView({
                     </span>
                   </div>
 
-                  {/* Target Audience */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-                    <Users size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {bAudience || 'General audience'}
-                    </span>
-                  </div>
-
                   {/* Brand Tone */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
                     <Sparkles size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />

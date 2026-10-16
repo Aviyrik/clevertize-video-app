@@ -296,7 +296,6 @@ export default function BusinessOnboardingModal({
   const [brandLogo, setBrandLogo] = useState(initialData.brandLogo || initialData.logo || null);
   const [nameError, setNameError] = useState(false);
   const [townError, setTownError] = useState(false);
-  const [audienceError, setAudienceError] = useState(false);
 
   const selectedCategoryCard =
     CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
@@ -323,7 +322,6 @@ export default function BusinessOnboardingModal({
       setBrandLogo(initialData.brandLogo || initialData.logo || null);
       setNameError(false);
       setTownError(false);
-      setAudienceError(false);
     }
   }, [isOpen, initialData]);
 
@@ -339,47 +337,21 @@ export default function BusinessOnboardingModal({
       return true;
     }
     if (currentStep === 2) {
-      let valid = true;
       if (!town.trim()) {
         setTownError(true);
-        valid = false;
-      } else {
-        setTownError(false);
+        return false;
       }
-      if (!targetAudience.trim()) {
-        setAudienceError(true);
-        valid = false;
-      } else {
-        setAudienceError(false);
-      }
-      return valid;
+      setTownError(false);
+      return true;
     }
-    // Step 3 has only optional fields (Tone is preselected, URL and Logo are optional)
+    // Step 3 and 4 have only optional fields
     return true;
   };
 
   const handleNext = () => {
     if (!validateStep(step)) return;
-
-    if (step === 1) {
-      // Auto-update audience if user hasn't explicitly customized it yet
-      const suggestions = getSuggestedAudiences(businessType);
-      const isDefaultOrPreset =
-        !targetAudience ||
-        targetAudience === 'Local families & everyday buyers' ||
-        (!initialData.targetAudience &&
-          Object.values(CATEGORY_AUDIENCES).some((list) => list.includes(targetAudience)));
-
-      if (isDefaultOrPreset) {
-        if (suggestions && suggestions[0]) {
-          setTargetAudience(suggestions[0]);
-        }
-      }
-      setStep(2);
-    } else if (step === 2) {
-      setStep(3);
-    } else if (step === 3) {
-      setStep(4);
+    if (step < 4) {
+      setStep(step + 1);
     }
   };
 
@@ -457,9 +429,9 @@ export default function BusinessOnboardingModal({
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                 {step === 1 && 'Business Identity'}
-                {step === 2 && 'Location & Customers'}
-                {step === 3 && 'Brand Voice & Online Presence'}
-                {step === 4 && 'Confirm & Launch'}
+                {step === 2 && 'Location & Online Presence'}
+                {step === 3 && 'Brand Voice & Personality'}
+                {step === 4 && 'Confirm & Save'}
               </span>
             </div>
 
@@ -853,7 +825,7 @@ export default function BusinessOnboardingModal({
           </div>
         )}
 
-        {/* Step 2: Location & Customers */}
+        {/* Step 2: Location & Online Presence */}
         {step === 2 && (
           <div
             style={{
@@ -869,10 +841,10 @@ export default function BusinessOnboardingModal({
           >
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-                Where are your customers?
+                Where is your business located?
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Town slang, cultural references, and buyer demographics make your video ads authentic and relatable.
+                Local references and town slang make your video ads authentic and relatable to local shoppers.
               </p>
             </div>
 
@@ -913,133 +885,26 @@ export default function BusinessOnboardingModal({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Target Customers <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  Type freely or click personas below
-                </span>
-              </div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                Website or Social Link (Optional)
+              </label>
               <input
                 type="text"
-                value={targetAudience}
-                onChange={(e) => {
-                  setTargetAudience(e.target.value);
-                  if (audienceError) setAudienceError(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleNext();
-                }}
-                placeholder="e.g. Daily car & bike commuters, wedding shoppers, young families..."
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="https://myshop.com or instagram.com/mybrand"
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
                   padding: '11px 14px',
                   fontSize: 13,
                   borderRadius: 8,
-                  border: `1.5px solid ${audienceError ? '#EF4444' : 'var(--border-default)'}`,
+                  border: '1px solid var(--border-default)',
                   backgroundColor: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
                   outline: 'none',
-                  marginBottom: audienceError ? 5 : 10,
                 }}
               />
-              {audienceError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 4, marginBottom: 10 }}>
-                  <AlertCircle size={13} />
-                  <span>Please enter or pick at least one target customer group.</span>
-                </div>
-              )}
-
-              {/* Dynamic Suggestions for Selected Category */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 4,
-                        backgroundColor: 'var(--accent-subtle)',
-                        color: 'var(--accent-primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Sparkles size={11} />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: 'var(--accent-primary)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Suggested for {selectedCategoryCard?.shortTitle || businessType}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    Click to apply or combine
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {currentAudienceSuggestions.map((sug, i) => {
-                    const currentItems = targetAudience
-                      .split(',')
-                      .map((p) => p.trim())
-                      .filter(Boolean);
-                    const isSelected = currentItems.some(
-                      (item) => item.toLowerCase() === sug.toLowerCase()
-                    );
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          if (audienceError) setAudienceError(false);
-
-                          if (isSelected) {
-                            // Deselect / remove this chip from the list
-                            const remaining = currentItems.filter(
-                              (p) => p.toLowerCase() !== sug.toLowerCase()
-                            );
-                            setTargetAudience(remaining.join(', '));
-                          } else {
-                            // Combine with existing text present in the input box
-                            if (currentItems.length === 0 || targetAudience === 'Local families & everyday buyers') {
-                              setTargetAudience(sug);
-                            } else {
-                              setTargetAudience([...currentItems, sug].join(', '));
-                            }
-                          }
-                        }}
-                        style={{
-                          fontSize: 11.5,
-                          fontWeight: isSelected ? 600 : 500,
-                          padding: '6px 12px',
-                          borderRadius: 20,
-                          backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.18)' : 'var(--bg-elevated)',
-                          border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {isSelected && <Check size={11} strokeWidth={3} />}
-                        <span>{sug}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -1060,10 +925,10 @@ export default function BusinessOnboardingModal({
           >
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-                Brand Voice & Online Presence
+                Brand Voice & Personality
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Define the personality of your brand so our scripts strike the right tone.
+                Define the personality and visual style of your brand for your video ads.
               </p>
             </div>
 
@@ -1333,10 +1198,10 @@ export default function BusinessOnboardingModal({
                 <CheckCircle2 size={28} />
               </div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-                Your Brand Profile is Set Up!
+                Your Brand Profile is Ready!
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, maxWidth: 420, margin: '0 auto', lineHeight: 1.5 }}>
-                Your brand identity is saved. You won't have to enter this again. Now, choose how you'd like to create your first video.
+                Save your business profile to start creating video ads anytime.
               </p>
             </div>
 
@@ -1403,10 +1268,10 @@ export default function BusinessOnboardingModal({
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {targetAudience && (
+                {websiteUrl && (
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Users size={12} style={{ color: 'var(--accent-primary)' }} />
-                    <span>Audience: {targetAudience}</span>
+                    <Globe size={12} style={{ color: 'var(--accent-primary)' }} />
+                    <span>{websiteUrl}</span>
                   </div>
                 )}
                 {brandTone && (
@@ -1500,8 +1365,8 @@ export default function BusinessOnboardingModal({
                 boxShadow: '0 2px 12px var(--accent-glow)',
               }}
             >
-              <Sparkles size={14} />
-              <span>Enter Creation Hub</span>
+              <Check size={16} />
+              <span>Save</span>
             </button>
           )}
         </div>

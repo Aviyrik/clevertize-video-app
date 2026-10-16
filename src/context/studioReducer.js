@@ -7,25 +7,23 @@
  */
 
 const STAGE_ORDER = [
-  'business', // Stage 1
-  'brief',    // Stage 2
-  'settings', // Stage 3
-  'idea',     // Stage 4
-  'opening',  // Stage 5
-  'story',    // Stage 6
-  'script',   // Stage 7
-  'video',    // Stage 8
+  'brief',    // Stage 1
+  'settings', // Stage 2
+  'idea',     // Stage 3
+  'opening',  // Stage 4
+  'story',    // Stage 5
+  'script',   // Stage 6
+  'video',    // Stage 7
 ];
 
 const STAGE_NUMBER_MAP = {
-  business: 1,
-  brief: 2,
-  settings: 3,
-  idea: 4,
-  opening: 5,
-  story: 6,
-  script: 7,
-  video: 8,
+  brief: 1,
+  settings: 2,
+  idea: 3,
+  opening: 4,
+  story: 5,
+  script: 6,
+  video: 7,
 };
 
 const StudioActionTypes = {
@@ -65,7 +63,7 @@ const StudioActionTypes = {
 };
 
 function createInitialStudioState(overrides = {}) {
-  const initialStage = overrides.currentStage || 'business';
+  const initialStage = overrides.currentStage || 'brief';
   return {
     // Stage navigation
     currentStage: initialStage,
@@ -502,7 +500,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           explicitChoices: nextChoices,
-          completedStages: state.completedStages.filter((s) => ['business', 'brief', 'settings'].includes(s)),
+          completedStages: state.completedStages.filter((s) => ['brief', 'settings'].includes(s)),
           hasStaleWarning: hadDownstream,
         };
       }
@@ -525,7 +523,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           explicitChoices: nextChoices,
-          completedStages: state.completedStages.filter((s) => ['business', 'brief', 'settings', 'idea'].includes(s)),
+          completedStages: state.completedStages.filter((s) => ['brief', 'settings', 'idea'].includes(s)),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
       }
@@ -542,7 +540,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['business', 'brief', 'settings', 'idea', 'opening'].includes(s)
+            ['brief', 'settings', 'idea', 'opening'].includes(s)
           ),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
@@ -559,7 +557,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['business', 'brief', 'settings', 'idea', 'opening', 'story'].includes(s)
+            ['brief', 'settings', 'idea', 'opening', 'story'].includes(s)
           ),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
@@ -573,7 +571,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'].includes(s)
+            ['brief', 'settings', 'idea', 'opening', 'story', 'script'].includes(s)
           ),
           hasStaleWarning: false,
         };
@@ -587,8 +585,8 @@ function studioReducer(state, action) {
      * Restarts film workflow without leaking downstream film artifacts.
      */
     case StudioActionTypes.RESET_STUDIO: {
-      const initialStage = action.payload?.initialStage || 'business';
-      const initialCompleted = action.payload?.preserveBrand ? ['business'] : [];
+      const initialStage = action.payload?.initialStage || 'brief';
+      const initialCompleted = action.payload?.initialCompleted || [];
       return {
         ...createInitialStudioState({
           currentStage: initialStage,

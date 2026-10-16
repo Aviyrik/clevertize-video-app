@@ -33,21 +33,19 @@ const {
   STAGE_NUMBER_MAP,
 } = require('../src/context/studioReducer.js');
 
-test('Guided Studio V4 Architecture: 8 Stages Definition & Integrity', () => {
+test('Guided Studio V4 Architecture: 7 Stages Definition & Integrity', () => {
   const expectedStages = [
-    { id: 'business', num: '01', label: 'Business' },
-    { id: 'brief', num: '02', label: 'Brief' },
-    { id: 'settings', num: '03', label: 'Settings' },
-    { id: 'idea', num: '04', label: 'Idea' },
-    { id: 'opening', num: '05', label: 'Opening' },
-    { id: 'story', num: '06', label: 'Story' },
-    { id: 'script', num: '07', label: 'Script' },
-    { id: 'video', num: '08', label: 'Video' },
+    { id: 'brief', num: '01', label: 'Brief' },
+    { id: 'settings', num: '02', label: 'Settings' },
+    { id: 'idea', num: '03', label: 'Idea' },
+    { id: 'opening', num: '04', label: 'Opening' },
+    { id: 'story', num: '05', label: 'Story' },
+    { id: 'script', num: '06', label: 'Script' },
+    { id: 'video', num: '07', label: 'Video' },
   ];
 
-  assert.equal(expectedStages.length, 8);
+  assert.equal(expectedStages.length, 7);
   assert.deepEqual(expectedStages.map(s => s.id), [
-    'business',
     'brief',
     'settings',
     'idea',
@@ -1114,11 +1112,10 @@ test('Studio Stage 08 Video: Share button exists with clipboard copy and share s
   assert.ok(guidedStudioSrc.includes('<span>Share</span>'), 'Must display Share button label');
 });
 
-test('Studio Reset: New Film and Create Another Video restart process and open editable Business stage', () => {
+test('Studio Reset: New Film restarts film process cleanly at Stage 01 Brief', () => {
   const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
   assert.ok(appSrc.includes('setBrandResetKey((prev) => prev + 1)'), 'handleStartNewProject must increment brandResetKey');
-  assert.ok(appSrc.includes("setStudioStage('business')"), 'handleStartNewProject must reset studioStage to business');
-  assert.ok(appSrc.includes('autoEdit={brandResetKey > 0}'), 'App must pass autoEdit to Screen01Business when reset');
+  assert.ok(appSrc.includes("setStudioStage('brief')"), 'handleStartNewProject must reset studioStage to brief');
 
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes('autoEdit = false'), 'Screen01Business must accept autoEdit prop');
@@ -1346,15 +1343,15 @@ test('Studio Invalidation: App.jsx handleLanguageChange and handleFormatChange i
   assert.ok(formatFnMatch[1].includes('setCompletedStages('), 'handleFormatChange must rewind completedStages');
 });
 
-test('Centralized Studio State: Initial state has correct defaults, 8 stages, and sequenceId 0', () => {
+test('Centralized Studio State: Initial state has correct defaults, 7 stages, and sequenceId 0', () => {
   const state = createInitialStudioState();
-  assert.equal(state.currentStage, 'business');
+  assert.equal(state.currentStage, 'brief');
   assert.equal(state.stageNumber, 1);
   assert.deepEqual(state.completedStages, []);
   assert.equal(state.hasStaleWarning, false);
   assert.equal(state.requestSequence, 0);
-  assert.equal(STAGE_ORDER.length, 8);
-  assert.deepEqual(STAGE_ORDER, ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script', 'video']);
+  assert.equal(STAGE_ORDER.length, 7);
+  assert.deepEqual(STAGE_ORDER, ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video']);
   assert.deepEqual(state.explicitChoices, {
     style: null,
     language: null,
@@ -1373,29 +1370,29 @@ test('Centralized Studio State: SET_STAGE updates currentStage and stageNumber c
   let state = createInitialStudioState();
   state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'settings' } });
   assert.equal(state.currentStage, 'settings');
-  assert.equal(state.stageNumber, 3);
+  assert.equal(state.stageNumber, 2);
 
   state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'script' } });
   assert.equal(state.currentStage, 'script');
-  assert.equal(state.stageNumber, 7);
+  assert.equal(state.stageNumber, 6);
 
   // Invalid stage is ignored
   state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'invalid_stage' } });
   assert.equal(state.currentStage, 'script');
-  assert.equal(state.stageNumber, 7);
+  assert.equal(state.stageNumber, 6);
 });
 
 test('Centralized Studio State: MARK_STAGE_COMPLETE accumulates completed stages idempotently', () => {
   let state = createInitialStudioState();
-  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'business' } });
-  assert.deepEqual(state.completedStages, ['business']);
-
   state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'brief' } });
-  assert.deepEqual(state.completedStages, ['business', 'brief']);
+  assert.deepEqual(state.completedStages, ['brief']);
+
+  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'settings' } });
+  assert.deepEqual(state.completedStages, ['brief', 'settings']);
 
   // Adding existing stageId does not duplicate
-  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'business' } });
-  assert.deepEqual(state.completedStages, ['business', 'brief']);
+  state = studioReducer(state, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'brief' } });
+  assert.deepEqual(state.completedStages, ['brief', 'settings']);
 });
 
 test('Centralized Studio State: SET_EXPLICIT_CHOICE records confirmed choices and SET_EXPLICIT_CHOICES replaces them', () => {
@@ -1416,10 +1413,10 @@ test('Centralized Studio State: SET_EXPLICIT_CHOICE records confirmed choices an
   assert.equal(state.explicitChoices.idea, null);
 });
 
-test('Centralized Studio State: Invalidation from Stage 3 (Settings) clears downstream directions, hooks, story world, and script, and increments requestSequence', () => {
+test('Centralized Studio State: Invalidation from Stage 2 (Settings) clears downstream directions, hooks, story world, and script, and increments requestSequence', () => {
   let state = createInitialStudioState({
     currentStage: 'settings',
-    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script'],
     directionsList: [{ id: 'dir-1', title: 'FAST MORNING CHAI' }],
     selectedDirection: { id: 'dir-1', title: 'FAST MORNING CHAI' },
     hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
@@ -1446,14 +1443,14 @@ test('Centralized Studio State: Invalidation from Stage 3 (Settings) clears down
   assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
   assert.equal(state.explicitChoices.idea, undefined, 'explicitChoices.idea must be deleted');
   assert.equal(state.explicitChoices.opening, undefined, 'explicitChoices.opening must be deleted');
-  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings'], 'Completed stages must rewind to settings');
+  assert.deepEqual(state.completedStages, ['brief', 'settings'], 'Completed stages must rewind to settings');
   assert.equal(state.hasStaleWarning, true, 'hasStaleWarning must be set because downstream content existed');
 });
 
-test('Centralized Studio State: Invalidation from Stage 4 (Idea) clears downstream hooks, story world, and script while preserving direction', () => {
+test('Centralized Studio State: Invalidation from Stage 3 (Idea) clears downstream hooks, story world, and script while preserving direction', () => {
   let state = createInitialStudioState({
     currentStage: 'idea',
-    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script'],
     directionsList: [{ id: 'dir-1', title: 'FAST MORNING CHAI' }],
     selectedDirection: { id: 'dir-1', title: 'FAST MORNING CHAI' },
     hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
@@ -1476,13 +1473,13 @@ test('Centralized Studio State: Invalidation from Stage 4 (Idea) clears downstre
   assert.deepEqual(state.scenes, [], 'scenes must be cleared');
   assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
   assert.equal(state.explicitChoices.opening, undefined, 'explicitChoices.opening must be cleared');
-  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea'], 'completedStages rewinds to idea');
+  assert.deepEqual(state.completedStages, ['brief', 'settings', 'idea'], 'completedStages rewinds to idea');
 });
 
-test('Centralized Studio State: Invalidation from Stage 5 (Opening) clears downstream story world and script while preserving hooks', () => {
+test('Centralized Studio State: Invalidation from Stage 4 (Opening) clears downstream story world and script while preserving hooks', () => {
   let state = createInitialStudioState({
     currentStage: 'opening',
-    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script'],
     hooksList: [{ id: 'hk-1', hookLine: 'Late for office?' }],
     selectedHook: { id: 'hk-1', hookLine: 'Late for office?' },
     storyWorldData: { character1: 'Ramesh' },
@@ -1499,13 +1496,13 @@ test('Centralized Studio State: Invalidation from Stage 5 (Opening) clears downs
   assert.equal(state.storyWorldData, null, 'storyWorldData must be cleared');
   assert.deepEqual(state.scenes, [], 'scenes must be cleared');
   assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
-  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea', 'opening']);
+  assert.deepEqual(state.completedStages, ['brief', 'settings', 'idea', 'opening']);
 });
 
-test('Centralized Studio State: Invalidation from Stage 6 (Story) clears downstream script while preserving story world', () => {
+test('Centralized Studio State: Invalidation from Stage 5 (Story) clears downstream script while preserving story world', () => {
   let state = createInitialStudioState({
     currentStage: 'story',
-    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script'],
     storyWorldData: { character1: 'Ramesh' },
     scenes: ['Scene 1'],
     generatedScript: { scenes: ['Scene 1'] },
@@ -1519,7 +1516,7 @@ test('Centralized Studio State: Invalidation from Stage 6 (Story) clears downstr
   assert.ok(state.storyWorldData !== null, 'storyWorldData must be preserved');
   assert.deepEqual(state.scenes, [], 'scenes must be cleared');
   assert.equal(state.generatedScript, null, 'generatedScript must be cleared');
-  assert.deepEqual(state.completedStages, ['business', 'brief', 'settings', 'idea', 'opening', 'story']);
+  assert.deepEqual(state.completedStages, ['brief', 'settings', 'idea', 'opening', 'story']);
 });
 
 test('Centralized Studio State: Stale async network response with older requestSequence is ignored', () => {
@@ -1559,10 +1556,10 @@ test('Centralized Studio State: Stale async network response with older requestS
   assert.equal(updatedState.directionsList[0].title, 'New Hindi Direction');
 });
 
-test('Centralized Studio State: RESET_STUDIO resets all film state, sets stage to business, and increments sequenceId', () => {
+test('Centralized Studio State: RESET_STUDIO resets all film state, sets stage to brief, and increments sequenceId', () => {
   let state = createInitialStudioState({
     currentStage: 'script',
-    completedStages: ['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script'],
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script'],
     directionsList: [{ id: 'dir-1', title: 'Test Dir' }],
     hooksList: [{ id: 'hk-1', hookLine: 'Test Hook' }],
     scenes: ['Scene 1', 'Scene 2'],
@@ -1573,12 +1570,12 @@ test('Centralized Studio State: RESET_STUDIO resets all film state, sets stage t
   const prevSeq = state.requestSequence;
   state = studioReducer(state, {
     type: StudioActionTypes.RESET_STUDIO,
-    payload: { initialStage: 'business', preserveBrand: true },
+    payload: { initialStage: 'brief', preserveBrand: true },
   });
 
-  assert.equal(state.currentStage, 'business');
+  assert.equal(state.currentStage, 'brief');
   assert.equal(state.stageNumber, 1);
-  assert.deepEqual(state.completedStages, ['business'], 'Brand preserved retains business stage complete');
+  assert.deepEqual(state.completedStages, []);
   assert.deepEqual(state.directionsList, []);
   assert.deepEqual(state.hooksList, []);
   assert.deepEqual(state.scenes, []);
@@ -1741,13 +1738,14 @@ test('Script-First Product: BusinessProfileView supports multi-business profiles
   assert.ok(bizSrc.includes('Save'), 'Must have save action');
 });
 
-test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard with visual category cards', () => {
+test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wizard with visual category cards and Save button', () => {
   const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
   assert.ok(obSrc.includes('Step {step} of 4'), 'Step indicator');
   assert.ok(obSrc.includes('Business Identity'), 'Step 1 business identity');
-  assert.ok(obSrc.includes('Location & Customers'), 'Step 2 location & customers');
-  assert.ok(obSrc.includes('Brand Voice & Online Presence'), 'Step 3 brand voice & online presence');
-  assert.ok(obSrc.includes('Confirm & Launch'), 'Step 4 confirm & launch');
+  assert.ok(obSrc.includes('Location & Online Presence'), 'Step 2 location & online presence');
+  assert.ok(obSrc.includes('Brand Voice & Personality'), 'Step 3 brand voice & personality');
+  assert.ok(obSrc.includes('Confirm & Save'), 'Step 4 confirm & save');
+  assert.ok(obSrc.includes('<span>Save</span>'), 'Final step button must be Save');
   assert.ok(obSrc.includes('CATEGORY_CARDS'), 'Must define CATEGORY_CARDS for visual selection');
   assert.ok(obSrc.includes('Fashion & Apparel'), 'Must include fashion card');
   assert.ok(obSrc.includes('Jewellery & Luxury'), 'Must include jewellery card');
@@ -1755,11 +1753,8 @@ test('Script-First Product: BusinessOnboardingModal delivers concise 4-step wiza
   assert.ok(obSrc.includes('Other Local Business'), 'Must include other/custom card');
   assert.ok(obSrc.includes('CATEGORY_AUDIENCES'), 'Must define category-aware audience personas');
   assert.ok(obSrc.includes('getSuggestedAudiences'), 'Must define getSuggestedAudiences helper');
-  assert.ok(obSrc.includes('Daily car & bike commuters'), 'Must include automobile audience personas');
   assert.ok(obSrc.includes('validateStep'), 'Must validate step mandatory fields');
   assert.ok(obSrc.includes('townError'), 'Must track town validation error');
-  assert.ok(obSrc.includes('audienceError'), 'Must track audience validation error');
-  assert.ok(obSrc.includes('Suggested for {selectedCategoryCard'), 'Must display category contextual suggestions header');
 });
 
 test('Script-First Product: App.jsx wires all 4 views and saves/restores projects to/from server', () => {
@@ -1794,9 +1789,14 @@ test('V2 Creation Flow: Screen02Brief confirms active brand and does not re-ask 
   assert.ok(appSrc.includes("setActiveAppView('home')"), 'Back from Brief must return to Creation Hub when brand exists');
 });
 
-test('Business Onboarding: Target customer suggestions use simple language and combine with existing text', () => {
+test('Campaign Target Audience: Screen02Brief supports campaign audience with category suggestions and multi-combine', () => {
+  const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(studioSrc.includes('Who is this video for? (Target Audience)'), 'Screen02Brief must have target audience input');
+  assert.ok(studioSrc.includes('getSuggestedAudiences'), 'Screen02Brief must use getSuggestedAudiences');
+  assert.ok(studioSrc.includes('[...currentItems, aud].join'), 'Must combine newly clicked suggestion with existing items');
+  assert.ok(studioSrc.includes('Click to apply or combine'), 'Must retain apply or combine label');
+
   const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
-  
   // Must avoid complex jargon and difficult vocabulary
   assert.ok(!obSrc.includes('trousseau'), 'Must not include tough word trousseau');
   assert.ok(!obSrc.includes('heirloom collectors'), 'Must not include heirloom collectors');
@@ -1809,10 +1809,6 @@ test('Business Onboarding: Target customer suggestions use simple language and c
   assert.ok(obSrc.includes('Brides & wedding jewellery buyers'), 'Must include clear bridal jewellery persona');
   assert.ok(obSrc.includes('Gold & diamond investment buyers'), 'Must include gold investment persona');
   assert.ok(obSrc.includes('Parents looking for child health & baby care'), 'Must include simple child healthcare persona');
-
-  // Multi-select combination logic: must combine with existing text instead of replacing
-  assert.ok(obSrc.includes('[...currentItems, sug].join'), 'Must combine newly clicked suggestion with existing items');
-  assert.ok(obSrc.includes('Click to apply or combine'), 'Must retain apply or combine label');
 });
 
 test('Business Onboarding: Brand Tone cards include visual icons for all tones', () => {

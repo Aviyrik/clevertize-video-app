@@ -28,21 +28,20 @@ import {
 import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
 
 const STUDIO_STAGES = [
-  { id: 'business', num: '01', label: 'Business' },
-  { id: 'brief', num: '02', label: 'Brief' },
-  { id: 'settings', num: '03', label: 'Settings' },
-  { id: 'idea', num: '04', label: 'Idea' },
-  { id: 'opening', num: '05', label: 'Opening' },
-  { id: 'story', num: '06', label: 'Story' },
-  { id: 'script', num: '07', label: 'Script' },
-  { id: 'video', num: '08', label: 'Video' },
+  { id: 'brief', num: '01', label: 'Brief' },
+  { id: 'settings', num: '02', label: 'Settings' },
+  { id: 'idea', num: '03', label: 'Idea' },
+  { id: 'opening', num: '04', label: 'Opening' },
+  { id: 'story', num: '05', label: 'Story' },
+  { id: 'script', num: '06', label: 'Script' },
+  { id: 'video', num: '07', label: 'Video' },
 ];
 
 export default function AppShell({
   children,
   activeView = 'studio', // 'hub' | 'studio' | 'library' | 'business'
   onSelectView,
-  currentStage = 'business',
+  currentStage = 'brief',
   completedStages = [],
   onNavigateStage,
   onStartNewFilm,

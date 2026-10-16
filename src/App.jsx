@@ -79,7 +79,6 @@ import {
   STUDIO_STAGES,
   StudioProgressHeader,
   StudioChoicesBar,
-  Screen01Business,
   Screen02Brief,
   Screen03Settings,
   Screen04Idea,
@@ -819,7 +818,7 @@ export default function App() {
   // 'business' | 'brief' | 'settings' | 'idea' | 'opening' | 'story' | 'script' | 'video'
   // Centralized Studio State via Reducer (Milestone 2B)
   const [studioState, studioDispatch] = useReducer(studioReducer, initialStudioState, () => {
-    let savedStage = 'business';
+    let savedStage = 'brief';
     let savedCompleted = [];
     try {
       const savedContext = localStorage.getItem('clevertize_user_context');
@@ -827,7 +826,7 @@ export default function App() {
         const parsed = JSON.parse(savedContext);
         if (parsed.businessName && parsed.businessName.trim().length > 0) {
           savedStage = 'brief';
-          savedCompleted = ['business'];
+          savedCompleted = [];
         }
       }
     } catch {}
@@ -1822,6 +1821,7 @@ export default function App() {
     const specialtyParts = [
       userContext.specialty?.trim(),
       userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
+      userContext.targetAudience?.trim() ? `Target Audience: ${userContext.targetAudience.trim()}` : null,
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
       `Platform: ${userContext.platform || 'Instagram Reels / 9:16'}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
@@ -1837,6 +1837,7 @@ export default function App() {
       businessName: userContext.businessName.trim(),
       businessType: bType || 'Retail Store',
       town: userContext.town?.trim() || '',
+      targetAudience: userContext.targetAudience?.trim() || '',
       language: userContext.language || 'English',
       duration: targetDur,
       platform: userContext.platform || 'Instagram Reels / 9:16',
@@ -1931,6 +1932,7 @@ export default function App() {
           businessType: bType,
           town: userContext.town || '',
           brief: userContext.brief || '',
+          targetAudience: userContext.targetAudience || '',
           research: researchData,
         }),
       });
@@ -2891,7 +2893,7 @@ export default function App() {
       });
 
       setCompletedStages([]);
-      setStudioStage('business');
+      setStudioStage('brief');
       setActiveAppView('hub');
       setCurrentStep('input');
       setCreationStep(1);
@@ -2906,7 +2908,7 @@ export default function App() {
     } catch (err) {
       console.error('[NewFilm] Error in handleExecuteNewProject:', err);
       setIsNewFilmConfirmOpen(false);
-      setStudioStage('business');
+      setStudioStage('brief');
       try {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (e) {
@@ -2928,11 +2930,7 @@ export default function App() {
     else if (studioStage === 'idea') setStudioStage('settings');
     else if (studioStage === 'settings') setStudioStage('brief');
     else if (studioStage === 'brief') {
-      if (userContext.businessName && userContext.businessName.trim().length > 0) {
-        setActiveAppView('home');
-      } else {
-        setStudioStage('business');
-      }
+      setActiveAppView('home');
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3073,7 +3071,7 @@ export default function App() {
     setValidationError('');
     setErrorMessage('');
     setCompletedStages([]);
-    setStudioStage('business');
+    setStudioStage('brief');
     setHasStaleWarning(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -3305,12 +3303,7 @@ export default function App() {
             <CreationEntryHub
               onStartBrief={() => {
                 setActiveAppView('studio');
-                if (userContext.businessName && userContext.businessName.trim().length > 0) {
-                  markStageComplete('business');
-                  setStudioStage('brief');
-                } else {
-                  setStudioStage('business');
-                }
+                setStudioStage('brief');
               }}
               onOpenScriptModal={() => setIsScriptModalOpen(true)}
               onOpenUrlModal={() => setIsUrlModalOpen(true)}
@@ -3320,10 +3313,7 @@ export default function App() {
               hasActiveScript={Boolean(scenes.length > 0 || generatedScript)}
               onContinueActiveProject={() => {
                 setActiveAppView('studio');
-                if (userContext.businessName && userContext.businessName.trim().length > 0) {
-                  markStageComplete('business');
-                  setStudioStage('brief');
-                }
+                setStudioStage('brief');
               }}
               onEditBrand={() => setIsOnboardingModalOpen(true)}
               recentProjects={userProjects}
@@ -3762,34 +3752,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 8 DEDICATED GUIDED STUDIO SCREENS */}
-        {studioStage === 'business' && (
-          <Screen01Business
-            key={`screen-01-business-${brandResetKey}`}
-            userContext={userContext}
-            updateUserContext={updateUserContext}
-            handleFileUpload={handleFileUpload}
-            BUSINESS_TYPES={BUSINESS_TYPE_PRESETS}
-            autoEdit={brandResetKey > 0}
-            onOpenUrlModal={() => setIsUrlModalOpen(true)}
-            onContinue={() => {
-              if (!userContext.businessName.trim()) {
-                setValidationError('Please enter your business or brand name.');
-                return;
-              }
-              setValidationError('');
-              try {
-                triggerAdaptiveResearch();
-              } catch (err) {
-                console.warn('[research] non-blocking research error:', err);
-              }
-              markStageComplete('business');
-              setStudioStage('brief');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
-
+        {/* 7 DEDICATED GUIDED STUDIO SCREENS */}
         {studioStage === 'brief' && (
           <Screen02Brief
             userContext={userContext}
@@ -3809,11 +3772,7 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onBack={() => {
-              if (userContext.businessName && userContext.businessName.trim().length > 0) {
-                setActiveAppView('home');
-              } else {
-                setStudioStage('business');
-              }
+              setActiveAppView('home');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             isRecording={isListening}
