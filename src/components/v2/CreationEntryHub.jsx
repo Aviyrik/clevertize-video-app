@@ -32,74 +32,54 @@ export default function CreationEntryHub({
   return (
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '36px 24px 60px' }}>
       {/* Welcome Banner */}
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: 'var(--accent-subtle)',
-            border: '1px solid var(--accent-glow)',
-            borderRadius: 20,
-            padding: '5px 14px',
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--accent-primary)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            marginBottom: 14,
-          }}
-        >
-          <Clapperboard size={14} />
-          CleverCuts Video Studio
-        </div>
+      <div style={{ textAlign: 'center', marginBottom: 26 }}>
         <h1
           style={{
-            fontSize: 34,
+            fontSize: 30,
             fontWeight: 800,
-            margin: '0 0 12px',
+            margin: '0 0 8px',
             color: 'var(--text-primary)',
-            letterSpacing: '-0.03em',
+            letterSpacing: '-0.025em',
           }}
         >
-          How would you like to create your commercial?
+          Create a New Video Ad
         </h1>
         <p
           style={{
-            fontSize: 15,
+            fontSize: 14,
             color: 'var(--text-secondary)',
-            maxWidth: 620,
+            maxWidth: 520,
             margin: '0 auto',
-            lineHeight: 1.6,
+            lineHeight: 1.5,
           }}
         >
-          Select one of the 3 starting points below to produce an authentic 4-scene video ad with AI visual continuity and quality verification.
+          Select how you'd like to start your 4-scene commercial.
         </p>
       </div>
 
-      {/* Active Brand Context Banner (Confirmation Only - Not an Entry Point) */}
+      {/* Active Brand Context Banner */}
       {businessName && (
         <div
           style={{
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
-            borderRadius: 12,
-            padding: '14px 20px',
-            marginBottom: 32,
+            borderRadius: 10,
+            padding: '10px 16px',
+            marginBottom: 28,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 12,
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 9,
+                width: 32,
+                height: 32,
+                borderRadius: 8,
                 backgroundColor: 'rgba(99, 102, 241, 0.15)',
                 color: 'var(--accent-primary)',
                 display: 'flex',
@@ -108,36 +88,31 @@ export default function CreationEntryHub({
                 flexShrink: 0,
               }}
             >
-              <Store size={20} />
+              <Store size={17} />
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
-                  Active Brand
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {businessName}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {businessType || 'Retail Store'}
-                </span>
-                {town && (
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {town}</span>
-                )}
-              </div>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                Your business details are set. Choose an entry point below to create your commercial.
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+                Active Brand:
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {businessName}
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '2px 8px',
+                  borderRadius: 4,
+                  color: 'var(--text-secondary)',
+                  fontWeight: 600,
+                }}
+              >
+                {businessType || 'Retail Store'}
+              </span>
+              {town && (
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {town}</span>
+              )}
             </div>
           </div>
           {onEditBrand && (
@@ -148,7 +123,7 @@ export default function CreationEntryHub({
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 6,
-                padding: '6px 12px',
+                padding: '5px 12px',
                 fontSize: 12,
                 fontWeight: 600,
                 color: 'var(--text-secondary)',
@@ -164,7 +139,7 @@ export default function CreationEntryHub({
                 e.currentTarget.style.borderColor = 'var(--border-subtle)';
               }}
             >
-              Edit Brand Details
+              Edit Details
             </button>
           )}
         </div>
@@ -174,9 +149,9 @@ export default function CreationEntryHub({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-          gap: 22,
-          marginBottom: 40,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 20,
+          marginBottom: 36,
         }}
       >
         {/* Entry Point 1: Start with a Brief (Hero / Recommended) */}
@@ -186,7 +161,7 @@ export default function CreationEntryHub({
             backgroundColor: 'var(--bg-surface)',
             border: '2px solid var(--accent-primary)',
             borderRadius: 14,
-            padding: 24,
+            padding: '22px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -226,18 +201,18 @@ export default function CreationEntryHub({
           <div>
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 borderRadius: 10,
                 backgroundColor: 'rgba(99, 102, 241, 0.15)',
                 color: 'var(--accent-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 16,
+                marginBottom: 14,
               }}
             >
-              <Sparkles size={24} />
+              <Sparkles size={22} />
             </div>
             <div
               style={{
@@ -246,27 +221,35 @@ export default function CreationEntryHub({
                 color: 'var(--accent-primary)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                marginBottom: 6,
+                marginBottom: 4,
               }}
             >
               Guided Creation
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Brief
             </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Describe what you want to promote, offer, or announce. Our creative engine drafts ranked consumer tensions, creator hooks, and a 4-scene video script.
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Describe what you want to promote. Our AI drafts high-converting hooks and a full 4-scene video script.
             </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+              <span style={{ fontSize: 11, backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                ✨ No script needed
+              </span>
+              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                ⚡ ~2 mins
+              </span>
+            </div>
           </div>
 
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 22 }}>
             <div
               style={{
                 width: '100%',
                 backgroundColor: 'var(--accent-primary)',
                 color: '#FFFFFF',
                 borderRadius: 8,
-                padding: '11px 16px',
+                padding: '10px 16px',
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'flex',
@@ -290,7 +273,7 @@ export default function CreationEntryHub({
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
             borderRadius: 14,
-            padding: 24,
+            padding: '22px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -312,18 +295,18 @@ export default function CreationEntryHub({
           <div>
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 borderRadius: 10,
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
                 color: '#10B981',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 16,
+                marginBottom: 14,
               }}
             >
-              <FileCode2 size={24} />
+              <FileCode2 size={22} />
             </div>
             <div
               style={{
@@ -332,20 +315,28 @@ export default function CreationEntryHub({
                 color: '#10B981',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                marginBottom: 6,
+                marginBottom: 4,
               }}
             >
               Fast Track
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with an Existing Script
             </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Already have a script or concept? Paste your 4 scenes to run quality validation and jump directly to Script Studio ready for video.
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Have your scenes written? Paste your text to run quality checks and jump straight to video rendering.
             </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+              <span style={{ fontSize: 11, backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#34D399', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                ⚡ Direct to Stage 7
+              </span>
+              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                📋 Paste 4 scenes
+              </span>
+            </div>
           </div>
 
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 22 }}>
             <div
               style={{
                 width: '100%',
@@ -353,7 +344,7 @@ export default function CreationEntryHub({
                 border: '1px solid #10B981',
                 color: '#34D399',
                 borderRadius: 8,
-                padding: '11px 16px',
+                padding: '10px 16px',
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'flex',
@@ -376,7 +367,7 @@ export default function CreationEntryHub({
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
             borderRadius: 14,
-            padding: 24,
+            padding: '22px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -398,18 +389,18 @@ export default function CreationEntryHub({
           <div>
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 borderRadius: 10,
                 backgroundColor: 'rgba(56, 189, 248, 0.15)',
                 color: '#38BDF8',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 16,
+                marginBottom: 14,
               }}
             >
-              <Globe size={24} />
+              <Globe size={22} />
             </div>
             <div
               style={{
@@ -418,20 +409,28 @@ export default function CreationEntryHub({
                 color: '#38BDF8',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                marginBottom: 6,
+                marginBottom: 4,
               }}
             >
               Automated Intelligence
             </div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Website URL
             </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Enter your store website, business page, or catalog link. We'll extract your brand identity, featured offerings, and value proposition automatically.
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Enter your store website or product page. We'll automatically pull your brand details and offerings.
             </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+              <span style={{ fontSize: 11, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38BDF8', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                🌐 Store & catalog links
+              </span>
+              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                🔍 Auto-extract
+              </span>
+            </div>
           </div>
 
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 22 }}>
             <div
               style={{
                 width: '100%',
@@ -439,7 +438,7 @@ export default function CreationEntryHub({
                 border: '1px solid #38BDF8',
                 color: '#60A5FA',
                 borderRadius: 8,
-                padding: '11px 16px',
+                padding: '10px 16px',
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'flex',
@@ -596,44 +595,44 @@ export default function CreationEntryHub({
       <div
         style={{
           borderTop: '1px solid var(--border-subtle)',
-          paddingTop: 24,
+          paddingTop: 20,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: 16,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
               18-Point Continuity Gate
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Guarantees single location, dialogue limits, and zero on-screen text clutter.
+              Single location & dialogue pacing verification.
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
               Indian Regional Dialects
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Devanagari script support for Hindi and accurate local spoken phrasing.
+              Devanagari script support & natural spoken phrasing.
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
               Magnific GPU Rendering
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Character anchoring and photorealistic cinematic video generation.
+              Photorealistic character anchoring & video generation.
             </div>
           </div>
         </div>
