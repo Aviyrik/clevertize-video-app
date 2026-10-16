@@ -308,99 +308,93 @@ export default function AccountModal({
             </div>
           </div>
 
-          {/* Danger Zone: Delete Account */}
+          {/* Subtle Compact Delete Account Row */}
           <div
             style={{
-              borderRadius: 12,
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              backgroundColor: 'rgba(239, 68, 68, 0.04)',
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
+              borderTop: '1px solid var(--border-subtle)',
+              paddingTop: 16,
+              marginTop: 4,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#EF4444' }}>
-              <AlertTriangle size={16} />
-              <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Danger Zone
-              </span>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                Delete Account
-              </div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Permanently delete your account, saved brand profiles, and all commercial scripts and videos. This action cannot be reversed.
-              </p>
-            </div>
-
             {!showConfirm ? (
-              <button
-                type="button"
-                onClick={() => setShowConfirm(true)}
-                style={{
-                  alignSelf: 'flex-start',
-                  padding: '8px 14px',
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#EF4444',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                }}
-              >
-                <Trash2 size={13} />
-                <span>Delete Account…</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Delete Account
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                    Permanently delete your profile and saved videos.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(true)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--border-default)',
+                    color: '#EF4444',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                    e.currentTarget.style.borderColor = '#EF4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'var(--border-default)';
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Delete Account…</span>
+                </button>
+              </div>
             ) : (
               <div
                 style={{
-                  padding: 14,
+                  padding: 12,
                   borderRadius: 8,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 10,
+                  gap: 8,
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#EF4444' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>
                   To confirm, type <strong style={{ color: '#F87171' }}>DELETE</strong> below:
                 </div>
 
-                <input
-                  type="text"
-                  value={confirmInput}
-                  onChange={(e) => setConfirmInput(e.target.value)}
-                  placeholder="Type DELETE"
-                  disabled={isDeleting}
-                  style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 6,
-                    padding: '8px 12px',
-                    fontSize: 13,
-                    color: 'var(--text-primary)',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    outline: 'none',
-                  }}
-                  autoFocus
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder="Type DELETE"
+                    disabled={isDeleting}
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 6,
+                      padding: '6px 10px',
+                      fontSize: 12,
+                      color: 'var(--text-primary)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      outline: 'none',
+                    }}
+                    autoFocus
+                  />
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -409,13 +403,12 @@ export default function AccountModal({
                     }}
                     disabled={isDeleting}
                     style={{
-                      padding: '7px 12px',
+                      padding: '6px 10px',
                       borderRadius: 6,
                       backgroundColor: 'transparent',
                       border: '1px solid var(--border-default)',
                       color: 'var(--text-secondary)',
-                      fontSize: 12,
-                      fontWeight: 600,
+                      fontSize: 11,
                       cursor: isDeleting ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -427,29 +420,28 @@ export default function AccountModal({
                     onClick={handleConfirmDelete}
                     disabled={confirmInput.trim().toUpperCase() !== 'DELETE' || isDeleting}
                     style={{
-                      padding: '7px 14px',
+                      padding: '6px 12px',
                       borderRadius: 6,
                       backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? '#DC2626' : 'rgba(220, 38, 38, 0.4)',
                       border: 'none',
                       color: '#ffffff',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 700,
                       cursor: confirmInput.trim().toUpperCase() === 'DELETE' && !isDeleting ? 'pointer' : 'not-allowed',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      boxShadow: confirmInput.trim().toUpperCase() === 'DELETE' ? '0 2px 8px rgba(220, 38, 38, 0.35)' : 'none',
+                      gap: 5,
                     }}
                   >
                     {isDeleting ? (
                       <>
-                        <RefreshCw size={13} className="icon-spinner" />
+                        <RefreshCw size={11} className="icon-spinner" />
                         <span>Deleting…</span>
                       </>
                     ) : (
                       <>
-                        <Trash2 size={13} />
-                        <span>Permanently Delete</span>
+                        <Trash2 size={11} />
+                        <span>Delete</span>
                       </>
                     )}
                   </button>

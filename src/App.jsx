@@ -1354,7 +1354,8 @@ export default function App() {
         town: userContext.town || '',
         language: userContext.language || 'English',
         creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
-        status: scenes && scenes.length > 0 ? 'script_ready' : 'draft',
+        status: videoUrl ? 'video_ready' : (scenes && scenes.length > 0 ? 'script_ready' : 'draft'),
+        videoUrl: videoUrl || null,
         brief: userContext.brief || '',
         scenes: scenes || [],
         setting: setting || '',
@@ -1450,9 +1451,15 @@ export default function App() {
       setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script']);
     }
 
-    setStudioStage('script');
+    if (proj.videoUrl) {
+      setVideoUrl(proj.videoUrl);
+      setStudioStage('video');
+    } else {
+      setVideoUrl('');
+      setStudioStage('script');
+    }
     setActiveAppView('studio');
-    setToastMessage(`Loaded "${proj.title || 'Project'}" into Script Studio.`);
+    setToastMessage(`Loaded "${proj.title || 'Project'}" into Studio.`);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
@@ -2748,6 +2755,15 @@ export default function App() {
           setIsBusy(false);
           setFastStageIndex(4);
           setCurrentStep('render');
+
+          // Auto-sync videoUrl into saved projects list if active project exists
+          if (activeProjectId) {
+            setUserProjects((prev) =>
+              prev.map((p) =>
+                p.id === activeProjectId ? { ...p, videoUrl: data.videoUrl, status: 'video_ready' } : p
+              )
+            );
+          }
           return;
         }
 
@@ -2931,6 +2947,7 @@ export default function App() {
     else if (studioStage === 'settings') setStudioStage('brief');
     else if (studioStage === 'brief') {
       setActiveAppView('home');
+      setStudioStage('entry');
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3299,7 +3316,7 @@ export default function App() {
             </div>
           )}
 
-          {(activeAppView === 'home' || activeAppView === 'hub') ? (
+          {(activeAppView === 'home' || activeAppView === 'hub' || (activeAppView === 'studio' && studioStage === 'entry')) ? (
             <CreationEntryHub
               onStartBrief={() => {
                 setActiveAppView('studio');
@@ -3313,7 +3330,7 @@ export default function App() {
               hasActiveScript={Boolean(scenes.length > 0 || generatedScript)}
               onContinueActiveProject={() => {
                 setActiveAppView('studio');
-                setStudioStage('brief');
+                setStudioStage(studioStage === 'entry' ? 'brief' : studioStage);
               }}
               onEditBrand={() => {
                 setEditingBusiness(userContext);
@@ -3327,6 +3344,7 @@ export default function App() {
           ) : (activeAppView === 'projects' || activeAppView === 'library') ? (
             <ScriptLibraryView
               projects={userProjects}
+              businesses={userBusinesses}
               currentProjectId={activeProjectId}
               onOpenProject={handleOpenProject}
               onDeleteProject={handleDeleteProject}

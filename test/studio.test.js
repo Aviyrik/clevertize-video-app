@@ -1993,3 +1993,48 @@ test('Business Onboarding: Adding a new business starts afresh with empty input 
   );
 });
 
+test('Navbar 3-Tabs Layout & Creative Studio Integration: AppShell renders Creative Studio, My Projects, and My Businesses', () => {
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+
+  // Verify the 3 core navigation tabs
+  assert.ok(shellSrc.includes('<span>Creative Studio</span>'), 'AppShell must feature Creative Studio tab');
+  assert.ok(shellSrc.includes('<span>My Projects</span>'), 'AppShell must feature My Projects tab');
+  assert.ok(shellSrc.includes('<span>My Businesses</span>'), 'AppShell must feature My Businesses tab');
+
+  // Verify bottom-left user card trigger and removal of bare icons
+  assert.ok(shellSrc.includes('onClick={onOpenAccountModal}'), 'User profile card must trigger Account modal');
+  assert.ok(!shellSrc.includes('<Settings2 size={15} />'), 'Redundant settings icon must be removed');
+
+  // Verify breadcrumb updates
+  assert.ok(shellSrc.includes("'My Projects'"), 'Breadcrumb must support My Projects');
+  assert.ok(shellSrc.includes("'My Businesses'"), 'Breadcrumb must support My Businesses');
+});
+
+test('Account Settings: Compact, subtle danger zone and safe logout in modal', () => {
+  const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
+
+  // Compact danger zone verification
+  assert.ok(modalSrc.includes('Delete Account'), 'Must contain Delete Account section');
+  assert.ok(modalSrc.includes('showConfirm'), 'Must have expandable confirmation state');
+  assert.ok(modalSrc.includes('Sign Out'), 'Must include safe Sign Out action');
+});
+
+test('My Projects Video Experience: ScriptLibraryView provides video download, business branding, and video-centric copy', () => {
+  const libSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScriptLibraryView.jsx'), 'utf8');
+
+  // Rebranded copy
+  assert.ok(libSrc.includes('My Projects'), 'Header must say My Projects');
+  assert.ok(libSrc.includes('No video projects yet'), 'Empty state must say No video projects yet');
+  assert.ok(!libSrc.includes('Create First Script'), 'Must not say Create First Script anywhere');
+  assert.ok(libSrc.includes('Create Video Project'), 'Empty state CTA must say Create Video Project');
+
+  // Video download functionality
+  assert.ok(libSrc.includes('Download Video'), 'Must include prominent Download Video button');
+  assert.ok(libSrc.includes('download='), 'Must set download attribute for MP4 file');
+
+  // Business branding & Expandable script
+  assert.ok(libSrc.includes('getAvatarGradient') || libSrc.includes('resolveLogoUrl'), 'Must support business logo/avatar');
+  assert.ok(libSrc.includes('expandedScriptIds'), 'Must support expandable script drawer');
+  assert.ok(libSrc.includes('handleCopyScript') && libSrc.includes('Copy 4 Scenes'), 'Must support Copy 4 Scenes');
+});
+

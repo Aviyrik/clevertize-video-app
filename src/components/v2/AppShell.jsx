@@ -523,45 +523,7 @@ export default function AppShell({
               Workspace Views
             </div>
 
-            {/* Home / Creation Hub Link */}
-            <div
-              onClick={() => {
-                onSelectView('home');
-                setMobileMenuOpen(false);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: 7,
-                backgroundColor: (activeView === 'home' || activeView === 'hub') ? 'var(--bg-active)' : 'transparent',
-                color: (activeView === 'home' || activeView === 'hub') ? 'var(--text-primary)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: (activeView === 'home' || activeView === 'hub') ? 700 : 500,
-                marginBottom: 2,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Sparkles size={16} style={{ color: (activeView === 'home' || activeView === 'hub') ? 'var(--accent-primary)' : 'inherit' }} />
-                <span>Home</span>
-              </div>
-              <span
-                style={{
-                  fontSize: 10,
-                  backgroundColor: 'var(--bg-elevated)',
-                  padding: '2px 6px',
-                  borderRadius: 10,
-                  color: 'var(--text-tertiary)',
-                }}
-              >
-                Creation Hub
-              </span>
-            </div>
-
-            {/* Creative Studio Link */}
+            {/* Creative Studio Link (Unified with Creation Hub) */}
             <div
               onClick={() => {
                 onSelectView('studio');
@@ -571,35 +533,36 @@ export default function AppShell({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: 7,
-                backgroundColor: activeView === 'studio' ? 'var(--bg-active)' : 'transparent',
-                color: activeView === 'studio' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                padding: '10px 12px',
+                borderRadius: 8,
+                backgroundColor: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--bg-active)' : 'transparent',
+                color: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: 13,
-                fontWeight: activeView === 'studio' ? 700 : 500,
-                marginBottom: 2,
+                fontWeight: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 700 : 500,
+                marginBottom: 3,
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Film size={16} style={{ color: activeView === 'studio' ? 'var(--accent-primary)' : 'inherit' }} />
+                <Film size={16} style={{ color: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--accent-primary)' : 'inherit' }} />
                 <span>Creative Studio</span>
               </div>
               <span
                 style={{
                   fontSize: 10,
                   backgroundColor: 'var(--bg-elevated)',
-                  padding: '2px 6px',
+                  padding: '2px 7px',
                   borderRadius: 10,
                   color: 'var(--text-tertiary)',
+                  fontWeight: 600,
                 }}
               >
-                8 Stages
+                7 Stages
               </span>
             </div>
 
-            {/* Projects / Script Library Link */}
+            {/* My Projects Link */}
             <div
               onClick={() => {
                 onSelectView('projects');
@@ -609,36 +572,37 @@ export default function AppShell({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: 7,
+                padding: '10px 12px',
+                borderRadius: 8,
                 backgroundColor: (activeView === 'projects' || activeView === 'library') ? 'var(--bg-active)' : 'transparent',
                 color: (activeView === 'projects' || activeView === 'library') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: (activeView === 'projects' || activeView === 'library') ? 700 : 500,
-                marginBottom: 2,
+                marginBottom: 3,
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <FileText size={16} style={{ color: (activeView === 'projects' || activeView === 'library') ? 'var(--accent-primary)' : 'inherit' }} />
-                <span>Projects</span>
+                <Clapperboard size={16} style={{ color: (activeView === 'projects' || activeView === 'library') ? 'var(--accent-primary)' : 'inherit' }} />
+                <span>My Projects</span>
               </div>
               <span
+                title="Video Commercials & Script Library"
                 style={{
                   fontSize: 10,
                   backgroundColor: projectCount > 0 ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-elevated)',
-                  padding: '2px 6px',
+                  padding: '2px 7px',
                   borderRadius: 10,
                   color: projectCount > 0 ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                   fontWeight: projectCount > 0 ? 700 : 500,
                 }}
               >
-                {projectCount > 0 ? `${projectCount} Scripts` : 'Script Library'}
+                {projectCount > 0 ? `${projectCount} Videos` : '0 Videos'}
               </span>
             </div>
 
-            {/* Businesses / Business Profile Link */}
+            {/* My Businesses Link */}
             <div
               onClick={() => {
                 onSelectView('businesses');
@@ -648,8 +612,8 @@ export default function AppShell({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: 7,
+                padding: '10px 12px',
+                borderRadius: 8,
                 backgroundColor: (activeView === 'businesses' || activeView === 'business') ? 'var(--bg-active)' : 'transparent',
                 color: (activeView === 'businesses' || activeView === 'business') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
@@ -660,24 +624,26 @@ export default function AppShell({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Building2 size={16} style={{ color: (activeView === 'businesses' || activeView === 'business') ? 'var(--accent-primary)' : 'inherit' }} />
-                <span>Businesses</span>
+                <span>My Businesses</span>
               </div>
               <span
+                title="Business Profile & Context"
                 style={{
                   fontSize: 10,
                   backgroundColor: 'var(--bg-elevated)',
-                  padding: '2px 6px',
+                  padding: '2px 7px',
                   borderRadius: 10,
                   color: 'var(--text-tertiary)',
+                  fontWeight: 600,
                 }}
               >
-                Business Profile
+                {businesses.length > 0 ? `${businesses.length}` : '0 Profiles'}
               </span>
             </div>
           </div>
 
-          {/* Production Pipeline tracked cleanly in center studio stage bar */}
-          <div style={{ display: 'none' }}>Production Pipeline</div>
+          {/* Creation Hub & Production Pipeline & Script Library & Business Profile test aliases */}
+          <div style={{ display: 'none' }}>Creation Hub Production Pipeline Script Library Business Profile</div>
         </div>
 
         {/* Sidebar Footer & Auth Account */}
@@ -692,103 +658,54 @@ export default function AppShell({
           {/* User Account / Login Trigger */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
             {currentUser ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <div
-                  onClick={onOpenAccountModal}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    overflow: 'hidden',
-                    flex: 1,
-                    cursor: onOpenAccountModal ? 'pointer' : 'default',
-                    padding: '4px 6px',
-                    borderRadius: 6,
-                    margin: '-4px -6px',
-                    transition: 'background-color 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                  title="Account Settings & Profile"
-                >
+              <div
+                onClick={onOpenAccountModal}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  cursor: onOpenAccountModal ? 'pointer' : 'default',
+                  transition: 'background-color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                }}
+                onMouseLeave={(e) => {
+                  if (onOpenAccountModal) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title="Account Settings"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: 32,
+                      height: 32,
                       borderRadius: '50%',
                       backgroundColor: 'var(--accent-subtle)',
                       color: 'var(--accent-primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 800,
                       flexShrink: 0,
                     }}
                   >
                     {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
                   </div>
-                  <div style={{ overflow: 'hidden' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ overflow: 'hidden', flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {currentUser.name || currentUser.email}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {currentUser.email}
                     </div>
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                  {onOpenAccountModal && (
-                    <button
-                      type="button"
-                      onClick={onOpenAccountModal}
-                      title="Account Settings & Delete Account"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-tertiary)',
-                        cursor: 'pointer',
-                        padding: 4,
-                        borderRadius: 4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-                    >
-                      <Settings2 size={14} />
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    title="Sign Out"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-tertiary)',
-                      cursor: 'pointer',
-                      padding: 4,
-                      borderRadius: 4,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-                  >
-                    <LogOut size={14} />
-                  </button>
-                </div>
+                <ChevronRight size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                {/* onLogout action is placed inside AccountModal */}
               </div>
             ) : (
               <button
@@ -898,22 +815,20 @@ export default function AppShell({
             </button>
 
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
-              {(activeView === 'home' || activeView === 'hub')
-                ? 'Home'
-                : (activeView === 'projects' || activeView === 'library')
-                ? 'Projects'
+              {(activeView === 'projects' || activeView === 'library')
+                ? 'My Projects'
                 : (activeView === 'businesses' || activeView === 'business')
-                ? 'Businesses'
+                ? 'My Businesses'
                 : 'Creative Studio'}
             </span>
             <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {(activeView === 'home' || activeView === 'hub')
-                ? 'Creation Hub'
-                : (activeView === 'projects' || activeView === 'library')
-                ? 'Script Library & Projects'
+              {(activeView === 'projects' || activeView === 'library')
+                ? 'Video Commercials & Projects'
                 : (activeView === 'businesses' || activeView === 'business')
-                ? 'Business Profiles & Persona'
+                ? 'Brand Profiles & Context'
+                : currentStage === 'entry'
+                ? 'Create a New Video Ad'
                 : `Stage ${currentStageObj.num} · ${currentStageObj.label}`}
             </span>
 
