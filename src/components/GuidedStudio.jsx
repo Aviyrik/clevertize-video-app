@@ -421,7 +421,7 @@ export function Screen01Business({
                   handleNext();
                 }
               }}
-              placeholder="e.g. Kanti Sweets"
+              placeholder="e.g. Royal Silks, Sharma Sweets, City Dental..."
               style={{
                 width: '100%',
                 padding: '10px 14px',
@@ -489,7 +489,7 @@ export function Screen01Business({
               type="url"
               value={userContext.websiteUrl || ''}
               onChange={(e) => updateUserContext('websiteUrl', e.target.value)}
-              placeholder="e.g. https://kantisweets.com"
+              placeholder="e.g. https://mybrand.com"
               style={{
                 width: '100%',
                 padding: '10px 14px',

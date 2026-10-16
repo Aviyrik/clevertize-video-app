@@ -1837,3 +1837,9 @@ test('Business Onboarding: Brand Tone cards include visual icons for all tones',
   assert.ok(obSrc.includes("Step 3: Brand Voice & Online Presence") && obSrc.includes("overflowY: 'auto'"), 'Step 3 must have scrollable overflow');
   assert.ok(obSrc.includes("flexShrink: 0") && obSrc.includes("Footer Navigation"), 'Footer navigation must be pinned with flexShrink 0');
 });
+
+test('Business Onboarding: Never pre-fills Kanti Sweets as default and maintains placeholder', () => {
+  const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  assert.ok(obSrc.includes("kanti sweets' ? '' :"), 'Must sanitize kanti sweets from initial businessName');
+  assert.ok(obSrc.includes('placeholder="e.g.'), 'Must have placeholder text on brand name input');
+});

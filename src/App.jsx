@@ -776,6 +776,9 @@ export default function App() {
     } catch {
       // fallback
     }
+    if (base.businessName && base.businessName.trim().toLowerCase() === 'kanti sweets') {
+      base.businessName = '';
+    }
     return base;
   });
 
@@ -3339,7 +3342,7 @@ export default function App() {
                   type="text"
                   value={userContext.businessName}
                   onChange={(e) => updateUserContext('businessName', e.target.value)}
-                  placeholder="e.g. Sharma General Store, Kanti Sweets"
+                  placeholder="e.g. Sharma General Store, Zari Silks, Metro Dental"
                   style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                 />
               </div>
@@ -3410,7 +3413,7 @@ export default function App() {
                   type="text"
                   value={userContext.websiteUrl}
                   onChange={(e) => updateUserContext('websiteUrl', e.target.value)}
-                  placeholder="e.g. kantisweets.com"
+                  placeholder="e.g. https://mybrand.com"
                   style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
                 />
               </div>
@@ -4184,7 +4187,7 @@ export default function App() {
         onClose={() => setIsOnboardingModalOpen(false)}
         onComplete={handleOnboardingComplete}
         initialData={{
-          businessName: userContext.businessName,
+          businessName: (userContext.businessName && userContext.businessName.trim().toLowerCase() !== 'kanti sweets') ? userContext.businessName : '',
           businessType: userContext.businessType,
           town: userContext.town,
           websiteUrl: userContext.websiteUrl,

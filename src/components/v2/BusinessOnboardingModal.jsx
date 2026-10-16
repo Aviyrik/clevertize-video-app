@@ -278,7 +278,9 @@ export default function BusinessOnboardingModal({
   // Step 3: Brand Voice & Online Presence
   // Step 4: Confirm & Launch
   const [step, setStep] = useState(1);
-  const [businessName, setBusinessName] = useState(initialData.businessName || '');
+  const rawBusinessName = (initialData.businessName || '').trim();
+  const initialBusinessName = rawBusinessName.toLowerCase() === 'kanti sweets' ? '' : (initialData.businessName || '');
+  const [businessName, setBusinessName] = useState(initialBusinessName);
   const [businessType, setBusinessType] = useState(initialData.businessType || CATEGORIES[0]);
   const [customCategory, setCustomCategory] = useState(
     initialData.businessType && !CATEGORY_CARDS.some((c) => c.label === initialData.businessType)
