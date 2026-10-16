@@ -318,6 +318,16 @@ input::placeholder, textarea::placeholder {
   margin-right: 0 !important;
 }
 
+.auth-showcase-caption {
+  position: fixed;
+  bottom: 44px;
+  left: 48px;
+  z-index: 20;
+  max-width: 500px;
+  pointer-events: none;
+  user-select: none;
+}
+
 @media (max-width: 1024px) {
   .auth-independent-logo {
     top: 28px !important;
@@ -333,6 +343,11 @@ input::placeholder, textarea::placeholder {
     margin-left: auto !important;
     margin-right: 0 !important;
   }
+  .auth-showcase-caption {
+    left: 32px !important;
+    bottom: 32px !important;
+    max-width: 360px !important;
+  }
   .auth-modal-card {
     flex-direction: column !important;
     max-width: 520px !important;
@@ -342,6 +357,12 @@ input::placeholder, textarea::placeholder {
     width: 100% !important;
     min-height: 190px !important;
     height: 190px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .auth-showcase-caption {
+    display: none !important;
   }
 }
 
@@ -363,6 +384,8 @@ input::placeholder, textarea::placeholder {
     max-width: 100% !important;
     padding: 24px 20px !important;
     border-radius: 18px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 

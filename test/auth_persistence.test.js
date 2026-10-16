@@ -264,6 +264,10 @@ test('Auth Redesign: AuthScreen layout, floating panel, and independent logo', (
   assert.ok(code.includes('justify-content: flex-end') || code.includes('justifyContent: flex-end'), 'Panel must align to the right');
   assert.ok(code.includes('margin-left: auto') || code.includes("marginLeft: 'auto'"), 'Panel must anchor firmly to the right side');
 
+  // Showcase editorial caption on bottom-left
+  assert.ok(code.includes('auth-showcase-caption'), 'Must render showcase caption in bottom-left');
+  assert.ok(code.includes('Turn product briefs into customer-converting video ads'), 'Must have compelling headline in bottom-left');
+
   // Headers and titles
   assert.ok(code.includes('Create an account'), 'Must support "Create an account" for signup');
   assert.ok(code.includes('Welcome back'), 'Must support "Welcome back" for signin');

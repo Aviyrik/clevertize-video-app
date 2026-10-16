@@ -15,10 +15,11 @@ import AuthVideoShowcase from './AuthVideoShowcase.jsx';
  *
  * Architecture:
  * 1. Background Video covers the ENTIRE viewport (position: fixed, inset: 0, full-bleed)
- *    with a dark overlay so it doesn't distract or disturb the user.
+ *    with a darkened overlay so it doesn't distract or disturb the user.
  * 2. CleverCuts brand logo sits independently in the upper-left corner of the viewport.
- * 3. A refined translucent glass authentication panel FLOATS over the video on the RIGHT side.
- * 4. Zero side-by-side card wrappers, zero outer rounded containers, zero split columns.
+ * 3. Showcase editorial copy sits in the bottom-left corner to give editorial balance.
+ * 4. A refined translucent glass authentication panel FLOATS over the video on the RIGHT side.
+ * 5. Zero side-by-side card wrappers, zero outer rounded containers, zero split columns.
  */
 export default function AuthScreen({
   onAuthSuccess,
@@ -180,6 +181,16 @@ export default function AuthScreen({
           box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.06);
         }
 
+        .auth-showcase-caption {
+          position: fixed;
+          bottom: 44px;
+          left: 48px;
+          z-index: 20;
+          max-width: 500px;
+          pointer-events: none;
+          user-select: none;
+        }
+
         .auth-input {
           width: 100%;
           box-sizing: border-box;
@@ -266,6 +277,17 @@ export default function AuthScreen({
             top: 28px !important;
             left: 32px !important;
           }
+          .auth-showcase-caption {
+            left: 32px !important;
+            bottom: 32px !important;
+            max-width: 360px !important;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .auth-showcase-caption {
+            display: none !important;
+          }
         }
 
         /* Mobile responsive composition */
@@ -346,7 +368,60 @@ export default function AuthScreen({
         </span>
       </div>
 
-      {/* 3. FLOATING AUTHENTICATION PANEL: Anchored firmly on the RIGHT side of the viewport */}
+      {/* 3. SHOWCASE EDITORIAL CAPTION: Anchored in bottom-left over the background video */}
+      <div className="auth-showcase-caption">
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '5px 12px',
+            borderRadius: 999,
+            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            border: '1px solid rgba(99, 102, 241, 0.35)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            color: '#C7D2FE',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            marginBottom: 14,
+          }}
+        >
+          <span style={{ fontSize: 12 }}>✨</span>
+          <span>AI Commercial Video Studio</span>
+        </div>
+
+        <h2
+          style={{
+            fontSize: 'clamp(24px, 2.4vw, 32px)',
+            fontWeight: 800,
+            lineHeight: 1.22,
+            letterSpacing: '-0.025em',
+            color: '#FFFFFF',
+            margin: '0 0 10px',
+            textShadow: '0 2px 16px rgba(0, 0, 0, 0.85)',
+          }}
+        >
+          Turn product briefs into customer-converting video ads.
+        </h2>
+
+        <p
+          style={{
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: 'rgba(255, 255, 255, 0.76)',
+            margin: 0,
+            maxWidth: 440,
+            textShadow: '0 1px 8px rgba(0, 0, 0, 0.75)',
+          }}
+        >
+          Generate high-retention video hooks, multi-scene storyboards, and realistic commercial video for your brand in minutes.
+        </p>
+      </div>
+
+      {/* 4. FLOATING AUTHENTICATION PANEL: Anchored firmly on the RIGHT side of the viewport */}
       <div
         className="auth-floating-wrapper"
         style={{
