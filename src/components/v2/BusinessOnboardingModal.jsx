@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Building2,
@@ -302,6 +302,12 @@ export default function BusinessOnboardingModal({
     CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
   const currentAudienceSuggestions = getSuggestedAudiences(businessType);
 
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const validateStep = (currentStep) => {
@@ -375,6 +381,7 @@ export default function BusinessOnboardingModal({
       brandTone,
       brandLogo,
     });
+    setStep(1);
     onClose();
   };
 

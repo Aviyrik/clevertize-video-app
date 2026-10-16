@@ -1181,7 +1181,7 @@ export default function App() {
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
-  const fetchUserData = async (token) => {
+  const fetchUserData = async (token, allowAutoOpenOnboarding = false) => {
     if (!token) return;
     try {
       const [bizRes, projRes] = await Promise.all([
@@ -1192,8 +1192,28 @@ export default function App() {
         const bData = await bizRes.json();
         const bizList = bData.businesses || [];
         setUserBusinesses(bizList);
-        if (bizList.length === 0) {
-          setIsOnboardingModalOpen(true);
+        if (bizList.length > 0) {
+          setUserContext((prev) => {
+            if (prev.businessName) return prev;
+            const primaryBiz = bizList[0];
+            return {
+              ...prev,
+              businessName: primaryBiz.businessName || primaryBiz.name || '',
+              businessType: primaryBiz.businessType || primaryBiz.category || prev.businessType,
+              town: primaryBiz.town || prev.town,
+              targetAudience: primaryBiz.targetAudience || prev.targetAudience,
+              websiteUrl: primaryBiz.websiteUrl || prev.websiteUrl,
+              brandTone: primaryBiz.brandTone || prev.brandTone,
+              brandLogo: primaryBiz.logo || prev.brandLogo,
+            };
+          });
+        } else if (allowAutoOpenOnboarding) {
+          setUserContext((prev) => {
+            if (!prev.businessName) {
+              setIsOnboardingModalOpen(true);
+            }
+            return prev;
+          });
         }
       }
       if (projRes.ok) {
@@ -1220,7 +1240,7 @@ export default function App() {
           if (data.user) {
             setCurrentUser(data.user);
             setAuthToken(token);
-            fetchUserData(token);
+            fetchUserData(token, false);
           } else {
             throw new Error('No user data');
           }
@@ -1503,11 +1523,15 @@ export default function App() {
 
   const handleOnboardingComplete = async (onboardingData) => {
     setIsOnboardingModalOpen(false);
+    const resolvedName = onboardingData.businessName || 'My Business';
+    const resolvedType = onboardingData.businessType || 'Retail Store';
+
     setUserContext((prev) => ({
       ...prev,
-      businessName: onboardingData.businessName,
-      businessType: onboardingData.businessType,
-      town: onboardingData.town,
+      businessName: resolvedName,
+      businessType: resolvedType,
+      town: onboardingData.town || '',
+      targetAudience: onboardingData.targetAudience || '',
       websiteUrl: onboardingData.websiteUrl || prev.websiteUrl,
       brandTone: onboardingData.brandTone || prev.brandTone,
       brandLogo: onboardingData.brandLogo || prev.brandLogo,
@@ -1515,23 +1539,41 @@ export default function App() {
 
     if (currentUser && authToken) {
       try {
-        await fetch('/api/businesses', {
+        const res = await fetch('/api/businesses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
-            name: onboardingData.businessName,
-            category: onboardingData.businessType,
-            town: onboardingData.town,
-            targetAudience: onboardingData.targetAudience,
-            websiteUrl: onboardingData.websiteUrl,
-            brandTone: onboardingData.brandTone,
-            logo: onboardingData.brandLogo,
+            businessName: resolvedName,
+            name: resolvedName,
+            businessType: resolvedType,
+            category: resolvedType,
+            town: onboardingData.town || '',
+            targetAudience: onboardingData.targetAudience || '',
+            websiteUrl: onboardingData.websiteUrl || '',
+            brandTone: onboardingData.brandTone || 'Relatable & Trustworthy',
+            logo: onboardingData.brandLogo || null,
+            brandLogo: onboardingData.brandLogo || null,
           }),
         });
-        fetchUserData(authToken);
+        if (res.ok) {
+          const data = await res.json();
+          const saved = data.business;
+          if (saved) {
+            setUserBusinesses((prev) => {
+              const idx = prev.findIndex((b) => b.id === saved.id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = saved;
+                return next;
+              }
+              return [saved, ...prev];
+            });
+          }
+        }
+        await fetchUserData(authToken, false);
       } catch (err) {
         console.error('Error auto-saving onboarded business:', err);
       }
@@ -1539,7 +1581,7 @@ export default function App() {
 
     markStageComplete('business');
     setActiveAppView('home');
-    setToastMessage(`Brand profile for "${onboardingData.businessName}" saved! Choose how to start your first video.`);
+    setToastMessage(`Brand profile for "${resolvedName}" saved! Choose how to start your first video.`);
     setTimeout(() => setToastMessage(''), 4500);
   };
 

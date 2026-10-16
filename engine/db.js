@@ -172,7 +172,9 @@ function mapBusinessRow(row) {
     id: row.id,
     userId: row.user_id,
     businessName: row.business_name,
+    name: row.business_name,
     businessType: row.business_type,
+    category: row.business_type,
     town: row.town,
     targetAudience: row.target_audience,
     websiteUrl: row.website_url,
@@ -477,7 +479,15 @@ async function getBusinessesForUser(userId) {
   }
 
   const businesses = readJsonFile('businesses.json', []);
-  return businesses.filter((b) => b.userId === userId);
+  return businesses
+    .filter((b) => b.userId === userId)
+    .map((b) => ({
+      ...b,
+      businessName: b.businessName || b.name,
+      name: b.name || b.businessName,
+      businessType: b.businessType || b.category || 'Retail Store',
+      category: b.category || b.businessType || 'Retail Store',
+    }));
 }
 
 async function getBusinessById(businessId, userId) {
@@ -494,22 +504,29 @@ async function getBusinessById(businessId, userId) {
   }
 
   const businesses = readJsonFile('businesses.json', []);
-  return businesses.find((b) => b.id === businessId && b.userId === userId) || null;
+  const found = businesses.find((b) => b.id === businessId && b.userId === userId);
+  if (!found) return null;
+  return {
+    ...found,
+    businessName: found.businessName || found.name,
+    name: found.name || found.businessName,
+    businessType: found.businessType || found.category || 'Retail Store',
+    category: found.category || found.businessType || 'Retail Store',
+  };
 }
 
 async function saveBusiness(businessData, userId) {
   if (!userId) throw new Error('Authentication required to save business.');
-  const {
-    id,
-    businessName,
-    businessType,
-    town,
-    targetAudience,
-    websiteUrl,
-    logo,
-    productImages,
-    brandTone,
-  } = businessData || {};
+  const bData = businessData || {};
+  const id = bData.id;
+  const businessName = bData.businessName || bData.name;
+  const businessType = bData.businessType || bData.category || 'Retail Store';
+  const town = bData.town;
+  const targetAudience = bData.targetAudience;
+  const websiteUrl = bData.websiteUrl;
+  const logo = bData.logo || bData.brandLogo;
+  const productImages = bData.productImages;
+  const brandTone = bData.brandTone;
 
   if (!businessName || !String(businessName).trim()) {
     throw new Error('Business name is required.');
@@ -560,7 +577,9 @@ async function saveBusiness(businessData, userId) {
     id: existingIndex >= 0 ? businesses[existingIndex].id : businessId,
     userId,
     businessName: bName,
+    name: bName,
     businessType: bType,
+    category: bType,
     town: bTown,
     targetAudience: bAudience,
     websiteUrl: bUrl,

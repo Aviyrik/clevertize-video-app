@@ -1843,3 +1843,76 @@ test('Business Onboarding: Never pre-fills Kanti Sweets as default and maintains
   assert.ok(obSrc.includes("kanti sweets' ? '' :"), 'Must sanitize kanti sweets from initial businessName');
   assert.ok(obSrc.includes('placeholder="e.g.'), 'Must have placeholder text on brand name input');
 });
+
+test('Business Onboarding & Profile Save: saveBusiness accepts both name and businessName and normalizes aliases', async () => {
+  const db = require('../engine/db.js');
+  const testUserId = `user_test_${Date.now()}`;
+  
+  // Test saving with { name, category }
+  const biz1 = await db.saveBusiness({
+    name: 'Royal Heritage Sarees',
+    category: 'Saree, Clothing & Apparel',
+    town: 'Varanasi',
+    targetAudience: 'Bridal shoppers',
+  }, testUserId);
+
+  assert.equal(biz1.businessName, 'Royal Heritage Sarees');
+  assert.equal(biz1.name, 'Royal Heritage Sarees');
+  assert.equal(biz1.businessType, 'Saree, Clothing & Apparel');
+  assert.equal(biz1.category, 'Saree, Clothing & Apparel');
+
+  // Test saving with { businessName, businessType }
+  const biz2 = await db.saveBusiness({
+    businessName: 'Sharma Sweets',
+    businessType: 'Sweets, Bakery & Restaurant',
+    town: 'Jaipur',
+  }, testUserId);
+
+  assert.equal(biz2.businessName, 'Sharma Sweets');
+  assert.equal(biz2.name, 'Sharma Sweets');
+  assert.equal(biz2.businessType, 'Sweets, Bakery & Restaurant');
+  assert.equal(biz2.category, 'Sweets, Bakery & Restaurant');
+
+  // Test retrieval
+  const list = await db.getBusinessesForUser(testUserId);
+  assert.equal(list.length, 2);
+  const found = list.find((b) => b.id === biz1.id);
+  assert.ok(found);
+  assert.equal(found.businessName, 'Royal Heritage Sarees');
+  assert.equal(found.name, 'Royal Heritage Sarees');
+});
+
+test('Business Onboarding: handleOnboardingComplete provides full payload and prevents modal reopening loop', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  
+  // Guard in fetchUserData
+  assert.ok(
+    appSrc.includes('allowAutoOpenOnboarding = false'),
+    'fetchUserData must default allowAutoOpenOnboarding to false'
+  );
+  assert.ok(
+    appSrc.includes('else if (allowAutoOpenOnboarding)'),
+    'fetchUserData must only auto-open onboarding if allowAutoOpenOnboarding is true'
+  );
+
+  // handleOnboardingComplete payload keys
+  assert.ok(
+    appSrc.includes('businessName: resolvedName') && appSrc.includes('name: resolvedName'),
+    'handleOnboardingComplete must provide both businessName and name'
+  );
+  assert.ok(
+    appSrc.includes('businessType: resolvedType') && appSrc.includes('category: resolvedType'),
+    'handleOnboardingComplete must provide both businessType and category'
+  );
+  assert.ok(
+    appSrc.includes('fetchUserData(authToken, false)'),
+    'handleOnboardingComplete must pass false to allowAutoOpenOnboarding'
+  );
+});
+
+test('Business Onboarding: Modal resets step to 1 on isOpen change and on completion', () => {
+  const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  assert.ok(obSrc.includes('setStep(1)'), 'Must reset step to 1');
+  assert.ok(obSrc.includes('[isOpen]'), 'Must watch isOpen to reset step to 1');
+});
+
