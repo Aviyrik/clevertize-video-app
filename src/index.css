@@ -306,24 +306,18 @@ input::placeholder, textarea::placeholder {
   }
 }
 
-/* Full-screen Authentication Entry Screen & Modal responsive layout */
+/* Full-screen Authentication Entry Screen responsive layout */
 @media (max-width: 1024px) {
-  .auth-screen-card {
-    height: auto !important;
-    min-height: auto !important;
-    max-width: 620px !important;
-    flex-direction: column !important;
-    gap: 16px !important;
+  .auth-independent-logo {
+    top: 28px !important;
+    left: 32px !important;
   }
-  .auth-left-column {
-    flex: 0 0 240px !important;
-    width: 100% !important;
-    height: 240px !important;
+  .auth-floating-wrapper {
+    padding: 36px 32px !important;
   }
-  .auth-right-column {
-    flex: 1 1 auto !important;
-    width: 100% !important;
-    padding: 24px 20px !important;
+  .auth-floating-panel {
+    max-width: 400px !important;
+    padding: 26px 28px !important;
   }
   .auth-modal-card {
     flex-direction: column !important;
@@ -339,19 +333,22 @@ input::placeholder, textarea::placeholder {
 
 @media (max-width: 640px) {
   .auth-screen-viewport {
-    padding: 12px !important;
+    overflow-y: auto !important;
   }
-  .auth-screen-card {
-    border-radius: 20px !important;
-    padding: 8px !important;
+  .auth-independent-logo {
+    top: 20px !important;
+    left: 20px !important;
   }
-  .auth-left-column {
-    flex: 0 0 170px !important;
-    height: 170px !important;
-    border-radius: 16px !important;
+  .auth-floating-wrapper {
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 76px 16px 28px 16px !important;
+    min-height: 100vh !important;
   }
-  .auth-right-column {
-    padding: 20px 14px !important;
+  .auth-floating-panel {
+    max-width: 100% !important;
+    padding: 24px 20px !important;
+    border-radius: 18px !important;
   }
 }
 

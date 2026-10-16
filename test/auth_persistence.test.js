@@ -232,29 +232,36 @@ test('Auth Redesign: AuthVideoShowcase component structure and video requirement
   assert.ok(code.includes('onError='), 'Video must handle errors gracefully');
   assert.ok(!code.match(/<video[^>]*\bcontrols\b/), 'Video tag must not display playback controls');
 
-  // Logo in upper-left
-  assert.ok(code.includes('CleverCuts'), 'Showcase must display CleverCuts logo');
-  assert.ok(code.includes('Clapperboard'), 'Showcase must include Clapperboard brand icon');
+  // Full-viewport coverage behind elements, uncropped
+  assert.ok(code.includes("position: 'fixed'") || code.includes('position: "fixed"'), 'Video showcase must position fixed to cover full viewport');
+  assert.ok(code.includes('inset: 0') || code.includes('top: 0'), 'Video showcase must cover full viewport');
 });
 
-test('Auth Redesign: AuthScreen layout, fields, and states', () => {
+test('Auth Redesign: AuthScreen layout, floating panel, and independent logo', () => {
   const authScreenPath = path.join(__dirname, '../src/components/v2/AuthScreen.jsx');
   assert.ok(fs.existsSync(authScreenPath), 'AuthScreen component must exist');
 
   const code = fs.readFileSync(authScreenPath, 'utf8');
 
-  // Architecture: Imports AuthVideoShowcase
+  // Architecture: Imports AuthVideoShowcase as full-screen background
   assert.ok(code.includes("import AuthVideoShowcase from './AuthVideoShowcase.jsx'"), 'AuthScreen must import AuthVideoShowcase');
-  assert.ok(code.includes('<AuthVideoShowcase'), 'AuthScreen must render AuthVideoShowcase in left section');
+  assert.ok(code.includes('<AuthVideoShowcase'), 'AuthScreen must render AuthVideoShowcase as full-screen background');
 
-  // 2-column layout (~55% left, ~45% right)
-  assert.ok(code.includes('auth-left-column'), 'Must define left column class');
-  assert.ok(code.includes('auth-right-column'), 'Must define right column class');
-  assert.ok(code.includes('55%'), 'Left column must occupy ~55% width');
-  assert.ok(code.includes('45%'), 'Right column must occupy ~45% width');
+  // Removed old two-card composition
+  assert.ok(!code.includes('auth-screen-card'), 'Must remove old outer card .auth-screen-card');
+  assert.ok(!code.includes('auth-left-column'), 'Must remove separate left card .auth-left-column');
+  assert.ok(!code.includes('auth-right-column'), 'Must remove separate right card .auth-right-column');
 
-  // Form width constraint (~440-480px)
-  assert.ok(code.includes('460px') || code.includes('440px') || code.includes('480px'), 'Form inner container must have max-width ~440-480px');
+  // Independent CleverCuts logo directly over full-screen video in top-left
+  assert.ok(code.includes('auth-independent-logo'), 'Must render independent logo floating over video in top-left');
+  assert.ok(code.includes('CleverCuts'), 'Must render CleverCuts brand title');
+  assert.ok(code.includes('Clapperboard'), 'Must render Clapperboard brand icon');
+
+  // Floating authentication panel on the right
+  assert.ok(code.includes('auth-floating-wrapper'), 'Must define floating panel wrapper');
+  assert.ok(code.includes('auth-floating-panel'), 'Must define floating panel on the right');
+  assert.ok(code.includes('430px') || code.includes('420px') || code.includes('440px'), 'Floating panel must have width ~400-440px');
+  assert.ok(code.includes('rgba(14, 14, 22') || code.includes('backdrop-filter: blur(18px)'), 'Panel must have translucent dark surface with backdrop blur');
 
   // Headers and titles
   assert.ok(code.includes('Create an account'), 'Must support "Create an account" for signup');
@@ -300,8 +307,7 @@ test('Auth Redesign: AuthModal incorporates AuthVideoShowcase and modal controls
   assert.ok(code.includes("import AuthVideoShowcase from './AuthVideoShowcase.jsx'"), 'AuthModal must import AuthVideoShowcase');
   assert.ok(code.includes('<AuthVideoShowcase'), 'AuthModal must render AuthVideoShowcase');
 
-  // Two column layout and close button
-  assert.ok(code.includes('auth-modal-card'), 'Must define modal card layout');
+  // Modal controls
   assert.ok(code.includes('Close modal') || code.includes('onClose'), 'Must include close trigger');
   assert.ok(code.includes('Create an account') && code.includes('Welcome back'), 'Must support both signup and login modes');
   assert.ok(code.includes('Sign up with Google') && code.includes('Continue with Google'), 'Must support Google OAuth buttons');
@@ -311,9 +317,9 @@ test('Auth Redesign: Responsive styles in index.css for mobile and tablet', () =
   const cssPath = path.join(__dirname, '../src/index.css');
   const css = fs.readFileSync(cssPath, 'utf8');
 
-  assert.ok(css.includes('.auth-screen-card'), 'CSS must define .auth-screen-card');
-  assert.ok(css.includes('.auth-left-column'), 'CSS must define .auth-left-column');
-  assert.ok(css.includes('.auth-right-column'), 'CSS must define .auth-right-column');
+  assert.ok(css.includes('.auth-independent-logo'), 'CSS must define .auth-independent-logo');
+  assert.ok(css.includes('.auth-floating-wrapper'), 'CSS must define .auth-floating-wrapper');
+  assert.ok(css.includes('.auth-floating-panel'), 'CSS must define .auth-floating-panel');
   assert.ok(css.includes('@media (max-width: 1024px)'), 'CSS must include tablet media query');
   assert.ok(css.includes('@media (max-width: 640px)'), 'CSS must include mobile media query');
 });
