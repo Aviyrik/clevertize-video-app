@@ -225,6 +225,25 @@ test("V2 Entry Point: /api/research/url validates input and returns structured e
   assert.ok(Array.isArray(res.body.products), "products must be an array");
 });
 
+test("V2 Entry Point: /api/research/url extracts domain brand and standard category without prior brand interference", async () => {
+  const amazonRes = await post("/api/research/url", {
+    url: "https://www.amazon.com",
+  });
+  assert.equal(amazonRes.status, 200);
+  assert.equal(amazonRes.body.brandName, "Amazon", "Should extract Amazon from amazon.com");
+  assert.ok(amazonRes.body.businessType, "businessType must be returned");
+  assert.ok(amazonRes.body.category, "category alias must be returned");
+  assert.equal(amazonRes.body.businessType, amazonRes.body.category);
+
+  // Even if an unrelated stale brand name was passed, URL domain brand takes precedence for brandName
+  const kalyanRes = await post("/api/research/url", {
+    url: "https://www.kalyanjewellers.net",
+  });
+  assert.equal(kalyanRes.status, 200);
+  assert.equal(kalyanRes.body.brandName, "Kalyan Jewellers");
+  assert.equal(kalyanRes.body.businessType, "Jewellery & Accessories");
+});
+
 test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs quality gate", async () => {
   // Empty script -> 400
   const badRes = await post("/api/script/validate-and-import", { rawScript: "" });

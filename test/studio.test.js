@@ -1916,3 +1916,26 @@ test('Business Onboarding: Modal resets step to 1 on isOpen change and on comple
   assert.ok(obSrc.includes('[isOpen]'), 'Must watch isOpen to reset step to 1');
 });
 
+test('UrlResearchModal: Exports 12 standard business categories, renders select dropdown, and updates brand and category', () => {
+  const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
+
+  // Verify STANDARD_BUSINESS_CATEGORIES
+  assert.ok(modalSrc.includes('STANDARD_BUSINESS_CATEGORIES'), 'STANDARD_BUSINESS_CATEGORIES must be declared');
+  assert.ok(modalSrc.includes('Saree, Clothing & Apparel'), 'Saree category must be present');
+  assert.ok(modalSrc.includes('Jewellery & Accessories'), 'Jewellery category must be present');
+  assert.ok(modalSrc.includes('Kirana, Grocery & Supermarket'), 'Kirana category must be present');
+  assert.ok(modalSrc.includes('Other Local Business'), 'Other Local Business category must be present');
+
+  // Verify category input is a <select> dropdown, not a plain <input>
+  assert.ok(modalSrc.includes('<select'), 'Business Category must use a <select> dropdown');
+  assert.ok(modalSrc.includes('STANDARD_BUSINESS_CATEGORIES.map'), 'Must map over standard categories in select');
+
+  // Verify fetch body sends clean URL without locking into prior stale business name
+  assert.ok(modalSrc.includes('url: urlInput.trim()'), 'Must pass trimmed URL');
+  assert.ok(!modalSrc.includes('businessName: draftBrand || businessName'), 'Must not send stale draftBrand in scan request');
+
+  // Verify update logic on API response
+  assert.ok(modalSrc.includes('if (data.brandName) setDraftBrand(data.brandName)'), 'Must update draftBrand from response');
+  assert.ok(modalSrc.includes('setDraftCategory(data.businessType || data.category)'), 'Must update draftCategory from response');
+});
+

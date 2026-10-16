@@ -447,6 +447,99 @@ function isDisallowedUrl(urlString) {
   }
 }
 
+const STANDARD_BUSINESS_CATEGORIES = [
+  "Saree, Clothing & Apparel",
+  "Jewellery & Accessories",
+  "Sweets, Bakery & Restaurant",
+  "Kirana, Grocery & Supermarket",
+  "Electronics, Mobile & Appliances",
+  "Salon, Spa & Beauty",
+  "Healthcare, Clinic & Pharmacy",
+  "Real Estate & Home Decor",
+  "Gym, Fitness & Yoga",
+  "Education, Coaching & Tuition",
+  "Automobile & Garage",
+  "Other Local Business",
+];
+
+function extractDomainBrand(urlStr) {
+  try {
+    const raw = urlStr.startsWith("http") ? urlStr : `https://${urlStr}`;
+    let hostname = new URL(raw).hostname.toLowerCase();
+    hostname = hostname.replace(/^www\./, "");
+    const parts = hostname.split(".");
+    let brandKey = parts[0];
+    if (brandKey.length <= 2 && parts.length > 2) {
+      brandKey = parts[1];
+    }
+    const KNOWN_BRANDS = {
+      amazon: "Amazon",
+      flipkart: "Flipkart",
+      myntra: "Myntra",
+      ajio: "Ajio",
+      nykaa: "Nykaa",
+      zomato: "Zomato",
+      swiggy: "Swiggy",
+      blinkit: "Blinkit",
+      zepto: "Zepto",
+      bigbasket: "BigBasket",
+      tanishq: "Tanishq",
+      kalyanjewellers: "Kalyan Jewellers",
+      malabargoldanddiamonds: "Malabar Gold & Diamonds",
+      tatacliq: "Tata CLiQ",
+      reliancedigital: "Reliance Digital",
+      croma: "Croma",
+    };
+    if (KNOWN_BRANDS[brandKey]) return KNOWN_BRANDS[brandKey];
+
+    const words = brandKey.split(/[-_]/).filter(Boolean);
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  } catch {
+    return "";
+  }
+}
+
+function matchClosestCategory(catStr, defaultCat = "Other Local Business") {
+  if (!catStr || typeof catStr !== "string") return defaultCat;
+  const s = catStr.toLowerCase();
+  if (s.includes("jewel") || s.includes("gold") || s.includes("diamond") || s.includes("ornament")) {
+    return "Jewellery & Accessories";
+  }
+  if (s.includes("saree") || s.includes("cloth") || s.includes("apparel") || s.includes("fashion") || s.includes("wear") || s.includes("boutique") || s.includes("tailor")) {
+    return "Saree, Clothing & Apparel";
+  }
+  if (s.includes("sweet") || s.includes("bakery") || s.includes("restaurant") || s.includes("food") || s.includes("cafe") || s.includes("mithai") || s.includes("dining")) {
+    return "Sweets, Bakery & Restaurant";
+  }
+  if (s.includes("kirana") || s.includes("grocery") || s.includes("supermarket") || s.includes("fmcg") || s.includes("provision") || s.includes("mart") || s.includes("ecommerce") || s.includes("e-commerce") || s.includes("marketplace")) {
+    return "Kirana, Grocery & Supermarket";
+  }
+  if (s.includes("electronic") || s.includes("mobile") || s.includes("appliance") || s.includes("gadget") || s.includes("phone")) {
+    return "Electronics, Mobile & Appliances";
+  }
+  if (s.includes("salon") || s.includes("spa") || s.includes("beauty") || s.includes("parlour") || s.includes("hair") || s.includes("makeup") || s.includes("skin")) {
+    return "Salon, Spa & Beauty";
+  }
+  if (s.includes("health") || s.includes("clinic") || s.includes("pharmacy") || s.includes("doctor") || s.includes("medical") || s.includes("hospital")) {
+    return "Healthcare, Clinic & Pharmacy";
+  }
+  if (s.includes("real estate") || s.includes("home decor") || s.includes("interior") || s.includes("furniture") || s.includes("property")) {
+    return "Real Estate & Home Decor";
+  }
+  if (s.includes("gym") || s.includes("fitness") || s.includes("yoga") || s.includes("workout")) {
+    return "Gym, Fitness & Yoga";
+  }
+  if (s.includes("education") || s.includes("coaching") || s.includes("tuition") || s.includes("school") || s.includes("academy") || s.includes("class")) {
+    return "Education, Coaching & Tuition";
+  }
+  if (s.includes("auto") || s.includes("garage") || s.includes("car") || s.includes("bike") || s.includes("mechanic") || s.includes("repair")) {
+    return "Automobile & Garage";
+  }
+  const exact = STANDARD_BUSINESS_CATEGORIES.find((c) => c.toLowerCase() === s);
+  if (exact) return exact;
+  return defaultCat;
+}
+
 // 1B) URL Web Scraping & Structured Business Analysis (V2 Entry Point)
 app.post("/api/research/url", async (req, res) => {
   const { url, businessName, businessType, town } = req.body || {};
@@ -465,6 +558,8 @@ app.post("/api/research/url", async (req, res) => {
     return res.status(400).json({ error: disallowed });
   }
 
+  const domainBrand = extractDomainBrand(targetUrl);
+
   let fetchedHtml = "";
   let fetchSucceeded = false;
   let fetchError = null;
@@ -475,8 +570,8 @@ app.post("/api/research/url", async (req, res) => {
     const response = await global.fetch(targetUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Clevertize-Bot/2.0",
-        "Accept": "text/html,application/xhtml+xml,text/plain",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
+        "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
       },
     });
     clearTimeout(timeout);
@@ -511,16 +606,15 @@ app.post("/api/research/url", async (req, res) => {
     headings = h1Matches.map((m) => m[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 3);
   }
 
-  // If fetch succeeded, use Claude or fallback heuristic to analyze the business
-  if (fetchSucceeded) {
-    try {
-      const systemPrompt = `You are an AI brand and business researcher for commercial video advertising.
-Given the HTML title, description, and key headings from a company's website, extract structured information for a 15-30 second video commercial:
+  // Analyze the business with Claude AI or heuristic extractor
+  try {
+    const systemPrompt = `You are an AI brand and business researcher for commercial video advertising.
+Given the WEBSITE URL, domain name, HTML title, meta description, and key headings from a company's website, extract structured information for a 15-30 second video commercial:
 Output JSON between @@JSON@@ and @@END@@ markers:
 @@JSON@@
 {
-  "brandName": "Extracted brand/company name",
-  "businessType": "Closest business category (e.g. Saree, Jewellery, Sweet Shop, Clothing, Electronics, Restaurant, Salon, etc.)",
+  "brandName": "Extracted brand/company name (e.g. Amazon, Kalyan Jewellers, Shree Silk Sarees)",
+  "businessType": "Closest business category from these exact options: Saree, Clothing & Apparel | Jewellery & Accessories | Sweets, Bakery & Restaurant | Kirana, Grocery & Supermarket | Electronics, Mobile & Appliances | Salon, Spa & Beauty | Healthcare, Clinic & Pharmacy | Real Estate & Home Decor | Gym, Fitness & Yoga | Education, Coaching & Tuition | Automobile & Garage | Other Local Business",
   "town": "City/town if detected, or empty string",
   "suggestedBrief": "Compelling 2-3 sentence creative video brief describing key products, target audience, and customer appeal",
   "products": ["Product/Service 1", "Product/Service 2"],
@@ -530,67 +624,71 @@ Output JSON between @@JSON@@ and @@END@@ markers:
 }
 @@END@@`;
 
-      const promptContent = `WEBSITE URL: ${targetUrl}
+    const promptContent = `WEBSITE URL: ${targetUrl}
+DOMAIN BRAND: ${domainBrand || "Not detected"}
 PAGE TITLE: ${pageTitle || "None"}
 META DESCRIPTION: ${metaDescription || "None"}
-HEADINGS: ${headings.join(" | ") || "None"}
-USER PROVIDED BRAND: ${businessName || "Not specified"}
-USER PROVIDED CATEGORY: ${businessType || "Not specified"}
-USER PROVIDED TOWN: ${town || "Not specified"}`;
+HEADINGS: ${headings.join(" | ") || "None"}`;
 
-      const raw = await callClaude({
-        system: systemPrompt,
-        content: promptContent,
-        maxTokens: 1000,
-        thinking: false,
-      });
+    const raw = await callClaude({
+      system: systemPrompt,
+      content: promptContent,
+      maxTokens: 1000,
+      thinking: false,
+    });
 
-      const parsed = parseJSONBlock(raw);
-      return res.json({
-        status: "success",
-        url: targetUrl,
-        fetchSucceeded: true,
-        brandName: parsed.brandName || businessName || pageTitle.split(/[-–|]/)[0].trim() || "My Business",
-        businessType: parsed.businessType || businessType || "Retail Business",
-        town: parsed.town || town || "",
-        suggestedBrief: parsed.suggestedBrief || metaDescription || `High-converting commercial video showcasing the products and services of ${pageTitle || targetUrl}`,
-        products: Array.isArray(parsed.products) ? parsed.products : [pageTitle || "Featured Products"],
-        keyOffer: parsed.keyOffer || "",
-        brandTone: parsed.brandTone || "Relatable & Trustworthy",
-        pageTitle,
-        metaDescription,
-      });
-    } catch (e) {
-      console.warn("[api/research/url] Claude parsing fallback:", e.message);
-      return res.json({
-        status: "success",
-        url: targetUrl,
-        fetchSucceeded: true,
-        brandName: businessName || pageTitle.split(/[-–|]/)[0].trim() || "My Business",
-        businessType: businessType || "Retail Business",
-        town: town || "",
-        suggestedBrief: metaDescription || `Specialized video showcasing authentic quality from ${pageTitle || targetUrl}`,
-        products: [pageTitle || "Featured Products"],
-        keyOffer: "",
-        brandTone: "Warm & Trustworthy",
-        pageTitle,
-        metaDescription,
-      });
-    }
+    const parsed = parseJSONBlock(raw);
+    const extractedBrand =
+      (parsed && parsed.brandName && parsed.brandName.trim()) ||
+      domainBrand ||
+      (pageTitle ? pageTitle.split(/[-–|]/)[0].trim() : "") ||
+      (businessName && businessName.trim()) ||
+      "My Business";
+
+    const extractedCategory = matchClosestCategory(
+      (parsed && (parsed.businessType || parsed.category)) || pageTitle || targetUrl,
+      businessType || "Other Local Business"
+    );
+
+    return res.json({
+      status: "success",
+      url: targetUrl,
+      fetchSucceeded: true,
+      brandName: extractedBrand,
+      businessType: extractedCategory,
+      category: extractedCategory,
+      town: (parsed && parsed.town) || town || "",
+      suggestedBrief:
+        (parsed && parsed.suggestedBrief) ||
+        metaDescription ||
+        `High-converting commercial showcasing the products and services of ${extractedBrand}`,
+      products: Array.isArray(parsed && parsed.products) ? parsed.products : [pageTitle || "Featured Products"],
+      keyOffer: (parsed && parsed.keyOffer) || "",
+      brandTone: (parsed && parsed.brandTone) || "Relatable & Trustworthy",
+      pageTitle,
+      metaDescription,
+    });
+  } catch (e) {
+    console.warn("[api/research/url] Claude parsing or fetch fallback:", e.message);
+    const fallbackBrand = domainBrand || (pageTitle ? pageTitle.split(/[-–|]/)[0].trim() : "") || (businessName && businessName.trim()) || "My Business";
+    const fallbackCategory = matchClosestCategory(pageTitle || targetUrl, businessType || "Other Local Business");
+    return res.json({
+      status: fetchSucceeded ? "success" : "fallback",
+      url: targetUrl,
+      fetchSucceeded,
+      message: fetchSucceeded ? "Extracted from website" : `Could not connect to ${targetUrl} directly (${fetchError || "Blocked by target server"}). Detected brand details below.`,
+      brandName: fallbackBrand,
+      businessType: fallbackCategory,
+      category: fallbackCategory,
+      town: town || "",
+      suggestedBrief: metaDescription || `High-converting commercial showcasing the products, customer care, and value of ${fallbackBrand}.`,
+      products: [pageTitle || "Featured Products"],
+      keyOffer: "",
+      brandTone: "Warm & Trustworthy",
+      pageTitle,
+      metaDescription,
+    });
   }
-
-  // Graceful Fallback if URL is unreachable:
-  return res.json({
-    status: "fallback",
-    url: targetUrl,
-    fetchSucceeded: false,
-    message: `Could not connect to ${targetUrl} (${fetchError || "Unreachable"}). You can enter your details manually or continue with category defaults.`,
-    brandName: businessName || targetUrl.replace(/^https?:\/\/(www\.)?/, "").split(/[\/.]/)[0].toUpperCase(),
-    businessType: businessType || "Retail Business",
-    town: town || "",
-    suggestedBrief: `High-converting commercial highlighting the authentic quality and personalized customer care of our business.`,
-    products: ["Featured Products"],
-  });
 });
 
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)

@@ -14,12 +14,27 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
+export const STANDARD_BUSINESS_CATEGORIES = [
+  'Saree, Clothing & Apparel',
+  'Jewellery & Accessories',
+  'Sweets, Bakery & Restaurant',
+  'Kirana, Grocery & Supermarket',
+  'Electronics, Mobile & Appliances',
+  'Salon, Spa & Beauty',
+  'Healthcare, Clinic & Pharmacy',
+  'Real Estate & Home Decor',
+  'Gym, Fitness & Yoga',
+  'Education, Coaching & Tuition',
+  'Automobile & Garage',
+  'Other Local Business',
+];
+
 const URL_PRESETS = [
   {
     name: 'Saree Boutique',
     url: 'https://shreesilksarees.in',
     sampleBrand: 'Shree Silk & Sarees',
-    category: 'Saree, Ethnic Wear & Bridal Store',
+    category: 'Saree, Clothing & Apparel',
   },
   {
     name: 'Neighborhood Kirana',
@@ -31,7 +46,7 @@ const URL_PRESETS = [
     name: 'Artisan Jewellery',
     url: 'https://ratnamjewellers.com',
     sampleBrand: 'Ratnam Jewellers',
-    category: 'Jewellery, Gold & Ornaments',
+    category: 'Jewellery & Accessories',
   },
 ];
 
@@ -50,10 +65,25 @@ export default function UrlResearchModal({
   const [errorMsg, setErrorMsg] = useState('');
 
   // Editable draft states after scan
-  const [draftBrand, setDraftBrand] = useState(businessName || '');
-  const [draftCategory, setDraftCategory] = useState(businessType || 'Retail Business');
+  const isDefaultKanti = (businessName || '').trim().toLowerCase() === 'kanti sweets';
+  const [draftBrand, setDraftBrand] = useState(isDefaultKanti ? '' : (businessName || ''));
+  const [draftCategory, setDraftCategory] = useState(businessType || STANDARD_BUSINESS_CATEGORIES[0]);
   const [draftTown, setDraftTown] = useState(town || '');
   const [draftBrief, setDraftBrief] = useState('');
+
+  // Reset/sync draft states whenever modal opens or initial props change
+  React.useEffect(() => {
+    if (isOpen) {
+      setUrlInput(initialUrl || '');
+      const isKanti = (businessName || '').trim().toLowerCase() === 'kanti sweets';
+      setDraftBrand(isKanti ? '' : (businessName || ''));
+      setDraftCategory(businessType || STANDARD_BUSINESS_CATEGORIES[0]);
+      setDraftTown(town || '');
+      setScanResult(null);
+      setErrorMsg('');
+      setDraftBrief('');
+    }
+  }, [isOpen, initialUrl, businessName, businessType, town]);
 
   if (!isOpen) return null;
 
@@ -80,9 +110,6 @@ export default function UrlResearchModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: urlInput.trim(),
-          businessName: draftBrand || businessName,
-          businessType: draftCategory || businessType,
-          town: draftTown || town,
         }),
       });
 
@@ -94,23 +121,24 @@ export default function UrlResearchModal({
       const data = await res.json();
       setScanResult(data);
       if (data.brandName) setDraftBrand(data.brandName);
-      if (data.businessType) setDraftCategory(data.businessType);
+      if (data.businessType || data.category) setDraftCategory(data.businessType || data.category);
       if (data.town) setDraftTown(data.town);
       if (data.suggestedBrief) setDraftBrief(data.suggestedBrief);
     } catch (err) {
       console.warn('[research/url] error:', err.message);
-      // Honest fallback
-      const cleanUrl = urlInput.trim().replace(/^https?:\/\/(www\.)?/, '').split(/[\/.]/)[0].toUpperCase();
+      // Honest fallback based on domain name
+      let cleanUrl = urlInput.trim().replace(/^https?:\/\/(www\.)?/, '').split(/[\/.]/)[0];
+      cleanUrl = cleanUrl ? cleanUrl.charAt(0).toUpperCase() + cleanUrl.slice(1) : 'My Brand';
       setScanResult({
         status: 'fallback',
         url: urlInput.trim(),
         fetchSucceeded: false,
         message: `Could not connect to URL directly (${err.message}). You can edit the detected details below.`,
-        brandName: draftBrand || cleanUrl || 'My Brand',
-        businessType: draftCategory || 'Retail Business',
+        brandName: cleanUrl,
+        businessType: draftCategory || STANDARD_BUSINESS_CATEGORIES[0],
         suggestedBrief: `High-converting commercial showcasing the authentic quality and customer care of our brand.`,
       });
-      setDraftBrand(draftBrand || cleanUrl || 'My Brand');
+      setDraftBrand(cleanUrl);
       setDraftBrief(`High-converting commercial showcasing the authentic quality and customer care of our brand.`);
     } finally {
       setIsScanning(false);
@@ -380,8 +408,7 @@ export default function UrlResearchModal({
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Business Category
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={draftCategory}
                     onChange={(e) => setDraftCategory(e.target.value)}
                     style={{
@@ -392,8 +419,18 @@ export default function UrlResearchModal({
                       border: '1px solid var(--border-default)',
                       borderRadius: 6,
                       color: 'var(--text-primary)',
+                      cursor: 'pointer',
                     }}
-                  />
+                  >
+                    {!STANDARD_BUSINESS_CATEGORIES.includes(draftCategory) && draftCategory && (
+                      <option value={draftCategory}>{draftCategory}</option>
+                    )}
+                    {STANDARD_BUSINESS_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
