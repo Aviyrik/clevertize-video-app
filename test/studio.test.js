@@ -2038,3 +2038,28 @@ test('My Projects Video Experience: ScriptLibraryView provides video download, b
   assert.ok(libSrc.includes('handleCopyScript') && libSrc.includes('Copy 4 Scenes'), 'Must support Copy 4 Scenes');
 });
 
+test('Account Settings Profile Picture: AccountModal supports profile photo upload, preview, remove, and AppShell sidebar display', async () => {
+  const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
+  assert.ok(modalSrc.includes('accept="image/*"'), 'AccountModal must have image file input');
+  assert.ok(modalSrc.includes('handleFileChange'), 'AccountModal must handle photo file selection');
+  assert.ok(modalSrc.includes('handleRemoveAvatar'), 'AccountModal must support removing profile photo');
+  assert.ok(modalSrc.includes('onUpdateProfile'), 'AccountModal must trigger onUpdateProfile');
+  assert.ok(modalSrc.includes('Camera'), 'AccountModal must render camera badge');
+
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+  assert.ok(shellSrc.includes('currentUser.avatar'), 'AppShell must display currentUser.avatar when present');
+
+  const db = require('../engine/db.js');
+  assert.ok(typeof db.updateUserProfile === 'function', 'db must export updateUserProfile');
+  const user = await db.createUser({
+    email: `avatar_test_${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Avatar Tester',
+  });
+  const updated = await db.updateUserProfile(user.id, {
+    avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  });
+  assert.ok(updated.avatar && updated.avatar.startsWith('data:image/png'), 'updateUserProfile must persist avatar');
+});
+
+

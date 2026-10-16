@@ -1333,6 +1333,32 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4500);
   };
 
+  const handleUpdateProfile = async (updates) => {
+    try {
+      setCurrentUser((prev) => (prev ? { ...prev, ...updates } : prev));
+      if (authToken) {
+        const res = await fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(updates),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setCurrentUser(data.user);
+          }
+        }
+      }
+      setToastMessage('Profile updated successfully!');
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+    }
+  };
+
   const handleSaveCurrentProject = async () => {
     if (!currentUser || !authToken) {
       setIsAuthModalOpen(true);
@@ -4296,6 +4322,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
+        onUpdateProfile={handleUpdateProfile}
         projectCount={userProjects.length}
         businessCount={userBusinesses.length}
       />

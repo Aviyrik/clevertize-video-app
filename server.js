@@ -1134,6 +1134,28 @@ app.get("/api/auth/me", authRequired, async (req, res) => {
   }
 });
 
+app.patch("/api/auth/profile", authRequired, async (req, res) => {
+  try {
+    const { name, avatar } = req.body || {};
+    const updated = await db.updateUserProfile(req.user.id, { name, avatar });
+    res.json({ status: "success", user: updated });
+  } catch (err) {
+    console.error("[auth] Update profile error:", err);
+    res.status(400).json({ error: err.message || "Failed to update profile." });
+  }
+});
+
+app.put("/api/auth/profile", authRequired, async (req, res) => {
+  try {
+    const { name, avatar } = req.body || {};
+    const updated = await db.updateUserProfile(req.user.id, { name, avatar });
+    res.json({ status: "success", user: updated });
+  } catch (err) {
+    console.error("[auth] Update profile error:", err);
+    res.status(400).json({ error: err.message || "Failed to update profile." });
+  }
+});
+
 app.delete("/api/auth/account", authRequired, async (req, res) => {
   try {
     const userId = req.user.id;

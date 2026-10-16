@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   User,
@@ -10,6 +10,9 @@ import {
   Trash2,
   LogOut,
   RefreshCw,
+  Camera,
+  Upload,
+  Check,
 } from 'lucide-react';
 
 export default function AccountModal({
@@ -18,6 +21,7 @@ export default function AccountModal({
   currentUser,
   onLogout,
   onDeleteAccount,
+  onUpdateProfile,
   projectCount = 0,
   businessCount = 0,
 }) {
@@ -25,6 +29,15 @@ export default function AccountModal({
   const [confirmInput, setConfirmInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [avatar, setAvatar] = useState(currentUser?.avatar || null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (currentUser?.avatar !== undefined) {
+      setAvatar(currentUser.avatar || null);
+    }
+  }, [currentUser?.avatar]);
 
   if (!isOpen || !currentUser) return null;
 
@@ -33,6 +46,7 @@ export default function AccountModal({
     setShowConfirm(false);
     setConfirmInput('');
     setErrorMsg('');
+    setSuccessMsg('');
     onClose();
   };
 
@@ -47,6 +61,52 @@ export default function AccountModal({
     } catch (err) {
       setErrorMsg(err.message || 'Failed to delete account. Please try again.');
       setIsDeleting(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg('Profile photo must be less than 5MB.');
+      return;
+    }
+
+    setErrorMsg('');
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target.result;
+      setAvatar(dataUrl);
+      if (onUpdateProfile) {
+        try {
+          await onUpdateProfile({ avatar: dataUrl });
+          setSuccessMsg('Profile picture updated successfully!');
+          setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+          setErrorMsg('Failed to save profile picture.');
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatar(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (onUpdateProfile) {
+      try {
+        await onUpdateProfile({ avatar: null });
+        setSuccessMsg('Profile picture removed.');
+        setTimeout(() => setSuccessMsg(''), 3000);
+      } catch (err) {
+        setErrorMsg('Failed to update profile.');
+      }
     }
   };
 
@@ -77,7 +137,7 @@ export default function AccountModal({
       <div
         style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 490,
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
           borderRadius: 16,
@@ -118,7 +178,7 @@ export default function AccountModal({
                 Account Settings
               </h2>
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                CleverCuts Profile
+                CleverCuts Profile & Preferences
               </span>
             </div>
           </div>
@@ -164,78 +224,230 @@ export default function AccountModal({
             </div>
           )}
 
-          {/* User Profile Card */}
+          {successMsg && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#10B981',
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <Check size={16} />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* User Profile & Avatar Card */}
           <div
             style={{
-              padding: 16,
+              padding: 18,
               borderRadius: 12,
               backgroundColor: 'var(--bg-elevated)',
               border: '1px solid var(--border-subtle)',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               gap: 16,
             }}
           >
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--accent-primary)',
-                fontSize: 20,
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              {/* Avatar with Upload Badge */}
+              <div
+                style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to change profile picture"
+              >
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={currentUser.name || 'Profile'}
+                    style={{
+                      width: 68,
+                      height: 68,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid var(--accent-primary)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 68,
+                      height: 68,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-subtle)',
+                      color: 'var(--accent-primary)',
+                      fontSize: 24,
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px dashed var(--border-default)',
+                    }}
+                  >
+                    {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                  </div>
+                )}
+
+                {/* Camera Overlay Icon Badge */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                    border: '2px solid var(--bg-surface)',
+                  }}
+                  title="Upload profile picture"
+                >
+                  <Camera size={12} />
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+              </div>
+
+              {/* User Details & Photo Actions */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    marginBottom: 3,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {currentUser.name || 'CleverCuts Creator'}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 4,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  <Mail size={12} style={{ flexShrink: 0 }} />
+                  <span>{currentUser.email}</span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Calendar size={11} />
+                  <span>Joined {memberSince}</span>
+                </div>
+              </div>
             </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
+            {/* Profile Picture Action Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                paddingTop: 12,
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
                 style={{
-                  fontSize: 15,
-                  fontWeight: 700,
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
                   color: 'var(--text-primary)',
-                  marginBottom: 3,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {currentUser.name || 'CleverCuts Creator'}
-              </div>
-              <div
-                style={{
                   fontSize: 12,
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  marginBottom: 4,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                  e.currentTarget.style.color = 'var(--accent-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }}
               >
-                <Mail size={12} style={{ flexShrink: 0 }} />
-                <span>{currentUser.email}</span>
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'var(--text-tertiary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Calendar size={11} />
-                <span>Joined {memberSince}</span>
-              </div>
+                <Upload size={13} />
+                <span>{avatar ? 'Change Profile Picture' : 'Upload Profile Picture'}</span>
+              </button>
+
+              {avatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-tertiary)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#EF4444';
+                    e.currentTarget.style.color = '#EF4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Remove</span>
+                </button>
+              )}
+
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+                JPG, PNG, or WebP up to 5MB
+              </span>
             </div>
           </div>
 
@@ -451,12 +663,12 @@ export default function AccountModal({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Modal Footer: Logout */}
         <div
           style={{
             padding: '14px 24px',
             borderTop: '1px solid var(--border-subtle)',
-            backgroundColor: 'rgba(11, 12, 16, 0.5)',
+            backgroundColor: 'var(--bg-elevated)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -466,43 +678,50 @@ export default function AccountModal({
             type="button"
             onClick={() => {
               handleClose();
-              onLogout();
+              if (onLogout) onLogout();
             }}
-            disabled={isDeleting}
             style={{
               background: 'none',
               border: 'none',
               color: 'var(--text-tertiary)',
-              cursor: isDeleting ? 'not-allowed' : 'pointer',
-              fontSize: 12,
-              fontWeight: 600,
-              display: 'flex',
+              cursor: 'pointer',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
               padding: '6px 8px',
               borderRadius: 6,
+              transition: 'color 0.15s ease, background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#EF4444';
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-tertiary)';
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            <LogOut size={13} />
+            <LogOut size={14} />
             <span>Sign Out</span>
           </button>
 
           <button
             type="button"
             onClick={handleClose}
-            disabled={isDeleting}
             style={{
-              padding: '7px 16px',
-              borderRadius: 6,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: isDeleting ? 'not-allowed' : 'pointer',
+              padding: '8px 18px',
+              borderRadius: 8,
+              backgroundColor: 'var(--accent-primary)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
             }}
           >
-            Close
+            Done
           </button>
         </div>
       </div>

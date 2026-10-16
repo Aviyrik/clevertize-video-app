@@ -47,10 +47,13 @@ async function ensurePgTables() {
         id VARCHAR(255) PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255),
+        avatar TEXT,
         password_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
 
       CREATE TABLE IF NOT EXISTS sessions (
         token VARCHAR(255) PRIMARY KEY,
@@ -227,7 +230,7 @@ async function findUserByEmail(email) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, password_hash, salt, created_at FROM users WHERE LOWER(email) = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, created_at FROM users WHERE LOWER(email) = $1',
       [cleanEmail]
     );
     if (!res.rows.length) return null;
@@ -236,6 +239,7 @@ async function findUserByEmail(email) {
       id: r.id,
       email: r.email,
       name: r.name,
+      avatar: r.avatar || null,
       passwordHash: r.password_hash,
       salt: r.salt,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
@@ -243,7 +247,12 @@ async function findUserByEmail(email) {
   }
 
   const users = readJsonFile('users.json', []);
-  return users.find((u) => u.email.toLowerCase() === cleanEmail) || null;
+  const u = users.find((x) => x.email.toLowerCase() === cleanEmail);
+  if (!u) return null;
+  return {
+    ...u,
+    avatar: u.avatar || null,
+  };
 }
 
 async function findUserById(userId) {
@@ -253,7 +262,7 @@ async function findUserById(userId) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, password_hash, salt, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, created_at FROM users WHERE id = $1',
       [userId]
     );
     if (!res.rows.length) return null;
@@ -262,6 +271,7 @@ async function findUserById(userId) {
       id: r.id,
       email: r.email,
       name: r.name,
+      avatar: r.avatar || null,
       passwordHash: r.password_hash,
       salt: r.salt,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
@@ -269,10 +279,15 @@ async function findUserById(userId) {
   }
 
   const users = readJsonFile('users.json', []);
-  return users.find((u) => u.id === userId) || null;
+  const u = users.find((x) => x.id === userId);
+  if (!u) return null;
+  return {
+    ...u,
+    avatar: u.avatar || null,
+  };
 }
 
-async function createUser({ email, password, name = '' }) {
+async function createUser({ email, password, name = '', avatar = null }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
     throw new Error('Please enter a valid email address.');
@@ -295,16 +310,17 @@ async function createUser({ email, password, name = '' }) {
   if (pool) {
     await ensurePgTables();
     await pool.query(
-      'INSERT INTO users (id, email, name, password_hash, salt, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
-      [id, cleanEmail, userName, hash, salt, createdAt]
+      'INSERT INTO users (id, email, name, avatar, password_hash, salt, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [id, cleanEmail, userName, avatar || null, hash, salt, createdAt]
     );
-    return { id, email: cleanEmail, name: userName, createdAt };
+    return { id, email: cleanEmail, name: userName, avatar: avatar || null, createdAt };
   }
 
   const user = {
     id,
     email: cleanEmail,
     name: userName,
+    avatar: avatar || null,
     passwordHash: hash,
     salt,
     createdAt,
@@ -318,6 +334,7 @@ async function createUser({ email, password, name = '' }) {
     id: user.id,
     email: user.email,
     name: user.name,
+    avatar: user.avatar || null,
     createdAt: user.createdAt,
   };
 }
@@ -338,6 +355,7 @@ async function authenticateUser({ email, password }) {
     id: user.id,
     email: user.email,
     name: user.name,
+    avatar: user.avatar || null,
     createdAt: user.createdAt,
   };
 }
@@ -370,6 +388,38 @@ async function deleteUser(userId) {
     writeJsonFile('users.json', filteredUsers);
   }
   return changed;
+}
+
+async function updateUserProfile(userId, { name, avatar }) {
+  if (!userId) throw new Error('User ID is required.');
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query(
+      `UPDATE users SET
+         name = CASE WHEN $2::text IS NOT NULL THEN $2 ELSE name END,
+         avatar = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE avatar END
+       WHERE id = $1`,
+      [userId, name !== undefined ? name : null, avatar !== undefined ? avatar : null]
+    );
+    return findUserById(userId);
+  }
+
+  const users = readJsonFile('users.json', []);
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw new Error('User not found.');
+  if (name !== undefined) users[idx].name = name;
+  if (avatar !== undefined) users[idx].avatar = avatar;
+  writeJsonFile('users.json', users);
+  const u = users[idx];
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    avatar: u.avatar || null,
+    createdAt: u.createdAt,
+  };
 }
 
 // ----------------------------------------------------
@@ -414,7 +464,7 @@ async function getUserBySessionToken(token) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.created_at
+      `SELECT u.id, u.email, u.name, u.avatar, u.created_at
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -426,6 +476,7 @@ async function getUserBySessionToken(token) {
       id: r.id,
       email: r.email,
       name: r.name,
+      avatar: r.avatar || null,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -442,6 +493,7 @@ async function getUserBySessionToken(token) {
     id: user.id,
     email: user.email,
     name: user.name,
+    avatar: user.avatar || null,
     createdAt: user.createdAt,
   };
 }
@@ -816,4 +868,5 @@ module.exports = {
   getProjectById,
   saveProject,
   deleteProject,
+  updateUserProfile,
 };
