@@ -410,6 +410,7 @@ export default function ScriptLibraryView({
                           }
                         }}
                         title="Delete Project"
+                        aria-label={`Delete project ${proj.title || ''}`}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -577,6 +578,7 @@ export default function ScriptLibraryView({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={`Download generated video for ${proj.title || 'project'}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -706,6 +708,7 @@ export default function ScriptLibraryView({
                     <button
                       type="button"
                       onClick={(e) => handleCopyScript(e, proj)}
+                      aria-label={`Copy 4-scene script for ${proj.title || 'project'}`}
                       style={{
                         background: 'none',
                         border: 'none',

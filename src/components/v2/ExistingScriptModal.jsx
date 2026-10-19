@@ -301,6 +301,7 @@ export default function ExistingScriptModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             backgroundColor: 'var(--bg-elevated)',
+            flexShrink: 0,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -328,7 +329,9 @@ export default function ExistingScriptModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               background: 'none',
               border: 'none',
@@ -542,6 +545,7 @@ export default function ExistingScriptModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             backgroundColor: 'var(--bg-elevated)',
+            flexShrink: 0,
           }}
         >
           <button

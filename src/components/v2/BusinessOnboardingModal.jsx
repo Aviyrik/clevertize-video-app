@@ -457,6 +457,7 @@ export default function BusinessOnboardingModal({
               type="button"
               onClick={onClose}
               title="Close"
+              aria-label="Close setup modal"
               style={{
                 background: 'none',
                 border: 'none',

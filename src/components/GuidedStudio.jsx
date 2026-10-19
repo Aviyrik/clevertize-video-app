@@ -894,6 +894,7 @@ export function Screen02Brief({
           <button
             type="button"
             onClick={toggleRecording}
+            aria-label={isRecording ? 'Stop recording voice brief' : 'Dictate your brief using microphone'}
             style={{
               position: 'absolute',
               bottom: 12,
@@ -1175,6 +1176,7 @@ export function Screen02Brief({
               <button
                 type="button"
                 onClick={() => updateUserContext('productPhoto', null)}
+                aria-label="Remove product photo"
                 style={{
                   padding: '6px 10px',
                   borderRadius: 6,
@@ -1439,15 +1441,15 @@ export function Screen03Settings({
                     else updateUserContext('language', lang);
                   }}
                   style={{
-                    padding: '6px 14px',
-                    borderRadius: 20,
+                    padding: '7px 14px',
+                    borderRadius: 8,
                     fontSize: 12,
                     fontWeight: isSelected ? 700 : 500,
                     backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
                     color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    border: '1px solid var(--border-subtle)',
+                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
                     cursor: 'pointer',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {lang}
@@ -1476,14 +1478,15 @@ export function Screen03Settings({
                       else updateUserContext('platform', plat.id);
                     }}
                     style={{
-                      padding: '6px 12px',
-                      borderRadius: 6,
+                      padding: '7px 14px',
+                      borderRadius: 8,
                       fontSize: 12,
                       fontWeight: isSelected ? 700 : 500,
                       backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
                       color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                      cursor: 'pointer'
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {plat.label}
@@ -1510,14 +1513,15 @@ export function Screen03Settings({
                       else updateUserContext('targetDuration', dur);
                     }}
                     style={{
-                      padding: '6px 16px',
-                      borderRadius: 6,
+                      padding: '7px 14px',
+                      borderRadius: 8,
                       fontSize: 12,
                       fontWeight: isSelected ? 700 : 500,
                       backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
                       color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                      cursor: 'pointer'
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {dur}

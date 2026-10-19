@@ -825,6 +825,7 @@ export default function AppShell({
                 justifyContent: 'center',
               }}
               title="Toggle Menu"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             >
               {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
@@ -834,6 +835,8 @@ export default function AppShell({
                 ? 'My Projects'
                 : (activeView === 'businesses' || activeView === 'business')
                 ? 'My Businesses'
+                : (activeView === 'home' || activeView === 'hub' || currentStage === 'entry')
+                ? 'Creation Hub'
                 : 'Creative Studio'}
             </span>
             <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
@@ -842,8 +845,8 @@ export default function AppShell({
                 ? 'Video Commercials & Projects'
                 : (activeView === 'businesses' || activeView === 'business')
                 ? 'Brand Profiles & Context'
-                : currentStage === 'entry'
-                ? 'Create a New Video Ad'
+                : (activeView === 'home' || activeView === 'hub' || currentStage === 'entry')
+                ? 'Choose Entry Point'
                 : `Stage ${currentStageObj.num} · ${currentStageObj.label}`}
             </span>
 

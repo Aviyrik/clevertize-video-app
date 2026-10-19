@@ -138,6 +138,7 @@ export default function AccountModal({
         style={{
           width: '100%',
           maxWidth: 490,
+          maxHeight: 'min(90vh, 720px)',
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
           borderRadius: 16,
@@ -156,6 +157,7 @@ export default function AccountModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -187,6 +189,7 @@ export default function AccountModal({
             type="button"
             onClick={handleClose}
             disabled={isDeleting}
+            aria-label="Close account settings"
             style={{
               background: 'none',
               border: 'none',
@@ -204,7 +207,16 @@ export default function AccountModal({
         </div>
 
         {/* Content Body */}
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div
+          style={{
+            padding: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+            overflowY: 'auto',
+            flex: 1,
+          }}
+        >
           {errorMsg && (
             <div
               style={{
@@ -672,6 +684,7 @@ export default function AccountModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
           }}
         >
           <button

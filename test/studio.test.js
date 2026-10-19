@@ -2062,4 +2062,45 @@ test('Account Settings Profile Picture: AccountModal supports profile photo uplo
   assert.ok(updated.avatar && updated.avatar.startsWith('data:image/png'), 'updateUserProfile must persist avatar');
 });
 
+test('UI/UX Audit Enhancements: Breadcrumbs, Modal Scroll Boundaries, Standardized Controls & Accessibility', () => {
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+  // Breadcrumb fix for creation hub
+  assert.ok(shellSrc.includes("'Creation Hub'"), 'AppShell breadcrumb must display Creation Hub');
+  assert.ok(shellSrc.includes("'Choose Entry Point'"), 'AppShell breadcrumb must display Choose Entry Point');
+  assert.ok(shellSrc.includes('aria-label={mobileMenuOpen ?'), 'Mobile hamburger menu must have accessible aria-label');
+
+  // AccountModal scroll boundaries & accessibility
+  const accountModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
+  assert.ok(accountModalSrc.includes('maxHeight: \'min(90vh, 720px)\''), 'AccountModal must constrain viewport height');
+  assert.ok(accountModalSrc.includes('flexShrink: 0'), 'AccountModal header/footer must have flexShrink: 0');
+  assert.ok(accountModalSrc.includes('aria-label="Close account settings"'), 'AccountModal must have accessible close button label');
+
+  // UrlResearchModal & ExistingScriptModal sticky footers & aria labels
+  const urlModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
+  assert.ok(urlModalSrc.includes('flexShrink: 0'), 'UrlResearchModal header and footer must have flexShrink: 0');
+  assert.ok(urlModalSrc.includes('aria-label="Close dialog"'), 'UrlResearchModal must have accessible close button');
+
+  const scriptModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ExistingScriptModal.jsx'), 'utf8');
+  assert.ok(scriptModalSrc.includes('flexShrink: 0'), 'ExistingScriptModal header and footer must have flexShrink: 0');
+  assert.ok(scriptModalSrc.includes('aria-label="Close dialog"'), 'ExistingScriptModal must have accessible close button');
+
+  // BusinessOnboardingModal close button aria-label
+  const bizModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
+  assert.ok(bizModalSrc.includes('aria-label="Close setup modal"'), 'BusinessOnboardingModal must have aria-label on close button');
+
+  // ScriptLibraryView accessibility
+  const libSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScriptLibraryView.jsx'), 'utf8');
+  assert.ok(libSrc.includes('aria-label={`Delete project'), 'Delete project button must have aria-label');
+  assert.ok(libSrc.includes('aria-label={`Download generated video'), 'Download video button must have aria-label');
+  assert.ok(libSrc.includes('aria-label={`Copy 4-scene script'), 'Copy script button must have aria-label');
+
+  // GuidedStudio standardized controls
+  const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(studioSrc.includes("borderRadius: 8"), 'Screen03Settings must standardize pill radius');
+  assert.ok(studioSrc.includes("padding: '7px 14px'"), 'Screen03Settings must standardize pill padding');
+  assert.ok(studioSrc.includes("aria-label={isRecording ?"), 'Screen02Brief dictation button must have accessible aria-label');
+  assert.ok(studioSrc.includes("aria-label=\"Remove product photo\""), 'Screen02Brief remove button must have aria-label');
+});
+
+
 
