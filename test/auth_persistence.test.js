@@ -329,65 +329,19 @@ test('Auth Redesign: Responsive styles in index.css for mobile and tablet', () =
   assert.ok(css.includes('@media (max-width: 640px)'), 'CSS must include mobile media query');
 });
 
-test('Google Auth: Server endpoint /api/auth/config and /api/auth/google authentication flow', async () => {
-  // 1. /api/auth/config returns status and googleClientId
-  const configRes = await get('/api/auth/config');
-  assert.equal(configRes.status, 200);
-  assert.equal(configRes.body.status, 'success');
-  assert.ok('googleClientId' in configRes.body);
-
-  // 2. /api/auth/google without credentials or demo flag -> 400
-  const emptyRes = await post('/api/auth/google', {});
-  assert.equal(emptyRes.status, 400);
-
-  // 3. /api/auth/google with demo Google profile creates user and session
-  const googleEmail = `google_tester_${Date.now()}@gmail.com`;
-  const googleRes = await post('/api/auth/google', {
-    demo: true,
-    email: googleEmail,
-    name: 'Google Creator',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  });
-  assert.equal(googleRes.status, 200);
-  assert.equal(googleRes.body.status, 'success');
-  assert.equal(googleRes.body.user.email, googleEmail);
-  assert.equal(googleRes.body.user.name, 'Google Creator');
-  assert.ok(googleRes.body.user.avatar.includes('images.unsplash.com'));
-  assert.ok(googleRes.body.token, 'Must return session token');
-
-  // 4. Session token works for authenticated /api/auth/me
-  const token = googleRes.body.token;
-  const meRes = await get('/api/auth/me', token);
-  assert.equal(meRes.status, 200);
-  assert.equal(meRes.body.user.email, googleEmail);
-  assert.equal(meRes.body.user.name, 'Google Creator');
-
-  // 5. Subsequent sign-in with same Google email signs into the existing user
-  const secondRes = await post('/api/auth/google', {
-    demo: true,
-    email: googleEmail,
-    name: 'Google Creator Updated',
-  });
-  assert.equal(secondRes.status, 200);
-  assert.equal(secondRes.body.user.id, googleRes.body.user.id);
-});
-
-test('Google Auth: GoogleAuthModal component and integration in AuthScreen and AuthModal', () => {
-  const gModalPath = path.join(__dirname, '../src/components/v2/GoogleAuthModal.jsx');
-  assert.ok(fs.existsSync(gModalPath), 'GoogleAuthModal component must exist');
-
-  const gModalCode = fs.readFileSync(gModalPath, 'utf8');
-  assert.ok(gModalCode.includes('GoogleAuthModal'), 'GoogleAuthModal component must be defined');
-  assert.ok(gModalCode.includes('/api/auth/google'), 'Must send requests to /api/auth/google');
-  assert.ok(gModalCode.includes('accounts.google.com/gsi/client'), 'Must support Google Identity Services');
-
+test('Google Auth: UI button triggers friendly coming soon notice while authentication uses email/password', () => {
   const screenCode = fs.readFileSync(path.join(__dirname, '../src/components/v2/AuthScreen.jsx'), 'utf8');
-  assert.ok(screenCode.includes("import GoogleAuthModal from './GoogleAuthModal.jsx'"), 'AuthScreen must import GoogleAuthModal');
-  assert.ok(screenCode.includes('<GoogleAuthModal'), 'AuthScreen must render GoogleAuthModal');
+  assert.ok(screenCode.includes('auth-btn-google'), 'AuthScreen must render Google button');
+  assert.ok(screenCode.includes('Continue with Google'), 'AuthScreen must display Continue with Google');
+  assert.ok(screenCode.includes('googleNotice'), 'AuthScreen must manage googleNotice state');
+  assert.ok(screenCode.includes('Google sign-in is coming soon!'), 'AuthScreen must display coming soon notice');
+  assert.ok(!screenCode.includes('GoogleAuthModal'), 'AuthScreen must not import or render GoogleAuthModal');
 
   const modalCode = fs.readFileSync(path.join(__dirname, '../src/components/v2/AuthModal.jsx'), 'utf8');
-  assert.ok(modalCode.includes("import GoogleAuthModal from './GoogleAuthModal.jsx'"), 'AuthModal must import GoogleAuthModal');
-  assert.ok(modalCode.includes('<GoogleAuthModal'), 'AuthModal must render GoogleAuthModal');
+  assert.ok(modalCode.includes('auth-btn-google') || modalCode.includes('Continue with Google'), 'AuthModal must render Google button');
+  assert.ok(modalCode.includes('googleNotice'), 'AuthModal must manage googleNotice state');
+  assert.ok(modalCode.includes('Google sign-in is coming soon!'), 'AuthModal must display coming soon notice');
+  assert.ok(!modalCode.includes('GoogleAuthModal'), 'AuthModal must not import or render GoogleAuthModal');
 });
 
 

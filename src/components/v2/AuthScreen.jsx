@@ -9,7 +9,6 @@ import {
   Info,
 } from 'lucide-react';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
-import GoogleAuthModal from './GoogleAuthModal.jsx';
 
 /**
  * AuthScreen - SpaceX-inspired full-viewport authentication experience for CleverCuts.
@@ -36,10 +35,8 @@ export default function AuthScreen({
   const [errorMsg, setErrorMsg] = useState('');
   const [noticeMsg, setNoticeMsg] = useState('');
   const [googleNotice, setGoogleNotice] = useState(false);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState(null);
 
-  // Restore remembered email on mount & fetch auth config
+  // Restore remembered email on mount
   useEffect(() => {
     try {
       const savedEmail = localStorage.getItem('clevertize_remember_email');
@@ -50,15 +47,6 @@ export default function AuthScreen({
     } catch {
       // ignore
     }
-
-    fetch('/api/auth/config')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.googleClientId) {
-          setGoogleClientId(data.googleClientId);
-        }
-      })
-      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
@@ -137,7 +125,8 @@ export default function AuthScreen({
   };
 
   const handleGoogleClick = () => {
-    setIsGoogleModalOpen(true);
+    setGoogleNotice(true);
+    setTimeout(() => setGoogleNotice(false), 4500);
   };
 
   const handleForgotPassword = () => {
@@ -834,14 +823,6 @@ export default function AuthScreen({
           </div>
         </div>
       </div>
-
-      <GoogleAuthModal
-        isOpen={isGoogleModalOpen}
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={onAuthSuccess}
-        mode={mode}
-        googleClientId={googleClientId}
-      />
     </div>
   );
 }

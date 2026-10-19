@@ -360,71 +360,6 @@ async function authenticateUser({ email, password }) {
   };
 }
 
-async function findOrCreateGoogleUser({ email, name = '', avatar = null, googleId = null }) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
-  if (!cleanEmail || !cleanEmail.includes('@')) {
-    throw new Error('Please enter a valid Google email address.');
-  }
-
-  let existing = await findUserByEmail(cleanEmail);
-  if (existing) {
-    if (!existing.avatar && avatar) {
-      await updateUserProfile(existing.id, { avatar });
-      existing.avatar = avatar;
-    }
-    if ((!existing.name || existing.name === cleanEmail.split('@')[0]) && name) {
-      await updateUserProfile(existing.id, { name });
-      existing.name = name;
-    }
-    return {
-      id: existing.id,
-      email: existing.email,
-      name: existing.name,
-      avatar: existing.avatar || null,
-      createdAt: existing.createdAt,
-    };
-  }
-
-  const randomPassword = crypto.randomBytes(32).toString('hex');
-  const { hash, salt } = hashPassword(randomPassword);
-  const id = `usr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  const userName = String(name || cleanEmail.split('@')[0]).trim();
-  const createdAt = new Date().toISOString();
-
-  const pool = getPgPool();
-  if (pool) {
-    await ensurePgTables();
-    await pool.query(
-      'INSERT INTO users (id, email, name, avatar, password_hash, salt, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [id, cleanEmail, userName, avatar || null, hash, salt, createdAt]
-    );
-    return { id, email: cleanEmail, name: userName, avatar: avatar || null, createdAt };
-  }
-
-  const newUser = {
-    id,
-    email: cleanEmail,
-    name: userName,
-    avatar: avatar || null,
-    passwordHash: hash,
-    salt,
-    createdAt,
-    googleId: googleId || null,
-  };
-
-  const users = readJsonFile('users.json', []);
-  users.push(newUser);
-  writeJsonFile('users.json', users);
-
-  return {
-    id: newUser.id,
-    email: newUser.email,
-    name: newUser.name,
-    avatar: newUser.avatar || null,
-    createdAt: newUser.createdAt,
-  };
-}
-
 async function deleteUser(userId) {
   if (!userId) return false;
 
@@ -934,5 +869,4 @@ module.exports = {
   saveProject,
   deleteProject,
   updateUserProfile,
-  findOrCreateGoogleUser,
 };
