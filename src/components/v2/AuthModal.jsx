@@ -9,6 +9,7 @@ import {
   Info,
 } from 'lucide-react';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
+import GoogleAuthModal from './GoogleAuthModal.jsx';
 
 export default function AuthModal({
   isOpen,
@@ -26,6 +27,8 @@ export default function AuthModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [noticeMsg, setNoticeMsg] = useState('');
   const [googleNotice, setGoogleNotice] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +45,15 @@ export default function AuthModal({
       } catch {
         // ignore
       }
+
+      fetch('/api/auth/config')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.googleClientId) {
+            setGoogleClientId(data.googleClientId);
+          }
+        })
+        .catch(() => {});
     }
   }, [isOpen, initialMode]);
 
@@ -124,8 +136,7 @@ export default function AuthModal({
   };
 
   const handleGoogleClick = () => {
-    setGoogleNotice(true);
-    setTimeout(() => setGoogleNotice(false), 4500);
+    setIsGoogleModalOpen(true);
   };
 
   const handleForgotPassword = () => {
@@ -583,6 +594,17 @@ export default function AuthModal({
           </div>
         </div>
       </div>
+
+      <GoogleAuthModal
+        isOpen={isGoogleModalOpen}
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(data) => {
+          if (onAuthSuccess) onAuthSuccess(data);
+          onClose();
+        }}
+        mode={mode}
+        googleClientId={googleClientId}
+      />
     </div>
   );
 }

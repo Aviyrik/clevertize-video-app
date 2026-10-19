@@ -111,6 +111,7 @@ DATABASE_URL=
 4. **Category Imagery & Audience Personas**: Step 1 features 12 visual cards with verified Unsplash images (fixed Automobile & Garage 404). Step 2 features category-matched target audiences.
 5. **Mandatory Step Validation**: Business Onboarding strictly enforces required fields before allowing users to advance to the next step.
 6. **No-Cache Server Headers**: Express delivers `Cache-Control: no-cache, no-store, must-revalidate` for `index.html` to prevent stale UI screens across browsers.
+7. **Google Authentication Activated**: "Continue with Google" is fully active across `AuthScreen` and `AuthModal`. Supports Google Identity Services (via `GOOGLE_CLIENT_ID` in `.env`) as well as instant one-click Google Sign-In with persistent database user profiles and session tokens.
 
 ---
 
