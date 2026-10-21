@@ -106,6 +106,23 @@ async function ensurePgTables() {
       CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
       CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+
+      -- Enable Row Level Security (RLS) on all tables to secure Supabase Data API
+      ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+
+      -- Revoke public PostgREST API access from anon/authenticated roles if running on Supabase
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+          REVOKE ALL ON TABLE users, sessions, businesses, projects FROM anon;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+          REVOKE ALL ON TABLE users, sessions, businesses, projects FROM authenticated;
+        END IF;
+      END $$;
     `);
     tablesInitialized = true;
     console.log('[db] PostgreSQL database and tables verified successfully.');
