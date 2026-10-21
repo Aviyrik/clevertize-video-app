@@ -9,6 +9,7 @@ import {
   Info,
 } from 'lucide-react';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
+import LegalDocumentModal from './LegalDocumentModal.jsx';
 
 export default function AuthModal({
   isOpen,
@@ -26,6 +27,8 @@ export default function AuthModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [noticeMsg, setNoticeMsg] = useState('');
   const [googleNotice, setGoogleNotice] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState('terms');
 
   useEffect(() => {
     if (isOpen) {
@@ -580,8 +583,82 @@ export default function AuthModal({
                 </span>
               )}
             </div>
+
+            {/* Terms and Privacy Policy Footnote */}
+            <div
+              style={{
+                marginTop: 18,
+                textAlign: 'center',
+                fontSize: 11,
+                color: '#6B7280',
+                lineHeight: 1.45,
+              }}
+            >
+              By continuing, you agree to CleverCuts's{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setLegalTab('terms');
+                  setLegalModalOpen(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: '#9CA3AF',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#818CF8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#9CA3AF';
+                }}
+              >
+                Terms of Service
+              </button>{' '}
+              and{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setLegalTab('privacy');
+                  setLegalModalOpen(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: '#9CA3AF',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#818CF8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#9CA3AF';
+                }}
+              >
+                Privacy Policy
+              </button>
+              .
+            </div>
           </div>
         </div>
+
+        {/* Legal Document Modal */}
+        <LegalDocumentModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalTab}
+        />
       </div>
     </div>
   );

@@ -344,5 +344,26 @@ test('Google Auth: UI button triggers friendly coming soon notice while authenti
   assert.ok(!modalCode.includes('GoogleAuthModal'), 'AuthModal must not import or render GoogleAuthModal');
 });
 
+test('Auth Legal Documents: AuthScreen and AuthModal feature interactive Terms of Service and Privacy Policy links and render LegalDocumentModal', () => {
+  const legalModalPath = path.join(__dirname, '../src/components/v2/LegalDocumentModal.jsx');
+  assert.ok(fs.existsSync(legalModalPath), 'LegalDocumentModal.jsx must exist');
 
+  const legalCode = fs.readFileSync(legalModalPath, 'utf8');
+  assert.ok(legalCode.includes('CleverCuts Terms of Service'), 'Must contain Terms of Service heading');
+  assert.ok(legalCode.includes('CleverCuts Privacy Policy'), 'Must contain Privacy Policy heading');
+  assert.ok(legalCode.includes('Commercial Ownership Guarantee'), 'Must guarantee commercial rights to user videos');
+  assert.ok(legalCode.includes('Acceptable Use Policy'), 'Must define acceptable use');
+  assert.ok(legalCode.includes('Information We Collect'), 'Must define data collection terms');
+  assert.ok(legalCode.includes('Permanent Erasure') || legalCode.includes('Account Deletion'), 'Must detail deletion and erasure rights');
+  assert.ok(legalCode.includes('window.print()'), 'Must provide print functionality');
 
+  const screenCode = fs.readFileSync(path.join(__dirname, '../src/components/v2/AuthScreen.jsx'), 'utf8');
+  assert.ok(screenCode.includes("import LegalDocumentModal from './LegalDocumentModal.jsx'"), 'AuthScreen must import LegalDocumentModal');
+  assert.ok(screenCode.includes('setLegalModalOpen(true)'), 'AuthScreen must trigger legal modal open');
+  assert.ok(screenCode.includes("<LegalDocumentModal"), 'AuthScreen must render LegalDocumentModal');
+
+  const modalCode = fs.readFileSync(path.join(__dirname, '../src/components/v2/AuthModal.jsx'), 'utf8');
+  assert.ok(modalCode.includes("import LegalDocumentModal from './LegalDocumentModal.jsx'"), 'AuthModal must import LegalDocumentModal');
+  assert.ok(modalCode.includes('setLegalModalOpen(true)'), 'AuthModal must trigger legal modal open');
+  assert.ok(modalCode.includes("<LegalDocumentModal"), 'AuthModal must render LegalDocumentModal');
+});
