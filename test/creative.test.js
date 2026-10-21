@@ -437,3 +437,69 @@ test("15. Switching formats (UGC -> Demo -> Comedy -> Storytelling) produces dis
   assert.ok(comedy.beats[0].action.toLowerCase().includes("sneak") || comedy.beats[1].action.toLowerCase().includes("caught"));
 });
 
+
+
+test("16. generateSimpleAdPackages produces 3 distinct ad packages with 4 scenes and Annex-A script text", async () => {
+  const result = await creative.generateSimpleAdPackages({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    town: "Indore",
+    brief: "Flat 20% discount on fresh Kaju Katli for Diwali",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+  });
+
+  assert.ok(Array.isArray(result), "Expected an array of packages");
+  assert.strictEqual(result.length, 3, "Expected exactly 3 packages");
+
+  // Verify first package (Problem & Relief)
+  const p1 = result[0];
+  assert.strictEqual(p1.id, "pkg_problem_relief");
+  assert.ok(p1.title);
+  assert.ok(p1.hook);
+  assert.strictEqual(p1.scenes.length, 4, "Must have exactly 4 scenes");
+  assert.ok(p1.fullScriptText.includes("SCENE 1"));
+  assert.ok(p1.fullScriptText.includes("SCENE 4"));
+  assert.ok(p1.fullScriptText.includes("Kanti Sweets"));
+
+  // Verify package 2 (Customer Trust)
+  const p2 = result[1];
+  assert.strictEqual(p2.id, "pkg_customer_trust");
+  assert.strictEqual(p2.scenes.length, 4);
+
+  // Verify package 3 (Limited-Time Offer)
+  const p3 = result[2];
+  assert.strictEqual(p3.id, "pkg_festive_offer");
+  assert.strictEqual(p3.scenes.length, 4);
+});
+
+test("17. /api/creative/simple-packages endpoint generates ad packages and validates brief", async () => {
+  // Test validation error if brief missing
+  const badRes = await fetch(`${base}/api/creative/simple-packages`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ businessName: "Kanti Sweets", brief: "" })
+  });
+  assert.strictEqual(badRes.status, 400);
+  const badData = await badRes.json();
+  assert.ok(badData.error.includes("Brief is required"));
+
+  // Test successful generation
+  const res = await fetch(`${base}/api/creative/simple-packages`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      businessName: "Kanti Sweets",
+      businessType: "Sweet Shop",
+      town: "Indore",
+      brief: "Diwali 20% discount",
+      language: "English",
+      creativeStyle: "UGC / Creator-style"
+    })
+  });
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.ok(Array.isArray(data.packages));
+  assert.strictEqual(data.packages.length, 3);
+  assert.strictEqual(data.packages[0].scenes.length, 4);
+});

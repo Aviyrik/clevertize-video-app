@@ -24,6 +24,8 @@ import {
   Menu,
   X,
   ChevronsUpDown,
+  Zap,
+  Sliders,
 } from 'lucide-react';
 import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
 
@@ -847,8 +849,36 @@ export default function AppShell({
                 ? 'Brand Profiles & Context'
                 : (activeView === 'home' || activeView === 'hub' || currentStage === 'entry')
                 ? 'Choose Entry Point'
+                : studioMode === 'simple'
+                ? 'Simple Studio · 3-Step Creation'
                 : `Stage ${currentStageObj.num} · ${currentStageObj.label}`}
             </span>
+
+            {activeView === 'studio' && onToggleStudioMode && (
+              <button
+                type="button"
+                onClick={onToggleStudioMode}
+                title={studioMode === 'simple' ? 'Switch to Director Mode' : 'Switch to Simple Studio'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginLeft: 10,
+                  padding: '3px 9px',
+                  borderRadius: 14,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                  color: studioMode === 'simple' ? 'var(--accent-primary)' : '#eab308',
+                  border: '1px solid ' + (studioMode === 'simple' ? 'var(--border-subtle)' : 'rgba(234, 179, 8, 0.3)'),
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {studioMode === 'simple' ? <Sliders size={12} /> : <Zap size={12} />}
+                <span>{studioMode === 'simple' ? 'Director Mode' : 'Simple Studio'}</span>
+              </button>
+            )}
 
             {hasStaleWarning && (
               <span

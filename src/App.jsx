@@ -14,6 +14,7 @@ import {
 } from './context/studioState.jsx';
 import AppShell from './components/v2/AppShell.jsx';
 import CreationEntryHub from './components/v2/CreationEntryHub.jsx';
+import SimpleBusinessStudio from './components/v2/SimpleBusinessStudio.jsx';
 import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
 import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
@@ -64,7 +65,9 @@ import {
   Clapperboard,
   ShieldCheck,
   CheckCircle2,
-  Play
+  Play,
+  Zap,
+  Sliders,
 } from 'lucide-react';
 
 import {
@@ -1096,6 +1099,23 @@ export default function App() {
   const [qualityFailures, setQualityFailures] = useState([]);
 
   // Clevertize V2 Application Shell & Entry Point State
+  const [studioMode, setStudioMode] = useState(() => {
+    try {
+      return localStorage.getItem('clevertize_studio_mode') || 'simple';
+    } catch {
+      return 'simple';
+    }
+  });
+
+  const handleSetStudioMode = (mode) => {
+    setStudioMode(mode);
+    try {
+      localStorage.setItem('clevertize_studio_mode', mode);
+    } catch (e) {
+      console.warn('Storage unavailable', e);
+    }
+  };
+
   const [activeAppView, setActiveAppViewState] = useState('hub');
   const setActiveAppView = (viewOrUpdater) => {
     setActiveAppViewState((prev) => {
@@ -2980,8 +3000,9 @@ export default function App() {
   };
 
   // Run Video Production Pipeline
-  const handleRunVideoProduction = async () => {
-    if (!scenes || !scenes.length) {
+  const handleRunVideoProduction = async (overrideParams = null) => {
+    const targetScenes = overrideParams?.scenes || scenes;
+    if (!targetScenes || !targetScenes.length) {
       setErrorMessage('No script scenes found. Please complete the script stage first.');
       return;
     }
@@ -2999,7 +3020,7 @@ export default function App() {
         : userContext.businessType;
 
       const runPayload = {
-        scenes: scenes.map((s) => (typeof s === 'string' ? s : s.visual || s.text || '').trim()).filter(Boolean),
+        scenes: targetScenes.map((s) => (typeof s === 'string' ? s : s.visual || s.text || '').trim()).filter(Boolean),
         character1: (character1 || '').trim(),
         character2: (character2 || '').trim(),
         setting: (setting || '').trim(),
@@ -3034,6 +3055,35 @@ export default function App() {
       stopTimer();
       setIsRendering(false);
       setErrorMessage(err.message || 'Error occurred while initiating video render.');
+    }
+  };
+
+  const handleSimpleProduceVideo = async (packageData) => {
+    try {
+      const formattedScenes = (packageData.scenes || []).map((s) => {
+        if (typeof s === 'string') return s;
+        const parts = [];
+        if (s.visual) parts.push(s.visual);
+        if (s.dialogue) parts.push(`Audio: "${s.dialogue}"`);
+        if (s.onScreenText) parts.push(`Text: ${s.onScreenText}`);
+        return parts.join(' | ') || s.visual || s.text || '';
+      });
+
+      setScenes(formattedScenes);
+      setGeneratedScript(packageData.fullScriptText || null);
+      if (packageData.brief) updateUserContext('brief', packageData.brief);
+      if (packageData.language) updateUserContext('language', packageData.language);
+      if (packageData.creativeStyle) updateUserContext('creativeStyle', packageData.creativeStyle);
+      if (packageData.productPhoto) updateUserContext('productPhoto', packageData.productPhoto);
+
+      await handleRunVideoProduction({
+        scenes: formattedScenes,
+        brief: packageData.brief || userContext.brief,
+        productPhoto: packageData.productPhoto || userContext.productPhoto,
+      });
+    } catch (err) {
+      console.error('[SimpleStudio] video run error:', err);
+      setErrorMessage(err.message || 'Failed to start video production.');
     }
   };
 
@@ -3272,6 +3322,8 @@ export default function App() {
         <AppShell
           activeView={activeAppView}
           onSelectView={setActiveAppView}
+          studioMode={studioMode}
+          onToggleStudioMode={() => handleSetStudioMode(studioMode === 'simple' ? 'advanced' : 'simple')}
           currentStage={studioStage}
           completedStages={completedStages}
           onNavigateStage={handleNavigateStage}
@@ -3414,8 +3466,47 @@ export default function App() {
               currentUser={currentUser}
               onSignIn={() => setIsAuthModalOpen(true)}
             />
+          ) : studioMode === 'simple' ? (
+            <SimpleBusinessStudio
+              businessName={userContext.businessName}
+              businessType={userContext.businessType}
+              town={userContext.town}
+              initialBrief={userContext.brief}
+              initialLanguage={creativeDNA.language || 'English'}
+              initialStyle={creativeDNA.creativeStyle || 'UGC / Creator-style'}
+              brandLogo={userContext.brandLogo || userContext.logo}
+              onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}
+              onProduceVideo={handleSimpleProduceVideo}
+              isProducingVideo={isRendering}
+              producedVideoUrl={videoUrl}
+              videoRunError={errorMessage}
+            />
           ) : (
             <>
+      {/* Director Mode Switcher Banner */}
+      <div style={{ maxWidth: 860, margin: '12px auto 0', width: '100%', padding: '0 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => handleSetStudioMode('simple')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 12px',
+            fontSize: 11,
+            fontWeight: 700,
+            borderRadius: 20,
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--accent-primary)',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
+          <Zap size={12} />
+          Switch to Simple Studio (3-Step Fast Track)
+        </button>
+      </div>
 
       {/* V4 GUIDED STUDIO PROGRESS HEADER & YOUR CHOICES */}
       <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px' }}>

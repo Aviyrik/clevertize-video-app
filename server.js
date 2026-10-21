@@ -907,6 +907,31 @@ app.post("/api/creative/rewrite-scene", async (req, res) => {
 });
 
 // ---- 2) start the Magnific flow ----
+// 8) Simple Business Studio — 3 Ready-Made Ad Packages
+app.post("/api/creative/simple-packages", async (req, res) => {
+  try {
+    const { businessName, businessType, town, brief, targetAudience, language, creativeStyle } = req.body || {};
+    if (!businessName || !businessName.trim()) {
+      return res.status(400).json({ error: "businessName is required." });
+    }
+    if (!brief || !brief.trim()) {
+      return res.status(400).json({ error: "Brief is required." });
+    }
+    const packages = await creative.generateSimpleAdPackages({
+      businessName: businessName.trim(),
+      businessType: businessType || "Local Business",
+      town: town || "",
+      brief: brief || "",
+      targetAudience: targetAudience || "",
+      language: language || "English",
+      creativeStyle: creativeStyle || "UGC / Creator-style",
+    });
+    res.json({ status: "success", packages });
+  } catch (e) {
+    console.error("[api/creative/simple-packages]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 app.post("/api/run", async (req, res) => {
   try {
     const {

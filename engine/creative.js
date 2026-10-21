@@ -825,6 +825,414 @@ Rewrite this scene now:`;
   throw new Error("Could not rewrite scene with the given instruction.");
 }
 
+/**
+ * Helper to compile 4 structured scenes into Annex-A script text for video generation.
+ */
+function compileSimpleScriptText(pkg, businessName) {
+  const scenes = pkg.scenes || [];
+  const s1 = scenes[0] || {};
+  const s2 = scenes[1] || {};
+  const s3 = scenes[2] || {};
+  const s4 = scenes[3] || {};
+
+  return `ANNEX A
+SCENE 1 – HOOK
+Visual:
+${s1.visual || `Hero opening featuring ${businessName} with clear front-and-center framing.`}
+Animation Elements:
+Camera: steady medium push-in
+Text overlay: none
+UI element: none
+Transition: cut
+Motion graphics: none
+Audio / Dialogue / Voiceover:
+${s1.dialogue || `${pkg.hookHeadline || "Check this out!"}`}
+Sound Design:
+Crisp ambient room tone, tactile Foley.
+Editing Notes:
+Scene duration: ~3s | Output: 1080p
+
+ANNEX A
+SCENE 2 – BUILD
+Visual:
+Same setting: ${s2.visual || `Demonstrating the active service and craftsmanship at ${businessName}.`}
+Animation Elements:
+Camera: medium two-shot with subtle horizontal pan
+Text overlay: none
+UI element: none
+Transition: cut
+Motion graphics: none
+Audio / Dialogue / Voiceover:
+${s2.dialogue || "Look at the authentic attention to detail."}
+Sound Design:
+Subtle acoustic Foley, hands-on activity.
+Editing Notes:
+Scene duration: ~4s | Output: 1080p
+
+ANNEX A
+SCENE 3 – TURN
+Visual:
+Same setting: ${s3.visual || `Customer reaction and positive confirmation of quality at ${businessName}.`}
+Animation Elements:
+Camera: close medium shot focusing on genuine reaction
+Text overlay: none
+UI element: none
+Transition: cut
+Motion graphics: none
+Audio / Dialogue / Voiceover:
+${s3.dialogue || "This is exactly what I was hoping for."}
+Sound Design:
+Reassuring ambient warmth, positive chime.
+Editing Notes:
+Scene duration: ~4s | Output: 1080p
+
+ANNEX A
+SCENE 4 – RESOLUTION
+Visual:
+Same setting: ${s4.visual || `Delighted wrap-up with final brand presentation for ${businessName}.`}
+Animation Elements:
+Camera: gentle pull-out to hold
+Text overlay: none
+UI element: none
+Transition: cut
+Motion graphics: none
+Audio / Dialogue / Voiceover:
+${s4.dialogue || `${pkg.callToAction || `Visit ${businessName} today!`}`}
+Sound Design:
+Upbeat melodic finish, clear resonant hold.
+Editing Notes:
+Scene duration: ~4s | Output: 1080p`;
+}
+
+/**
+ * Curated fallback ad packages for instant recovery when offline or LLM limit reached.
+ */
+function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English" }) {
+  const isEng = !language || /eng/i.test(language);
+  const isHin = language && /hin/i.test(language);
+  const isMar = language && /mar/i.test(language);
+  const offer = brief || `${businessType} Special`;
+  const city = town ? ` in ${town}` : "";
+
+  return [
+    {
+      id: "pkg_problem_relief",
+      badge: "Highest Converting",
+      angle: "Problem & Relief",
+      title: "The Dilemma Solved",
+      hookHeadline: isEng
+        ? `Tired of dealing with bad service? Watch this.`
+        : isHin
+        ? `खराब सर्विस से परेशान हैं? ये देखिए!`
+        : `कंटाळला आहात का? हे नक्की बघा!`,
+      narrativeSummary: `Addresses the common customer headache and shows how ${businessName} solves it reliably.`,
+      callToAction: isEng
+        ? `Visit ${businessName}${city} today for trusted quality!`
+        : isHin
+        ? `आज ही ${businessName} आइए और बेहतरीन सर्विस पाइए!`
+        : `आजच ${businessName} ला भेट द्या!`,
+      setting: `Welcoming storefront counter at ${businessName}${city}.`,
+      characters: { lead: "Owner / Host", customer: "Customer" },
+      scenes: [
+        {
+          sceneNumber: 1,
+          beat: "Hook",
+          timing: "0-3s",
+          visual: `Lead stands at the ${businessName} counter looking directly at camera with empathetic energy.`,
+          dialogue: isEng
+            ? `Lead: "Tired of dealing with bad service? Watch this."`
+            : isHin
+            ? `Lead: "खराब सर्विस से परेशान हैं? ये देखिए!"`
+            : `Lead: "कंटाळला आहात का? हे नक्की बघा!"`,
+        },
+        {
+          sceneNumber: 2,
+          beat: "Build",
+          timing: "3-8s",
+          visual: `Customer arrives explaining their issue; Lead points reassuringly to ${offer} on the display counter.`,
+          dialogue: isEng
+            ? `Lead: "Don't stress. At ${businessName}, we guarantee 100% genuine quality every time."`
+            : isHin
+            ? `Lead: "चिंता मत कीजिए, ${businessName} में हर काम पूरी गारंटी के साथ होता है।"`
+            : `Lead: "काळजी नको, ${businessName} मध्ये १००% खात्रीशीर काम मिळते."`,
+        },
+        {
+          sceneNumber: 3,
+          beat: "Turn",
+          timing: "8-14s",
+          visual: `Customer inspects the completed work with visible relief and nods happily at the result.`,
+          dialogue: isEng
+            ? `Customer: "Wow, that was fast, honest, and completely hassle-free!"`
+            : isHin
+            ? `Customer: "अरे वाह, इतना तेज़ और बिना किसी झंझट के!"`
+            : `Customer: "अरे वा, अगदी पटकन आणि प्रामाणिक काम झाले!"`,
+        },
+        {
+          sceneNumber: 4,
+          beat: "Resolution",
+          timing: "14-20s",
+          visual: `Lead smiles warmly next to the official ${businessName} service card and contact details.`,
+          dialogue: isEng
+            ? `Lead: "Visit ${businessName}${city} today—we've got you covered!"`
+            : isHin
+            ? `Lead: "आज ही ${businessName} आइए—हम हमेशा आपके साथ हैं!"`
+            : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+        },
+      ],
+    },
+    {
+      id: "pkg_customer_trust",
+      badge: "Most Trusted",
+      angle: "Customer Story & Trust",
+      title: "The Neighborhood Favorite",
+      hookHeadline: isEng
+        ? `Why does everyone recommend ${businessName}?`
+        : isHin
+        ? `सब लोग ${businessName} की ही तारीफ क्यों करते हैं?`
+        : `सगळे ${businessName} चेच नाव का घेतात?`,
+      narrativeSummary: `A genuine customer shares why ${businessName} is their go-to choice for ${businessType}.`,
+      callToAction: isEng
+        ? `Find out why your neighbors love ${businessName}${city}!`
+        : isHin
+        ? `आइए और खुद देखिए कि ${businessName} पर इतना भरोसा क्यों है!`
+        : `अनुभव घ्या आणि आजच भेट द्या!`,
+      setting: `Bright, tidy customer lounge and counter at ${businessName}.`,
+      characters: { lead: "Happy Customer", customer: "Host" },
+      scenes: [
+        {
+          sceneNumber: 1,
+          beat: "Hook",
+          timing: "0-3s",
+          visual: `Happy customer holds up order confirmation smiling directly into camera outside the entrance.`,
+          dialogue: isEng
+            ? `Customer: "Why does everyone in our area recommend ${businessName}?"`
+            : isHin
+            ? `Customer: "सब लोग हमारे इलाके में ${businessName} की ही बात क्यों करते हैं?"`
+            : `Customer: "सगळे ${businessName} चेच नाव का घेतात?"`,
+        },
+        {
+          sceneNumber: 2,
+          beat: "Build",
+          timing: "3-8s",
+          visual: `Camera showcases the transparent pricing, organized workspace, and friendly staff greeting customers.`,
+          dialogue: isEng
+            ? `Customer: "Because from the moment you walk in, the transparency and care are unmatched."`
+            : isHin
+            ? `Customer: "क्योंकि यहाँ काम बिल्कुल साफ-सुथरा और भरोसेमंद होता है।"`
+            : `Customer: "कारण इथे काम अगदी स्वच्छ आणि विश्वासाचे असते."`,
+        },
+        {
+          sceneNumber: 3,
+          beat: "Turn",
+          timing: "8-14s",
+          visual: `Lead hands over the finished delivery with a warm handshake and warranty seal.`,
+          dialogue: isEng
+            ? `Lead: "We treat every single customer like family."`
+            : isHin
+            ? `Lead: "हम हर ग्राहक को अपने परिवार जैसा समझते हैं।"`
+            : `Lead: "आम्ही प्रत्येक ग्राहकाला आपल्या कुटुंबासारखे मानतो."`,
+        },
+        {
+          sceneNumber: 4,
+          beat: "Resolution",
+          timing: "14-20s",
+          visual: `Both raise thumbs up at the counter with location pin and opening hours on screen.`,
+          dialogue: isEng
+            ? `Customer: "Come see for yourself at ${businessName}${city}!"`
+            : isHin
+            ? `Customer: "खुद आकर देखिए, ${businessName} में!"`
+            : `Customer: "स्वतः अनुभव घ्या ${businessName} मध्ये!"`,
+        },
+      ],
+    },
+    {
+      id: "pkg_festive_offer",
+      badge: "Limited-Time Deal",
+      angle: "Limited-Time Special Offer",
+      title: "Exclusive Celebration Offer",
+      hookHeadline: isEng
+        ? `Stop scrolling—our biggest offer of the season is here!`
+        : isHin
+        ? `रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!`
+        : `थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!`,
+      narrativeSummary: `High-energy commercial spotlighting ${offer} with clear savings and instant action.`,
+      callToAction: isEng
+        ? `Book or visit today—offer valid while slots last!`
+        : isHin
+        ? `ऑफर सीमित समय के लिए है—आज ही कॉल करें या आइए!`
+        : `मर्यादित काळासाठी ऑफर—आजच बुक करा!`,
+      setting: `Festive-decorated service counter at ${businessName}.`,
+      characters: { lead: "Store Host", customer: "Delighted Customer" },
+      scenes: [
+        {
+          sceneNumber: 1,
+          beat: "Hook",
+          timing: "0-3s",
+          visual: `Host steps into frame with festive celebration energy, holding up the special announcement banner.`,
+          dialogue: isEng
+            ? `Lead: "Stop scrolling—our biggest offer of the season is here!"`
+            : isHin
+            ? `Lead: "रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!"`
+            : `Lead: "थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!"`,
+        },
+        {
+          sceneNumber: 2,
+          beat: "Build",
+          timing: "3-8s",
+          visual: `Host demonstrates ${offer} highlighting premium ingredients and thorough professional standards.`,
+          dialogue: isEng
+            ? `Lead: "Get the complete ${offer} package at an unbeatable price this week."`
+            : isHin
+            ? `Lead: "इस हफ्ते पाइए पूरा ${offer} सबसे खास कीमत पर।"`
+            : `Lead: "या आठवड्यात मिळवा संपूर्ण ${offer} अगदी विशेष दरात."`,
+        },
+        {
+          sceneNumber: 3,
+          beat: "Turn",
+          timing: "8-14s",
+          visual: `Customer smiles happily as host stamps the special discount coupon on their receipt.`,
+          dialogue: isEng
+            ? `Customer: "I saved money and got the best service in town!"`
+            : isHin
+            ? `Customer: "पैसे भी बचे और काम भी नंबर एक हुआ!"`
+            : `Customer: "पैसेही वाचले आणि उत्तम कामही झाले!"`,
+        },
+        {
+          sceneNumber: 4,
+          beat: "Resolution",
+          timing: "14-20s",
+          visual: `Delighted customer and host stand together as store contact details and location flash clearly.`,
+          dialogue: isEng
+            ? `Lead: "Visit ${businessName}${city} today before slots fill up!"`
+            : isHin
+            ? `Lead: "आज ही ${businessName} आइए, ऑफर सीमित समय के लिए है!"`
+            : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+        },
+      ],
+    },
+  ].map((pkg) => ({
+    ...pkg,
+    hook: pkg.hookHeadline,
+    fullScriptText: compileSimpleScriptText(pkg, businessName),
+  }));
+}
+
+/**
+ * 8. SIMPLE BUSINESS STUDIO — Generates 3 Complete, High-Converting Ad Packages.
+ * Runs in a single, fast call. Each package contains Hook, Story, Dialogue, CTA, and full script.
+ */
+async function generateSimpleAdPackages({
+  businessName,
+  businessType = "Local Business",
+  town = "",
+  brief = "",
+  targetAudience = "",
+  language = "English",
+  creativeStyle = "UGC / Creator-style",
+}) {
+  const brand = String(businessName || "My Business").trim();
+  const bType = String(businessType || "Retail").trim();
+  const city = String(town || "").trim();
+  const offer = String(brief || `${bType} promotion`).trim();
+  const audience = String(targetAudience || "Neighborhood customers").trim();
+  const isEng = !language || /eng/i.test(language);
+
+  const system = `You are an elite short-form commercial video director creating high-converting ads for Indian local businesses and brands.
+Generate exactly 3 complete, distinct, and realistic Ad Packages for this business.
+Each Ad Package must have:
+1. "Problem & Relief" angle (relatable pain-point, trusted fix).
+2. "Customer Experience & Trust" angle (word-of-mouth, transparency, authentic satisfaction).
+3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).
+
+CRITICAL SCRIPT CONSTRAINTS:
+- Language: ${language}. ${isEng ? "Natural conversational English." : "Conversational dialogue written in Devanagari script."}
+- Exactly 4 scenes per package:
+  Scene 1: Hook (0-3s, pattern interrupt)
+  Scene 2: Build (3-8s, product/service demo in action)
+  Scene 3: Turn (8-14s, proof / customer reaction)
+  Scene 4: Resolution (14-20s, clear CTA with store visit or order link)
+- Single continuous setting per ad package.
+- Exactly 2 characters with natural interaction.
+
+OUTPUT FORMAT:
+Output strictly valid JSON between @@JSON@@ and @@END@@ markers:
+@@JSON@@
+{
+  "packages": [
+    {
+      "id": "pkg_problem_relief",
+      "badge": "Highest Converting",
+      "angle": "Problem & Relief",
+      "title": "Short Punchy Title",
+      "hookHeadline": "Opening 3-second hook spoken line",
+      "narrativeSummary": "1-sentence description of the ad story",
+      "callToAction": "Clear final CTA line",
+      "setting": "Setting description",
+      "characters": { "lead": "Character 1", "customer": "Character 2" },
+      "scenes": [
+        {
+          "sceneNumber": 1,
+          "beat": "Hook",
+          "timing": "0-3s",
+          "visual": "Action description",
+          "dialogue": "Lead: Spoken words"
+        },
+        {
+          "sceneNumber": 2,
+          "beat": "Build",
+          "timing": "3-8s",
+          "visual": "Action description",
+          "dialogue": "Lead: Spoken words"
+        },
+        {
+          "sceneNumber": 3,
+          "beat": "Turn",
+          "timing": "8-14s",
+          "visual": "Action description",
+          "dialogue": "Customer: Spoken words"
+        },
+        {
+          "sceneNumber": 4,
+          "beat": "Resolution",
+          "timing": "14-20s",
+          "visual": "Action description",
+          "dialogue": "Lead: Spoken words"
+        }
+      ]
+    }
+  ]
+}
+@@END@@`;
+
+  const content = `BUSINESS NAME: ${brand}
+CATEGORY: ${bType}
+LOCATION: ${city || "City"}
+OFFER / PROMOTION: ${offer}
+TARGET AUDIENCE: ${audience}
+LANGUAGE: ${language}
+STYLE: ${creativeStyle}
+
+Create 3 distinct Ad Packages now:`;
+
+  try {
+    const raw = await callClaude({ system, content, maxTokens: 4000, thinking: false });
+    const parsed = parseJSONBlock(raw);
+    if (parsed && Array.isArray(parsed.packages) && parsed.packages.length === 3) {
+      return parsed.packages.map((pkg, idx) => ({
+        ...pkg,
+        id: pkg.id || `pkg_${idx + 1}`,
+        hook: pkg.hook || pkg.hookHeadline || "",
+        hookHeadline: pkg.hookHeadline || pkg.hook || "",
+        fullScriptText: compileSimpleScriptText(pkg, brand),
+      }));
+    }
+  } catch (e) {
+    console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);
+  }
+
+  return getFallbackAdPackages({ businessName: brand, businessType: bType, town: city, brief: offer, language });
+}
+
 module.exports = {
   performAdaptiveResearch,
   generateDirections,
@@ -833,4 +1241,5 @@ module.exports = {
   generateStoryWorld,
   synthesizeMasterScript,
   rewriteScene,
+  generateSimpleAdPackages,
 };
