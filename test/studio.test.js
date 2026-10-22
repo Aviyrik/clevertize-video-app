@@ -1607,6 +1607,8 @@ test('V2 Application Shell: App.jsx integrates AppShell, frosted navigation, and
   assert.ok(shellSrc.includes('Creation Hub'), 'AppShell must link to Creation Hub');
   assert.ok(shellSrc.includes('Creative Studio'), 'AppShell must link to Creative Studio');
   assert.ok(shellSrc.includes('Production Pipeline'), 'AppShell must show 8-stage production pipeline');
+  assert.ok(shellSrc.includes("studioMode = 'simple'"), 'AppShell must declare studioMode in props');
+  assert.ok(shellSrc.includes('onToggleStudioMode'), 'AppShell must declare onToggleStudioMode in props');
 });
 
 test('V2 Entry Points: CreationEntryHub exposes Brief, Existing Script, and Website URL entry points', () => {

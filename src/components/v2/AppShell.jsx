@@ -67,6 +67,8 @@ export default function AppShell({
   onLogout,
   onOpenOnboarding,
   projectCount = 0,
+  studioMode = 'simple',
+  onToggleStudioMode,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [businessDropdownOpen, setBusinessDropdownOpen] = useState(false);
