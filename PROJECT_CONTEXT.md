@@ -99,7 +99,7 @@ DATABASE_URL=
 - **Database Adapter**: [`src/db/index.js`](file:///f:/Video%20App%20NEW/cleverdashboard/src/db/index.js)
   - Handles PostgreSQL persistence with automatic fallback to local JSON file persistence.
 - **Automated Tests**: [`test/studio.test.js`](file:///f:/Video%20App%20NEW/cleverdashboard/test/studio.test.js)
-  - Comprehensive suite with **152 passing automated tests**. Run with `npm test`.
+  - Comprehensive suite with **176 passing automated tests**. Run with `npm test`.
 
 ---
 
