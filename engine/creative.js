@@ -913,23 +913,437 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
   const isMar = language && /mar/i.test(language);
   const offer = brief || `${businessType} Special`;
   const city = town ? ` in ${town}` : "";
+  const catLower = `${businessType} ${brief}`.toLowerCase();
 
+  const isJewellery = /jewel|gold|diamond|ornament|silver|gem/i.test(catLower);
+  const isSweets = /sweet|mithai|bakery|cake|dessert/i.test(catLower);
+  const isFashion = /saree|apparel|clothing|fashion|boutique|dress|garment|textile/i.test(catLower);
+
+  if (isJewellery) {
+    return [
+      {
+        id: "pkg_problem_relief",
+        badge: "Highest Converting",
+        angle: "Problem & Relief",
+        title: "Hallmark Purity, Zero Guesswork",
+        hookHeadline: isEng
+          ? "Worried about gold purity and high making charges? Look closely at this."
+          : isHin
+          ? "सोने की शुद्धता और भारी मेकिंग चार्ज की चिंता? ये देखिए!"
+          : "सोन्याच्या शुद्धतेची आणि मेकिंग चार्जेसची काळजी? हे नक्की बघा!",
+        narrativeSummary: `Addresses common customer doubts on gold purity and making charges by spotlighting ${businessName}'s 100% BIS Hallmarked jewellery and transparent pricing.`,
+        callToAction: isEng
+          ? `Visit ${businessName}${city} today to explore the new collection!`
+          : isHin
+          ? `आज ही ${businessName} आइए और नया कलेक्शन देखिए!`
+          : `आजच ${businessName} ला भेट द्या आणि नवीन डिझाईन्स बघा!`,
+        setting: `Elegant plush showroom counter at ${businessName}${city} with gold and diamond display trays under warm spotlight.`,
+        characters: { lead: "Jewellery Specialist", customer: "Customer" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Lead holds an exquisite BIS 916 gold ornament under spotlight at the ${businessName} showroom counter.`,
+            dialogue: isEng
+              ? `Lead: "Worried about gold purity and high making charges? Look closely at this."`
+              : isHin
+              ? `Lead: "सोने की शुद्धता और भारी मेकिंग चार्ज की चिंता? ये देखिए!"`
+              : `Lead: "सोन्याच्या शुद्धतेची आणि मेकिंग चार्जेसची काळजी? हे नक्की बघा!"`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Lead presents the piece to customer, pointing to the laser-engraved 916 BIS Hallmark stamp and transparent tag for ${offer}.`,
+            dialogue: isEng
+              ? `Lead: "At ${businessName}, every single design is 100% BIS Hallmarked with crystal-clear making charges."`
+              : isHin
+              ? `Lead: "${businessName} में हर गहना 100% BIS हॉलमार्क शुद्धता और पारदर्शी मेकिंग चार्ज के साथ आता है।" `
+              : `Lead: "${businessName} मध्ये प्रत्येक दागिन्यावर १००% BIS हॉलमार्क आणि पारदर्शी घडणावळ मिळते."`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Customer tries on the jewellery in front of the showroom mirror with delight and confidence.`,
+            dialogue: isEng
+              ? `Customer: "The craftsmanship is stunning, and the pricing is completely honest!"`
+              : isHin
+              ? `Customer: "कारीगरी भी लाजवाब है और कीमत भी पूरी तरह सच्ची!"`
+              : `Customer: "डिझाइन अप्रतिम आहे आणि खात्रीशीर भाव मिळाला!"`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Lead places the jewellery into a luxury velvet presentation box as store location and contact details appear.`,
+            dialogue: isEng
+              ? `Lead: "Visit ${businessName}${city} today—celebrate every milestone with timeless gold!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} पधारिए—अपने हर पल को सोने सा चमकाइए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या—आनंद साजरा करा!"`,
+          },
+        ],
+      },
+      {
+        id: "pkg_customer_trust",
+        badge: "Most Trusted",
+        angle: "Customer Story & Trust",
+        title: "The Milestone Heirloom",
+        hookHeadline: isEng
+          ? `Why do families across town trust ${businessName} for every milestone?`
+          : isHin
+          ? `शादी और त्योहारों के लिए शहर का भरोसा ${businessName} पर ही क्यों है?`
+          : `प्रत्येक शुभकार्यासाठी सगळे ${businessName} वरच विश्वास का ठेवतात?`,
+        narrativeSummary: `A loyal family shares why ${businessName} is their lifelong choice for wedding jewellery and gold exchange.`,
+        callToAction: isEng
+          ? `Step into ${businessName}${city} and find your family's next heirloom!`
+          : isHin
+          ? `आज ही ${businessName} आइए और अपनी पसंद का गहना चुनिए!`
+          : `आजच ${businessName} ला भेट द्या!`,
+        setting: `Warm bridal lounge inside ${businessName}${city} with velvet seating and sparkling necklace sets.`,
+        characters: { lead: "Showroom Stylist", customer: "Delighted Bride / Customer" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Customer admires a handcrafted bridal necklace set in front of an ornate showroom mirror.`,
+            dialogue: isEng
+              ? `Customer: "Why do families across town trust ${businessName} for every milestone? Here is why."`
+              : isHin
+              ? `Customer: "शादी और त्योहारों के लिए सब ${businessName} पर ही भरोसा क्यों करते हैं? वजह साफ है।" `
+              : `Customer: "प्रत्येक शुभकार्यासाठी सगळे ${businessName} वरच का विश्वास ठेवतात? कारण अगदी स्पष्ट आहे."`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Lead displays certified uncut diamond and antique gold designs, presenting the authenticity certificate.`,
+            dialogue: isEng
+              ? `Lead: "Generations of families trust us for guaranteed purity, lifetime exchange, and handcrafted perfection."`
+              : isHin
+              ? `Lead: "सालों से परिवारों का भरोसा है हमारी शुद्धता, लाइफटाइम एक्सचेंज और बेमिसाल कारीगरी पर।" `
+              : `Lead: "अनेक वर्षांचा विश्वास—१००% शुद्धता, लाइफटाइम एक्सचेंज आणि सुंदर कारागिरी."`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Customer's eyes light up as the full bridal set catches the light, glowing with happiness.`,
+            dialogue: isEng
+              ? `Customer: "Every single piece feels like a royal heirloom!"`
+              : isHin
+              ? `Customer: "हर एक गहना सच में शाही विरासत जैसा लगता है!"`
+              : `Customer: "प्रत्येक दागिना अगदी राजेशाही वाटतो!"`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Lead hands over the branded luxury gift bag and authenticity certificate with a warm smile.`,
+            dialogue: isEng
+              ? `Lead: "Step into ${businessName}${city} today—we make every milestone unforgettable!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} पधारिए—अपनी खुशियों को खास बनाइए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+          },
+        ],
+      },
+      {
+        id: "pkg_festive_offer",
+        badge: "Highest Urgency",
+        angle: "Limited-Time Special Offer",
+        title: "Festive Gold & Diamond Celebration",
+        hookHeadline: isEng
+          ? `Stop scrolling—our biggest festive jewellery celebration at ${businessName} is on!`
+          : isHin
+          ? `रुकिए! ${businessName} का सबसे बड़ा फेस्टिव ज्वेलरी ऑफर शुरू हो चुका है!`
+          : `थांबा! ${businessName} चा सर्वात मोठा फेस्टिव्ह ज्वेलरी ऑफर आला आहे!`,
+        narrativeSummary: `High-energy festive promotion spotlighting ${offer} with special making charge benefits and gold exchange bonus.`,
+        callToAction: isEng
+          ? `Visit ${businessName}${city} this week—festive offer valid while collections last!`
+          : isHin
+          ? `आज ही ${businessName} पधारिए—ऑफर सीमित समय के लिए!`
+          : `आजच ${businessName} ला भेट द्या!`,
+        setting: `Festive-decorated showroom counter at ${businessName}${city} adorned with marigold garlands and brass lamps.`,
+        characters: { lead: "Store Host", customer: "Delighted Shopper" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Host steps into frame with festive elegance, showcasing a sparkling gold necklace against a velvet backdrop.`,
+            dialogue: isEng
+              ? `Lead: "Stop scrolling—our biggest festive celebration at ${businessName} is here!"`
+              : isHin
+              ? `Lead: "रुकिए! ${businessName} का सबसे बड़ा फेस्टिव ऑफर आ गया है!"`
+              : `Lead: "थांबा! ${businessName} चा सर्वात मोठा सणासुदीचा ऑफर आला आहे!"`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Host showcases ${offer} highlighting special festive tags with discounted making charges and gold bonus.`,
+            dialogue: isEng
+              ? `Lead: "Celebrate this season with ${offer}—special making charges and guaranteed exchange bonus!"`
+              : isHin
+              ? `Lead: "इस त्योहारी सीज़न में पाइए ${offer}—मेकिंग चार्ज पर विशेष छूट और शानदार उपहार!"`
+              : `Lead: "या सणात मिळवा ${offer}—घडणावळीवर भरघोस सवलत आणि खास भेटवस्तू!"`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Delighted customer receives complimentary festive gift box alongside their jewellery purchase.`,
+            dialogue: isEng
+              ? `Customer: "Unbeatable designs, zero hassle, and the best festive deal in town!"`
+              : isHin
+              ? `Customer: "खूबसूरत डिज़ाइन्स और शहर का सबसे बेहतरीन फेस्टिव ऑफर!"`
+              : `Customer: "अप्रतिम डिझाइन आणि सणाचा सर्वात मोठा फायदा!"`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Customer and host smile together as showroom address, festive offer dates, and contact details appear clearly.`,
+            dialogue: isEng
+              ? `Lead: "Visit ${businessName}${city} today—limited-time festive celebration!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} पधारिए—ऑफर सीमित समय के लिए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+          },
+        ],
+      },
+    ].map((pkg) => ({
+      ...pkg,
+      hook: pkg.hookHeadline,
+      fullScriptText: compileSimpleScriptText(pkg, businessName),
+    }));
+  }
+
+  if (isSweets) {
+    return [
+      {
+        id: "pkg_problem_relief",
+        badge: "Highest Converting",
+        angle: "Problem & Relief",
+        title: "Pure Desi Ghee, Zero Compromise",
+        hookHeadline: isEng
+          ? "Tired of questionable ingredients in festival sweets? Taste the difference here."
+          : isHin
+          ? "सस्ती मिलावट वाली मिठाइयों से परेशान हैं? असली स्वाद यहाँ देखिए!"
+          : "मिठायांमध्ये भेसळीची भीती वाटते? अस्सल चव इथे अनुभवा!",
+        narrativeSummary: `Highlights ${businessName}'s 100% pure desi ghee preparation and daily fresh authenticity.`,
+        callToAction: isEng
+          ? `Visit ${businessName}${city} today for pure festive sweetness!`
+          : isHin
+          ? `आज ही ${businessName} आइए और शुद्ध देसी घी की मिठाइयां पाइए!`
+          : `आजच ${businessName} ला भेट द्या!`,
+        setting: `Gleaming sweet shop counter at ${businessName}${city} filled with traditional brass platters of fresh sweets.`,
+        characters: { lead: "Sweet Maker / Host", customer: "Customer" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Lead breaks open a fresh, golden sweet under warm lighting showing rich texture and pure desi ghee.`,
+            dialogue: isEng
+              ? `Lead: "Tired of questionable ingredients in festival sweets? Taste the difference here."`
+              : isHin
+              ? `Lead: "सस्ती मिलावट वाली मिठाइयों से परेशान हैं? असली स्वाद यहाँ देखिए!"`
+              : `Lead: "मिठायांमध्ये भेसळीची भीती वाटते? अस्सल चव इथे अनुभवा!"`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Lead presents a fresh platter of ${offer} made with pure saffron, pistachio, and fresh milk.`,
+            dialogue: isEng
+              ? `Lead: "At ${businessName}, every batch is made fresh daily using 100% pure desi ghee and time-honored recipes."`
+              : isHin
+              ? `Lead: "${businessName} में हर मिठाई बनती है 100% शुद्ध देसी घी और ताज़ा मेवों से।" `
+              : `Lead: "${businessName} मध्ये प्रत्येक गोड पदार्थ १००% शुद्ध तूप आणि ताज्या घटकांपासून बनतो."`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Customer takes a bite, closing their eyes in authentic delight at the melt-in-mouth taste.`,
+            dialogue: isEng
+              ? `Customer: "Melt-in-mouth perfection! You can taste the genuine purity immediately."`
+              : isHin
+              ? `Customer: "मुंह में घुलने वाला स्वाद! असली शुद्धता का स्वाद साफ पता चलता है।" `
+              : `Customer: "अतिशय चविष्ट! अस्सल तुपाची चव लगेच समजते."`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Lead packs an elegant festive gift box with royal ribbon as store location flashes on screen.`,
+            dialogue: isEng
+              ? `Lead: "Visit ${businessName}${city} today—sweeten every celebration with pure joy!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} आइए—अपनी खुशियों में शुद्ध मिठास घोलिए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+          },
+        ],
+      },
+      {
+        id: "pkg_customer_trust",
+        badge: "Most Trusted",
+        angle: "Customer Story & Trust",
+        title: "The Neighborhood Tradition",
+        hookHeadline: isEng
+          ? `Why is ${businessName} the first choice for every family celebration?`
+          : isHin
+          ? `हर त्योहार पर पूरा शहर ${businessName} की मिठाई ही क्यों पसंद करता है?`
+          : `प्रत्येक सणासाठी सगळे ${businessName} चेच नाव का घेतात?`,
+        narrativeSummary: `A loyal family shares why ${businessName} has been their trusted sweet shop for decades.`,
+        callToAction: isEng
+          ? `Pick up your festive favorites at ${businessName}${city} today!`
+          : isHin
+          ? `आज ही ${businessName} आइए और त्योहार की मिठास ले जाइए!`
+          : `आजच ${businessName} ला भेट द्या!`,
+        setting: `Bustling, welcoming sweet shop counter at ${businessName}${city}.`,
+        characters: { lead: "Store Host", customer: "Delighted Customer" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Customer stands by the festive sweet counter pointing enthusiastically to the display.`,
+            dialogue: isEng
+              ? `Customer: "Why is ${businessName} the first choice for every family celebration?"`
+              : isHin
+              ? `Customer: "हर त्योहार पर पूरा शहर ${businessName} की मिठाई ही क्यों पसंद करता है?" `
+              : `Customer: "प्रत्येक सणासाठी सगळे ${businessName} चेच नाव का घेतात?"`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Lead arranges festive assorted gift hampers featuring ${offer} with ornate gold boxes.`,
+            dialogue: isEng
+              ? `Lead: "Decades of trust, zero compromise on hygiene, and the authentic taste of tradition."`
+              : isHin
+              ? `Lead: "सालों का अटूट विश्वास, पूरी सफाई और वही पुराना प्रामाणिक स्वाद।" `
+              : `Lead: "वर्षानुवर्षांचा विश्वास, उत्तम स्वच्छता आणि पारंपारिक चव."`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Customer picks up festive hampers with a huge smile, nodding with satisfaction.`,
+            dialogue: isEng
+              ? `Customer: "Our guests always rave about these sweets—they never settle for anything else!"`
+              : isHin
+              ? `Customer: "हमारे मेहमान हमेशा यहाँ की मिठाई की तारीफ करते हैं!"`
+              : `Customer: "आमच्याकडे सणाला फक्त इथलीच मिठाई येते!"`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Host hands over beautifully wrapped gift hampers with festive greeting card and shop address.`,
+            dialogue: isEng
+              ? `Lead: "Visit ${businessName}${city} today and take home the sweetness of celebration!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} आइए और खुशियों के डिब्बे घर ले जाइए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+          },
+        ],
+      },
+      {
+        id: "pkg_festive_offer",
+        badge: "Highest Urgency",
+        angle: "Limited-Time Special Offer",
+        title: "Festive Sweet Box Special",
+        hookHeadline: isEng
+          ? `Stop scrolling—our festive sweet pre-orders at ${businessName} are officially live!`
+          : isHin
+          ? `रुकिए! ${businessName} की फेस्टिव मिठाई बुकिंग शुरू हो चुकी है!`
+          : `थांबा! ${businessName} ची सणासुदीची खास ऑफर सुरू झाली आहे!`,
+        narrativeSummary: `High-energy festive ad spotlighting ${offer} with special festive pre-order pricing.`,
+        callToAction: isEng
+          ? `Pre-order or visit ${businessName}${city} today before festive slots sell out!`
+          : isHin
+          ? `आज ही ${businessName} आइए या प्री-ऑर्डर कीजिए!`
+          : `आजच ${businessName} ला भेट द्या!`,
+        setting: `Festive-decorated sweet shop storefront at ${businessName}${city}.`,
+        characters: { lead: "Store Host", customer: "Happy Shopper" },
+        scenes: [
+          {
+            sceneNumber: 1,
+            beat: "Hook",
+            timing: "0-3s",
+            visual: `Host holds up a premium festive gift hamper filled with assorted sweets and dry fruits.`,
+            dialogue: isEng
+              ? `Lead: "Stop scrolling—our biggest festive sweet celebration at ${businessName} is here!"`
+              : isHin
+              ? `Lead: "रुकिए! ${businessName} का सबसे बड़ा फेस्टिव स्वीट ऑफर आ गया है!"`
+              : `Lead: "थांबा! ${businessName} चा सर्वात मोठा फेस्टिव्ह ऑफर आला आहे!"`,
+          },
+          {
+            sceneNumber: 2,
+            beat: "Build",
+            timing: "3-8s",
+            visual: `Host shows ${offer} with festive savings tag and elegant packaging.`,
+            dialogue: isEng
+              ? `Lead: "Get your special ${offer} box this week with exclusive festive savings!"`
+              : isHin
+              ? `Lead: "इस हफ्ते पाइए खास ${offer} स्पेशल फेस्टिव डिस्काउंट के साथ!"`
+              : `Lead: "या आठवड्यात मिळवा ${offer} खास सवलतीत!"`,
+          },
+          {
+            sceneNumber: 3,
+            beat: "Turn",
+            timing: "8-14s",
+            visual: `Customer smiles warmly with packed festive boxes in hand, delighted with the packaging and freshness.`,
+            dialogue: isEng
+              ? `Customer: "Pure quality, gorgeous gift packaging, and unbeatable taste!"`
+              : isHin
+              ? `Customer: "शुद्ध क्वालिटी, खूबसूरत पैकिंग और शानदार स्वाद!"`
+              : `Customer: "उत्कृष्ट दर्जा आणि सुंदर पॅकिंग!"`,
+          },
+          {
+            sceneNumber: 4,
+            beat: "Resolution",
+            timing: "14-20s",
+            visual: `Host and customer wave with festive cheer as shop location and phone number flash on screen.`,
+            dialogue: isEng
+              ? `Lead: "Visit ${businessName}${city} today—limited festive stock available!"`
+              : isHin
+              ? `Lead: "आज ही ${businessName} पधारिए—ऑफर सीमित समय के लिए!"`
+              : `Lead: "आजच ${businessName} ला भेट द्या!"`,
+          },
+        ],
+      },
+    ].map((pkg) => ({
+      ...pkg,
+      hook: pkg.hookHeadline,
+      fullScriptText: compileSimpleScriptText(pkg, businessName),
+    }));
+  }
+
+  // General fallback (refined to be universally appropriate across retail and local businesses)
   return [
     {
       id: "pkg_problem_relief",
       badge: "Highest Converting",
       angle: "Problem & Relief",
-      title: "The Dilemma Solved",
+      title: "The Search Ended",
       hookHeadline: isEng
-        ? `Tired of dealing with bad service? Watch this.`
+        ? "Tired of compromising on quality and service? Watch this."
         : isHin
-        ? `खराब सर्विस से परेशान हैं? ये देखिए!`
-        : `कंटाळला आहात का? हे नक्की बघा!`,
-      narrativeSummary: `Addresses the common customer headache and shows how ${businessName} solves it reliably.`,
+        ? "क्वालिटी से समझौता करके परेशान हैं? ये देखिए!"
+        : "क्वालिटीशी तडजोड करून कंटाळला आहात? हे नक्की बघा!",
+      narrativeSummary: `Addresses common customer frustrations and shows how ${businessName} provides dependable quality.`,
       callToAction: isEng
         ? `Visit ${businessName}${city} today for trusted quality!`
         : isHin
-        ? `आज ही ${businessName} आइए और बेहतरीन सर्विस पाइए!`
+        ? `आज ही ${businessName} आइए और बेहतरीन अनुभव पाइए!`
         : `आजच ${businessName} ला भेट द्या!`,
       setting: `Welcoming storefront counter at ${businessName}${city}.`,
       characters: { lead: "Owner / Host", customer: "Customer" },
@@ -940,38 +1354,38 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           timing: "0-3s",
           visual: `Lead stands at the ${businessName} counter looking directly at camera with empathetic energy.`,
           dialogue: isEng
-            ? `Lead: "Tired of dealing with bad service? Watch this."`
+            ? "Tired of compromising on quality and service? Watch this."
             : isHin
-            ? `Lead: "खराब सर्विस से परेशान हैं? ये देखिए!"`
-            : `Lead: "कंटाळला आहात का? हे नक्की बघा!"`,
+            ? "क्वालिटी से समझौता करके परेशान हैं? ये देखिए!"
+            : "क्वालिटीशी तडजोड करून कंटाळला आहात? हे नक्की बघा!",
         },
         {
           sceneNumber: 2,
           beat: "Build",
           timing: "3-8s",
-          visual: `Customer arrives explaining their issue; Lead points reassuringly to ${offer} on the display counter.`,
+          visual: `Customer arrives explaining their needs; Lead points reassuringly to ${offer} on display.`,
           dialogue: isEng
-            ? `Lead: "Don't stress. At ${businessName}, we guarantee 100% genuine quality every time."`
+            ? `Lead: "Don't worry. At ${businessName}, we guarantee 100% genuine quality every time."`
             : isHin
-            ? `Lead: "चिंता मत कीजिए, ${businessName} में हर काम पूरी गारंटी के साथ होता है।"`
-            : `Lead: "काळजी नको, ${businessName} मध्ये १००% खात्रीशीर काम मिळते."`,
+            ? `Lead: "चिंता मत कीजिए, ${businessName} में हर काम पूरी गारंटी के साथ होता है।" `
+            : `Lead: "काळजी नको, ${businessName} मध्ये १००% खात्रीशीर अनुभव मिळतो."`,
         },
         {
           sceneNumber: 3,
           beat: "Turn",
           timing: "8-14s",
-          visual: `Customer inspects the completed work with visible relief and nods happily at the result.`,
+          visual: `Customer inspects the selection with visible relief and smiles warmly at the result.`,
           dialogue: isEng
             ? `Customer: "Wow, that was fast, honest, and completely hassle-free!"`
             : isHin
             ? `Customer: "अरे वाह, इतना तेज़ और बिना किसी झंझट के!"`
-            : `Customer: "अरे वा, अगदी पटकन आणि प्रामाणिक काम झाले!"`,
+            : `Customer: "अरे वा, अगदी पटकन आणि प्रामाणिक अनुभव मिळाला!"`,
         },
         {
           sceneNumber: 4,
           beat: "Resolution",
           timing: "14-20s",
-          visual: `Lead smiles warmly next to the official ${businessName} service card and contact details.`,
+          visual: `Lead smiles warmly next to the official ${businessName} store guarantee and contact details.`,
           dialogue: isEng
             ? `Lead: "Visit ${businessName}${city} today—we've got you covered!"`
             : isHin
@@ -996,71 +1410,71 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
         : isHin
         ? `आइए और खुद देखिए कि ${businessName} पर इतना भरोसा क्यों है!`
         : `अनुभव घ्या आणि आजच भेट द्या!`,
-      setting: `Bright, tidy customer lounge and counter at ${businessName}.`,
-      characters: { lead: "Happy Customer", customer: "Host" },
+      setting: `Bright, tidy customer lounge and showroom at ${businessName}${city}.`,
+      characters: { lead: "Lead Specialist", customer: "Customer" },
       scenes: [
         {
           sceneNumber: 1,
           beat: "Hook",
           timing: "0-3s",
-          visual: `Happy customer holds up order confirmation smiling directly into camera outside the entrance.`,
+          visual: `Customer sits comfortably at ${businessName}, looking directly into camera with genuine enthusiasm.`,
           dialogue: isEng
-            ? `Customer: "Why does everyone in our area recommend ${businessName}?"`
+            ? `Customer: "Why does everyone recommend ${businessName}? Here's my honest review."`
             : isHin
-            ? `Customer: "सब लोग हमारे इलाके में ${businessName} की ही बात क्यों करते हैं?"`
-            : `Customer: "सगळे ${businessName} चेच नाव का घेतात?"`,
+            ? `Customer: "सब लोग ${businessName} की ही तारीफ क्यों करते हैं? जानिए मेरा सच्चा अनुभव।" `
+            : `Customer: "सगळे ${businessName} चेच नाव का घेतात? हा माझा खरा अनुभव बघा."`,
         },
         {
           sceneNumber: 2,
           beat: "Build",
           timing: "3-8s",
-          visual: `Camera showcases the transparent pricing, organized workspace, and friendly staff greeting customers.`,
+          visual: `Lead walks customer through ${offer}, showing clear pricing and premium standards without upselling.`,
           dialogue: isEng
-            ? `Customer: "Because from the moment you walk in, the transparency and care are unmatched."`
+            ? `Lead: "We believe in complete transparency, zero hidden charges, and honest work."`
             : isHin
-            ? `Customer: "क्योंकि यहाँ काम बिल्कुल साफ-सुथरा और भरोसेमंद होता है।"`
-            : `Customer: "कारण इथे काम अगदी स्वच्छ आणि विश्वासाचे असते."`,
+            ? `Lead: "हम मानते हैं पूरी ईमानदारी और बिना किसी छुपे चार्ज के काम में।" `
+            : `Lead: "आम्ही मानतो पूर्ण पारदर्शकता आणि प्रामाणिक सेवेत."`,
         },
         {
           sceneNumber: 3,
           beat: "Turn",
           timing: "8-14s",
-          visual: `Lead hands over the finished delivery with a warm handshake and warranty seal.`,
+          visual: `Customer checks out happily, holding their receipt with a confident nod.`,
           dialogue: isEng
-            ? `Lead: "We treat every single customer like family."`
+            ? `Customer: "Saved time, saved money, and the team treated me like family."`
             : isHin
-            ? `Lead: "हम हर ग्राहक को अपने परिवार जैसा समझते हैं।"`
-            : `Lead: "आम्ही प्रत्येक ग्राहकाला आपल्या कुटुंबासारखे मानतो."`,
+            ? `Customer: "पैसे भी बचे, समय भी बचा और व्यवहार तो एकदम अपने परिवार जैसा!"`
+            : `Customer: "वेळ आणि पैसा दोन्ही वाचले, आणि घरच्यासारखी वागणूक मिळाली!"`,
         },
         {
           sceneNumber: 4,
           beat: "Resolution",
           timing: "14-20s",
-          visual: `Both raise thumbs up at the counter with location pin and opening hours on screen.`,
+          visual: `Lead and customer stand together outside the entrance with Google 5-star rating overlay.`,
           dialogue: isEng
-            ? `Customer: "Come see for yourself at ${businessName}${city}!"`
+            ? `Customer: "Don't think twice—head to ${businessName}${city}!"`
             : isHin
-            ? `Customer: "खुद आकर देखिए, ${businessName} में!"`
-            : `Customer: "स्वतः अनुभव घ्या ${businessName} मध्ये!"`,
+            ? `Customer: "सोचिए मत, आज ही ${businessName} आइए!"`
+            : `Customer: "जास्त विचार करू नका, आजच ${businessName} ला भेट द्या!"`,
         },
       ],
     },
     {
       id: "pkg_festive_offer",
-      badge: "Limited-Time Deal",
+      badge: "Highest Urgency",
       angle: "Limited-Time Special Offer",
-      title: "Exclusive Celebration Offer",
+      title: "The Seasonal Spotlight",
       hookHeadline: isEng
-        ? `Stop scrolling—our biggest offer of the season is here!`
+        ? "Stop scrolling—our biggest offer of the season is here!"
         : isHin
-        ? `रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!`
-        : `थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!`,
+        ? "रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!"
+        : "थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!",
       narrativeSummary: `High-energy commercial spotlighting ${offer} with clear savings and instant action.`,
       callToAction: isEng
-        ? `Book or visit today—offer valid while slots last!`
+        ? "Visit today—offer valid while stocks last!"
         : isHin
-        ? `ऑफर सीमित समय के लिए है—आज ही कॉल करें या आइए!`
-        : `मर्यादित काळासाठी ऑफर—आजच बुक करा!`,
+        ? "ऑफर सीमित समय के लिए है—आज ही आइए!"
+        : "मर्यादित काळासाठी ऑफर—आजच भेट द्या!",
       setting: `Festive-decorated service counter at ${businessName}.`,
       characters: { lead: "Store Host", customer: "Delighted Customer" },
       scenes: [
@@ -1068,42 +1482,42 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           sceneNumber: 1,
           beat: "Hook",
           timing: "0-3s",
-          visual: `Host steps into frame with festive celebration energy, holding up the special announcement banner.`,
+          visual: "Host steps into frame with festive celebration energy, holding up the special announcement banner.",
           dialogue: isEng
-            ? `Lead: "Stop scrolling—our biggest offer of the season is here!"`
+            ? 'Lead: "Stop scrolling—our biggest offer of the season is here!"'
             : isHin
-            ? `Lead: "रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!"`
-            : `Lead: "थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!"`,
+            ? 'Lead: "रुकिए! इस सीज़न का सबसे बड़ा ऑफर आ गया है!"'
+            : 'Lead: "थांबा! या हंगामाची सर्वात मोठी ऑफर आली आहे!"',
         },
         {
           sceneNumber: 2,
           beat: "Build",
           timing: "3-8s",
-          visual: `Host demonstrates ${offer} highlighting premium ingredients and thorough professional standards.`,
+          visual: `Host demonstrates ${offer} highlighting premium standards and genuine value.`,
           dialogue: isEng
             ? `Lead: "Get the complete ${offer} package at an unbeatable price this week."`
             : isHin
-            ? `Lead: "इस हफ्ते पाइए पूरा ${offer} सबसे खास कीमत पर।"`
+            ? `Lead: "इस हफ्ते पाइए पूरा ${offer} सबसे खास कीमत पर।" `
             : `Lead: "या आठवड्यात मिळवा संपूर्ण ${offer} अगदी विशेष दरात."`,
         },
         {
           sceneNumber: 3,
           beat: "Turn",
           timing: "8-14s",
-          visual: `Customer smiles happily as host stamps the special discount coupon on their receipt.`,
+          visual: "Customer smiles happily as host stamps the special discount coupon on their receipt.",
           dialogue: isEng
-            ? `Customer: "I saved money and got the best service in town!"`
+            ? 'Customer: "I saved money and got the best quality in town!"'
             : isHin
-            ? `Customer: "पैसे भी बचे और काम भी नंबर एक हुआ!"`
-            : `Customer: "पैसेही वाचले आणि उत्तम कामही झाले!"`,
+            ? 'Customer: "पैसे भी बचे और काम भी नंबर एक हुआ!"'
+            : 'Customer: "पैसेही वाचले आणि उत्तम अनुभवही मिळाला!"',
         },
         {
           sceneNumber: 4,
           beat: "Resolution",
           timing: "14-20s",
-          visual: `Delighted customer and host stand together as store contact details and location flash clearly.`,
+          visual: "Delighted customer and host stand together as store contact details and location flash clearly.",
           dialogue: isEng
-            ? `Lead: "Visit ${businessName}${city} today before slots fill up!"`
+            ? `Lead: "Visit ${businessName}${city} today while offers last!"`
             : isHin
             ? `Lead: "आज ही ${businessName} आइए, ऑफर सीमित समय के लिए है!"`
             : `Lead: "आजच ${businessName} ला भेट द्या!"`,
@@ -1117,10 +1531,6 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
   }));
 }
 
-/**
- * 8. SIMPLE BUSINESS STUDIO — Generates 3 Complete, High-Converting Ad Packages.
- * Runs in a single, fast call. Each package contains Hook, Story, Dialogue, CTA, and full script.
- */
 async function generateSimpleAdPackages({
   businessName,
   businessType = "Local Business",
@@ -1137,7 +1547,35 @@ async function generateSimpleAdPackages({
   const audience = String(targetAudience || "Neighborhood customers").trim();
   const isEng = !language || /eng/i.test(language);
 
+  let categoryGuidance = "";
+  const catCheck = `${bType} ${offer}`.toLowerCase();
+  if (/jewel|gold|diamond|ornament|silver|gem/i.test(catCheck)) {
+    categoryGuidance = `
+CATEGORY-SPECIFIC MANDATES FOR JEWELLERY & LUXURY:
+- Setting: Plush, elegant jewellery showroom with velvet trays, jewelry spotlights, mirror counters, and bridal lounge.
+- Characters: Jewellery Consultant / Stylist and Buyer / Bride / Family Member.
+- Authenticity elements: 916 BIS Hallmark purity, certified natural/lab diamonds, karatage, transparent making charges, bridal heirlooms, old-gold exchange bonus.
+- STRICT NEGATIVE RULES: NEVER mention "free consultation", "services", "repairs", "maintenance", "service card", "diagnostic", "fixing", "servicing", or "technician". Jewellery is an emotional, high-value luxury purchase, NOT a mechanical service or clinic consultation!`;
+  } else if (/sweet|mithai|bakery|cake/i.test(catCheck)) {
+    categoryGuidance = `
+CATEGORY-SPECIFIC MANDATES FOR SWEETS & BAKERY:
+- Setting: Bright, festive sweet shop with gleaming glass display cases, brass platters, and festive gift boxes.
+- Authenticity elements: 100% pure desi ghee, fresh daily batches, authentic traditional recipes, festive gift hampers, melt-in-mouth taste.
+- STRICT NEGATIVE RULES: NEVER mention "free consultation", "diagnostics", "repairs", "technicians", or "maintenance".`;
+  } else if (/saree|apparel|clothing|fashion|boutique|garment/i.test(catCheck)) {
+    categoryGuidance = `
+CATEGORY-SPECIFIC MANDATES FOR FASHION & APPAREL:
+- Setting: Chic boutique showroom with designer mannequins, silk shelves, and full-length mirrors.
+- Authenticity elements: Pure handloom silks, bridal lehengas, trendy festive collection, fabric drape, curated designer wear.
+- STRICT NEGATIVE RULES: NEVER mention "free consultation" (unless boutique styling advice), "repairs", "maintenance", or "diagnostics".`;
+  }
+
   const system = `You are an elite short-form commercial video director creating high-converting ads for Indian local businesses and brands.
+Generate exactly 3 complete, distinct, and realistic Ad Packages for this business.
+Each Ad Package must have:
+1. "Problem & Relief" angle (relatable pain-point, trusted fix).
+2. "Customer Experience & Trust" angle (word-of-mouth, transparency, authentic satisfaction).
+3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).${categoryGuidance ? "\n" + categoryGuidance : ""}
 Generate exactly 3 complete, distinct, and realistic Ad Packages for this business.
 Each Ad Package must have:
 1. "Problem & Relief" angle (relatable pain-point, trusted fix).

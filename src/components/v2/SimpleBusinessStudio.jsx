@@ -1,3 +1,4 @@
+import { getBriefSuggestions } from '../../utils/categorySuggestions.js';
 import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
@@ -43,13 +44,7 @@ const AD_STYLES = [
   { id: 'Storytelling', label: 'Heartwarming Story', desc: 'Warm customer connection', icon: '🎬' },
 ];
 
-const QUICK_OFFER_TEMPLATES = [
-  'Diwali 20% discount on all services and free consultation',
-  'Special festive package with same-day delivery guaranteed',
-  'Buy 1 Get 1 free celebration weekend deal',
-  'First-time customer welcome offer: flat 15% off',
-  'Monsoon protection and maintenance checkup',
-];
+// Dynamic category suggestions are loaded inside the component via getBriefSuggestions
 
 export default function SimpleBusinessStudio({
   businessName = 'My Business',
@@ -66,6 +61,19 @@ export default function SimpleBusinessStudio({
   producedVideoUrl = null,
   videoRunError = null,
 }) {
+
+  // Dynamic Category & Brand-Specific Suggestions
+  const categoryContext = getBriefSuggestions(businessType, businessName, town);
+  const quickIdeas = (categoryContext && Array.isArray(categoryContext.suggestions) && categoryContext.suggestions.length > 0)
+    ? categoryContext.suggestions
+    : [
+        `Highlight special festive offers and hallmark quality at ${businessName}`,
+        `Create a relatable story celebrating happy patrons at ${businessName}`,
+        `Show why customers across ${town || 'the city'} recommend ${businessName}`,
+        `Announce exclusive limited-time celebratory discounts`,
+      ];
+  const dynamicPlaceholder = categoryContext?.placeholder || `e.g. Tell us what you want to promote for ${businessName} (e.g., special festive discounts, new collections, hallmark purity...)`;
+
   // 3 Steps:
   // 1: 'offer' (Input promotion details)
   // 2: 'choose' (Pick from 3 generated complete ad packages)
@@ -394,7 +402,7 @@ export default function SimpleBusinessStudio({
                 Quick Ideas for {businessName}:
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {QUICK_OFFER_TEMPLATES.map((tpl, i) => (
+                {quickIdeas.map((tpl, i) => (
                   <button
                     key={i}
                     type="button"
@@ -430,7 +438,7 @@ export default function SimpleBusinessStudio({
               <textarea
                 value={brief}
                 onChange={(e) => setBrief(e.target.value)}
-                placeholder="e.g. Offering 20% off all brake and battery services this festival season. Free car wash included for all customers."
+                placeholder={dynamicPlaceholder}
                 rows={4}
                 style={{
                   width: '100%',

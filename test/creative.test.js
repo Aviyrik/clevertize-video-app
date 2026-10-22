@@ -503,3 +503,33 @@ test("17. /api/creative/simple-packages endpoint generates ad packages and valid
   assert.strictEqual(data.packages.length, 3);
   assert.strictEqual(data.packages[0].scenes.length, 4);
 });
+
+
+test("18. generateSimpleAdPackages grounds Jewellery brand in gold/hallmark and forbids service/consultation terms", async () => {
+  const result = await creative.generateSimpleAdPackages({
+    businessName: "Kalyan Jewellers",
+    businessType: "Jewellery and Accessories",
+    town: "Bangalore",
+    brief: "Festive 0% making charges on 22K gold and diamond jewellery",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+  });
+
+  assert.ok(Array.isArray(result));
+  assert.strictEqual(result.length, 3);
+
+  const allScriptText = result.map(p => p.fullScriptText + " " + p.hook + " " + p.title).join(" ").toLowerCase();
+
+  // Must contain authentic jewellery terms
+  assert.ok(
+    allScriptText.includes("hallmark") || allScriptText.includes("gold") || allScriptText.includes("jewellery") || allScriptText.includes("diamond"),
+    "Should contain authentic jewellery terms"
+  );
+
+  // Must NEVER contain service/mechanic/consultation terms
+  assert.strictEqual(allScriptText.includes("free consultation"), false, "Must not contain 'free consultation'");
+  assert.strictEqual(allScriptText.includes("bad service"), false, "Must not contain 'bad service'");
+  assert.strictEqual(allScriptText.includes("technician"), false, "Must not contain 'technician'");
+  assert.strictEqual(allScriptText.includes("repairs"), false, "Must not contain 'repairs'");
+  assert.strictEqual(allScriptText.includes("maintenance"), false, "Must not contain 'maintenance'");
+});
