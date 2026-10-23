@@ -784,24 +784,6 @@ export function Screen02Brief({
               <span>Active Brand Context</span>
             </div>
 
-            {onEditBrand && (
-              <button
-                type="button"
-                onClick={onEditBrand}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  textDecoration: 'underline',
-                }}
-              >
-                Change Brand
-              </button>
-            )}
           </div>
         </div>
       )}

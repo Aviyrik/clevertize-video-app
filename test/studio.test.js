@@ -1785,7 +1785,7 @@ test('V2 Single Starting Point: CreationEntryHub has exactly 3 creation entry po
 test('V2 Creation Flow: Screen02Brief confirms active brand and does not re-ask business registration', () => {
   const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(studioSrc.includes('Creating Video For'), 'Screen02Brief must display active brand confirmation');
-  assert.ok(studioSrc.includes('Change Brand'), 'Screen02Brief must offer brand edit/change action');
+  assert.ok(studioSrc.includes('Active Brand Context'), 'Screen02Brief must display active brand context');
   
   const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
   assert.ok(appSrc.includes("setActiveAppView('home')"), 'Back from Brief must return to Creation Hub when brand exists');
