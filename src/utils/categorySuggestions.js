@@ -9,7 +9,38 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
   const citySuffix = city ? ` in ${city}` : '';
   const bType = (businessType || '').toLowerCase();
 
-  // 1. Jewellery & Accessories
+  // 1. Healthcare, Clinic, Pharmacy & Medical (High Priority - protects against 'care' substring collisions)
+  if (
+    bType.includes('health') ||
+    bType.includes('clinic') ||
+    bType.includes('pharmacy') ||
+    bType.includes('doctor') ||
+    bType.includes('hospital') ||
+    bType.includes('medical') ||
+    bType.includes('dental') ||
+    bType.includes('chemist') ||
+    bType.includes('medicine') ||
+    bType.includes('practo') ||
+    bType.includes('diagnostic') ||
+    bType.includes('pathology') ||
+    bType.includes('consultation') ||
+    bType.includes('telehealth') ||
+    bType.includes('pediatric')
+  ) {
+    return {
+      placeholder: `e.g. Show why patients trust ${brand}${citySuffix} for verified doctor consultations, instant video appointments, and express medicine delivery. Highlight certified specialists, zero waiting, and caring support...`,
+      suggestions: [
+        `Book a verified specialist consultation in 2 minutes with top doctors across 25+ specialties`,
+        `Skip long clinic queues — get instant online doctor video consultations from home on ${brand}`,
+        `Promote complete family preventive health checkup and lab tests with free home sample pickup`,
+        `Highlight 100% genuine medicines delivered directly to your doorstep with guaranteed savings`,
+        `Show a caring doctor patiently listening to a worried parent and easing their anxiety`,
+        `Overcome hesitation and doctor anxiety with gentle, modern technology and transparent care`,
+      ],
+    };
+  }
+
+  // 2. Jewellery & Accessories
   if (bType.includes('jewel') || bType.includes('gold') || bType.includes('ornament') || bType.includes('diamond') || bType.includes('silver')) {
     return {
       placeholder: `e.g. Announce our festive gold and diamond collection at ${brand}${citySuffix}. Emphasize 100% BIS hallmark 916 purity, exquisite craftsmanship, and 0% making charges offer...`,
@@ -24,7 +55,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 2. Sarees, Ethnic & Bridal Wear
+  // 3. Sarees, Ethnic & Bridal Wear
   if (bType.includes('saree') || bType.includes('ethnic') || bType.includes('bridal') || bType.includes('lehenga') || bType.includes('silk')) {
     return {
       placeholder: `e.g. Show why ${brand} is the top destination for wedding & festive sarees${citySuffix}. Highlight authentic handloom silks, intricate zardozi borders, and special bridal styling assistance...`,
@@ -38,7 +69,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 3. Clothing & Fashion Apparel
+  // 4. Clothing & Fashion Apparel
   if (bType.includes('clothing') || bType.includes('apparel') || bType.includes('fashion') || bType.includes('boutique') || bType.includes('tailor')) {
     return {
       placeholder: `e.g. Launch our new seasonal clothing collection at ${brand}${citySuffix}. Highlight premium cotton fabrics, flattering fits, and trendsetting styles for every occasion...`,
@@ -52,7 +83,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 4. Sweets, Bakery & Confectionery
+  // 5. Sweets, Bakery & Confectionery
   if (bType.includes('sweet') || bType.includes('bakery') || bType.includes('mithai') || bType.includes('cake') || bType.includes('snack')) {
     return {
       placeholder: `e.g. Create a festive video for ${brand}${citySuffix} highlighting pure desi ghee sweets, fresh customized gift hampers, and guaranteed same-day delivery...`,
@@ -66,7 +97,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 5. Restaurants, Cafes & Dining
+  // 6. Restaurants, Cafes & Dining
   if (bType.includes('restaurant') || bType.includes('cafe') || bType.includes('kitchen') || bType.includes('food') || bType.includes('dining') || bType.includes('diner') || bType.includes('hotel')) {
     return {
       placeholder: `e.g. Show why food lovers visit ${brand}${citySuffix} for authentic flavors, warm cozy ambience, and unbeatable weekend dining specials...`,
@@ -80,8 +111,8 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 6. Kirana, Supermarkets & Grocery
-  if (bType.includes('kirana') || bType.includes('grocery') || bType.includes('supermarket') || bType.includes('mart') || bType.includes('provisions')) {
+  // 7. Kirana, Supermarkets & Grocery
+  if (bType.includes('kirana') || bType.includes('grocery') || bType.includes('supermarket') || (bType.includes('mart') && !bType.includes('smart')) || bType.includes('provisions')) {
     return {
       placeholder: `e.g. Show why local families trust ${brand}${citySuffix} for monthly grocery shopping, farm-fresh produce, and 30-minute free home delivery...`,
       suggestions: [
@@ -93,7 +124,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 7. Salon, Parlour & Spa
+  // 8. Salon, Parlour & Spa
   if (bType.includes('salon') || bType.includes('parlour') || bType.includes('spa') || bType.includes('beauty') || bType.includes('hair')) {
     return {
       placeholder: `e.g. Promote our festive makeover and bridal packages at ${brand}${citySuffix}. Highlight certified hair stylists, relaxing ambience, and glowing transformations...`,
@@ -106,7 +137,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 8. Skincare, Cosmetics & Wellness
+  // 9. Skincare, Cosmetics & Wellness
   if (bType.includes('skin') || bType.includes('cosmetic') || bType.includes('wellness') || bType.includes('ayurveda') || bType.includes('derma')) {
     return {
       placeholder: `e.g. Introduce our clean, chemical-free skincare formulas from ${brand}. Focus on natural glowing skin, visible transformation in 14 days, and dermatologist approval...`,
@@ -119,8 +150,8 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 9. Mobile, Electronics & Appliances
-  if (bType.includes('mobile') || bType.includes('laptop') || bType.includes('electronics') || bType.includes('appliance') || bType.includes('gadget')) {
+  // 10. Mobile, Electronics & Appliances
+  if (((bType.includes('mobile') && !bType.includes('auto')) || bType.includes('smartphone') || bType.includes('laptop') || bType.includes('electronics') || bType.includes('appliance') || bType.includes('gadget'))) {
     return {
       placeholder: `e.g. Show why purchasing gadgets at ${brand}${citySuffix} gives instant setup, best exchange bonus, and zero-cost EMI plans...`,
       suggestions: [
@@ -132,7 +163,7 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 10. Home Decor, Furniture & Interior
+  // 11. Home Decor, Furniture & Interior
   if (bType.includes('decor') || bType.includes('furniture') || bType.includes('modular') || bType.includes('interior') || bType.includes('furnishing')) {
     return {
       placeholder: `e.g. Show why ${brand} is the smart choice for interior makeovers${citySuffix}. Highlight modular space-saving designs, premium materials, and 10-year warranty...`,
@@ -141,19 +172,6 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
         `Highlight durable solid teakwood dining and living room sets with 10-year warranty`,
         `Create a cozy festive home makeover Reel with designer lighting and curtains`,
         `Promote free 3D design layout and turnkey interior installation`,
-      ],
-    };
-  }
-
-  // 11. Automobile, Bikes & Garage Services
-  if (bType.includes('auto') || bType.includes('bike') || bType.includes('car') || bType.includes('garage') || bType.includes('mechanic') || bType.includes('motor')) {
-    return {
-      placeholder: `e.g. Highlight festive delivery offers at ${brand}${citySuffix}. Show express service turnaround, genuine spare parts, and exciting exchange bonuses...`,
-      suggestions: [
-        `Show a family joyfully taking delivery of their shiny new vehicle for the festival`,
-        `Promote bumper-to-bumper car detailing, ceramic coating, and AC service package`,
-        `Highlight easy exchange schemes and lowest interest EMI financing on two-wheelers`,
-        `Showcase quick 60-minute express periodic servicing with genuine parts`,
       ],
     };
   }
@@ -171,15 +189,25 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
     };
   }
 
-  // 13. Dental, Healthcare & Clinics
-  if (bType.includes('dental') || bType.includes('clinic') || bType.includes('health') || bType.includes('hospital') || bType.includes('doctor')) {
+  // 13. Education, Coaching & Tuition
+  if (
+    bType.includes('education') ||
+    bType.includes('coaching') ||
+    bType.includes('tuition') ||
+    bType.includes('school') ||
+    bType.includes('academy') ||
+    bType.includes('institute') ||
+    bType.includes('class') ||
+    bType.includes('learning') ||
+    bType.includes('training')
+  ) {
     return {
-      placeholder: `e.g. Encourage families to book a consultation at ${brand}${citySuffix}. Emphasize pain-free modern technology, gentle doctors, and warm patient care...`,
+      placeholder: `e.g. Show how students achieve top results and concept clarity at ${brand}${citySuffix}. Highlight experienced faculty, structured mock tests, and personalized mentoring...`,
       suggestions: [
-        `Convince patients to book a pain-free dental checkup or smile correction`,
-        `Overcome doctor anxiety with gentle modern technology and caring specialists`,
-        `Promote complete family preventive health checkup package with fast reports`,
-        `Share a confidence transformation story after invisible aligners treatment`,
+        `Show students achieving top exam scores with personalized coaching and expert faculty at ${brand}`,
+        `Promote free interactive demo classes and early-bird scholarship for new academic batches`,
+        `Highlight structured concept clearing and doubt-solving sessions that build real exam confidence`,
+        `Share an inspiring student transformation story from exam fear to school topper`,
       ],
     };
   }
@@ -193,6 +221,28 @@ export function getCategoryBriefSuggestions(businessType, businessName, town, of
         `Promote annual membership festive discount with free personalized diet plan`,
         `Show an energetic group workout session and welcoming community vibe`,
         `Highlight modern imported equipment, clean locker rooms, and flexible timings`,
+      ],
+    };
+  }
+
+  // 15. Automobile, Bikes & Garage Services (Strictly check non-care words to prevent collision with 'healthcare' or 'skincare')
+  const isAutomobile =
+    (bType.includes('auto') ||
+      bType.includes('bike') ||
+      bType.includes('garage') ||
+      bType.includes('mechanic') ||
+      bType.includes('motor') ||
+      /\b(cars?|vehicles?|motorcycles?|scooters?|dealership|detailing)\b/i.test(bType)) &&
+    !bType.includes('care');
+
+  if (isAutomobile) {
+    return {
+      placeholder: `e.g. Highlight festive delivery offers at ${brand}${citySuffix}. Show express service turnaround, genuine spare parts, and exciting exchange bonuses...`,
+      suggestions: [
+        `Show a family joyfully taking delivery of their shiny new vehicle for the festival`,
+        `Promote bumper-to-bumper car detailing, ceramic coating, and AC service package`,
+        `Highlight easy exchange schemes and lowest interest EMI financing on two-wheelers`,
+        `Showcase quick 60-minute express periodic servicing with genuine parts`,
       ],
     };
   }

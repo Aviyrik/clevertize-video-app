@@ -532,7 +532,7 @@ function matchClosestCategory(catStr, defaultCat = "Other Local Business") {
   if (s.includes("education") || s.includes("coaching") || s.includes("tuition") || s.includes("school") || s.includes("academy") || s.includes("class")) {
     return "Education, Coaching & Tuition";
   }
-  if (s.includes("auto") || s.includes("garage") || s.includes("car") || s.includes("bike") || s.includes("mechanic") || s.includes("repair")) {
+  if ((s.includes("auto") || s.includes("garage") || s.includes("bike") || s.includes("mechanic") || s.includes("repair") || /\b(cars?|vehicles?|motor)\b/i.test(s)) && !s.includes("care")) {
     return "Automobile & Garage";
   }
   const exact = STANDARD_BUSINESS_CATEGORIES.find((c) => c.toLowerCase() === s);

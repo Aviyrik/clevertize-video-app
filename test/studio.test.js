@@ -2358,3 +2358,22 @@ test('Video Render Polling: Stale/duplicate runs are cancelled and never post ti
   // 4. Duplicate render triggers are blocked while isRendering is true
   assert.ok(appSrc.includes('if (isRendering) {'), 'handleRunVideoProduction must prevent duplicate calls while rendering');
 });
+test('Category Brief Suggestions: Healthcare/Practo receives healthcare ideas and avoids car/automobile collision', async () => {
+  const { getCategoryBriefSuggestions } = await import('../src/utils/categorySuggestions.js');
+
+  // 1. Practo in Healthcare, Clinic & Pharmacy must receive doctor/consultation suggestions, NEVER cars/automobile
+  const practoResult = getCategoryBriefSuggestions('Healthcare, Clinic & Pharmacy', 'Practo', 'India');
+  assert.ok(practoResult && Array.isArray(practoResult.suggestions), 'Must return suggestions array');
+  assert.ok(practoResult.suggestions.some((s) => s.includes('doctor') || s.includes('consultation') || s.includes('health')), 'Must contain doctor or consultation ideas');
+  assert.ok(!practoResult.suggestions.some((s) => s.includes('vehicle') || s.includes('car detailing') || s.includes('two-wheelers')), 'Must NOT contain car or automotive ideas');
+  assert.ok(practoResult.placeholder.includes('doctor') || practoResult.placeholder.includes('medicine'), 'Placeholder must be healthcare tailored');
+
+  // 2. Automobile & Garage must receive vehicle/servicing suggestions, NEVER electronics/phones
+  const autoResult = getCategoryBriefSuggestions('Automobile & Garage', 'Tata Motors', 'Mumbai');
+  assert.ok(autoResult.suggestions.some((s) => s.includes('vehicle') || s.includes('car') || s.includes('servicing')), 'Must contain vehicle ideas');
+  assert.ok(!autoResult.suggestions.some((s) => s.includes('phone') || s.includes('5G smartphone')), 'Must NOT collide with mobile/electronics');
+
+  // 3. Education, Coaching & Tuition must receive exam/coaching suggestions
+  const eduResult = getCategoryBriefSuggestions('Education, Coaching & Tuition', 'Aakash', 'Delhi');
+  assert.ok(eduResult.suggestions.some((s) => s.includes('exam') || s.includes('coaching') || s.includes('faculty')), 'Must contain coaching ideas');
+});
