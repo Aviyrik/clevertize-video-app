@@ -57,6 +57,7 @@ export default function SimpleBusinessStudio({
   onSwitchToDirectorMode,
   onProduceVideo, // (packageData) => Promise<videoUrl>
   onSaveProject,
+  onEditBrand,
   isProducingVideo = false,
   producedVideoUrl = null,
   videoRunError = null,
@@ -188,143 +189,203 @@ export default function SimpleBusinessStudio({
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '16px 20px 60px' }}>
-      {/* Top Bar: Mode Switcher & Active Business */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 12,
-          padding: '12px 16px',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 14,
-          marginBottom: 20,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              color: 'var(--accent-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Store size={16} />
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {businessName}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              {businessType} {town ? `· ${town}` : ''}
-            </div>
-          </div>
-        </div>
-
-        {/* Active Brand Context Badge */}
-        <div
-          style={{
-            fontSize: 11,
-            color: 'var(--accent-primary)',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
-            padding: '4px 10px',
-            borderRadius: 6,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-          }}
-        >
-          <Sparkles size={12} />
-          <span>Active Brand Context</span>
-        </div>
-      </div>
-
-      {/* 3-Step Progress Indicator */}
+    <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px 80px' }}>
+      {/* 3-STEP GUIDED PROGRESS HEADER */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 12,
-          marginBottom: 24,
+          gap: 6,
+          padding: '10px 16px',
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 12,
+          marginBottom: 16,
+          flexWrap: 'wrap',
         }}
       >
         {[
-          { num: 1, label: 'Your Offer' },
-          { num: 2, label: 'Pick Video Ad' },
-          { num: 3, label: 'Generate Video' },
-        ].map((s) => {
-          const isActive = step === s.num;
-          const isDone = step > s.num;
+          { num: '01', stepNum: 1, label: 'Your Offer' },
+          { num: '02', stepNum: 2, label: 'Pick Video Ad' },
+          { num: '03', stepNum: 3, label: 'Generate Video' },
+        ].map((s, idx) => {
+          const isCurrent = step === s.stepNum;
+          const isCompleted = step > s.stepNum;
+          const isNavigable = isCompleted && !isCurrent;
+
           return (
-            <div
-              key={s.num}
-              onClick={() => {
-                if (isDone) setStep(s.num);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '7px 16px',
-                borderRadius: 20,
-                backgroundColor: isActive ? 'var(--bg-active)' : 'transparent',
-                border: isActive
-                  ? '1px solid var(--accent-primary)'
-                  : isDone
-                  ? '1px solid var(--border-default)'
-                  : '1px solid transparent',
-                cursor: isDone ? 'pointer' : 'default',
-              }}
-            >
-              <div
+            <React.Fragment key={s.stepNum}>
+              <button
+                type="button"
+                disabled={!isNavigable}
+                onClick={() => isNavigable && setStep(s.stepNum)}
                 style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  backgroundColor: isActive
-                    ? 'var(--accent-primary)'
-                    : isDone
-                    ? 'var(--success)'
-                    : 'var(--bg-elevated)',
-                  color: '#FFFFFF',
-                  fontSize: 11,
-                  fontWeight: 800,
+                  background: 'none',
+                  border: 'none',
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  cursor: isNavigable ? 'pointer' : 'default',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isDone ? <Check size={12} /> : s.num}
-              </div>
-              <span
-                style={{
+                  gap: 6,
                   fontSize: 12,
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive
+                  fontWeight: isCurrent ? 700 : isCompleted ? 600 : 500,
+                  color: isCurrent
+                    ? 'var(--accent-primary)'
+                    : isCompleted
                     ? 'var(--text-primary)'
-                    : isDone
-                    ? 'var(--text-secondary)'
                     : 'var(--text-tertiary)',
+                  backgroundColor: isCurrent ? 'var(--bg-active)' : 'transparent',
+                  transition: 'all 0.15s ease',
                 }}
+                title={isNavigable ? `Back to ${s.label}` : s.label}
               >
-                {s.label}
-              </span>
-            </div>
+                <span
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    backgroundColor: isCurrent
+                      ? 'var(--accent-primary)'
+                      : isCompleted
+                      ? 'rgba(34, 197, 94, 0.15)'
+                      : 'var(--bg-elevated)',
+                    color: isCurrent
+                      ? '#ffffff'
+                      : isCompleted
+                      ? 'var(--success)'
+                      : 'var(--text-tertiary)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10,
+                    fontWeight: 800,
+                  }}
+                >
+                  {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : s.num}
+                </span>
+                <span>{s.label}</span>
+              </button>
+              {idx < 2 && (
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>›</span>
+              )}
+            </React.Fragment>
           );
         })}
       </div>
+
+      {/* ACTIVE BRAND BANNER */}
+      {businessName && (
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 12,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                color: 'var(--accent-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Store size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-tertiary)',
+                  }}
+                >
+                  Creating Video For
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {businessName}
+                </span>
+                {businessType && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      color: 'var(--text-secondary)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {businessType}
+                  </span>
+                )}
+                {town && (
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {town}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--accent-primary)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                padding: '4px 10px',
+                borderRadius: 6,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <Sparkles size={12} />
+              <span>Active Brand Context</span>
+            </div>
+
+            {onEditBrand && (
+              <button
+                type="button"
+                onClick={onEditBrand}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  textDecoration: 'underline',
+                }}
+              >
+                Change Brand
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ========================================================
           STEP 1: YOUR OFFER & PROMOTION

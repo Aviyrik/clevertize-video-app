@@ -709,7 +709,7 @@ export function Screen02Brief({
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: 10,
+            borderRadius: 12,
             padding: '12px 18px',
             display: 'flex',
             alignItems: 'center',
@@ -765,24 +765,44 @@ export function Screen02Brief({
             </div>
           </div>
 
-          {onEditBrand && (
-            <button
-              type="button"
-              onClick={onEditBrand}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
               style={{
-                background: 'none',
-                border: 'none',
+                fontSize: 11,
                 color: 'var(--accent-primary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '4px 8px',
-                textDecoration: 'underline',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                padding: '4px 10px',
+                borderRadius: 6,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
               }}
             >
-              Change Brand
-            </button>
-          )}
+              <Sparkles size={12} />
+              <span>Active Brand Context</span>
+            </div>
+
+            {onEditBrand && (
+              <button
+                type="button"
+                onClick={onEditBrand}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  textDecoration: 'underline',
+                }}
+              >
+                Change Brand
+              </button>
+            )}
+          </div>
         </div>
       )}
 

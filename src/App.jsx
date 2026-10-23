@@ -3294,6 +3294,10 @@ export default function App() {
               isProducingVideo={isRendering}
               producedVideoUrl={videoUrl}
               videoRunError={errorMessage}
+              onEditBrand={() => {
+                setEditingBusiness(userContext);
+                setIsOnboardingModalOpen(true);
+              }}
             />
           ) : (
             <>
