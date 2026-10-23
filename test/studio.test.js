@@ -2309,3 +2309,19 @@ test('UI/UX Audit Enhancements: Breadcrumbs, Modal Scroll Boundaries, Standardiz
 
 
 
+
+test('Streamlined Creation Flow: Script directly triggers Video Generation without redundant review screen', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // 1. Verify Screen07Script button directly offers "Generate Video →"
+  assert.ok(guidedStudioSrc.includes('Generate Video →'), 'Screen07Script must have Generate Video button');
+  assert.ok(!guidedStudioSrc.includes('Looks good →'), 'Screen07Script should no longer have generic Looks good button');
+
+  // 2. Verify redundant pre-production review screen is eliminated
+  assert.ok(!guidedStudioSrc.includes('Ready to make your video?'), 'Redundant pre-production review screen title must be removed');
+  assert.ok(!guidedStudioSrc.includes('Review your creative choices before we create the final video.'), 'Redundant review description must be removed');
+
+  // 3. Verify onApproveScript in App.jsx directly starts video production
+  assert.ok(appSrc.includes('handleRunVideoProduction();'), 'App.jsx onApproveScript must trigger handleRunVideoProduction');
+});

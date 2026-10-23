@@ -4266,6 +4266,7 @@ export default function App() {
               markStageComplete('script');
               setStudioStage('video');
               window.scrollTo({ top: 0, behavior: 'smooth' });
+              handleRunVideoProduction();
             }}
             onBack={() => {
               setStudioStage('story');

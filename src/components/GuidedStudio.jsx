@@ -3655,7 +3655,8 @@ export function Screen07Script({
               boxShadow: '0 2px 10px var(--accent-glow)'
             }}
           >
-            <span>Looks good →</span>
+            <Sparkles size={16} />
+            <span>Generate Video →</span>
           </button>
         </div>
       </div>
@@ -4150,101 +4151,24 @@ export function Screen08Video({
     );
   }
 
-  // Pre-Production Review State
+  // Idle or Error State (when not rendering and no video generated yet)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          Ready to make your video?
+          {errorMessage ? 'Video Generation Incomplete' : 'Ready to Generate Video'}
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Review your creative choices before we create the final video.
+          {errorMessage ? 'An issue occurred during video production. You can review your script or retry below.' : 'Click Generate Video below to start video synthesis.'}
         </p>
       </div>
 
       {errorMessage && (
-        <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--error)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertCircle size={15} />
+        <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={16} />
           <span>{errorMessage}</span>
         </div>
       )}
-
-      {/* Summary Checklist */}
-      <div style={{
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 12,
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ color: 'var(--success)', marginTop: 2 }}>✓</span>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>BUSINESS</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{userContext.businessName || 'Your Business'}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ color: 'var(--success)', marginTop: 2 }}>✓</span>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>IDEA</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{creativeDNA?.direction?.title || 'Selected Idea'}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ color: 'var(--success)', marginTop: 2 }}>✓</span>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>OPENING</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{creativeDNA?.hook?.archetype || 'Approved Opening'}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ color: 'var(--success)', marginTop: 2 }}>✓</span>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>SCRIPT</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{scenes.length} Scenes Ready</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Collapsible Video Details */}
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12, marginTop: 4 }}>
-          <button
-            type="button"
-            onClick={() => setShowVideoDetails(!showVideoDetails)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: 0
-            }}
-          >
-            <span>{showVideoDetails ? 'Hide video details' : 'Show video details'}</span>
-            {showVideoDetails ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
-
-          {showVideoDetails && (
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              <div><strong>Language:</strong> {userContext.language || 'English'}</div>
-              <div><strong>Platform:</strong> {userContext.platform || 'Instagram Reels'}</div>
-              <div><strong>Target Duration:</strong> {userContext.targetDuration || '20s'}</div>
-              <div><strong>Style:</strong> {userContext.creativeStyle || 'UGC / Creator'}</div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
@@ -4283,7 +4207,8 @@ export function Screen08Video({
             boxShadow: '0 4px 16px var(--accent-glow)'
           }}
         >
-          <span>Make Video</span>
+          <Sparkles size={16} />
+          <span>{errorMessage ? 'Retry Video Generation' : 'Generate Video'}</span>
           <ArrowRight size={18} />
         </button>
       </div>
