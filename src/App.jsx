@@ -698,6 +698,7 @@ export default function App() {
   const [customGapAnswer, setCustomGapAnswer] = useState('');
   const lastResearchedBrandRef = useRef('');
   const loadedHooksDirectionKeyRef = useRef('');
+  const loadedDirectionsFormatRef = useRef('');
 
   // Creative Decision Panels: 'direction' | 'hook' | 'plot' | 'story' | 'constraints'
   const [creativePanel, setCreativePanel] = useState('direction');
@@ -1985,8 +1986,9 @@ export default function App() {
   };
 
   // 2. Fetching Creative Direction Territories
-  const loadCreativeDirections = async (force = false) => {
-    if (directionsList.length && !force) return;
+  const loadCreativeDirections = async (force = false, overrideFormat = null) => {
+    const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
+    if (directionsList.length && !force && loadedDirectionsFormatRef.current === activeFormat) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
@@ -2005,6 +2007,8 @@ export default function App() {
           brief: userContext.brief || '',
           targetAudience: userContext.targetAudience || '',
           research: researchData,
+          format: activeFormat,
+          creativeStyle: activeFormat,
         }),
       });
       if (res.ok) {
@@ -2012,7 +2016,8 @@ export default function App() {
         setDirectionsList(list);
         const rec = list.find((d) => d.recommended) || list[0];
         setSelectedDirection(rec);
-        setCreativeDNA((prev) => ({ ...prev, direction: rec }));
+        setCreativeDNA((prev) => ({ ...prev, direction: rec, format: activeFormat }));
+        loadedDirectionsFormatRef.current = activeFormat;
       }
     } catch (e) {
       console.warn('[directions] load error:', e);
@@ -2051,6 +2056,7 @@ export default function App() {
     });
 
     if (loadedHooksDirectionKeyRef) loadedHooksDirectionKeyRef.current = '';
+    if (loadedDirectionsFormatRef) loadedDirectionsFormatRef.current = '';
     setHooksList([]);
     setSelectedHook(null);
     setCustomHook('');
@@ -2075,14 +2081,15 @@ export default function App() {
     }
   };
 
-  const loadHooks = async (force = false, overrideLang = null, overrideDirection = null) => {
+  const loadHooks = async (force = false, overrideLang = null, overrideDirection = null, overrideFormat = null) => {
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
+    const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
     const activeDir = overrideDirection || selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' });
-    const activeKey = activeDir?.id || activeDir?.title || '';
+    const activeKey = `${activeDir?.id || activeDir?.title || ''}_${activeFormat}_${lang}`;
 
     if (hooksList.length && !force) {
       if (loadedHooksDirectionKeyRef.current === activeKey) return;
@@ -2099,6 +2106,8 @@ export default function App() {
           brief: userContext.brief || '',
           direction: activeDir,
           language: lang,
+          format: activeFormat,
+          creativeStyle: activeFormat,
         }),
       });
       if (res.ok) {
@@ -4056,8 +4065,9 @@ export default function App() {
               markStageComplete('settings');
               setStudioStage('idea');
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              if (!directionsList.length) {
-                await loadCreativeDirections();
+              const currentFormat = userContext.creativeStyle || 'UGC / Creator-style';
+              if (!directionsList.length || loadedDirectionsFormatRef.current !== currentFormat) {
+                await loadCreativeDirections(true, currentFormat);
               }
             }}
             onBack={() => {

@@ -200,6 +200,8 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   if (format.startsWith("ugc")) {
     const ownerScenes = speakers.filter((s) => speakerMatches(s, parsed.character1)).reduce((a, s) => a + speakerScenes[s], 0);
     if (ownerScenes > 3) fails.push(`UGC: the owner speaks in ${ownerScenes} scenes; max 3 of the 4, the other is B-roll (Section 6).`);
+  } else if (format.includes("demo")) {
+    // Product Demo: visual proof and product action leads. Single presenter or rotated dialogue both allowed.
   } else if (totalLines >= 3 && speakers.length < 2) {
     fails.push("Storytelling: all dialogue comes from one character — rotate speakers (M10).");
   }

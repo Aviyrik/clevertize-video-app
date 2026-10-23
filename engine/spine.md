@@ -169,12 +169,14 @@ Tension ranking: write 5 customer tensions this business can honestly solve, eac
 5. Record the pattern name and its library in the header and record. If you fall back to an Annex C pattern, the library is "Annex C".
 
 ## Section 6 — Format decision
-Choose UGC or Storytelling. (VO-led is switched off in this version of the product — never choose it.)
+Choose UGC, Storytelling, Product Demo, or Situational Comedy. (VO-led is switched off in this version of the product — never choose it.)
 
 | Format | What it looks like | Best when | Rules for AI generation |
 |---|---|---|---|
 | UGC | The owner (or staff) talks straight to camera inside their own shop, phone-propped framing, first-person. | Trust is the hesitation; the owner's personal touch is the selling point; myth-buster or area-shoutout hooks. | The owner speaks in at most 3 of the 4 scenes; the other scene is B-roll (hands packing an order, the counter, a customer walking in) with ambience, or one line from character 2. Gentle handheld feel only. Never a "customer" giving a review (M23). |
 | Storytelling | A small acted scene: a customer's everyday problem, the business solves it, a warm ending. | Everyday-moment and festival tensions; the hesitation is emotional (embarrassment, worry). | Exact Context Block so characters stay consistent. The hook lands in the first 3 seconds. Rotate dialogue between characters (M10). The customer is clearly acted (M23). |
+| Product Demo | Hands-on physical demonstration of the product in action with clear tactile textures and sensory proof. | Physical products, tech hardware, cosmetics, food items, tools where visual proof sells. | The product must be introduced immediately in Scene 1 and featured prominently in all 4 scenes. Visual actions emphasize hands handling, testing, snapping, pouring, or applying the product. Visual proof leads over dialogue. |
+| Situational Comedy | A witty, humorous situation with comic escalation, misunderstanding, and a funny payoff. | Relatable everyday annoyances, playful banter, exaggerated struggles where humor disarms the customer. | Humorous setup in Scene 1, comic escalation in Scene 2, playful misunderstanding or irony in Scene 3, and a laugh-out-loud punchline in Scene 4. |
 
 Score each format 1–3 on: tension fit; hook fit; trust (will a local customer believe it?); generation risk (lip-sync, consistency — 3 = lowest risk); freshness (differs from the previous script's format). The highest total is recommended to the owner at Checkpoint 3. Tie → the format not used in the previous script; still tied → UGC.
 

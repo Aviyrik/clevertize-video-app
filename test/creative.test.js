@@ -533,3 +533,63 @@ test("18. generateSimpleAdPackages grounds Jewellery brand in gold/hallmark and 
   assert.strictEqual(allScriptText.includes("repairs"), false, "Must not contain 'repairs'");
   assert.strictEqual(allScriptText.includes("maintenance"), false, "Must not contain 'maintenance'");
 });
+
+test("19. All 4 'How should it feel?' options (Product Demo, Funny, Story, UGC) are mapped end-to-end", async () => {
+  // Test 1: Product Demo directions
+  const demoDirs = await creative.generateDirections({
+    businessName: "DJI Mic Mini TX",
+    businessType: "Electronics",
+    brief: "Ultra-compact wireless microphone for creators with crystal clear sound",
+    format: "Product Demo",
+  });
+  assert.ok(Array.isArray(demoDirs) && demoDirs.length >= 3);
+  const demoText = JSON.stringify(demoDirs).toLowerCase();
+  assert.ok(demoText.includes("test") || demoText.includes("proof") || demoText.includes("tactile") || demoText.includes("showcase") || demoText.includes("demo"));
+
+  // Test 2: Situational Comedy directions
+  const comedyDirs = await creative.generateDirections({
+    businessName: "DJI Mic Mini TX",
+    businessType: "Electronics",
+    brief: "Ultra-compact wireless microphone",
+    format: "Situational Comedy",
+  });
+  assert.ok(Array.isArray(comedyDirs) && comedyDirs.length >= 3);
+  const comedyText = JSON.stringify(comedyDirs).toLowerCase();
+  assert.ok(comedyText.includes("misunderstanding") || comedyText.includes("struggle") || comedyText.includes("challenge") || comedyText.includes("humor") || comedyText.includes("comic"));
+
+  // Test 3: Storytelling directions
+  const storyDirs = await creative.generateDirections({
+    businessName: "DJI Mic Mini TX",
+    businessType: "Electronics",
+    brief: "Ultra-compact wireless microphone",
+    format: "Storytelling",
+  });
+  assert.ok(Array.isArray(storyDirs) && storyDirs.length >= 3);
+  const storyText = JSON.stringify(storyDirs).toLowerCase();
+  assert.ok(storyText.includes("assistance") || storyText.includes("secret") || storyText.includes("rescue") || storyText.includes("dilemma") || storyText.includes("bond"));
+
+  // Test 4: UGC directions
+  const ugcDirs = await creative.generateDirections({
+    businessName: "DJI Mic Mini TX",
+    businessType: "Electronics",
+    brief: "Ultra-compact wireless microphone",
+    format: "UGC / Creator-style",
+  });
+  assert.ok(Array.isArray(ugcDirs) && ugcDirs.length >= 3);
+  const ugcText = JSON.stringify(ugcDirs).toLowerCase();
+  assert.ok(ugcText.includes("creator") || ugcText.includes("moment") || ugcText.includes("discovery") || ugcText.includes("secret") || ugcText.includes("relatable"));
+
+  // Test 5: gate.js allows Product Demo format and verifies formatMatches
+  const { runGate, formatMatches } = require("../engine/gate");
+  assert.strictEqual(formatMatches("Product Demo", "Product Demo"), true);
+  assert.strictEqual(formatMatches("Product Demo", "Demo"), true);
+  assert.strictEqual(formatMatches("Situational Comedy", "Comedy"), true);
+  assert.strictEqual(formatMatches("UGC / Creator-style", "UGC"), true);
+
+  const GOOD = fs.readFileSync(path.join(__dirname, "fixtures/good-storytelling.txt"), "utf8");
+  const demoFixture = GOOD.replace("Format: Storytelling", "Format: Product Demo");
+  const { parseOutput } = require("../engine/parse");
+  const parsedDemo = parseOutput(demoFixture);
+  const gateResult = runGate(parsedDemo, { businessName: "Sharma General Store", businessType: "Kirana / general store", town: "Indore", language: "Hindi" }, { approvedFormat: "Product Demo" });
+  assert.strictEqual(gateResult.length, 0, "Product Demo should pass the quality gate cleanly");
+});

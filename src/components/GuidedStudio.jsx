@@ -3229,7 +3229,7 @@ export function Screen07Script({
   const [editSceneText, setEditSceneText] = useState('');
   const [isCopiedFull, setIsCopiedFull] = useState(false);
 
-  const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || 'Story').includes('Demo') ? 'Product Demo' : 'Story';
+  const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || '').includes('Demo') ? 'Product Demo' : (userContext.creativeStyle || '').includes('Comedy') ? 'Funny' : 'Story';
   const duration = userContext.targetDuration || '20s';
   const platform = (userContext.platform || 'Instagram').split('/')[0].trim();
   const lang = userContext.language || 'English';

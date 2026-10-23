@@ -926,7 +926,7 @@ app.post("/api/script/validate-and-import", async (req, res) => {
 // 2) Creative Direction
 app.post("/api/creative/directions", async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival } = req.body || {};
+    const { businessName, businessType, town, brief, research, festival, format, creativeStyle } = req.body || {};
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -934,6 +934,7 @@ app.post("/api/creative/directions", async (req, res) => {
       brief,
       research,
       festival,
+      format: format || creativeStyle || "UGC / Creator-style",
     });
     res.json(result);
   } catch (e) {
@@ -945,13 +946,14 @@ app.post("/api/creative/directions", async (req, res) => {
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle } = req.body || {};
     const result = await creative.generateHooks({
       businessName,
       businessType,
       brief,
       direction,
       language: language || "English",
+      format: format || creativeStyle || "UGC / Creator-style",
     });
     res.json(result);
   } catch (e) {

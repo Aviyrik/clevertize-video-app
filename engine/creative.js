@@ -93,9 +93,42 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, format = "UGC / Creator-style" }) {
+  const cleanFormat = String(format || "").trim();
+  const isDemo = /demo/i.test(cleanFormat);
+  const isComedy = /comedy|funny/i.test(cleanFormat);
+  const isStory = /story/i.test(cleanFormat) && !isDemo;
+  const isUGC = /ugc|creator/i.test(cleanFormat) || (!isDemo && !isComedy && !isStory);
+
+  const formatDirectionPrompt = isDemo
+    ? `MANDATORY CREATIVE FORMAT: PRODUCT DEMO ("Show the product in action")
+Sets story architecture and pacing: Hands-on tactile textures & clear visual proof.
+CRITICAL CONSTRAINT: Every creative territory proposed MUST be a tangible, hands-on product demonstration, live stress test, or clear visual proof concept.
+- Showcase the physical product being unboxed, handled, tested, or demonstrated in action.
+- DO NOT propose fictional character drama, lifestyle vlogging stories, or unrelated skits.
+- Suggested territory types: "Live Stress Test", "Side-by-Side Proof", "Tactile Macro Showcase", "Instant Before & After", "2-Second Setup Challenge".`
+    : isComedy
+    ? `MANDATORY CREATIVE FORMAT: SITUATIONAL COMEDY ("Setup, funny moment, payoff")
+Sets story architecture and pacing: Witty relatable problem, playful banter & comic punchline.
+CRITICAL CONSTRAINT: Every creative territory proposed MUST be a humorous, witty situation or relatable comic struggle.
+- Focus on witty misunderstandings, playful banter, comic escalation, and funny payoffs where the product saves the day.
+- Suggested territory types: "The Relatable Misunderstanding", "The Over-Complicated Struggle", "The Humorous Rivalry", "The Playful Bluff".`
+    : isStory
+    ? `MANDATORY CREATIVE FORMAT: STORYTELLING ("A short story with people")
+Sets story architecture and pacing: 2-character relatable dilemma & emotional payoff.
+CRITICAL CONSTRAINT: Every creative territory proposed MUST be an emotional or relatable human dilemma between two people.
+- Focus on authentic interpersonal relationships, a real emotional tension, and a warm, earned resolution.
+- Suggested territory types: "The Unspoken Dilemma", "The Shared Secret", "The Heartfelt Rescue", "The Generational Bond".`
+    : `MANDATORY CREATIVE FORMAT: UGC / CREATOR-STYLE ("Feels like a real person made it")
+Sets story architecture and pacing: Direct-to-camera, creator rhythm & natural mobile energy.
+CRITICAL CONSTRAINT: Every creative territory proposed MUST feel authentic, creator-led, and native to mobile feeds.
+- Focus on candid creator point-of-view, insider recommendations, relatable creator frustrations, or honest real-talk advice.
+- Suggested territory types: "The Real-Talk Truth", "The Secret Hack", "Creator Reality Check", "The Daily Driver Test".`;
+
   const system = `You are an executive creative director proposing 3 to 4 distinct creative territories for an Indian short-form commercial ad.
-Each territory must be a clear, relatable strategic angle (e.g. "Everyday Frustration", "Unexpected Discovery", "The Secret Hack", "Relatable Household Chaos", "Cultural Pride").
+Each territory must strictly honour the chosen creative format below:
+${formatDirectionPrompt}
+
 Mark exactly one territory as recommended: true.
 
 Output strictly valid JSON between @@JSON@@ and @@END@@:
@@ -103,25 +136,11 @@ Output strictly valid JSON between @@JSON@@ and @@END@@:
 [
   {
     "id": "dir_1",
-    "title": "EVERYDAY FRUSTRATION",
-    "description": "Turn a common customer problem into the story.",
-    "angle": "Relatable friction that everyday consumers instantly recognize.",
+    "title": "TERRITORY TITLE",
+    "description": "Short explanation of the concept.",
+    "angle": "Specific strategic angle.",
     "recommended": true,
-    "whyRecommended": "Strongest emotional hook for this category."
-  },
-  {
-    "id": "dir_2",
-    "title": "UNEXPECTED DISCOVERY",
-    "description": "Start with a surprising moment that creates curiosity.",
-    "angle": "Counter-intuitive reveal about what customers usually do.",
-    "recommended": false
-  },
-  {
-    "id": "dir_3",
-    "title": "PRODUCT TRANSFORMATION",
-    "description": "Show how the business changes a specific customer situation.",
-    "angle": "Direct before-and-after contrast with emotional relief.",
-    "recommended": false
+    "whyRecommended": "Why this territory is best suited for this brand and format."
   }
 ]
 @@END@@`;
@@ -129,6 +148,7 @@ Output strictly valid JSON between @@JSON@@ and @@END@@:
   const content = `BRAND: ${businessName} (${businessType})
 TOWN: ${town || "Universal"}
 BRIEF: ${brief || "Promote brand"}
+CHOSEN CREATIVE FORMAT: ${cleanFormat || "UGC / Creator-style"}
 AUDIENCE INSIGHT: ${research?.audienceInsight || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || "Relatable problem-first story"}
 UPCOMING OCCASION: ${festival?.name || "None"}`;
@@ -139,6 +159,87 @@ UPCOMING OCCASION: ${festival?.name || "None"}`;
     if (Array.isArray(list) && list.length) return list;
   } catch (e) {
     console.warn("[directions] fallback:", e.message);
+  }
+
+  if (isDemo) {
+    return [
+      {
+        id: "dir_1",
+        title: "LIVE STRESS TEST",
+        description: "Put the product to the ultimate real-world test with undeniable visual proof.",
+        angle: "High-stakes performance demonstration under challenging real conditions.",
+        recommended: true,
+        whyRecommended: "Highest commercial conversion for product-focused demonstrations.",
+      },
+      {
+        id: "dir_2",
+        title: "SIDE-BY-SIDE PROOF",
+        description: "Direct before-and-after comparison showing the stark contrast in action.",
+        angle: "Immediate visual and sensory difference in the first 3 seconds.",
+        recommended: false,
+      },
+      {
+        id: "dir_3",
+        title: "TACTILE MACRO SHOWCASE",
+        description: "Hands-on close-up highlighting tactile build, craftsmanship, and ease of use.",
+        angle: "Sensory product textures and instant tactile appeal.",
+        recommended: false,
+      },
+    ];
+  }
+
+  if (isComedy) {
+    return [
+      {
+        id: "dir_1",
+        title: "THE RELATABLE MISUNDERSTANDING",
+        description: "A funny everyday miscommunication that gets playfully escalated until the product saves the day.",
+        angle: "Relatable comic timing and witty banter.",
+        recommended: true,
+        whyRecommended: "Strongest humorous engagement and viral shareability.",
+      },
+      {
+        id: "dir_2",
+        title: "THE OVER-COMPLICATED STRUGGLE",
+        description: "Doing things the hard, awkward old way backfires hilariously next to the smart solution.",
+        angle: "Comic contrast between unnecessary complexity and easy relief.",
+        recommended: false,
+      },
+      {
+        id: "dir_3",
+        title: "THE PLAYFUL CHALLENGE",
+        description: "A lighthearted bet or tease between two characters with an unexpected punchline.",
+        angle: "Playful character banter and witty resolution.",
+        recommended: false,
+      },
+    ];
+  }
+
+  if (isStory) {
+    return [
+      {
+        id: "dir_1",
+        title: "THE UNEXPECTED ASSISTANCE",
+        description: "A heartfelt everyday dilemma resolved through an authentic interpersonal bond.",
+        angle: "Emotional relief and relatable family or friendship connection.",
+        recommended: true,
+        whyRecommended: "Deep emotional resonance that builds lasting brand goodwill.",
+      },
+      {
+        id: "dir_2",
+        title: "THE SHARED SECRET",
+        description: "Two characters navigate a small daily crisis together with warmth and mutual discovery.",
+        angle: "Intimate character dynamic and shared joy.",
+        recommended: false,
+      },
+      {
+        id: "dir_3",
+        title: "THE QUIET RESCUE",
+        description: "A high-stakes everyday moment where the product arrives just in time to turn worry into joy.",
+        angle: "Dramatic tension with a satisfying emotional payoff.",
+        recommended: false,
+      },
+    ];
   }
 
   return [
@@ -170,11 +271,29 @@ UPCOMING OCCASION: ${festival?.name || "None"}`;
 /**
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
-async function generateHooks({ businessName, businessType, brief, direction, language = "English" }) {
+async function generateHooks({ businessName, businessType, brief, direction, language = "English", format = "UGC / Creator-style" }) {
   const isEng = !language || /eng/i.test(language);
   const isHin = /hindi/i.test(language);
   const isHinglish = /hinglish/i.test(language);
   const isMar = /marathi/i.test(language);
+
+  const cleanFormat = String(format || "").trim();
+  const isDemo = /demo/i.test(cleanFormat);
+  const isComedy = /comedy|funny/i.test(cleanFormat);
+  const isStory = /story/i.test(cleanFormat) && !isDemo;
+  const isUGC = /ugc|creator/i.test(cleanFormat) || (!isDemo && !isComedy && !isStory);
+
+  const formatHookRule = isDemo
+    ? `FORMAT HOOK RULE (PRODUCT DEMO):
+Hooks MUST focus on instant physical demonstration, visual proof, sensory action, or immediate before-and-after contrast in the first 3 seconds (e.g. tactile hands-on action, instant audio comparison, physical demonstration test). Make the Demonstration and Visual archetypes top priorities.`
+    : isComedy
+    ? `FORMAT HOOK RULE (SITUATIONAL COMEDY):
+Hooks MUST be funny, witty, playful, or paradoxical with a comical opening situation, humorous question, or playful dilemma.`
+    : isStory
+    ? `FORMAT HOOK RULE (STORYTELLING):
+Hooks MUST establish an intriguing interpersonal dilemma, relatable emotional moment, or human conflict between two people.`
+    : `FORMAT HOOK RULE (UGC / CREATOR-STYLE):
+Hooks MUST sound like a viral Indian mobile creator speaking directly to the viewer with authentic high-energy mobile intimacy ("Stop scrolling if you...", "The truth about...", "My honest test").`;
 
   const langRule = isEng
     ? "STRICT: The film's canonical language is ENGLISH. Every hookLine MUST be written in natural, fluent conversational English. Absolutely NO Hindi, NO Devanagari script, NO regional Indian language words under any circumstances."
@@ -194,6 +313,9 @@ Each hook must span a distinct archetype:
 - Creator / UGC (direct to camera insider tip)
 - Demonstration (instant before-and-after action)
 
+FORMAT ENFORCEMENT (${cleanFormat}):
+${formatHookRule}
+
 MANDATORY LANGUAGE ENFORCEMENT:
 ${langRule}
 CRITICAL PRINCIPLE: Never infer output language from the brand name, product category, city, country, or cultural context. The film's explicit language setting (${language}) is the ONLY source of truth.
@@ -209,10 +331,10 @@ Return valid JSON between @@JSON@@ and @@END@@:
 [
   {
     "id": "hook_1",
-    "archetype": "Problem / Everyday Crisis",
+    "archetype": "Demonstration",
     "hookLine": "...",
     "visualAction": "...",
-    "angle": "Urgent household realization",
+    "angle": "Instant physical demonstration",
     "recommended": true
   }
 ]
@@ -220,6 +342,7 @@ Return valid JSON between @@JSON@@ and @@END@@:
 
   const content = `BRAND: ${businessName} (${businessType})
 BRIEF: ${brief || "Promote brand"}
+CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
 CANONICAL FILM LANGUAGE: ${language}`;
 
@@ -700,7 +823,7 @@ Follow all Product Spine Section 8 rules:
 - Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)."}
 - CAMERA SETUP VARIETY (Rule M13c): Use at least 3 distinct camera setups across scenes with motivated camera motion, no two consecutive scenes identical.
 - EYE-LINE RULE (Rule M13d): In EVERY scene where two characters talk or interact, the Visual description MUST explicitly state that they look at each other, face each other, or make eye contact (e.g. "Ramesh looks at Sunita as he speaks", "Sunita turns to face Ramesh"). Never omit eye contact when both characters are in the scene or speaking, and never have characters stare into distance or look away.
-${format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 of the 4 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
+${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration leads. Dialogue is concise and demonstrator-led; single presenter or dual interaction allowed without artificial conversational filler." : format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 of the 4 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
 - Return ONLY the standard @@HEADER@@, @@CHARACTER1@@, @@CHARACTER2@@, @@SETTING@@, @@SCENE@@, and @@RECORD@@ markers. In @@HEADER@@, set Format: ${format}.`;
 
   const base = buildUserContent(form, fest, [], todayIST(), stageInst);
