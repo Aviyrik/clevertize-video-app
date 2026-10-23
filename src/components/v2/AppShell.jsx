@@ -148,7 +148,7 @@ export default function AppShell({
               </div>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  CleverCuts
+                  CleverCut
                 </div>
               </div>
             </div>

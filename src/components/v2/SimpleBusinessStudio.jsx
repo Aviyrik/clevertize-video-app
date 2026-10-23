@@ -386,7 +386,7 @@ export default function SimpleBusinessStudio({
               What would you like to promote?
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Enter your deal, discount, or announcement. CleverCuts will turn it into 3 ready-to-run video ad concepts.
+              Enter your deal, discount, or announcement. CleverCut will turn it into 3 ready-to-run video ad concepts.
             </p>
 
             {/* Quick Inspiration Pills */}

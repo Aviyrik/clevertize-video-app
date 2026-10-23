@@ -180,7 +180,7 @@ export default function AccountModal({
                 Account Settings
               </h2>
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                CleverCuts Profile & Preferences
+                CleverCut Profile & Preferences
               </span>
             </div>
           </div>
@@ -352,7 +352,7 @@ export default function AccountModal({
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {currentUser.name || 'CleverCuts Creator'}
+                  {currentUser.name || 'CleverCut Creator'}
                 </div>
                 <div
                   style={{

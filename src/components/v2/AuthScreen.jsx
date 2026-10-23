@@ -12,12 +12,12 @@ import AuthVideoShowcase from './AuthVideoShowcase.jsx';
 import LegalDocumentModal from './LegalDocumentModal.jsx';
 
 /**
- * AuthScreen - SpaceX-inspired full-viewport authentication experience for CleverCuts.
+ * AuthScreen - SpaceX-inspired full-viewport authentication experience for CleverCut.
  *
  * Architecture:
  * 1. Background Video covers the ENTIRE viewport (position: fixed, inset: 0, full-bleed)
  *    with a darkened overlay so it doesn't distract or disturb the user.
- * 2. CleverCuts brand logo sits independently in the upper-left corner of the viewport.
+ * 2. CleverCut brand logo sits independently in the upper-left corner of the viewport.
  * 3. Showcase editorial copy sits in the bottom-left corner to give editorial balance.
  * 4. A refined translucent glass authentication panel FLOATS over the video on the RIGHT side.
  * 5. Zero side-by-side card wrappers, zero outer rounded containers, zero split columns.
@@ -326,7 +326,7 @@ export default function AuthScreen({
         posterSrc="/videos/background-poster.jpg"
       />
 
-      {/* 2. INDEPENDENT CLEVERCUTS LOGO: Floats in the top-left directly over full-screen video */}
+      {/* 2. INDEPENDENT CLEVERCUT LOGO: Floats in the top-left directly over full-screen video */}
       <div
         className="auth-independent-logo"
         style={{
@@ -367,7 +367,7 @@ export default function AuthScreen({
             textShadow: '0 2px 12px rgba(0, 0, 0, 0.85)',
           }}
         >
-          CleverCuts
+          CleverCut
         </span>
       </div>
 
@@ -479,7 +479,7 @@ export default function AuthScreen({
             >
               {mode === 'signup'
                 ? 'Access your saved scripts and campaigns anywhere.'
-                : 'Log in to continue creating with CleverCuts.'}
+                : 'Log in to continue creating with CleverCut.'}
             </p>
           </div>
 
@@ -822,7 +822,7 @@ export default function AuthScreen({
               lineHeight: 1.45,
             }}
           >
-            By continuing, you agree to CleverCuts's{' '}
+            By continuing, you agree to CleverCut's{' '}
             <button
               type="button"
               onClick={() => {

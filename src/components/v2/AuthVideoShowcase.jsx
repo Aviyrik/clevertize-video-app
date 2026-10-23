@@ -3,7 +3,7 @@ import { Clapperboard } from 'lucide-react';
 
 /**
  * AuthVideoShowcase - Cinematic full-screen AI commercial video background
- * for the CleverCuts authentication screen.
+ * for the CleverCut authentication screen.
  *
  * Implements:
  * - Full-screen background video covering the entire viewport (position: fixed, inset: 0)
@@ -89,7 +89,7 @@ export default function AuthVideoShowcase({
       ) : (
         <img
           src={posterSrc}
-          alt="CleverCuts Showreel"
+          alt="CleverCut Showreel"
           style={{
             position: 'absolute',
             inset: 0,
@@ -190,7 +190,7 @@ export default function AuthVideoShowcase({
               textShadow: '0 2px 10px rgba(0, 0, 0, 0.7)',
             }}
           >
-            CleverCuts
+            CleverCut
           </span>
         </div>
       )}

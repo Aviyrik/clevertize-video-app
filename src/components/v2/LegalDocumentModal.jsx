@@ -107,7 +107,7 @@ export default function LegalDocumentModal({
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-                CleverCuts Legal & Policy
+                CleverCut Legal & Policy
               </div>
               <div style={{ fontSize: 12, color: '#9CA3AF' }}>
                 Commercial video creation platform policies
@@ -267,10 +267,10 @@ export default function LegalDocumentModal({
                   <span style={{ fontSize: 12, color: '#9CA3AF' }}>Effective: October 2026 • Version 2.4</span>
                 </div>
                 <h1 style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
-                  CleverCuts Terms of Service
+                  CleverCut Terms of Service
                 </h1>
                 <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
-                  Please read these Terms of Service carefully before accessing or using the CleverCuts commercial video creation studio.
+                  Please read these Terms of Service carefully before accessing or using the CleverCut commercial video creation studio.
                 </p>
               </div>
 
@@ -289,7 +289,7 @@ export default function LegalDocumentModal({
               >
                 <CheckCircle2 size={18} style={{ color: '#818CF8', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ fontSize: 12, color: '#E0E7FF', lineHeight: 1.55 }}>
-                  <strong style={{ color: '#FFFFFF' }}>Commercial Ownership Guarantee:</strong> You retain 100% full commercial rights to the video ads, scripts, and promotional assets you produce with CleverCuts. You are free to run them on Instagram, YouTube, television, websites, or any paid advertising channel.
+                  <strong style={{ color: '#FFFFFF' }}>Commercial Ownership Guarantee:</strong> You retain 100% full commercial rights to the video ads, scripts, and promotional assets you produce with CleverCut. You are free to run them on Instagram, YouTube, television, websites, or any paid advertising channel.
                 </div>
               </div>
 
@@ -299,7 +299,7 @@ export default function LegalDocumentModal({
                   1. Acceptance of Terms
                 </h3>
                 <p style={{ margin: 0 }}>
-                  By registering an account, accessing, or using CleverCuts (&ldquo;the Service&rdquo;), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you are entering into this agreement on behalf of a business or legal entity, you represent that you have the authority to bind such entity.
+                  By registering an account, accessing, or using CleverCut (&ldquo;the Service&rdquo;), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you are entering into this agreement on behalf of a business or legal entity, you represent that you have the authority to bind such entity.
                 </p>
               </div>
 
@@ -309,7 +309,7 @@ export default function LegalDocumentModal({
                   2. Service Description & AI Generation
                 </h3>
                 <p style={{ margin: 0 }}>
-                  CleverCuts is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis through neural generative video models (including Magnific AI and large language models). While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
+                  CleverCut is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis through neural generative video models (including Magnific AI and large language models). While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
                 </p>
               </div>
 
@@ -329,10 +329,10 @@ export default function LegalDocumentModal({
                   4. Intellectual Property & Commercial Usage Rights
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>
-                  <strong>Your Content & Outputs:</strong> As between you and CleverCuts, you own all rights, title, and interest in and to your input materials (logos, product photos, business information) and the resulting generated video ads and scripts produced for your account, subject to applicable third-party model terms.
+                  <strong>Your Content & Outputs:</strong> As between you and CleverCut, you own all rights, title, and interest in and to your input materials (logos, product photos, business information) and the resulting generated video ads and scripts produced for your account, subject to applicable third-party model terms.
                 </p>
                 <p style={{ margin: 0 }}>
-                  <strong>Platform IP:</strong> CleverCuts, including its interface design, software code, creative direction engines, scoring algorithms, and brand trademarks, remain the exclusive intellectual property of CleverCuts and its licensors.
+                  <strong>Platform IP:</strong> CleverCut, including its interface design, software code, creative direction engines, scoring algorithms, and brand trademarks, remain the exclusive intellectual property of CleverCut and its licensors.
                 </p>
               </div>
 
@@ -359,7 +359,7 @@ export default function LegalDocumentModal({
                   6. Third-Party Integrations & Generation Latency
                 </h3>
                 <p style={{ margin: 0 }}>
-                  Video rendering and frame synthesis rely on state-of-the-art neural diffusion pipelines (including Magnific AI). Processing times may fluctuate based on global cloud infrastructure demand and render queue length. CleverCuts coordinates, polls, and delivers final high-definition MP4 renders once completed by the rendering cluster.
+                  Video rendering and frame synthesis rely on state-of-the-art neural diffusion pipelines (including Magnific AI). Processing times may fluctuate based on global cloud infrastructure demand and render queue length. CleverCut coordinates, polls, and delivers final high-definition MP4 renders once completed by the rendering cluster.
                 </p>
               </div>
 
@@ -379,7 +379,7 @@ export default function LegalDocumentModal({
                   8. Disclaimers & Limitation of Liability
                 </h3>
                 <p style={{ margin: 0 }}>
-                  The Service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis without warranties of any kind, either express or implied. To the maximum extent permitted by applicable law, CleverCuts shall not be liable for any indirect, incidental, punitive, or consequential damages resulting from the use or inability to use the platform.
+                  The Service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis without warranties of any kind, either express or implied. To the maximum extent permitted by applicable law, CleverCut shall not be liable for any indirect, incidental, punitive, or consequential damages resulting from the use or inability to use the platform.
                 </p>
               </div>
 
@@ -389,7 +389,7 @@ export default function LegalDocumentModal({
                   9. Account Deletion & Termination
                 </h3>
                 <p style={{ margin: 0 }}>
-                  You may close and permanently delete your CleverCuts account at any time via Account Settings. Deletion irreversibly purges your authentication credentials, business profiles, saved project scripts, and associated video records.
+                  You may close and permanently delete your CleverCut account at any time via Account Settings. Deletion irreversibly purges your authentication credentials, business profiles, saved project scripts, and associated video records.
                 </p>
               </div>
 
@@ -400,7 +400,7 @@ export default function LegalDocumentModal({
                 </h3>
                 <p style={{ margin: 0 }}>
                   If you have questions regarding these Terms of Service, please reach out to our legal department at{' '}
-                  <span style={{ color: '#818CF8' }}>legal@clevercuts.ai</span> or through our support channels.
+                  <span style={{ color: '#818CF8' }}>legal@clevercut.ai</span> or through our support channels.
                 </p>
               </div>
             </div>
@@ -427,10 +427,10 @@ export default function LegalDocumentModal({
                   <span style={{ fontSize: 12, color: '#9CA3AF' }}>Effective: October 2026 • Version 2.4</span>
                 </div>
                 <h1 style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
-                  CleverCuts Privacy Policy
+                  CleverCut Privacy Policy
                 </h1>
                 <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
-                  Learn how CleverCuts collects, utilizes, and protects your business context, uploaded brand assets, and personal information.
+                  Learn how CleverCut collects, utilizes, and protects your business context, uploaded brand assets, and personal information.
                 </p>
               </div>
 
@@ -523,7 +523,7 @@ export default function LegalDocumentModal({
                   6. Local Storage & Session State
                 </h3>
                 <p style={{ margin: 0 }}>
-                  CleverCuts uses browser <code>localStorage</code> strictly for functional purposes: remembering your authentication token, saving your login email (if &ldquo;Remember me&rdquo; is checked), and persisting your preferred studio mode (Simple Studio vs. Director Mode). We do not use intrusive third-party cross-site advertising cookies.
+                  CleverCut uses browser <code>localStorage</code> strictly for functional purposes: remembering your authentication token, saving your login email (if &ldquo;Remember me&rdquo; is checked), and persisting your preferred studio mode (Simple Studio vs. Director Mode). We do not use intrusive third-party cross-site advertising cookies.
                 </p>
               </div>
 
@@ -534,7 +534,7 @@ export default function LegalDocumentModal({
                 </h3>
                 <p style={{ margin: 0 }}>
                   If you have inquiries about this Privacy Policy or wish to submit a data subject request, please contact our Data Protection Officer at{' '}
-                  <span style={{ color: '#818CF8' }}>privacy@clevercuts.ai</span>.
+                  <span style={{ color: '#818CF8' }}>privacy@clevercut.ai</span>.
                 </p>
               </div>
             </div>
@@ -553,7 +553,7 @@ export default function LegalDocumentModal({
           }}
         >
           <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-            {activeTab === 'terms' ? 'Reading CleverCuts Terms of Service' : 'Reading CleverCuts Privacy Policy'}
+            {activeTab === 'terms' ? 'Reading CleverCut Terms of Service' : 'Reading CleverCut Privacy Policy'}
           </div>
 
           <button

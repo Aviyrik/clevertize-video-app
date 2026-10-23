@@ -254,7 +254,7 @@ export default function AuthModal({
               <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0, lineHeight: 1.4 }}>
                 {mode === 'signup'
                   ? 'Access your saved scripts and campaigns anywhere.'
-                  : 'Log in to continue creating with CleverCuts.'}
+                  : 'Log in to continue creating with CleverCut.'}
               </p>
             </div>
 
@@ -594,7 +594,7 @@ export default function AuthModal({
                 lineHeight: 1.45,
               }}
             >
-              By continuing, you agree to CleverCuts's{' '}
+              By continuing, you agree to CleverCut's{' '}
               <button
                 type="button"
                 onClick={() => {

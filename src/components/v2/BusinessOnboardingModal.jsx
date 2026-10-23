@@ -510,7 +510,7 @@ export default function BusinessOnboardingModal({
                 Tell us about your business
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                CleverCuts uses your brand identity to write high-converting commercial scripts tailored to your market.
+                CleverCut uses your brand identity to write high-converting commercial scripts tailored to your market.
               </p>
             </div>
 

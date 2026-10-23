@@ -1368,7 +1368,7 @@ export default function App() {
     setUserContext(createEmptyUserContext());
     resetAllCreativeFilmState();
 
-    setToastMessage('Your CleverCuts account has been permanently deleted.');
+    setToastMessage('Your CleverCut account has been permanently deleted.');
     setTimeout(() => setToastMessage(''), 4500);
   };
 
@@ -3401,7 +3401,7 @@ export default function App() {
         </div>
         <div style={{ fontSize: 13, color: '#A6ACB8', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Sparkles size={14} className="icon-spinner" style={{ color: '#6366F1' }} />
-          <span>Starting CleverCuts...</span>
+          <span>Starting CleverCut...</span>
         </div>
       </div>
     );

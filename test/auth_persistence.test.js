@@ -252,9 +252,9 @@ test('Auth Redesign: AuthScreen layout, floating panel, and independent logo', (
   assert.ok(!code.includes('auth-left-column'), 'Must remove separate left card .auth-left-column');
   assert.ok(!code.includes('auth-right-column'), 'Must remove separate right card .auth-right-column');
 
-  // Independent CleverCuts logo directly over full-screen video in top-left
+  // Independent CleverCut logo directly over full-screen video in top-left
   assert.ok(code.includes('auth-independent-logo'), 'Must render independent logo floating over video in top-left');
-  assert.ok(code.includes('CleverCuts'), 'Must render CleverCuts brand title');
+  assert.ok(code.includes('CleverCut'), 'Must render CleverCut brand title');
   assert.ok(code.includes('Clapperboard'), 'Must render Clapperboard brand icon');
 
   assert.ok(code.includes('auth-floating-wrapper'), 'Must define floating panel wrapper');
@@ -349,8 +349,8 @@ test('Auth Legal Documents: AuthScreen and AuthModal feature interactive Terms o
   assert.ok(fs.existsSync(legalModalPath), 'LegalDocumentModal.jsx must exist');
 
   const legalCode = fs.readFileSync(legalModalPath, 'utf8');
-  assert.ok(legalCode.includes('CleverCuts Terms of Service'), 'Must contain Terms of Service heading');
-  assert.ok(legalCode.includes('CleverCuts Privacy Policy'), 'Must contain Privacy Policy heading');
+  assert.ok(legalCode.includes('CleverCut Terms of Service'), 'Must contain Terms of Service heading');
+  assert.ok(legalCode.includes('CleverCut Privacy Policy'), 'Must contain Privacy Policy heading');
   assert.ok(legalCode.includes('Commercial Ownership Guarantee'), 'Must guarantee commercial rights to user videos');
   assert.ok(legalCode.includes('Acceptable Use Policy'), 'Must define acceptable use');
   assert.ok(legalCode.includes('Information We Collect'), 'Must define data collection terms');

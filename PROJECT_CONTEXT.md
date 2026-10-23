@@ -1,4 +1,4 @@
-# CleverCuts (Clevertize Video Studio) — Project Context & Handoff Guide
+# CleverCut (Clevertize Video Studio) — Project Context & Handoff Guide
 
 > **Quick Start for Antigravity on a New System (Desktop / Laptop):**
 > When starting a new session on your laptop or any other machine, tell Antigravity:
