@@ -2605,7 +2605,8 @@ export default function App() {
           setIsRendering(false);
           setIsBusy(false);
           setCurrentStep('input');
-          setErrorMessage(`Rendering failed: ${data.status}`);
+          const detail = data.error || (data.status === 'completed_with_errors' ? 'The Magnific workflow ran into internal generation errors (such as missing/low-resolution images, node timeout, or content filters). Please check your product photo or try re-generating.' : `Rendering failed: ${data.status}`);
+          setErrorMessage(detail);
           return;
         }
 
