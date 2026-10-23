@@ -230,64 +230,23 @@ export default function SimpleBusinessStudio({
           </div>
         </div>
 
-        {/* Mode Toggle */}
+        {/* Active Brand Context Badge */}
         <div
           style={{
+            fontSize: 11,
+            color: 'var(--accent-primary)',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.25)',
+            padding: '4px 10px',
+            borderRadius: 6,
+            fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
-            backgroundColor: 'var(--bg-elevated)',
-            padding: '3px 4px',
-            borderRadius: 8,
-            border: '1px solid var(--border-subtle)',
+            gap: 5,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '5px 10px',
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#FFFFFF',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-            }}
-          >
-            <Zap size={12} />
-            <span>Simple Studio</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={onSwitchToDirectorMode}
-            title="Switch to Advanced 7-Stage Director Mode"
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '5px 10px',
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            <Sliders size={12} />
-            <span>Director Mode</span>
-          </button>
+          <Sparkles size={12} />
+          <span>Active Brand Context</span>
         </div>
       </div>
 

@@ -3111,6 +3111,7 @@ export default function App() {
           onSelectView={setActiveAppView}
           studioMode={studioMode}
           onToggleStudioMode={() => handleSetStudioMode(studioMode === 'simple' ? 'advanced' : 'simple')}
+          onSetStudioMode={handleSetStudioMode}
           currentStage={studioStage}
           completedStages={completedStages}
           onNavigateStage={handleNavigateStage}
@@ -3296,31 +3297,6 @@ export default function App() {
             />
           ) : (
             <>
-      {/* Director Mode Switcher Banner */}
-      <div style={{ maxWidth: 860, margin: '12px auto 0', width: '100%', padding: '0 20px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          onClick={() => handleSetStudioMode('simple')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            fontSize: 11,
-            fontWeight: 700,
-            borderRadius: 20,
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            color: 'var(--accent-primary)',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          }}
-        >
-          <Zap size={12} />
-          Switch to Simple Studio (3-Step Fast Track)
-        </button>
-      </div>
-
       {/* V4 GUIDED STUDIO PROGRESS HEADER & YOUR CHOICES */}
       <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px' }}>
         <StudioProgressHeader

@@ -69,6 +69,7 @@ export default function AppShell({
   projectCount = 0,
   studioMode = 'simple',
   onToggleStudioMode,
+  onSetStudioMode,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [businessDropdownOpen, setBusinessDropdownOpen] = useState(false);
@@ -941,30 +942,28 @@ export default function AppShell({
                 : `Stage ${currentStageObj.num} · ${currentStageObj.label}`}
             </span>
 
-            {activeView === 'studio' && onToggleStudioMode && (
-              <button
-                type="button"
-                onClick={onToggleStudioMode}
-                title={studioMode === 'simple' ? 'Switch to Director Mode' : 'Switch to Simple Studio'}
+            {/* Indicator 1: Pure indicator of active mode (shows current mode accurately, non-clickable) */}
+            {activeView === 'studio' && (
+              <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
                   marginLeft: 10,
-                  padding: '3px 9px',
+                  padding: '3px 10px',
                   borderRadius: 14,
                   fontSize: 11,
-                  fontWeight: 600,
-                  backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                  fontWeight: 700,
+                  backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.14)' : 'rgba(234, 179, 8, 0.14)',
                   color: studioMode === 'simple' ? 'var(--accent-primary)' : '#eab308',
-                  border: '1px solid ' + (studioMode === 'simple' ? 'var(--border-subtle)' : 'rgba(234, 179, 8, 0.3)'),
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
+                  border: '1px solid ' + (studioMode === 'simple' ? 'rgba(99, 102, 241, 0.3)' : 'rgba(234, 179, 8, 0.35)'),
+                  cursor: 'default',
+                  userSelect: 'none',
                 }}
               >
-                {studioMode === 'simple' ? <Sliders size={12} /> : <Zap size={12} />}
-                <span>{studioMode === 'simple' ? 'Director Mode' : 'Simple Studio'}</span>
-              </button>
+                {studioMode === 'simple' ? <Zap size={11} /> : <Sliders size={11} />}
+                <span>{studioMode === 'simple' ? 'Simple Studio' : 'Director Mode'}</span>
+              </span>
             )}
 
             {hasStaleWarning && (
@@ -986,7 +985,78 @@ export default function AppShell({
           </div>
 
           {activeView === 'studio' && (
-            <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Box 2 Mode Switcher Toggle Pill (Fixed on Navbar Top Right) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 8,
+                  padding: 3,
+                  gap: 2,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (studioMode !== 'simple') {
+                      if (onSetStudioMode) onSetStudioMode('simple');
+                      else if (onToggleStudioMode) onToggleStudioMode();
+                    }
+                  }}
+                  title="Switch to Simple Studio (3-Step Fast Video Ad Creation)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 11px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: studioMode === 'simple' ? 700 : 500,
+                    backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
+                    color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: studioMode === 'simple' ? 'default' : 'pointer',
+                    boxShadow: studioMode === 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Zap size={12} />
+                  <span>Simple Studio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (studioMode === 'simple') {
+                      if (onSetStudioMode) onSetStudioMode('advanced');
+                      else if (onToggleStudioMode) onToggleStudioMode();
+                    }
+                  }}
+                  title="Switch to Director Mode (7-Stage Full Film Control)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 11px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: studioMode !== 'simple' ? 700 : 500,
+                    backgroundColor: studioMode !== 'simple' ? 'var(--accent-primary)' : 'transparent',
+                    color: studioMode !== 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: studioMode !== 'simple' ? 'default' : 'pointer',
+                    boxShadow: studioMode !== 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Sliders size={12} />
+                  <span>Director Mode</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={onStartNewFilm}
