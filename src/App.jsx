@@ -521,50 +521,42 @@ export default function App() {
     };
   };
 
-  // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
-  const [userContext, setUserContext] = useState(() => {
-    let base = {
-      businessName: '',
-      businessType: 'Saree, Ethnic Wear & Bridal Store',
-      customBusinessType: '',
-      town: '',
-      area: '',
-      brief: '',
-      specialty: '',
-      offer: '',
-      occasion: '',
-      contact: '',
-      ownerName: '',
-      leadCharacter: '',
-      supportingCharacter: '',
-      environment: '',
-      websiteUrl: '',
-      duration: '15s',
-      platform: 'Instagram Reels / 9:16',
-      creativeStyle: 'UGC / Creator-style',
-      language: 'English',
-      scriptMode: 'devanagari',
-      selectedGoalId: 'offer',
-      shopPhoto: null,
-      productPhoto: null,
-      logo: null,
-      brandFile: null,
-    };
-    try {
-      const saved = localStorage.getItem('clevertize_user_context');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const brandProfile = extractBrandProfile(parsed);
-        base = { ...base, ...brandProfile };
-      }
-    } catch {
-      // fallback
-    }
-    if (base.businessName && base.businessName.trim().toLowerCase() === 'kanti sweets') {
-      base.businessName = '';
-    }
-    return base;
+  // Helper to create an isolated, empty brand context for new users
+  const createEmptyUserContext = () => ({
+    businessId: null,
+    businessName: '',
+    businessType: 'Retail Store',
+    customBusinessType: '',
+    town: '',
+    area: '',
+    brief: '',
+    specialty: '',
+    offer: '',
+    occasion: '',
+    contact: '',
+    ownerName: '',
+    leadCharacter: '',
+    supportingCharacter: '',
+    environment: '',
+    websiteUrl: '',
+    duration: '15s',
+    platform: 'Instagram Reels / 9:16',
+    creativeStyle: 'UGC / Creator-style',
+    language: 'English',
+    scriptMode: 'devanagari',
+    selectedGoalId: 'offer',
+    targetAudience: '',
+    brandTone: 'Relatable & Trustworthy',
+    brandLogo: null,
+    shopPhoto: null,
+    productPhoto: null,
+    logo: null,
+    brandFile: null,
   });
+
+  // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
+  // Initializes cleanly empty — user businesses are always loaded from their authenticated database profile
+  const [userContext, setUserContext] = useState(() => createEmptyUserContext());
 
   const updateUserContext = (key, val) => {
     if (key === 'language') {
@@ -575,9 +567,10 @@ export default function App() {
     setUserContext((prev) => {
       const next = { ...prev, [key]: val };
       try {
-        // Persist only clean Brand Profile to localStorage so film settings never bleed into new films
-        const brandProfile = extractBrandProfile(next);
-        localStorage.setItem('clevertize_user_context', JSON.stringify(brandProfile));
+        if (currentUser?.id) {
+          const brandProfile = extractBrandProfile(next);
+          localStorage.setItem(`clevertize_user_context_${currentUser.id}`, JSON.stringify(brandProfile));
+        }
       } catch (err) {
         console.warn('LocalStorage save failed:', err);
       }
@@ -995,27 +988,23 @@ export default function App() {
         const bizList = bData.businesses || [];
         setUserBusinesses(bizList);
         if (bizList.length > 0) {
-          setUserContext((prev) => {
-            if (prev.businessName) return prev;
-            const primaryBiz = bizList[0];
-            return {
-              ...prev,
-              businessName: primaryBiz.businessName || primaryBiz.name || '',
-              businessType: primaryBiz.businessType || primaryBiz.category || prev.businessType,
-              town: primaryBiz.town || prev.town,
-              targetAudience: primaryBiz.targetAudience || prev.targetAudience,
-              websiteUrl: primaryBiz.websiteUrl || prev.websiteUrl,
-              brandTone: primaryBiz.brandTone || prev.brandTone,
-              brandLogo: primaryBiz.logo || prev.brandLogo,
-            };
-          });
+          const primaryBiz = bizList[0];
+          setUserContext((prev) => ({
+            ...prev,
+            businessId: primaryBiz.id,
+            businessName: primaryBiz.businessName || primaryBiz.name || '',
+            businessType: primaryBiz.businessType || primaryBiz.category || 'Retail Store',
+            town: primaryBiz.town || '',
+            targetAudience: primaryBiz.targetAudience || '',
+            websiteUrl: primaryBiz.websiteUrl || '',
+            brandTone: primaryBiz.brandTone || 'Relatable & Trustworthy',
+            brandLogo: primaryBiz.logo || primaryBiz.brandLogo || null,
+          }));
         } else if (allowAutoOpenOnboarding) {
-          setUserContext((prev) => {
-            if (!prev.businessName) {
-              setIsOnboardingModalOpen(true);
-            }
-            return prev;
-          });
+          setUserContext(createEmptyUserContext());
+          setIsOnboardingModalOpen(true);
+        } else {
+          setUserContext(createEmptyUserContext());
         }
       }
       if (projRes.ok) {
@@ -1028,6 +1017,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Purge legacy global un-scoped context so stale brands never bleed across sessions
+    try {
+      localStorage.removeItem('clevertize_user_context');
+    } catch {}
+
     const token = localStorage.getItem('clevertize_token');
     if (token) {
       setIsAuthChecking(true);
@@ -1042,7 +1036,7 @@ export default function App() {
           if (data.user) {
             setCurrentUser(data.user);
             setAuthToken(token);
-            fetchUserData(token, false);
+            fetchUserData(token, true);
           } else {
             throw new Error('No user data');
           }
@@ -1051,6 +1045,8 @@ export default function App() {
           localStorage.removeItem('clevertize_token');
           setAuthToken(null);
           setCurrentUser(null);
+          setUserBusinesses([]);
+          setUserContext(createEmptyUserContext());
         })
         .finally(() => {
           setIsAuthChecking(false);
@@ -1069,15 +1065,10 @@ export default function App() {
       try {
         localStorage.setItem('clevertize_token', token);
       } catch {}
-      fetchUserData(token);
+      fetchUserData(token, true);
     }
     setToastMessage(`Welcome, ${user?.fullName || user?.name || user?.email || 'User'}!`);
     setTimeout(() => setToastMessage(''), 3000);
-
-    // If new registration, open business onboarding
-    if (authMode === 'signup') {
-      setIsOnboardingModalOpen(true);
-    }
   };
 
   const handleLogout = async () => {
@@ -1091,6 +1082,11 @@ export default function App() {
     }
     try {
       localStorage.removeItem('clevertize_token');
+      localStorage.removeItem('clevertize_user');
+      localStorage.removeItem('clevertize_user_context');
+      if (currentUser?.id) {
+        localStorage.removeItem(`clevertize_user_context_${currentUser.id}`);
+      }
     } catch {}
     setAuthToken(null);
     setCurrentUser(null);
@@ -1098,6 +1094,7 @@ export default function App() {
     setUserBusinesses([]);
     setActiveProjectId(null);
     setIsCurrentProjectSaved(false);
+    setUserContext(createEmptyUserContext());
     setToastMessage('Signed out successfully.');
     setTimeout(() => setToastMessage(''), 3000);
   };
@@ -1120,6 +1117,9 @@ export default function App() {
       localStorage.removeItem('clevertize_token');
       localStorage.removeItem('clevertize_user');
       localStorage.removeItem('clevertize_user_context');
+      if (currentUser?.id) {
+        localStorage.removeItem(`clevertize_user_context_${currentUser.id}`);
+      }
     } catch {}
 
     setAuthToken(null);
@@ -1128,6 +1128,7 @@ export default function App() {
     setUserBusinesses([]);
     setActiveProjectId(null);
     setIsCurrentProjectSaved(false);
+    setUserContext(createEmptyUserContext());
     setActiveAppView('home');
     setStudioStage('business');
 
@@ -3109,7 +3110,13 @@ export default function App() {
           currentStage={studioStage}
           completedStages={completedStages}
           onNavigateStage={handleNavigateStage}
-          onStartNewFilm={() => handleStartNewProject(false)}
+          onStartNewFilm={() => {
+            if (userBusinesses.length === 0 || !userContext.businessName) {
+              setIsOnboardingModalOpen(true);
+              return;
+            }
+            handleStartNewProject(false);
+          }}
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
@@ -3179,11 +3186,27 @@ export default function App() {
           {(activeAppView === 'home' || activeAppView === 'hub' || (activeAppView === 'studio' && studioStage === 'entry')) ? (
             <CreationEntryHub
               onStartBrief={() => {
+                if (userBusinesses.length === 0 || !userContext.businessName) {
+                  setIsOnboardingModalOpen(true);
+                  return;
+                }
                 setActiveAppView('studio');
                 setStudioStage('brief');
               }}
-              onOpenScriptModal={() => setIsScriptModalOpen(true)}
-              onOpenUrlModal={() => setIsUrlModalOpen(true)}
+              onOpenScriptModal={() => {
+                if (userBusinesses.length === 0 || !userContext.businessName) {
+                  setIsOnboardingModalOpen(true);
+                  return;
+                }
+                setIsScriptModalOpen(true);
+              }}
+              onOpenUrlModal={() => {
+                if (userBusinesses.length === 0 || !userContext.businessName) {
+                  setIsOnboardingModalOpen(true);
+                  return;
+                }
+                setIsUrlModalOpen(true);
+              }}
               businessName={userContext.businessName}
               businessType={userContext.businessType}
               town={userContext.town}
@@ -3193,7 +3216,11 @@ export default function App() {
                 setStudioStage(studioStage === 'entry' ? 'brief' : studioStage);
               }}
               onEditBrand={() => {
-                setEditingBusiness(userContext);
+                if (userBusinesses.length === 0 || !userContext.businessName) {
+                  setEditingBusiness(null);
+                } else {
+                  setEditingBusiness(userContext);
+                }
                 setIsOnboardingModalOpen(true);
               }}
               recentProjects={userProjects}

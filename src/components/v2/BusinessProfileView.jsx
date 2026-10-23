@@ -53,13 +53,8 @@ export default function BusinessProfileView({
   onAddNewBusiness,
   onSaveBusiness,
 }) {
-  // Use user businesses list, or fallback to active business if available
-  const displayBusinesses =
-    businesses && businesses.length > 0
-      ? businesses
-      : activeBusiness && (activeBusiness.businessName || activeBusiness.name)
-      ? [activeBusiness]
-      : [];
+  // Strictly display actual businesses belonging to this user profile
+  const displayBusinesses = Array.isArray(businesses) ? businesses : [];
 
   const activeName = (activeBusiness?.businessName || activeBusiness?.name || '').trim().toLowerCase();
 
@@ -91,14 +86,91 @@ export default function BusinessProfileView({
         </p>
       </div>
 
-      {/* Grid of Business Cards + Add Another Business Card */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: 20,
-        }}
-      >
+      {/* Empty State when user has 0 businesses */}
+      {displayBusinesses.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1.5px dashed var(--border-default)',
+            borderRadius: 16,
+            padding: '56px 24px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            maxWidth: 540,
+            margin: '20px auto 0',
+          }}
+        >
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              color: 'var(--accent-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <Building2 size={28} />
+          </div>
+          <h3
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              margin: '0 0 8px',
+            }}
+          >
+            No Businesses Created Yet
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.6,
+              margin: '0 0 24px',
+              maxWidth: 420,
+            }}
+          >
+            Every user manages their own businesses. Create your first business profile to set up your store details, brand voice, and target audience used for your video ads.
+          </p>
+          <button
+            type="button"
+            onClick={onAddNewBusiness}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: 'var(--accent-primary)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 22px',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Plus size={16} />
+            <span>Create Your First Business</span>
+          </button>
+        </div>
+      ) : (
+        /* Grid of Business Cards + Add Another Business Card */
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: 20,
+          }}
+        >
         {displayBusinesses.map((biz, idx) => {
           const bName = biz.businessName || biz.name || 'Unnamed Business';
           const bType = biz.businessType || biz.category || 'Retail Store';
@@ -422,6 +494,7 @@ export default function BusinessProfileView({
           </p>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -367,3 +367,71 @@ test('Auth Legal Documents: AuthScreen and AuthModal feature interactive Terms o
   assert.ok(modalCode.includes('setLegalModalOpen(true)'), 'AuthModal must trigger legal modal open');
   assert.ok(modalCode.includes("<LegalDocumentModal"), 'AuthModal must render LegalDocumentModal');
 });
+
+
+test('Multi-tenant and New User Isolation: New user starts with 0 businesses, sees setup prompt, and never inherits other users brands', async () => {
+  // 1. Create a business for User A
+  const userARes = await post('/api/auth/signup', {
+    email: 'usera@brand.com',
+    password: 'password123',
+    name: 'User A',
+    businessName: 'Mahindra Showroom',
+    businessType: 'Automobile',
+    town: 'Bangalore',
+  });
+  assert.equal(userARes.status, 200);
+  const tokenA = userARes.body.token;
+
+  // 2. Signup User B with NO business initially
+  const userBRes = await post('/api/auth/signup', {
+    email: 'userb@brand.com',
+    password: 'password123',
+    name: 'User B',
+  });
+  assert.equal(userBRes.status, 200);
+  const tokenB = userBRes.body.token;
+
+  // Verify User B has ZERO businesses in the database
+  const bizBRes = await get('/api/businesses', tokenB);
+  assert.equal(bizBRes.status, 200);
+  assert.equal(bizBRes.body.businesses.length, 0, 'New user B must have 0 businesses');
+
+  // Verify User A has 1 business and User B cannot see it
+  const bizARes = await get('/api/businesses', tokenA);
+  assert.equal(bizARes.status, 200);
+  assert.equal(bizARes.body.businesses.length, 1);
+  assert.equal(bizARes.body.businesses[0].businessName, 'Mahindra Showroom');
+
+  // 3. Verify Frontend Code Guarantees No Brand Leakage:
+  const bpvSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessProfileView.jsx'), 'utf8');
+  assert.ok(
+    !bpvSrc.includes('[activeBusiness]'),
+    'BusinessProfileView must never fallback to activeBusiness when businesses is empty'
+  );
+  assert.ok(
+    bpvSrc.includes('No Businesses Created Yet'),
+    'BusinessProfileView must render dedicated empty state when user has 0 businesses'
+  );
+
+  const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+  assert.ok(
+    shellSrc.includes('Set Up Business'),
+    'AppShell must display Set Up Business CTA when user has 0 businesses'
+  );
+
+  const hubSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/CreationEntryHub.jsx'), 'utf8');
+  assert.ok(
+    hubSrc.includes('No Business Profile Set Up'),
+    'CreationEntryHub must display No Business Profile Set Up when brand is empty'
+  );
+
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(
+    appSrc.includes('createEmptyUserContext()'),
+    'App.jsx must initialize with createEmptyUserContext'
+  );
+  assert.ok(
+    appSrc.includes('setIsOnboardingModalOpen(true)') && appSrc.includes('userBusinesses.length === 0'),
+    'App.jsx must require business creation before launching studio'
+  );
+});

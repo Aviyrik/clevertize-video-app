@@ -57,8 +57,8 @@ export default function CreationEntryHub({
         </p>
       </div>
 
-      {/* Active Brand Context Banner */}
-      {businessName && (
+      {/* Active Brand Context Banner OR Setup Prompt */}
+      {businessName ? (
         <div
           style={{
             backgroundColor: 'var(--bg-elevated)',
@@ -140,6 +140,66 @@ export default function CreationEntryHub({
               }}
             >
               Edit Details
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            backgroundColor: 'rgba(99, 102, 241, 0.06)',
+            border: '1.5px dashed var(--accent-primary)',
+            borderRadius: 10,
+            padding: '12px 18px',
+            marginBottom: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                backgroundColor: 'var(--accent-primary)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Store size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                No Business Profile Set Up
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Set up your business profile first to generate tailored ads with your brand context and offerings.
+              </div>
+            </div>
+          </div>
+          {onEditBrand && (
+            <button
+              type="button"
+              onClick={onEditBrand}
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 7,
+                padding: '8px 16px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              + Set Up Business
             </button>
           )}
         </div>

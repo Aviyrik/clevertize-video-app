@@ -196,7 +196,80 @@ export default function AppShell({
 
           {/* Current Business / Brand Card */}
           {(() => {
+            const hasBusinesses = Array.isArray(businesses) && businesses.length > 0;
             const activeLogo = resolveLogoUrl(brandLogo || activeBusiness?.brandLogo || activeBusiness?.logo);
+
+            if (!hasBusinesses) {
+              return (
+                <div style={{ padding: '0 16px 16px' }}>
+                  <div
+                    onClick={() => {
+                      if (onAddNewBusiness) onAddNewBusiness();
+                      else if (onOpenOnboarding) onOpenOnboarding();
+                    }}
+                    style={{
+                      backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                      border: '1.5px dashed var(--accent-primary)',
+                      borderRadius: 10,
+                      padding: '10px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        backgroundColor: 'var(--accent-primary)',
+                        color: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Plus size={16} />
+                    </div>
+                    <div style={{ overflow: 'hidden', flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        Set Up Business
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--text-secondary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        Click to add your business
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div style={{ padding: '0 16px 16px', position: 'relative' }}>
                 <div
