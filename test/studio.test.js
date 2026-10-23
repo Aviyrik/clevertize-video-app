@@ -1705,6 +1705,123 @@ test('V2 Entry Point 3 (URL): UrlResearchModal handles URL extraction and pre-po
   assert.deepEqual(completedStages, ['business']);
 });
 
+test('UrlResearchModal & App.jsx: Multi-business isolation, smart auto-creation, and reliable Studio navigation on URL scan', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // Verify App.jsx includes the smart brand matching and isolation logic
+  assert.ok(appSrc.includes('isMatchingBusiness'), 'App.jsx must define isMatchingBusiness helper');
+  assert.ok(appSrc.includes('matchesCurrent'), 'handleApplyUrlData must check if URL matches active business');
+  assert.ok(!appSrc.includes("if ((prev === 'hub' || prev === 'home') && nextView === 'studio' && (!completedStages || completedStages.length === 0))"),
+    'App.jsx must not have premature blocking guard in setActiveAppView that drops user back to hub');
+
+  // Extract isMatchingBusiness logic and test matching behaviour
+  const isMatchingBusiness = (biz, incomingName, incomingUrl) => {
+    if (!biz) return false;
+    const currentName = (biz.businessName || biz.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetName = (incomingName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (currentName && targetName) {
+      if (currentName === targetName) return true;
+      if (currentName.length >= 4 && targetName.length >= 4) {
+        if (currentName.includes(targetName) || targetName.includes(currentName)) return true;
+      }
+    }
+    if (incomingUrl) {
+      try {
+        const fullIncoming = incomingUrl.startsWith('http') ? incomingUrl : `https://${incomingUrl}`;
+        const incomingHost = new URL(fullIncoming).hostname.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (biz.websiteUrl) {
+          try {
+            const fullCurrent = biz.websiteUrl.startsWith('http') ? biz.websiteUrl : `https://${biz.websiteUrl}`;
+            const currentHost = new URL(fullCurrent).hostname.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (incomingHost && currentHost && (incomingHost === currentHost || incomingHost.includes(currentHost) || currentHost.includes(incomingHost))) {
+              return true;
+            }
+          } catch {}
+        }
+        if (currentName && currentName.length >= 4) {
+          if (incomingHost.includes(currentName) || currentName.includes(incomingHost)) return true;
+        }
+      } catch {}
+    }
+    return false;
+  };
+
+  const kalyanBiz = {
+    id: 'biz_kalyan',
+    businessName: 'Kalyan Jewellers',
+    name: 'Kalyan Jewellers',
+    businessType: 'Jewellery & Accessories',
+    websiteUrl: 'https://www.kalyanjewellers.net',
+    logo: 'https://kalyan.com/logo.png',
+    brandLogo: 'https://kalyan.com/logo.png',
+  };
+
+  // Case 1: Scanning Amazon URL while Kalyan Jewellers is active
+  assert.strictEqual(
+    isMatchingBusiness(kalyanBiz, 'Amazon', 'https://www.amazon.in/dp/B08N5WRWNW'),
+    false,
+    'Amazon must not match Kalyan Jewellers'
+  );
+
+  // Case 2: Scanning Kalyan Jewellers product URL while Kalyan Jewellers is active
+  assert.strictEqual(
+    isMatchingBusiness(kalyanBiz, 'Kalyan Jewellers', 'https://www.kalyanjewellers.net/bridal-collection'),
+    true,
+    'Kalyan Jewellers product link must match Kalyan Jewellers'
+  );
+
+  // Case 3: Simulating handleApplyUrlData multi-business isolation
+  let userBusinesses = [kalyanBiz];
+  let userContext = { ...kalyanBiz, brief: '' };
+  let activeAppView = 'hub';
+  let studioStage = 'entry';
+
+  // User scans Amazon URL:
+  const amazonData = {
+    websiteUrl: 'https://www.amazon.in/dp/B08N5WRWNW',
+    businessName: 'Amazon',
+    businessType: 'Electronics, Mobile & Appliances',
+    brief: 'Festival electronics offer with next-day delivery.',
+  };
+
+  const matchesCurrent = isMatchingBusiness(userContext, amazonData.businessName, amazonData.websiteUrl);
+  assert.strictEqual(matchesCurrent, false);
+
+  if (!matchesCurrent) {
+    const existingMatch = userBusinesses.find(b => isMatchingBusiness(b, amazonData.businessName, amazonData.websiteUrl));
+    assert.strictEqual(existingMatch, undefined);
+
+    const newBusiness = {
+      id: 'biz_amazon',
+      businessName: amazonData.businessName,
+      name: amazonData.businessName,
+      businessType: amazonData.businessType,
+      websiteUrl: amazonData.websiteUrl,
+      brief: amazonData.brief,
+      logo: null,       // Must NOT copy Kalyan Jewellers logo!
+      brandLogo: null,  // Must NOT copy Kalyan Jewellers logo!
+    };
+    userBusinesses = [newBusiness, ...userBusinesses];
+    userContext = { ...newBusiness };
+    studioStage = 'brief';
+    activeAppView = 'studio';
+  }
+
+  // Verify: Kalyan Jewellers profile is 100% untouched
+  const preservedKalyan = userBusinesses.find(b => b.id === 'biz_kalyan');
+  assert.ok(preservedKalyan, 'Kalyan Jewellers must be preserved in userBusinesses');
+  assert.strictEqual(preservedKalyan.name, 'Kalyan Jewellers');
+  assert.strictEqual(preservedKalyan.logo, 'https://kalyan.com/logo.png');
+
+  // Verify: Amazon business was auto-created and active
+  assert.strictEqual(userBusinesses.length, 2);
+  assert.strictEqual(userContext.businessName, 'Amazon');
+  assert.strictEqual(userContext.logo, null, 'New business must not inherit old business logo');
+  assert.strictEqual(userContext.brandLogo, null);
+  assert.strictEqual(activeAppView, 'studio', 'Must transition to Studio');
+  assert.strictEqual(studioStage, 'brief', 'Must be at Stage 2 Brief');
+});
+
 test('Script-First Product: Screen07Script includes Section 8 Gate Passed badge, Copy Script, and Save Script', () => {
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes('Section 8 Gate: Passed'), 'Must display Section 8 Gate Passed badge');

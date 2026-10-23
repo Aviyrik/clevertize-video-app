@@ -895,10 +895,6 @@ export default function App() {
   const setActiveAppView = (viewOrUpdater) => {
     setActiveAppViewState((prev) => {
       const nextView = typeof viewOrUpdater === 'function' ? viewOrUpdater(prev) : viewOrUpdater;
-      // If user is currently on the creation hub and clicks 'studio' without active film progress, stay on 'hub'
-      if ((prev === 'hub' || prev === 'home') && nextView === 'studio' && (!completedStages || completedStages.length === 0)) {
-        return 'hub';
-      }
       if (nextView === 'studio' && userContext.businessName && userContext.businessName.trim().length > 0 && studioStage === 'business') {
         markStageComplete('business');
         setStudioStage('brief');
@@ -935,25 +931,6 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const handleApplyUrlData = ({
-    websiteUrl: url,
-    businessName: bName,
-    businessType: bType,
-    town: tw,
-    brief: br,
-  }) => {
-    if (bName) updateUserContext('businessName', bName);
-    if (bType) updateUserContext('businessType', bType);
-    if (tw) updateUserContext('town', tw);
-    if (url) updateUserContext('websiteUrl', url);
-    if (br) updateUserContext('brief', br);
-
-    markStageComplete('business');
-    setStudioStage('brief');
-    setActiveAppView('studio');
-    setToastMessage('Website analyzed! Brief generated in Stage 02.');
-    setTimeout(() => setToastMessage(''), 4000);
-  };
 
   // Clevertize V2 Authentication & Server Persistence State
   const [currentUser, setCurrentUser] = useState(null);
@@ -979,6 +956,196 @@ export default function App() {
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  // Helper to check whether incoming URL research data matches a given business
+  const isMatchingBusiness = (biz, incomingName, incomingUrl) => {
+    if (!biz) return false;
+    const currentName = (biz.businessName || biz.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetName = (incomingName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // 1. Direct name match or substring match (for names >= 4 characters)
+    if (currentName && targetName) {
+      if (currentName === targetName) return true;
+      if (currentName.length >= 4 && targetName.length >= 4) {
+        if (currentName.includes(targetName) || targetName.includes(currentName)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Compare URL hostnames
+    if (incomingUrl) {
+      try {
+        const fullIncoming = incomingUrl.startsWith('http') ? incomingUrl : `https://${incomingUrl}`;
+        const incomingHost = new URL(fullIncoming).hostname.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (biz.websiteUrl) {
+          try {
+            const fullCurrent = biz.websiteUrl.startsWith('http') ? biz.websiteUrl : `https://${biz.websiteUrl}`;
+            const currentHost = new URL(fullCurrent).hostname.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (incomingHost && currentHost && (incomingHost === currentHost || incomingHost.includes(currentHost) || currentHost.includes(incomingHost))) {
+              return true;
+            }
+          } catch {}
+        }
+
+        if (currentName && currentName.length >= 4) {
+          if (incomingHost.includes(currentName) || currentName.includes(incomingHost)) {
+            return true;
+          }
+        }
+      } catch {}
+    }
+
+    return false;
+  };
+
+  const handleApplyUrlData = ({
+    websiteUrl: url,
+    businessName: bName,
+    businessType: bType,
+    town: tw,
+    brief: br,
+  }) => {
+    const rawIncomingName = (bName || '').trim();
+    const rawIncomingUrl = (url || '').trim();
+    const currentBizName = (userContext.businessName || '').trim();
+
+    // Check if the scanned URL or extracted brand matches the currently selected business
+    const matchesCurrent = Boolean(
+      !currentBizName ||
+      isMatchingBusiness(userContext, rawIncomingName, rawIncomingUrl)
+    );
+
+    if (matchesCurrent) {
+      // SAME BUSINESS: Update brief & URL on current business without creating duplicates or overwriting brand identity
+      if (rawIncomingUrl) updateUserContext('websiteUrl', rawIncomingUrl);
+      if (br) updateUserContext('brief', br);
+      if (tw && !userContext.town) updateUserContext('town', tw);
+      if (rawIncomingName && !currentBizName) updateUserContext('businessName', rawIncomingName);
+      if (bType && (!userContext.businessType || userContext.businessType === 'Retail Store')) {
+        updateUserContext('businessType', bType);
+      }
+      setToastMessage(`Website analyzed! Brief updated for ${currentBizName || rawIncomingName || 'your business'}.`);
+    } else {
+      // DIFFERENT BUSINESS / BRAND:
+      // Keep active business (e.g. Kalyan Jewellers) untouched in userBusinesses!
+      // Check if userBusinesses already contains a business matching the scanned brand:
+      const existingMatch = userBusinesses.find((b) =>
+        isMatchingBusiness(b, rawIncomingName, rawIncomingUrl)
+      );
+
+      if (existingMatch) {
+        // Switch to the existing matching business profile
+        setUserContext((prev) => ({
+          ...prev,
+          businessId: existingMatch.id,
+          businessName: existingMatch.businessName || existingMatch.name,
+          businessType: existingMatch.businessType || existingMatch.category || bType || 'Retail Store',
+          town: existingMatch.town || tw || '',
+          area: existingMatch.area || '',
+          websiteUrl: rawIncomingUrl || existingMatch.websiteUrl || '',
+          brief: br || '',
+          targetAudience: existingMatch.targetAudience || '',
+          brandTone: existingMatch.brandTone || 'Warm & Authentic',
+          brandLogo: existingMatch.brandLogo || existingMatch.logo || null,
+          logo: existingMatch.brandLogo || existingMatch.logo || null,
+          productImages: existingMatch.productImages || [],
+        }));
+        setToastMessage(`Switched to existing brand profile "${existingMatch.businessName || existingMatch.name}" with extracted brief!`);
+      } else {
+        // Automatically create a BRAND NEW business profile
+        const newBizId = `biz_${Date.now()}`;
+        const resolvedName = rawIncomingName || 'New Brand';
+        const resolvedType = bType || 'Retail Store';
+        const resolvedTown = tw || '';
+
+        const newBusiness = {
+          id: newBizId,
+          businessName: resolvedName,
+          name: resolvedName,
+          businessType: resolvedType,
+          category: resolvedType,
+          town: resolvedTown,
+          area: '',
+          websiteUrl: rawIncomingUrl,
+          brief: br || '',
+          targetAudience: '',
+          brandTone: 'Warm & Authentic',
+          logo: null,       // Crucial: Brand new profile does not inherit the previous brand's logo!
+          brandLogo: null,
+          productImages: [],
+          createdAt: new Date().toISOString(),
+        };
+
+        // Add to userBusinesses without mutating previous businesses
+        setUserBusinesses((prev) => [newBusiness, ...prev]);
+
+        // Switch userContext to the newly created business
+        setUserContext((prev) => ({
+          ...prev,
+          businessId: newBizId,
+          businessName: resolvedName,
+          businessType: resolvedType,
+          town: resolvedTown,
+          area: '',
+          websiteUrl: rawIncomingUrl,
+          brief: br || '',
+          targetAudience: '',
+          brandTone: 'Warm & Authentic',
+          brandLogo: null,
+          logo: null,
+          productImages: [],
+        }));
+
+        // Persist to database if authenticated
+        if (currentUser && authToken) {
+          fetch('/api/businesses', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify(newBusiness),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.business) {
+                setUserBusinesses((prev) => [
+                  data.business,
+                  ...prev.filter((b) => b.id !== newBizId && b.id !== data.business.id),
+                ]);
+              }
+            })
+            .catch((err) => console.error('Failed to auto-save new business profile:', err));
+        }
+
+        setToastMessage(`Created new business profile for "${resolvedName}"!`);
+      }
+    }
+
+    // Reset downstream film selections from prior runs so new brief starts clean
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setGeneratedScript(null);
+    setScenes([]);
+    setVideoUrl('');
+
+    // Advance directly to Stage 02 (Creative Brief) in Studio mode
+    markStageComplete('business');
+    setCompletedStages((prev) => Array.from(new Set([...(prev || []), 'business'])));
+    setStudioStage('brief');
+    setActiveAppView('studio');
+    setTimeout(() => setToastMessage(''), 4500);
+  };
 
   const fetchUserData = async (token, allowAutoOpenOnboarding = false) => {
     if (!token) return;
