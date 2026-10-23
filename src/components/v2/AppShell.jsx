@@ -603,7 +603,19 @@ export default function AppShell({
             {/* Creative Studio Link (Unified with Creation Hub) */}
             <div
               onClick={() => {
-                onSelectView('studio');
+                // If user is already on the Creation Hub screen (the 3 starting options), stay on the screen!
+                if (activeView === 'hub' || activeView === 'home') {
+                  setMobileMenuOpen(false);
+                  return;
+                }
+                const hasActiveWork = Boolean(
+                  currentStage &&
+                  currentStage !== 'brief' &&
+                  currentStage !== 'entry' &&
+                  completedStages &&
+                  completedStages.length > 0
+                );
+                onSelectView(hasActiveWork ? 'studio' : 'hub');
                 setMobileMenuOpen(false);
               }}
               style={{

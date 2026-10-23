@@ -895,6 +895,10 @@ export default function App() {
   const setActiveAppView = (viewOrUpdater) => {
     setActiveAppViewState((prev) => {
       const nextView = typeof viewOrUpdater === 'function' ? viewOrUpdater(prev) : viewOrUpdater;
+      // If user is currently on the creation hub and clicks 'studio' without active film progress, stay on 'hub'
+      if ((prev === 'hub' || prev === 'home') && nextView === 'studio' && (!completedStages || completedStages.length === 0)) {
+        return 'hub';
+      }
       if (nextView === 'studio' && userContext.businessName && userContext.businessName.trim().length > 0 && studioStage === 'business') {
         markStageComplete('business');
         setStudioStage('brief');
