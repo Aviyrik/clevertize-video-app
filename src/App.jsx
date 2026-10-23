@@ -1490,12 +1490,20 @@ export default function App() {
         setIsCurrentProjectSaved(true);
         setUserProjects((prev) => {
           const idx = prev.findIndex((p) => p.id === data.project.id);
+          let next;
           if (idx >= 0) {
-            const next = [...prev];
+            next = [...prev];
             next[idx] = data.project;
-            return next;
+          } else {
+            next = [data.project, ...prev];
           }
-          return [data.project, ...prev];
+          try {
+            localStorage.setItem('clevertize_local_projects', JSON.stringify(next));
+            if (currentUser?.id) {
+              localStorage.setItem(`clevertize_local_projects_${currentUser.id}`, JSON.stringify(next));
+            }
+          } catch {}
+          return next;
         });
         setToastMessage('Script and project saved to your library!');
         setTimeout(() => setToastMessage(''), 4000);
@@ -1565,26 +1573,33 @@ export default function App() {
   };
 
   const handleDeleteProject = async (projectId) => {
-    if (!authToken) return;
-    try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      if (res.ok) {
-        setUserProjects((prev) => prev.filter((p) => p.id !== projectId));
-        if (activeProjectId === projectId) {
-          setActiveProjectId(null);
-          setIsCurrentProjectSaved(false);
+    setUserProjects((prev) => {
+      const next = prev.filter((p) => p.id !== projectId);
+      try {
+        localStorage.setItem('clevertize_local_projects', JSON.stringify(next));
+        if (currentUser?.id) {
+          localStorage.setItem(`clevertize_local_projects_${currentUser.id}`, JSON.stringify(next));
         }
-        setToastMessage('Project removed from library.');
-        setTimeout(() => setToastMessage(''), 3000);
-      }
-    } catch (err) {
-      console.error('Error deleting project:', err);
+      } catch {}
+      return next;
+    });
+    if (activeProjectId === projectId) {
+      setActiveProjectId(null);
+      setIsCurrentProjectSaved(false);
+      setVideoUrl('');
     }
+    if (authToken) {
+      try {
+        await fetch(`/api/projects/${projectId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+      } catch (err) {
+        console.error('Error deleting project from server:', err);
+      }
+    }
+    setToastMessage('Project removed from library.');
+    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const handleSaveBusiness = async (bizData) => {
@@ -2425,6 +2440,75 @@ export default function App() {
       else if (creativePanel === 'story') loadStoryWorld();
     }
   }, [creationStep, creativePanel]);
+
+  // Auto-sync completed video into projects whenever videoUrl is generated
+  useEffect(() => {
+    if (!videoUrl) return;
+    setUserProjects((prev) => {
+      const alreadySaved = prev.some((p) => p.videoUrl === videoUrl || (activeProjectId && p.id === activeProjectId));
+      if (alreadySaved) return prev;
+
+      const resolvedTitle = userContext.businessName
+        ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
+        : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
+
+      const projectId = activeProjectId || `proj_${Date.now()}`;
+      const completedProject = {
+        id: projectId,
+        businessId: userContext.businessId || null,
+        title: resolvedTitle,
+        businessName: userContext.businessName || '',
+        businessType: userContext.businessType || '',
+        town: userContext.town || '',
+        language: userContext.language || 'English',
+        creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+        status: 'video_ready',
+        videoUrl: videoUrl,
+        brief: userContext.brief || '',
+        scenes: scenes || [],
+        setting: setting || '',
+        character1: character1 || '',
+        character2: character2 || '',
+        stages: {
+          directionsList,
+          selectedDirectionIndex,
+          hookAngles,
+          selectedHookIndex,
+          storyWorlds,
+          selectedStoryWorldIndex,
+          generatedScript,
+          completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+        },
+        completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+        brandContext: typeof extractBrandProfile === 'function' ? extractBrandProfile(userContext) : {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updated = [completedProject, ...prev];
+      try {
+        localStorage.setItem('clevertize_local_projects', JSON.stringify(updated));
+        if (currentUser?.id) {
+          localStorage.setItem(`clevertize_local_projects_${currentUser.id}`, JSON.stringify(updated));
+        }
+      } catch (err) {
+        console.warn('[projects] localStorage sync warning:', err);
+      }
+
+      if (authToken) {
+        fetch('/api/projects', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(completedProject),
+        }).catch((err) => console.error('[projects] Failed auto-syncing video project:', err));
+      }
+
+      return updated;
+    });
+  }, [videoUrl]);
 
   // START: POST /api/session -> CHECKPOINT 1 (DIRECTION)
   const handleStartCreativeEngine = async () => {
@@ -3462,6 +3546,43 @@ export default function App() {
     );
   }
 
+  // Instantaneous fallback guaranteeing that any generated video in current session appears in My Projects
+  const activeVideoProject = (videoUrl && !userProjects.some((p) => p.videoUrl === videoUrl)) ? [{
+    id: activeProjectId || 'current_active_video',
+    businessId: userContext.businessId || null,
+    title: userContext.businessName
+      ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
+      : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film'),
+    businessName: userContext.businessName || 'Brand',
+    businessType: userContext.businessType || '',
+    town: userContext.town || '',
+    language: userContext.language || 'English',
+    creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+    status: 'video_ready',
+    videoUrl: videoUrl,
+    brief: userContext.brief || '',
+    scenes: scenes || [],
+    setting: setting || '',
+    character1: character1 || '',
+    character2: character2 || '',
+    stages: {
+      directionsList,
+      selectedDirectionIndex,
+      hookAngles,
+      selectedHookIndex,
+      storyWorlds,
+      selectedStoryWorldIndex,
+      generatedScript,
+      completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+    },
+    completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+    brandContext: typeof extractBrandProfile === 'function' ? extractBrandProfile(userContext) : {},
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }] : [];
+
+  const displayProjects = [...activeVideoProject, ...userProjects];
+
   return (
     <StudioStateContext.Provider value={studioState}>
       <StudioDispatchContext.Provider value={studioDispatch}>
@@ -3526,7 +3647,7 @@ export default function App() {
             setEditingBusiness(null);
             setIsOnboardingModalOpen(true);
           }}
-          projectCount={Math.max(userProjects.length, videoUrl ? 1 : 0)}
+          projectCount={displayProjects.length}
         >
           {/* Offline Connectivity Notification Banner */}
           {!isOnline && (
@@ -3588,14 +3709,14 @@ export default function App() {
                 }
                 setIsOnboardingModalOpen(true);
               }}
-              recentProjects={userProjects}
+              recentProjects={displayProjects}
               onOpenProject={handleOpenProject}
               currentUser={currentUser}
               onNavigateProjects={() => setActiveAppView('projects')}
             />
           ) : (activeAppView === 'projects' || activeAppView === 'library') ? (
             <ScriptLibraryView
-              projects={userProjects}
+              projects={displayProjects}
               businesses={userBusinesses}
               currentProjectId={activeProjectId}
               onOpenProject={handleOpenProject}
@@ -4571,7 +4692,7 @@ export default function App() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
-        projectCount={Math.max(userProjects.length, videoUrl ? 1 : 0)}
+        projectCount={displayProjects.length}
         businessCount={userBusinesses.length}
       />
     </StudioDispatchContext.Provider>

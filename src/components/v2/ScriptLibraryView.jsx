@@ -77,12 +77,25 @@ export default function ScriptLibraryView({
     setExpandedScriptIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredProjects = projects.filter((p) => {
-    const q = searchTerm.toLowerCase();
+  const filteredProjects = (projects || []).filter((p) => {
+    if (!p) return false;
+    if (!searchTerm || !searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase().trim();
+    const title = (p.title || '').toLowerCase();
+    const biz = (p.businessName || '').toLowerCase();
+    const brief = (p.brief || '').toLowerCase();
+    const style = (p.creativeStyle || '').toLowerCase();
+    const town = (p.town || '').toLowerCase();
+    const lang = (p.language || '').toLowerCase();
+    const url = (p.videoUrl || '').toLowerCase();
     return (
-      (p.title && p.title.toLowerCase().includes(q)) ||
-      (p.businessName && p.businessName.toLowerCase().includes(q)) ||
-      (p.brief && p.brief.toLowerCase().includes(q))
+      title.includes(q) ||
+      biz.includes(q) ||
+      brief.includes(q) ||
+      style.includes(q) ||
+      town.includes(q) ||
+      lang.includes(q) ||
+      url.includes(q)
     );
   });
 
@@ -282,11 +295,15 @@ export default function ScriptLibraryView({
             const bizName = proj.businessName || matchedBiz?.businessName || matchedBiz?.name || 'Brand';
             const bizType = proj.businessType || matchedBiz?.businessType || matchedBiz?.category || '';
 
-            const formattedDate = new Date(proj.updatedAt || proj.createdAt).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            });
+            const rawDate = proj.updatedAt || proj.createdAt;
+            const dateObj = rawDate ? new Date(rawDate) : new Date();
+            const formattedDate = !isNaN(dateObj.getTime())
+              ? dateObj.toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : 'Recently';
 
             return (
               <div
@@ -443,7 +460,7 @@ export default function ScriptLibraryView({
                       lineHeight: 1.3,
                     }}
                   >
-                    {proj.title}
+                    {proj.title || `${bizName} Commercial Video`}
                   </h3>
 
                   {/* Status & Attributes Tags */}

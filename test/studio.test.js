@@ -2325,3 +2325,19 @@ test('Streamlined Creation Flow: Script directly triggers Video Generation witho
   // 3. Verify onApproveScript in App.jsx directly starts video production
   assert.ok(appSrc.includes('handleRunVideoProduction();'), 'App.jsx onApproveScript must trigger handleRunVideoProduction');
 });
+
+test('My Projects Generated Video Consistency: displayProjects ensures video is immediately visible and searchable', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const libSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScriptLibraryView.jsx'), 'utf8');
+
+  // 1. App.jsx must synthesize displayProjects including active video and pass displayProjects to ScriptLibraryView and AppShell
+  assert.ok(appSrc.includes('const displayProjects = [...activeVideoProject, ...userProjects];'), 'App.jsx must derive displayProjects');
+  assert.ok(appSrc.includes('projects={displayProjects}'), 'ScriptLibraryView must receive displayProjects');
+  assert.ok(appSrc.includes('projectCount={displayProjects.length}'), 'AppShell must receive displayProjects.length');
+
+  // 2. ScriptLibraryView must not drop items when search is empty
+  assert.ok(libSrc.includes('if (!searchTerm || !searchTerm.trim()) return true;'), 'ScriptLibraryView filter must return true on empty search');
+
+  // 3. ScriptLibraryView card title fallback
+  assert.ok(libSrc.includes('proj.title || `${bizName} Commercial Video`'), 'ScriptLibraryView must provide fallback title');
+});
