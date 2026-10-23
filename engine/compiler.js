@@ -110,7 +110,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
 
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")
-    `COMPOSITION & FRAMING: ${shot.framing}. Subject/character fills primary vertical 9:16 viewing area with clear head-and-chest or waist-up visibility. Hero product is clearly discernible and never obscured.`,
+    `COMPOSITION & FRAMING: ${shot.framing}. Subject/character fills primary vertical 9:16 viewing area with clear head-and-chest or waist-up visibility. Hero product/service is clearly discernible. ${/story/i.test(staticWorld.style || options.style || options.format || "") ? "STRICT STORYTELLING CAM: Cinematic third-person perspective only. The camera observes the characters objectively. Actors DO NOT hold smartphones or film themselves." : ""}`,
 
     // 2. Static World (Environment, Lighting, Wardrobe consistency)
     `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}.${staticWorld.businessType ? ` Business domain: ${staticWorld.businessType}.` : ""} Same lighting, color palette, and atmosphere throughout.`,

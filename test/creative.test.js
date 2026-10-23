@@ -593,3 +593,27 @@ test("19. All 4 'How should it feel?' options (Product Demo, Funny, Story, UGC) 
   const gateResult = runGate(parsedDemo, { businessName: "Sharma General Store", businessType: "Kirana / general store", town: "Indore", language: "Hindi" }, { approvedFormat: "Product Demo" });
   assert.strictEqual(gateResult.length, 0, "Product Demo should pass the quality gate cleanly");
 });
+
+test("20. Storytelling format enforces third-person cinematic perspective and bans selfie/vlog camera", async () => {
+  const { sceneForGeneration } = require("../engine/parse");
+  const { compileShotPrompt } = require("../engine/compiler");
+
+  // Verify sceneForGeneration enforces 3rd person and bans selfie when format is Story
+  const storyPrompt = sceneForGeneration("Visual: Same setting: Two characters speak.", {
+    format: "Storytelling",
+    setting: "Gym floor",
+    character1: "Member",
+    character2: "Trainer",
+  });
+  assert.ok(storyPrompt.includes("Objective third-person cinematic camera"), "Must specify third-person camera for Story");
+  assert.ok(storyPrompt.includes("NOT hold phones"), "Must explicitly forbid holding phones for Story");
+
+  // Verify compiler.js enforces storytelling camera
+  const compiled = compileShotPrompt(
+    { framing: "Medium shot", primaryAction: "A speaks to B.", fullVisual: "A speaks to B.", cameraMovement: "steady", dialogue: "None" },
+    { setting: "Gym floor", characters: "Member | Trainer", style: "Storytelling" },
+    { format: "Storytelling" }
+  );
+  assert.ok(compiled.includes("STRICT STORYTELLING CAM"), "Shot prompt compiler must include strict storytelling camera rule");
+  assert.ok(compiled.includes("DO NOT hold smartphones"), "Shot prompt compiler must forbid holding smartphones");
+});

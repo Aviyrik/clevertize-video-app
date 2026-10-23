@@ -84,7 +84,11 @@ function sceneForGeneration(scene, ctx = {}) {
   if (ctx.businessType) {
     lock.push(`BUSINESS DOMAIN: Authentic setting and merchandise for ${ctx.businessType}. Props, environment, and character actions must believably belong to this business.`);
   }
-  lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person (only a UGC owner speaking to the viewer looks into the lens).");
+    const isStoryFmt = /story/i.test(ctx.format || ctx.style || ctx.creativeStyle || "");
+  if (isStoryFmt) {
+    lock.push("STAGING & CAMERA: Objective third-person cinematic camera observing the scene. Characters interact with each other and look at each other. They do NOT hold phones, do NOT film selfies, and do NOT talk into a smartphone camera.");
+  }
+  lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person" + (isStoryFmt ? "." : " (only a UGC owner speaking to the viewer looks into the lens)."));
   lock.push("CAMERA: follow this scene's camera direction exactly (shot size, angle, movement) — smooth, motivated movement only, no whip pans or fast cuts.");
   if (ctx.duration) {
     const totalSec = parseInt(ctx.duration, 10) || 15;

@@ -118,7 +118,8 @@ CRITICAL CONSTRAINT: Every creative territory proposed MUST be a humorous, witty
 Sets story architecture and pacing: 2-character relatable dilemma & emotional payoff.
 CRITICAL CONSTRAINT: Every creative territory proposed MUST be an emotional or relatable human dilemma between two people.
 - Focus on authentic interpersonal relationships, a real emotional tension, and a warm, earned resolution.
-- Suggested territory types: "The Unspoken Dilemma", "The Shared Secret", "The Heartfelt Rescue", "The Generational Bond".`
+- THIRD-PERSON CINEMATIC CAMERA ONLY: Absolutely NO direct-to-camera, NO vlog, NO selfie-style, NO creator talking into a phone.
+- Suggested territory types: "The Hesitant First Step", "The Unspoken Dilemma", "The Timely Encouragement", "The Breakthrough Moment", "The Generational Bond".`
     : `MANDATORY CREATIVE FORMAT: UGC / CREATOR-STYLE ("Feels like a real person made it")
 Sets story architecture and pacing: Direct-to-camera, creator rhythm & natural mobile energy.
 CRITICAL CONSTRAINT: Every creative territory proposed MUST feel authentic, creator-led, and native to mobile feeds.
@@ -382,19 +383,23 @@ CANONICAL FILM LANGUAGE: ${language}`;
         "ज्यादातर लोग यहाँ गलती करते हैं।",
         "बहुतेक लोक इथेच चूक करतात."
       ),
-      visualAction: "The speaker holds up two contrasting items directly to the camera lens, gesturing emphatically.",
+      visualAction: isStory
+        ? "A newcomer pauses hesitantly inside the entrance, taking in the energetic room before making eye contact with the lead trainer."
+        : "The speaker holds up two contrasting items directly to the camera lens, gesturing emphatically.",
       angle: "Knowledge gap reveal",
       recommended: false,
     },
     {
       id: "hook_3",
-      archetype: "Creator / UGC Secret",
+      archetype: isStory ? "Relatable Dilemma" : "Creator / UGC Secret",
       hookLine: getHookLine(
-        "If you live in this area, you need to know this.",
-        "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
-        "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या."
+        isStory ? "I almost walked away today, but then this happened." : "If you live in this area, you need to know this.",
+        isStory ? "मैं आज बस वापस लौटने ही वाली थी, पर फिर कुछ ऐसा हुआ।" : "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
+        isStory ? "मी आज मागे फिरणारच होते, पण मग असं काही घडलं." : "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या."
       ),
-      visualAction: "Creator leans in closely towards the phone camera with a knowing smile, pointing over their shoulder.",
+      visualAction: isStory
+        ? "Two characters interact on the gym floor — one encouraging the other through an initial hesitation with warm reassurance."
+        : "Creator leans in closely towards the phone camera with a knowing smile, pointing over their shoulder.",
       angle: "Insider recommendation",
       recommended: false,
     },
@@ -549,8 +554,11 @@ async function generateStoryWorld({ businessName, businessType, town, brief, dir
 - Humorous setup, playful escalation, witty misunderstanding, and funny punchline payoff.
 - Exaggerated relatable reactions directly centered on the product or occasion.`
     : `FORMAT EXECUTION (STORYTELLING):
-- Character-driven commercial narrative between two people.
-- Relatable human dilemma or festive requirement solved naturally by the product.
+- Character-driven commercial narrative between two people (e.g. newcomer & trainer, customer & shopkeeper).
+- THIRD-PERSON CINEMATIC CAMERA ONLY.
+- HARD PROHIBITION: The characters must NEVER hold a phone, NEVER film themselves in selfie mode, and NEVER address the viewer like a vlogger or influencer.
+- Staging: Both characters interact in the physical setting, making natural eye contact with each other, not looking into the camera lens.
+- Relatable human dilemma or emotional hesitation solved naturally by the service or brand.
 - Warm emotional payoff and delightful brand resolution.`;
 
   const storyLangRule = isEng
@@ -640,11 +648,11 @@ CANONICAL FILM LANGUAGE: ${language}`;
         product: prodStr,
         location: typeof parsed.location === "object" ? parsed.location : { name: "Featured Setting", details: settingStr },
         setting: settingStr,
-        character1: typeof c1 === "object" ? c1 : { name: "Lead", role: "Host / Creator", appearance: String(c1 || "") },
-        character2: typeof c2 === "object" ? c2 : { name: "Supporting", role: "Partner / Customer", appearance: String(c2 || "") },
+        character1: typeof c1 === "object" ? c1 : { name: "Lead", role: cleanFormat.includes("Story") ? "Customer / Member" : cleanFormat.includes("Demo") ? "Demonstrator" : "Host / Creator", appearance: String(c1 || "") },
+        character2: typeof c2 === "object" ? c2 : { name: "Supporting", role: cleanFormat.includes("Story") ? "Trainer / Specialist" : "Partner / Customer", appearance: String(c2 || "") },
         characters: {
-          character1: typeof c1 === "string" ? c1 : `${c1?.name || "Lead"} (${c1?.role || "Host"})`,
-          character2: typeof c2 === "string" ? c2 : `${c2?.name || "Supporting"} (${c2?.role || "Partner"})`,
+          character1: typeof c1 === "string" ? c1 : `${c1?.name || "Lead"} (${c1?.role || (cleanFormat.includes("Story") ? "Customer" : "Host")})`,
+          character2: typeof c2 === "string" ? c2 : `${c2?.name || "Supporting"} (${c2?.role || (cleanFormat.includes("Story") ? "Trainer" : "Partner")})`,
         },
         beats,
       };
@@ -790,9 +798,12 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     ? `FORMAT EXECUTION (SITUATIONAL COMEDY):
 - Humorous setup in Scene 1, comedic escalation in Scene 2, witty misunderstanding in Scene 3, and funny punchline in Scene 4.
 - Exaggerated facial reactions and comedic timing.`
-    : `FORMAT EXECUTION (STORYTELLING):
-- Character-driven narrative tension between two characters.
-- Natural eye-line contact, emotional dilemma, and heartwarming payoff.`;
+    : `FORMAT EXECUTION (STORYTELLING / NARRATIVE FILM):
+- Character-driven narrative tension between two characters in the room (e.g. newcomer & trainer/expert, customer & shop owner).
+- THIRD-PERSON CINEMATIC CAMERA: Shot by an invisible cinematic camera observing the room.
+- HARD PROHIBITION: Characters must NEVER hold a smartphone, NEVER record in front-facing selfie mode, and NEVER address the viewer as a social media vlogger.
+- Eye-line: Both characters must look at, face, and engage with EACH OTHER, not the camera lens.
+- Natural emotional dilemma and heartwarming, confidence-building payoff.`;
 
   // Compile detailed instructions carrying all creative decisions into Claude
   const dnaInstructions = [

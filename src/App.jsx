@@ -949,7 +949,14 @@ export default function App() {
       return false;
     }
   });
-  const [userProjects, setUserProjects] = useState([]);
+  const [userProjects, setUserProjects] = useState(() => {
+    try {
+      const local = localStorage.getItem('clevertize_local_projects');
+      return local ? JSON.parse(local) : [];
+    } catch {
+      return [];
+    }
+  });
   const [userBusinesses, setUserBusinesses] = useState([]);
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
@@ -1187,7 +1194,23 @@ export default function App() {
       }
       if (projRes.ok) {
         const pData = await projRes.json();
-        setUserProjects(pData.projects || []);
+        const serverProjects = pData.projects || [];
+        setUserProjects((prev) => {
+          const merged = [...serverProjects];
+          for (const lp of prev) {
+            if (!merged.some((mp) => mp.id === lp.id || (mp.videoUrl && mp.videoUrl === lp.videoUrl))) {
+              merged.push(lp);
+            }
+          }
+          try {
+            localStorage.setItem('clevertize_local_projects', JSON.stringify(merged));
+            const cUser = currentUser || JSON.parse(localStorage.getItem('clevertize_user') || 'null');
+            if (cUser?.id) {
+              localStorage.setItem(`clevertize_local_projects_${cUser.id}`, JSON.stringify(merged));
+            }
+          } catch {}
+          return merged;
+        });
       }
     } catch (err) {
       console.error('Failed to load user projects/businesses:', err);
@@ -1292,7 +1315,19 @@ export default function App() {
   const handleAuthSuccess = (userDataOrUser, possibleToken, authMode) => {
     const user = userDataOrUser?.user || userDataOrUser;
     const token = possibleToken || userDataOrUser?.token;
-    if (user) setCurrentUser(user);
+    if (user) {
+      setCurrentUser(user);
+      try {
+        const userSaved = localStorage.getItem(`clevertize_local_projects_${user.id}`);
+        if (userSaved) {
+          const parsedList = JSON.parse(userSaved);
+          setUserProjects(parsedList);
+          localStorage.setItem('clevertize_local_projects', userSaved);
+        }
+      } catch (e) {
+        console.warn('Error restoring user projects from cache:', e);
+      }
+    }
 
     // Deep clean any lingering film & video state from prior sessions
     resetAllCreativeFilmState();
@@ -2871,15 +2906,25 @@ export default function App() {
           setActiveProjectId(projectId);
           setIsCurrentProjectSaved(true);
 
-          // Instantly add to My Projects in state so the sidebar counter updates immediately
+          // Instantly add to My Projects in state & localStorage so the sidebar counter updates immediately
           setUserProjects((prev) => {
-            const idx = prev.findIndex((p) => p.id === projectId);
+            const idx = prev.findIndex((p) => p.id === projectId || (p.videoUrl && p.videoUrl === data.videoUrl));
+            let next;
             if (idx >= 0) {
-              const next = [...prev];
+              next = [...prev];
               next[idx] = { ...next[idx], ...completedProject };
-              return next;
+            } else {
+              next = [completedProject, ...prev];
             }
-            return [completedProject, ...prev];
+            try {
+              localStorage.setItem('clevertize_local_projects', JSON.stringify(next));
+              if (currentUser?.id) {
+                localStorage.setItem(`clevertize_local_projects_${currentUser.id}`, JSON.stringify(next));
+              }
+            } catch (err) {
+              console.warn('[projects] localStorage sync warning:', err);
+            }
+            return next;
           });
 
           // Persist directly to database for the logged-in user
@@ -3481,7 +3526,7 @@ export default function App() {
             setEditingBusiness(null);
             setIsOnboardingModalOpen(true);
           }}
-          projectCount={userProjects.length}
+          projectCount={Math.max(userProjects.length, videoUrl ? 1 : 0)}
         >
           {/* Offline Connectivity Notification Banner */}
           {!isOnline && (
@@ -4526,7 +4571,7 @@ export default function App() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
-        projectCount={userProjects.length}
+        projectCount={Math.max(userProjects.length, videoUrl ? 1 : 0)}
         businessCount={userBusinesses.length}
       />
     </StudioDispatchContext.Provider>
