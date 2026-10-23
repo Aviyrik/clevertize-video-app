@@ -2264,6 +2264,7 @@ export function Screen06Story({
   setStoryWorldData,
   userContext = {},
   updateUserContext,
+  handleFileUpload,
   isLoadingStory = false,
   constraintsList = [],
   setConstraintsList,
@@ -2898,10 +2899,15 @@ export function Screen06Story({
                 )}
               </div>
 
-              {/* Product */}
-              <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>🎁 Product</span>
+              {/* Product (User Uploaded Photo or Real Item) */}
+              <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>🎁 Product</span>
+                    {userContext.productPhoto && (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--success)', backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '1px 5px', borderRadius: 4 }}>User Photo</span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -2913,7 +2919,7 @@ export function Screen06Story({
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
                   >
-                    {editingCard === 'prod' ? 'Save' : '[Edit]'}
+                    {editingCard === 'prod' ? 'Save' : '[Edit Text]'}
                   </button>
                 </div>
                 {editingCard === 'prod' ? (
@@ -2929,6 +2935,61 @@ export function Screen06Story({
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || `${userContext.businessName || 'Store'} items`}
                   </div>
+                )}
+                {/* Real User-Uploaded Product Photo */}
+                {userContext.productPhoto ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 2, padding: '4px 8px', backgroundColor: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <img
+                        src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
+                        alt="Product"
+                        style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }}
+                      />
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {userContext.productPhoto.name || 'Product photo'}
+                      </span>
+                    </div>
+                    <label style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                      Change
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                        }}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px dashed rgba(99, 102, 241, 0.3)',
+                    color: 'var(--accent-primary)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: 2,
+                  }}>
+                    <Upload size={10} />
+                    <span>Upload Real Product Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                      }}
+                    />
+                  </label>
                 )}
               </div>
             </div>

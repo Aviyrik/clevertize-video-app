@@ -3892,6 +3892,7 @@ export default function App() {
         {studioStage === 'story' && (
           <Screen06Story
             storyWorldData={storyWorldData}
+            handleFileUpload={handleFileUpload}
             setStoryWorldData={(sw) => {
               const nextSw = typeof sw === 'function' ? sw(storyWorldData) : sw;
               setStoryWorldData(nextSw);
