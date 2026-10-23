@@ -1843,7 +1843,7 @@ test('URL Research Product Scraping: Scrapes real product photo from URL and att
 
   // 4. Verify GuidedStudio (Screen06Story) displays the scraped product photo under People & Setting
   assert.ok(guidedStudioSrc.includes('userContext.productPhoto'), 'Screen06Story must render userContext.productPhoto');
-  assert.ok(guidedStudioSrc.includes('Attached from website'), 'Screen06Story must indicate photo attached from website');
+  assert.ok(guidedStudioSrc.includes('Attached from website'), 'GuidedStudio must indicate photo attached from website');
 
   // 5. Test mock HTML extraction logic for Amazon and OpenGraph
   const sampleAmazonHtml = '<div data-a-dynamic-image="{&quot;https://m.media-amazon.com/images/I/71an9eiBxpL._AC_SX679_.jpg&quot;:[679,679]}"></div>';

@@ -1237,6 +1237,7 @@ export default function App() {
   // Deep wipe of all film, script, and video state (prevents data bleeding across accounts)
   const resetAllCreativeFilmState = () => {
     setVideoUrl('');
+    updateUserContext('productPhoto', null);
     setScenes([]);
     setGeneratedScript(null);
     setShotSpec(null);
@@ -3454,6 +3455,7 @@ export default function App() {
               brandTone: biz.brandTone || prev.brandTone,
               brandLogo: biz.logo || biz.brandLogo || null,
               logo: biz.logo || biz.brandLogo || null,
+              productPhoto: null,
             }));
             setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
             setTimeout(() => setToastMessage(''), 3000);
@@ -3577,7 +3579,8 @@ export default function App() {
                   brandTone: biz.brandTone || prev.brandTone,
                   brandLogo: biz.logo || biz.brandLogo || null,
                   logo: biz.logo || biz.brandLogo || null,
-                }));
+              productPhoto: null,
+            }));
                 setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
                 setTimeout(() => setToastMessage(''), 3000);
               }}

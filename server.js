@@ -729,6 +729,7 @@ app.post("/api/research/url", async (req, res) => {
               mime,
               data: b64,
               previewUrl: productImageUrl,
+              fromWebsite: true,
             };
           }
         }

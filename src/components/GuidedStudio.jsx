@@ -543,7 +543,7 @@ export function Screen01Business({
                       {userContext.logo.name || 'Brand logo'}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                      Attached for video production
+                      {userContext.productPhoto?.fromWebsite ? '✓ Attached from website' : 'Attached for video production'}
                     </div>
                   </div>
                 </div>
@@ -1604,129 +1604,136 @@ export function Screen03Settings({
           </div>
         </div>
 
-        {/* 5. Product Image Asset (Optional) */}
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Package size={13} style={{ color: 'var(--accent-primary)' }} />
-              <span>5. Product Asset (Optional)</span>
-            </label>
-            {userContext.productPhoto && (
-              <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <CheckCircle2 size={12} />
-                Attached
-              </span>
-            )}
-          </div>
-
-          {userContext.productPhoto ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 14px',
-              backgroundColor: 'var(--bg-elevated)',
-              borderRadius: 8,
-              border: '1px solid var(--border-subtle)',
-              flexWrap: 'wrap',
-              gap: 10
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {(userContext.productPhoto.previewUrl || userContext.productPhoto.data) && (
-                  <img
-                    src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
-                    alt="Product"
-                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
-                  />
-                )}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {userContext.productPhoto.name || 'Product photo'}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                    Attached for video production
+        {/* 5. Product Image Asset (Optional - only for physical product businesses) */}
+        {(() => {
+          const bType = String(userContext.businessType || '').toLowerCase();
+          const isService = bType.includes('gym') || bType.includes('fitness') || bType.includes('salon') || bType.includes('beauty') || bType.includes('spa') || bType.includes('clinic') || bType.includes('dental') || bType.includes('health') || bType.includes('coaching') || bType.includes('tuition') || bType.includes('consult') || bType.includes('service') || bType.includes('agency') || bType.includes('interior') || bType.includes('repair');
+          if (isService) return null;
+          return (
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Package size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>5. Product Asset (Optional)</span>
+              </label>
+              {userContext.productPhoto && (
+                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={12} />
+                  Attached
+                </span>
+              )}
+            </div>
+  
+            {userContext.productPhoto ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                backgroundColor: 'var(--bg-elevated)',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                flexWrap: 'wrap',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {(userContext.productPhoto.previewUrl || userContext.productPhoto.data) && (
+                    <img
+                      src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
+                      alt="Product"
+                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
+                    />
+                  )}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {userContext.productPhoto.name || 'Product photo'}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                      {userContext.productPhoto?.fromWebsite ? '✓ Attached from website' : 'Attached for video production'}
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  color: 'var(--text-secondary)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}>
-                  <Upload size={11} />
-                  <span>Change</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-                    }}
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => updateUserContext('productPhoto', null)}
-                  style={{
-                    padding: '4px 8px',
+  
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{
+                    padding: '4px 10px',
                     borderRadius: 6,
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    color: 'var(--error)',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
                     fontSize: 11,
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 3
-                  }}
-                >
-                  <Trash2 size={11} />
-                  <span>Remove</span>
-                </button>
+                    gap: 4
+                  }}>
+                    <Upload size={11} />
+                    <span>Change</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                      }}
+                    />
+                  </label>
+  
+                  <button
+                    type="button"
+                    onClick={() => updateUserContext('productPhoto', null)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: 'var(--error)',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3
+                    }}
+                  >
+                    <Trash2 size={11} />
+                    <span>Remove</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <label style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 14px',
-              borderRadius: 8,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px dashed var(--border-default)',
-              color: 'var(--accent-primary)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'border-color 0.15s ease'
-            }}>
-              <Upload size={13} />
-              <span>Upload product photo (Optional)</span>
-              <input
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-                }}
-              />
-            </label>
-          )}
-        </div>
+            ) : (
+              <label style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px dashed var(--border-default)',
+                color: 'var(--accent-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'border-color 0.15s ease'
+              }}>
+                <Upload size={13} />
+                <span>Upload product photo (Optional)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          );
+        })()}
       </div>
 
       {/* Navigation */}
@@ -2899,104 +2906,55 @@ export function Screen06Story({
                 )}
               </div>
 
-              {/* Product (User Uploaded Photo or Real Item) */}
-              <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>🎁 Product</span>
-                    {userContext.productPhoto && (
-                      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--success)', backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '1px 5px', borderRadius: 4 }}>User Photo</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editingCard === 'prod') {
-                        handleSaveProduct();
-                      } else {
-                        startEditProduct();
-                      }
-                    }}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                  >
-                    {editingCard === 'prod' ? 'Save' : '[Edit Text]'}
-                  </button>
-                </div>
-                {editingCard === 'prod' ? (
-                  <input
-                    type="text"
-                    value={editProductName}
-                    onChange={(e) => setEditProductName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProduct(); } }}
-                    placeholder="Featured Product"
-                    style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                ) : (
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || `${userContext.businessName || 'Store'} items`}
-                  </div>
-                )}
-                {/* Real User-Uploaded or URL-Scraped Product Photo */}
-                {userContext.productPhoto ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 4, padding: '4px 8px', backgroundColor: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-                      <img
-                        src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
-                        alt="Product"
-                        style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
-                      />
-                      <div style={{ overflow: 'hidden' }}>
-                        <span style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {userContext.productPhoto.name || 'Product photo'}
-                        </span>
-                        <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 600 }}>
-                          ✓ Attached from website
+              {/* Product / Service Offering */}
+              {(() => {
+                const bType = String(userContext.businessType || '').toLowerCase();
+                const isService = bType.includes('gym') || bType.includes('fitness') || bType.includes('salon') || bType.includes('beauty') || bType.includes('spa') || bType.includes('clinic') || bType.includes('dental') || bType.includes('health') || bType.includes('coaching') || bType.includes('tuition') || bType.includes('consult') || bType.includes('service') || bType.includes('agency') || bType.includes('interior') || bType.includes('repair');
+
+                return (
+                  <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                          {isService ? '🎯 Service Offering' : '🎁 Featured Product'}
                         </span>
                       </div>
-                    </div>
-                    <label style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-                      Change
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingCard === 'prod') {
+                            handleSaveProduct();
+                          } else {
+                            startEditProduct();
+                          }
                         }}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        {editingCard === 'prod' ? 'Save' : '[Edit Text]'}
+                      </button>
+                    </div>
+                    {editingCard === 'prod' ? (
+                      <input
+                        type="text"
+                        value={editProductName}
+                        onChange={(e) => setEditProductName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProduct(); } }}
+                        placeholder={isService ? "e.g. Group Fitness & Personal Training" : "Featured Product"}
+                        style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                       />
-                    </label>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || (isService ? `${userContext.businessName || 'Business'} Service` : `${userContext.businessName || 'Store'} items`)}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                          {isService ? 'Service experience showcased' : 'Product highlighted in scenes'}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    padding: '4px 8px',
-                    borderRadius: 6,
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    border: '1px dashed rgba(99, 102, 241, 0.3)',
-                    color: 'var(--accent-primary)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    marginTop: 2,
-                  }}>
-                    <Upload size={10} />
-                    <span>Upload Real Product Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
+                );
+              })()}
             </div>
           </div>
 
