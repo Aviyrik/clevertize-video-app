@@ -70,6 +70,7 @@ export default function UrlResearchModal({
   const [draftCategory, setDraftCategory] = useState(businessType || STANDARD_BUSINESS_CATEGORIES[0]);
   const [draftTown, setDraftTown] = useState(town || '');
   const [draftBrief, setDraftBrief] = useState('');
+  const [draftProductPhoto, setDraftProductPhoto] = useState(null);
 
   // Reset/sync draft states whenever modal opens or initial props change
   React.useEffect(() => {
@@ -82,6 +83,7 @@ export default function UrlResearchModal({
       setScanResult(null);
       setErrorMsg('');
       setDraftBrief('');
+      setDraftProductPhoto(null);
     }
   }, [isOpen, initialUrl, businessName, businessType, town]);
 
@@ -124,6 +126,8 @@ export default function UrlResearchModal({
       if (data.businessType || data.category) setDraftCategory(data.businessType || data.category);
       if (data.town) setDraftTown(data.town);
       if (data.suggestedBrief) setDraftBrief(data.suggestedBrief);
+      if (data.productPhoto) setDraftProductPhoto(data.productPhoto);
+      else setDraftProductPhoto(null);
     } catch (err) {
       console.warn('[research/url] error:', err.message);
       // Honest fallback based on domain name
@@ -152,6 +156,7 @@ export default function UrlResearchModal({
       businessType: draftCategory.trim(),
       town: draftTown.trim(),
       brief: draftBrief.trim(),
+      productPhoto: draftProductPhoto,
     });
     onClose();
   };
@@ -436,6 +441,64 @@ export default function UrlResearchModal({
                   </select>
                 </div>
               </div>
+
+              {/* Scraped Real Product Photo Preview */}
+              {draftProductPhoto && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+                    <img
+                      src={draftProductPhoto.previewUrl || `data:${draftProductPhoto.mime || 'image/jpeg'};base64,${draftProductPhoto.data}`}
+                      alt="Detected Product"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        objectFit: 'cover',
+                        border: '1px solid var(--border-subtle)',
+                        backgroundColor: '#0F1117',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>Detected Product Photo</span>
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
+                          Scraped from URL
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Directly attached — will appear automatically in your commercial story world.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDraftProductPhoto(null)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      textDecoration: 'underline',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>

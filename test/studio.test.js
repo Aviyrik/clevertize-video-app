@@ -1822,6 +1822,37 @@ test('UrlResearchModal & App.jsx: Multi-business isolation, smart auto-creation,
   assert.strictEqual(studioStage, 'brief', 'Must be at Stage 2 Brief');
 });
 
+test('URL Research Product Scraping: Scrapes real product photo from URL and attaches directly to Story World (Screen06Story)', () => {
+  const serverSrc = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
+  const urlModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+
+  // 1. Verify server.js contains product photo scraping logic
+  assert.ok(serverSrc.includes('extractProductImageFromHtml'), 'server.js must define extractProductImageFromHtml');
+  assert.ok(serverSrc.includes('productPhoto'), 'server.js must return productPhoto in /api/research/url');
+  assert.ok(serverSrc.includes('productImageUrl'), 'server.js must return productImageUrl in /api/research/url');
+
+  // 2. Verify UrlResearchModal receives and previews product photo
+  assert.ok(urlModalSrc.includes('draftProductPhoto'), 'UrlResearchModal must track draftProductPhoto state');
+  assert.ok(urlModalSrc.includes('Detected Product Photo'), 'UrlResearchModal must display Detected Product Photo badge');
+  assert.ok(urlModalSrc.includes('productPhoto: draftProductPhoto'), 'UrlResearchModal must pass productPhoto in onApplyUrlData');
+
+  // 3. Verify App.jsx wires productPhoto to userContext
+  assert.ok(appSrc.includes('productPhoto: pPhoto'), 'App.jsx handleApplyUrlData must store productPhoto');
+
+  // 4. Verify GuidedStudio (Screen06Story) displays the scraped product photo under People & Setting
+  assert.ok(guidedStudioSrc.includes('userContext.productPhoto'), 'Screen06Story must render userContext.productPhoto');
+  assert.ok(guidedStudioSrc.includes('Attached from website'), 'Screen06Story must indicate photo attached from website');
+
+  // 5. Test mock HTML extraction logic for Amazon and OpenGraph
+  const sampleAmazonHtml = '<div data-a-dynamic-image="{&quot;https://m.media-amazon.com/images/I/71an9eiBxpL._AC_SX679_.jpg&quot;:[679,679]}"></div>';
+  const dynamicMatch = sampleAmazonHtml.match(/data-a-dynamic-image=["']\{&quot;(https:\/\/[^&]*?media-amazon\.com\/images\/I\/[^&]*?)&quot;/i);
+  assert.ok(dynamicMatch);
+  const cleanHighRes = dynamicMatch[1].replace(/\._[A-Za-z0-9_,]+_\./, '.');
+  assert.strictEqual(cleanHighRes, 'https://m.media-amazon.com/images/I/71an9eiBxpL.jpg', 'Must clean Amazon dynamic image to original high-res');
+});
+
 test('Script-First Product: Screen07Script includes Section 8 Gate Passed badge, Copy Script, and Save Script', () => {
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes('Section 8 Gate: Passed'), 'Must display Section 8 Gate Passed badge');

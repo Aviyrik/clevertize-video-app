@@ -540,6 +540,100 @@ function matchClosestCategory(catStr, defaultCat = "Other Local Business") {
   return defaultCat;
 }
 
+function resolveScrapedUrl(relative, base) {
+  try {
+    return new URL(relative, base).href;
+  } catch {
+    return relative;
+  }
+}
+
+function isGenericScrapedIcon(url) {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("favicon") ||
+    lower.includes("logo") ||
+    lower.includes("sprite") ||
+    lower.includes("placeholder") ||
+    lower.endsWith(".svg") ||
+    lower.includes("1x1") ||
+    lower.includes("spacer") ||
+    lower.includes("share-icons")
+  );
+}
+
+function extractProductImageFromHtml(html, pageUrl) {
+  if (!html || typeof html !== "string") return null;
+
+  // 1. Amazon specific high-res product image extraction
+  if (/amazon\./i.test(pageUrl)) {
+    const dynamicMatch =
+      html.match(/data-a-dynamic-image=["']\{&quot;(https:\/\/[^&]*?media-amazon\.com\/images\/I\/[^&]*?)&quot;/i) ||
+      html.match(/data-old-hires=["'](https:\/\/[^"']*?media-amazon\.com\/images\/I\/[^"']*)["']/i) ||
+      html.match(/id=["']landingImage["'][^>]*src=["'](https:\/\/[^"']*?media-amazon\.com\/images\/I\/[^"']*)["']/i);
+    if (dynamicMatch) {
+      return dynamicMatch[1].replace(/\._[A-Za-z0-9_,]+_\./, ".");
+    }
+    const amazonImgMatch = html.match(/https:\/\/[^"'\s<>]*?media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+?\.(?:jpg|png|webp)/i);
+    if (amazonImgMatch) {
+      return amazonImgMatch[0].replace(/\._[A-Za-z0-9_,]+_\./, ".");
+    }
+  }
+
+  // 2. Schema.org JSON-LD (Product.image)
+  const ldMatches = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const match of ldMatches) {
+    try {
+      const data = JSON.parse(match[1]);
+      const checkItem = (item) => {
+        if (!item) return null;
+        if (item["@type"] === "Product" || item.image) {
+          const img = item.image;
+          if (typeof img === "string") return img;
+          if (Array.isArray(img) && img.length > 0) return typeof img[0] === "string" ? img[0] : img[0]?.url;
+          if (img && typeof img.url === "string") return img.url;
+        }
+        return null;
+      };
+      if (Array.isArray(data)) {
+        for (const it of data) {
+          const found = checkItem(it);
+          if (found) return resolveScrapedUrl(found, pageUrl);
+        }
+      } else {
+        const found = checkItem(data) || (data["@graph"] && data["@graph"].map(checkItem).find(Boolean));
+        if (found) return resolveScrapedUrl(found, pageUrl);
+      }
+    } catch {}
+  }
+
+  // 3. OpenGraph og:image (Standard across Shopify, WooCommerce, Magento, etc.)
+  const ogMatch =
+    html.match(/<meta[^>]*property=["']og:image(?::secure_url)?["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image(?::secure_url)?["']/i) ||
+    html.match(/<meta[^>]*name=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["'](?:og:image|twitter:image)["']/i);
+  if (ogMatch && ogMatch[1] && !isGenericScrapedIcon(ogMatch[1])) {
+    return resolveScrapedUrl(ogMatch[1], pageUrl);
+  }
+
+  // 4. Product-specific img tags
+  const productImgMatch =
+    html.match(/<img[^>]*class=["'][^"']*(?:product|featured|main|primary)[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<img[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*(?:product|featured|main|primary)[^"']*["']/i);
+  if (productImgMatch && productImgMatch[1] && !isGenericScrapedIcon(productImgMatch[1])) {
+    return resolveScrapedUrl(productImgMatch[1], pageUrl);
+  }
+
+  // 5. Fallback og:image even if it was skipped
+  if (ogMatch && ogMatch[1]) {
+    return resolveScrapedUrl(ogMatch[1], pageUrl);
+  }
+
+  return null;
+}
+
 // 1B) URL Web Scraping & Structured Business Analysis (V2 Entry Point)
 app.post("/api/research/url", async (req, res) => {
   const { url, businessName, businessType, town } = req.body || {};
@@ -561,6 +655,7 @@ app.post("/api/research/url", async (req, res) => {
   const domainBrand = extractDomainBrand(targetUrl);
 
   let fetchedHtml = "";
+  let fullFetchedHtml = "";
   let fetchSucceeded = false;
   let fetchError = null;
 
@@ -578,6 +673,7 @@ app.post("/api/research/url", async (req, res) => {
 
     if (response && response.ok) {
       const text = await response.text();
+      fullFetchedHtml = text;
       fetchedHtml = text.slice(0, 60000);
       fetchSucceeded = true;
     } else {
@@ -604,6 +700,42 @@ app.post("/api/research/url", async (req, res) => {
 
     const h1Matches = [...fetchedHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
     headings = h1Matches.map((m) => m[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 3);
+  }
+
+  let productPhoto = null;
+  let productImageUrl = null;
+
+  if (fetchSucceeded && (fullFetchedHtml || fetchedHtml)) {
+    productImageUrl = extractProductImageFromHtml(fullFetchedHtml || fetchedHtml, targetUrl);
+    if (productImageUrl) {
+      try {
+        const imgCtrl = new AbortController();
+        const imgTimeout = setTimeout(() => imgCtrl.abort(), 6000);
+        const imgRes = await global.fetch(productImageUrl, {
+          signal: imgCtrl.signal,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
+          },
+        });
+        clearTimeout(imgTimeout);
+        if (imgRes && imgRes.ok) {
+          const rawMime = (imgRes.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
+          const mime = /^image\/(jpeg|png|webp|gif)/i.test(rawMime) ? rawMime : "image/jpeg";
+          const arrayBuf = await imgRes.arrayBuffer();
+          if (arrayBuf.byteLength > 0 && arrayBuf.byteLength <= 4.5 * 1024 * 1024) {
+            const b64 = Buffer.from(arrayBuf).toString("base64");
+            productPhoto = {
+              name: "Product Photo",
+              mime,
+              data: b64,
+              previewUrl: productImageUrl,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("[api/research/url] Failed to fetch image buffer for:", productImageUrl, e.message);
+      }
+    }
   }
 
   // Analyze the business with Claude AI or heuristic extractor
@@ -667,6 +799,8 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
       brandTone: (parsed && parsed.brandTone) || "Relatable & Trustworthy",
       pageTitle,
       metaDescription,
+      productImageUrl,
+      productPhoto,
     });
   } catch (e) {
     console.warn("[api/research/url] Claude parsing or fetch fallback:", e.message);
@@ -687,6 +821,8 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
       brandTone: "Warm & Trustworthy",
       pageTitle,
       metaDescription,
+      productImageUrl,
+      productPhoto,
     });
   }
 });

@@ -1006,6 +1006,7 @@ export default function App() {
     businessType: bType,
     town: tw,
     brief: br,
+    productPhoto: pPhoto,
   }) => {
     const rawIncomingName = (bName || '').trim();
     const rawIncomingUrl = (url || '').trim();
@@ -1025,6 +1026,9 @@ export default function App() {
       if (rawIncomingName && !currentBizName) updateUserContext('businessName', rawIncomingName);
       if (bType && (!userContext.businessType || userContext.businessType === 'Retail Store')) {
         updateUserContext('businessType', bType);
+      }
+      if (pPhoto) {
+        updateUserContext('productPhoto', pPhoto);
       }
       setToastMessage(`Website analyzed! Brief updated for ${currentBizName || rawIncomingName || 'your business'}.`);
     } else {
@@ -1051,6 +1055,7 @@ export default function App() {
           brandLogo: existingMatch.brandLogo || existingMatch.logo || null,
           logo: existingMatch.brandLogo || existingMatch.logo || null,
           productImages: existingMatch.productImages || [],
+          productPhoto: pPhoto || null,
         }));
         setToastMessage(`Switched to existing brand profile "${existingMatch.businessName || existingMatch.name}" with extracted brief!`);
       } else {
@@ -1096,6 +1101,7 @@ export default function App() {
           brandLogo: null,
           logo: null,
           productImages: [],
+          productPhoto: pPhoto || null,
         }));
 
         // Persist to database if authenticated

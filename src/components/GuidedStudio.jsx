@@ -2936,18 +2936,23 @@ export function Screen06Story({
                     {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || `${userContext.businessName || 'Store'} items`}
                   </div>
                 )}
-                {/* Real User-Uploaded Product Photo */}
+                {/* Real User-Uploaded or URL-Scraped Product Photo */}
                 {userContext.productPhoto ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 2, padding: '4px 8px', backgroundColor: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 4, padding: '4px 8px', backgroundColor: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
                       <img
                         src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
                         alt="Product"
-                        style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }}
+                        style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
                       />
-                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {userContext.productPhoto.name || 'Product photo'}
-                      </span>
+                      <div style={{ overflow: 'hidden' }}>
+                        <span style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {userContext.productPhoto.name || 'Product photo'}
+                        </span>
+                        <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 600 }}>
+                          ✓ Attached from website
+                        </span>
+                      </div>
                     </div>
                     <label style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
                       Change
