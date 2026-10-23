@@ -1233,10 +1233,68 @@ export default function App() {
     }
   }, []);
 
+  // Deep wipe of all film, script, and video state (prevents data bleeding across accounts)
+  const resetAllCreativeFilmState = () => {
+    setVideoUrl('');
+    setScenes([]);
+    setGeneratedScript(null);
+    setShotSpec(null);
+    setSessionId(null);
+    setActiveProjectId(null);
+    setIsCurrentProjectSaved(false);
+
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    setHooksList([]);
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+    setDirectionData(null);
+    setPlotData(null);
+    setStoryData(null);
+    setScriptPayloadData(null);
+    setExplicitChoices({
+      style: null,
+      language: null,
+      platform: null,
+      duration: null,
+      idea: null,
+      opening: null,
+    });
+    setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+
+    setApprovedSummary([]);
+    setErrorMessage('');
+    setValidationError('');
+    setQualityFailures([]);
+    setIsRendering(false);
+    setIsBusy(false);
+    setFastStageIndex(0);
+    setCurrentStep('input');
+    stopTimer();
+
+    studioDispatch({
+      type: StudioActionTypes.RESET_STUDIO,
+      payload: { initialStage: 'brief', preserveBrand: false },
+    });
+
+    setCompletedStages([]);
+    setStudioStage('brief');
+    setActiveAppView('home');
+  };
+
   const handleAuthSuccess = (userDataOrUser, possibleToken, authMode) => {
     const user = userDataOrUser?.user || userDataOrUser;
     const token = possibleToken || userDataOrUser?.token;
     if (user) setCurrentUser(user);
+
+    // Deep clean any lingering film & video state from prior sessions
+    resetAllCreativeFilmState();
+
     if (token) {
       setAuthToken(token);
       try {
@@ -1272,6 +1330,7 @@ export default function App() {
     setActiveProjectId(null);
     setIsCurrentProjectSaved(false);
     setUserContext(createEmptyUserContext());
+    resetAllCreativeFilmState();
     setToastMessage('Signed out successfully.');
     setTimeout(() => setToastMessage(''), 3000);
   };
@@ -1306,8 +1365,7 @@ export default function App() {
     setActiveProjectId(null);
     setIsCurrentProjectSaved(false);
     setUserContext(createEmptyUserContext());
-    setActiveAppView('home');
-    setStudioStage('business');
+    resetAllCreativeFilmState();
 
     setToastMessage('Your CleverCuts account has been permanently deleted.');
     setTimeout(() => setToastMessage(''), 4500);
@@ -2762,14 +2820,86 @@ export default function App() {
           setFastStageIndex(4);
           setCurrentStep('render');
 
-          // Auto-sync videoUrl into saved projects list if active project exists
-          if (activeProjectId) {
-            setUserProjects((prev) =>
-              prev.map((p) =>
-                p.id === activeProjectId ? { ...p, videoUrl: data.videoUrl, status: 'video_ready' } : p
-              )
-            );
+          // Auto-save & sync video into My Projects library
+          const resolvedTitle = userContext.businessName
+            ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
+            : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
+
+          const projectId = activeProjectId || `proj_${Date.now()}`;
+          const completedProject = {
+            id: projectId,
+            businessId: userContext.businessId || null,
+            title: resolvedTitle,
+            businessName: userContext.businessName || '',
+            businessType: userContext.businessType || '',
+            town: userContext.town || '',
+            language: userContext.language || 'English',
+            creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+            status: 'video_ready',
+            videoUrl: data.videoUrl,
+            brief: userContext.brief || '',
+            scenes: scenes || [],
+            setting: setting || '',
+            character1: character1 || '',
+            character2: character2 || '',
+            stages: {
+              directionsList,
+              selectedDirectionIndex,
+              hookAngles,
+              selectedHookIndex,
+              storyWorlds,
+              selectedStoryWorldIndex,
+              generatedScript,
+              completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+            },
+            completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+            brandContext: typeof extractBrandProfile === 'function' ? extractBrandProfile(userContext) : {},
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          setActiveProjectId(projectId);
+          setIsCurrentProjectSaved(true);
+
+          // Instantly add to My Projects in state so the sidebar counter updates immediately
+          setUserProjects((prev) => {
+            const idx = prev.findIndex((p) => p.id === projectId);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = { ...next[idx], ...completedProject };
+              return next;
+            }
+            return [completedProject, ...prev];
+          });
+
+          // Persist directly to database for the logged-in user
+          if (currentUser && authToken) {
+            fetch('/api/projects', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify(completedProject),
+            })
+              .then((res) => (res.ok ? res.json() : null))
+              .then((savedData) => {
+                if (savedData?.project) {
+                  setUserProjects((prev) => {
+                    const idx = prev.findIndex((p) => p.id === savedData.project.id || p.id === projectId);
+                    if (idx >= 0) {
+                      const next = [...prev];
+                      next[idx] = savedData.project;
+                      return next;
+                    }
+                    return [savedData.project, ...prev];
+                  });
+                  setActiveProjectId(savedData.project.id);
+                }
+              })
+              .catch((err) => console.error('Failed to auto-save completed video to user projects:', err));
           }
+
           return;
         }
 

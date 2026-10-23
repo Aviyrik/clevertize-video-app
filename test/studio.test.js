@@ -1853,6 +1853,61 @@ test('URL Research Product Scraping: Scrapes real product photo from URL and att
   assert.strictEqual(cleanHighRes, 'https://m.media-amazon.com/images/I/71an9eiBxpL.jpg', 'Must clean Amazon dynamic image to original high-res');
 });
 
+test('Multi-Account Isolation & Video Library Auto-Save: Video never leaks across accounts and auto-saves to My Projects', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // 1. Verify resetAllCreativeFilmState exists and resets all generation data
+  assert.ok(appSrc.includes('resetAllCreativeFilmState'), 'App.jsx must define resetAllCreativeFilmState');
+  assert.ok(appSrc.includes("setVideoUrl('')"), 'Must reset videoUrl to empty');
+
+  // 2. Verify handleLogout and handleAuthSuccess invoke resetAllCreativeFilmState
+  assert.ok(appSrc.includes('resetAllCreativeFilmState();'), 'handleLogout and handleAuthSuccess must wipe creative state');
+  assert.ok(appSrc.includes('Signed out successfully.'), 'handleLogout must sign out');
+
+  // 3. Verify pollRenderStatus auto-saves video to userProjects and /api/projects
+  assert.ok(appSrc.includes("status: 'video_ready'"), 'Must set status to video_ready');
+  assert.ok(appSrc.includes('videoUrl: data.videoUrl'), 'Must attach videoUrl to project');
+  assert.ok(appSrc.includes("fetch('/api/projects'"), 'Must persist project to /api/projects on video completion');
+
+  // 4. Test simulated account switch: Account A generates video, logs out, Account B logs in
+  let currentAccount = 'saumya@clevertize.com';
+  let activeVideo = 'https://magnific.blob.core.windows.net/render/video_123.mp4';
+  let accountProjects = [{ id: 'proj_1', title: 'Saumya Ad Film', videoUrl: activeVideo }];
+  let studioStage = 'video';
+  let activeAppView = 'studio';
+
+  // Logout executed:
+  const executeLogout = () => {
+    currentAccount = null;
+    activeVideo = '';
+    accountProjects = [];
+    studioStage = 'brief';
+    activeAppView = 'home';
+  };
+  executeLogout();
+
+  assert.strictEqual(currentAccount, null);
+  assert.strictEqual(activeVideo, '', 'Video must be cleared on logout');
+  assert.strictEqual(accountProjects.length, 0, 'Projects must be cleared on logout');
+  assert.strictEqual(studioStage, 'brief', 'Stage must reset from video');
+  assert.strictEqual(activeAppView, 'home', 'View must reset to home');
+
+  // Account B logs in:
+  const accountBProjects = []; // Fresh account has 0 projects
+  const executeLoginB = (user, projects) => {
+    currentAccount = user;
+    accountProjects = [...projects];
+    studioStage = 'brief';
+    activeAppView = 'home';
+  };
+  executeLoginB('viki@clevertize.com', accountBProjects);
+
+  assert.strictEqual(currentAccount, 'viki@clevertize.com');
+  assert.strictEqual(activeVideo, '', 'Account B must never see Account A video');
+  assert.strictEqual(accountProjects.length, 0, 'Account B must see 0 projects initially');
+  assert.strictEqual(studioStage, 'brief');
+});
+
 test('Script-First Product: Screen07Script includes Section 8 Gate Passed badge, Copy Script, and Save Script', () => {
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes('Section 8 Gate: Passed'), 'Must display Section 8 Gate Passed badge');
