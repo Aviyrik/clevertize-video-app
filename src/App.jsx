@@ -868,6 +868,15 @@ export default function App() {
   const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  const activeVideoUrlRef = useRef(videoUrl);
+  const activeRunIdRef = useRef(null);
+  useEffect(() => {
+    activeVideoUrlRef.current = videoUrl;
+    if (videoUrl && errorMessage && errorMessage.includes('Render taking longer')) {
+      setErrorMessage('');
+    }
+  }, [videoUrl, errorMessage]);
+
   // General UI errors & modals
   const [errorMessage, setErrorMessage] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -2933,17 +2942,28 @@ export default function App() {
 
   // Poll /api/status/:runId
   const pollRenderStatus = async (runId) => {
+    activeRunIdRef.current = runId;
     const maxAttempts = 160;
     for (let i = 1; i <= maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 15000));
+      // Abort immediately if a newer render job superseded this polling loop
+      if (activeRunIdRef.current !== runId) {
+        return;
+      }
       try {
         const res = await fetch(`/api/status/${encodeURIComponent(runId)}`);
         const data = await res.json();
         if (data.error) continue;
 
+        if (activeRunIdRef.current !== runId) {
+          return;
+        }
+
         if (data.videoUrl) {
           stopTimer();
+          setErrorMessage('');
           setVideoUrl(data.videoUrl);
+          activeVideoUrlRef.current = data.videoUrl;
           setIsRendering(false);
           setIsBusy(false);
           setFastStageIndex(4);
@@ -3043,6 +3063,13 @@ export default function App() {
         }
 
         if (data.failed) {
+          // If a video is already rendered and ready, never show failure from a stale/secondary run
+          if (activeVideoUrlRef.current || videoUrl) {
+            stopTimer();
+            setIsRendering(false);
+            setIsBusy(false);
+            return;
+          }
           stopTimer();
           setIsRendering(false);
           setIsBusy(false);
@@ -3059,6 +3086,17 @@ export default function App() {
       } catch (pollErr) {
         // Keep waiting despite transient network drops
       }
+    }
+    // Polling attempts exhausted:
+    // If run was superseded or video was already generated successfully, never show timeout error!
+    if (activeRunIdRef.current !== runId) {
+      return;
+    }
+    if (activeVideoUrlRef.current || videoUrl) {
+      stopTimer();
+      setIsRendering(false);
+      setIsBusy(false);
+      return;
     }
     stopTimer();
     setIsRendering(false);
@@ -3231,6 +3269,10 @@ export default function App() {
 
   // Run Video Production Pipeline
   const handleRunVideoProduction = async (overrideParams = null) => {
+    if (isRendering) {
+      console.warn('[VideoProduction] Video render already in progress; ignoring duplicate trigger.');
+      return;
+    }
     const targetScenes = overrideParams?.scenes || scenes;
     if (!targetScenes || !targetScenes.length) {
       setErrorMessage('No script scenes found. Please complete the script stage first.');
@@ -4059,7 +4101,7 @@ export default function App() {
       {/* MAIN VIEW CONTAINER */}
       <main style={{ flex: 1, maxWidth: 860, width: '100%', margin: '0 auto', padding: '16px 20px 80px' }}>
         {/* GLOBAL ERROR BANNER */}
-        {errorMessage && (
+        {errorMessage && !videoUrl && (
           <div
             role="alert"
             style={{

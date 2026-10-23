@@ -2341,3 +2341,20 @@ test('My Projects Generated Video Consistency: displayProjects ensures video is 
   // 3. ScriptLibraryView card title fallback
   assert.ok(libSrc.includes('proj.title || `${bizName} Commercial Video`'), 'ScriptLibraryView must provide fallback title');
 });
+test('Video Render Polling: Stale/duplicate runs are cancelled and never post timeout errors over ready videos', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // 1. App.jsx tracks activeRunIdRef and activeVideoUrlRef
+  assert.ok(appSrc.includes('const activeRunIdRef = useRef(null);'), 'Must track activeRunIdRef');
+  assert.ok(appSrc.includes('activeRunIdRef.current = runId;'), 'pollRenderStatus must assign activeRunIdRef.current');
+  assert.ok(appSrc.includes('if (activeRunIdRef.current !== runId) {'), 'Polling loop must abort on stale runId');
+
+  // 2. Timeout error is prevented if video is already ready
+  assert.ok(appSrc.includes('if (activeVideoUrlRef.current || videoUrl) {'), 'Must suppress timeout error when video is present');
+
+  // 3. Error banner is hidden when videoUrl is present
+  assert.ok(appSrc.includes('errorMessage && !videoUrl &&'), 'Error banner must be hidden when videoUrl is present');
+
+  // 4. Duplicate render triggers are blocked while isRendering is true
+  assert.ok(appSrc.includes('if (isRendering) {'), 'handleRunVideoProduction must prevent duplicate calls while rendering');
+});
