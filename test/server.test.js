@@ -266,3 +266,21 @@ test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs q
   assert.ok(validRes.body.setting, "setting must be extracted");
 });
 
+test("Simple Studio / api/run: missing setting or character1 auto-resolves gracefully without preflight failure", async () => {
+  // Simulates exact scenario from Practo / Simple Studio where user triggers render directly
+  const res = await post("/api/run", {
+    scenes: ["Scene 1: Hook", "Scene 2: Problem", "Scene 3: Climax", "Scene 4: CTA"],
+    businessName: "Practo",
+    businessType: "Healthcare, Clinic & Pharmacy",
+    brief: "Book verified doctor appointments instantly",
+  });
+
+  assert.equal(res.status, 200, "Must succeed with HTTP 200 without pre-flight validation failure");
+  assert.ok(res.body.runId, "Must return runId");
+
+  const sent = calls.magnificRun.at(-1).inputs;
+  assert.ok(sent.character_1_2, "Must send resolved character1");
+  assert.ok(sent.setting_2, "Must send resolved setting");
+});
+
+

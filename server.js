@@ -1093,6 +1093,13 @@ app.post("/api/run", async (req, res) => {
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
 
+    // Intelligent auto-derivation of setting and characters if missing (e.g., Simple Studio or direct API)
+    const bName = (businessName || shotSpec?.project?.businessName || "the business").trim();
+    const bCat = (businessType || shotSpec?.project?.businessType || "store").trim();
+    const resolvedSetting = (setting || "").trim() || `Modern, well-lit ${bCat} environment at ${bName}`;
+    const resolvedChar1 = (character1 || "").trim() || `${bName} Specialist / Representative`;
+    const resolvedChar2 = (character2 || "").trim() || "Customer";
+
     // Resolve product text representation
     const resolvedProduct = resolveProduct({
       product,
@@ -1107,7 +1114,7 @@ app.post("/api/run", async (req, res) => {
     let processedScenes;
     if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
       processedScenes = shotSpec.shots.map((sh) =>
-        compileShotPrompt(sh, shotSpec.staticWorld || { setting, characters: [character1, character2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
+        compileShotPrompt(sh, shotSpec.staticWorld || { setting: resolvedSetting, characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
           duration: duration || "15s",
           shotCount: scenes.length,
         })
@@ -1115,9 +1122,9 @@ app.post("/api/run", async (req, res) => {
     } else {
       // Robust fallback to continuous scene compilation
       processedScenes = scenes.map((sc) => sceneForGeneration(sc, {
-        setting,
-        character1,
-        character2,
+        setting: resolvedSetting,
+        character1: resolvedChar1,
+        character2: resolvedChar2,
         duration,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
@@ -1126,9 +1133,9 @@ app.post("/api/run", async (req, res) => {
 
     const runId = await magnific.startRun({
       scenes: processedScenes,
-      character1,
-      character2,
-      setting,
+      character1: resolvedChar1,
+      character2: resolvedChar2,
+      setting: resolvedSetting,
       product: resolvedProduct,
       productName: resolvedProduct,
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,

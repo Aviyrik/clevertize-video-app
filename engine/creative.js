@@ -1039,6 +1039,41 @@ Scene duration: ~4s | Output: 1080p`;
 }
 
 /**
+ * Normalizes an Ad Package to guarantee setting, character1, character2,
+ * hook, and fullScriptText are non-empty for downstream video generation.
+ */
+function normalizeSimpleAdPackage(pkg, brand, bType) {
+  const char1 = (
+    pkg.character1 ||
+    pkg.characters?.lead ||
+    pkg.characters?.character1 ||
+    (typeof pkg.characters === "string" ? pkg.characters : "") ||
+    `${brand || "Store"} Specialist / Host`
+  ).trim();
+  const char2 = (
+    pkg.character2 ||
+    pkg.characters?.customer ||
+    pkg.characters?.character2 ||
+    "Customer"
+  ).trim();
+  const pkgSetting = (
+    pkg.setting ||
+    `Modern, well-lit ${bType || "store"} environment at ${brand || "the store"}`
+  ).trim();
+
+  return {
+    ...pkg,
+    character1: char1,
+    character2: char2,
+    characters: pkg.characters || { lead: char1, customer: char2 },
+    setting: pkgSetting,
+    hook: pkg.hook || pkg.hookHeadline || "",
+    hookHeadline: pkg.hookHeadline || pkg.hook || "",
+    fullScriptText: pkg.fullScriptText || compileSimpleScriptText(pkg, brand),
+  };
+}
+
+/**
  * Curated fallback ad packages for instant recovery when offline or LLM limit reached.
  */
 function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English" }) {
@@ -1250,11 +1285,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => ({
-      ...pkg,
-      hook: pkg.hookHeadline,
-      fullScriptText: compileSimpleScriptText(pkg, businessName),
-    }));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
   }
 
   if (isSweets) {
@@ -1454,11 +1485,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => ({
-      ...pkg,
-      hook: pkg.hookHeadline,
-      fullScriptText: compileSimpleScriptText(pkg, businessName),
-    }));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
   }
 
   // General fallback (refined to be universally appropriate across retail and local businesses)
@@ -1658,11 +1685,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
         },
       ],
     },
-  ].map((pkg) => ({
-    ...pkg,
-    hook: pkg.hookHeadline,
-    fullScriptText: compileSimpleScriptText(pkg, businessName),
-  }));
+  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
 }
 
 async function generateSimpleAdPackages({
@@ -1790,13 +1813,16 @@ Create 3 distinct Ad Packages now:`;
     const raw = await callClaude({ system, content, maxTokens: 4000, thinking: false });
     const parsed = parseJSONBlock(raw);
     if (parsed && Array.isArray(parsed.packages) && parsed.packages.length === 3) {
-      return parsed.packages.map((pkg, idx) => ({
-        ...pkg,
-        id: pkg.id || `pkg_${idx + 1}`,
-        hook: pkg.hook || pkg.hookHeadline || "",
-        hookHeadline: pkg.hookHeadline || pkg.hook || "",
-        fullScriptText: compileSimpleScriptText(pkg, brand),
-      }));
+      return parsed.packages.map((pkg, idx) =>
+        normalizeSimpleAdPackage(
+          {
+            ...pkg,
+            id: pkg.id || `pkg_${idx + 1}`,
+          },
+          brand,
+          bType
+        )
+      );
     }
   } catch (e) {
     console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);

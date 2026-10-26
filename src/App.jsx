@@ -3292,11 +3292,29 @@ export default function App() {
         ? userContext.customBusinessType.trim()
         : userContext.businessType;
 
+      const effectiveSetting = (
+        overrideParams?.setting ||
+        setting ||
+        `Modern, well-lit ${bType || 'store'} environment at ${userContext.businessName || 'the business'}`
+      ).trim();
+
+      const effectiveChar1 = (
+        overrideParams?.character1 ||
+        character1 ||
+        `${userContext.businessName || 'Store'} Specialist / Lead Presenter`
+      ).trim();
+
+      const effectiveChar2 = (
+        overrideParams?.character2 ||
+        character2 ||
+        'Customer'
+      ).trim();
+
       const runPayload = {
         scenes: targetScenes.map((s) => (typeof s === 'string' ? s : s.visual || s.text || '').trim()).filter(Boolean),
-        character1: (character1 || '').trim(),
-        character2: (character2 || '').trim(),
-        setting: (setting || '').trim(),
+        character1: effectiveChar1,
+        character2: effectiveChar2,
+        setting: effectiveSetting,
         duration: userContext.duration || '15s',
         platform: userContext.platform || 'Instagram Reels / 9:16',
         product: userContext.specialty || userContext.offer || userContext.brief || bType || 'featured product',
@@ -3342,7 +3360,33 @@ export default function App() {
         return parts.join(' | ') || s.visual || s.text || '';
       });
 
+      const bType = userContext.businessType || 'business';
+      const bName = userContext.businessName || 'the store';
+
+      const packageSetting = (
+        packageData.setting ||
+        `Modern, well-lit ${bType} environment at ${bName}`
+      ).trim();
+
+      const packageChar1 = (
+        packageData.character1 ||
+        packageData.characters?.lead ||
+        packageData.characters?.character1 ||
+        (typeof packageData.characters === 'string' ? packageData.characters : '') ||
+        `${bName} Specialist / Host`
+      ).trim();
+
+      const packageChar2 = (
+        packageData.character2 ||
+        packageData.characters?.customer ||
+        packageData.characters?.character2 ||
+        'Customer'
+      ).trim();
+
       setScenes(formattedScenes);
+      setSetting(packageSetting);
+      setCharacter1(packageChar1);
+      setCharacter2(packageChar2);
       setGeneratedScript(packageData.fullScriptText || null);
       if (packageData.brief) updateUserContext('brief', packageData.brief);
       if (packageData.language) updateUserContext('language', packageData.language);
@@ -3351,6 +3395,9 @@ export default function App() {
 
       await handleRunVideoProduction({
         scenes: formattedScenes,
+        setting: packageSetting,
+        character1: packageChar1,
+        character2: packageChar2,
         brief: packageData.brief || userContext.brief,
         productPhoto: packageData.productPhoto || userContext.productPhoto,
       });

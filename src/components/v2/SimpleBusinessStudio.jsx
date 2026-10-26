@@ -175,8 +175,31 @@ export default function SimpleBusinessStudio({
     if (!selectedPackage) return;
     setStep(3);
     if (onProduceVideo) {
+      const derivedSetting = (
+        selectedPackage.setting ||
+        `Modern, well-lit ${businessType || 'business'} environment at ${businessName || 'the store'}`
+      ).trim();
+
+      const derivedChar1 = (
+        selectedPackage.character1 ||
+        selectedPackage.characters?.lead ||
+        selectedPackage.characters?.character1 ||
+        (typeof selectedPackage.characters === 'string' ? selectedPackage.characters : '') ||
+        `${businessName || 'Store'} Specialist / Host`
+      ).trim();
+
+      const derivedChar2 = (
+        selectedPackage.character2 ||
+        selectedPackage.characters?.customer ||
+        selectedPackage.characters?.character2 ||
+        'Customer'
+      ).trim();
+
       onProduceVideo({
         ...selectedPackage,
+        setting: derivedSetting,
+        character1: derivedChar1,
+        character2: derivedChar2,
         productPhoto,
         brief,
         language,
