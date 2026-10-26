@@ -868,6 +868,12 @@ export default function App() {
   const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  // General UI errors & modals
+  const [errorMessage, setErrorMessage] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [qualityFailures, setQualityFailures] = useState([]);
+
   const activeVideoUrlRef = useRef(videoUrl);
   const activeRunIdRef = useRef(null);
   useEffect(() => {
@@ -876,12 +882,6 @@ export default function App() {
       setErrorMessage('');
     }
   }, [videoUrl, errorMessage]);
-
-  // General UI errors & modals
-  const [errorMessage, setErrorMessage] = useState('');
-  const [validationError, setValidationError] = useState('');
-  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
-  const [qualityFailures, setQualityFailures] = useState([]);
 
   // Clevertize V2 Application Shell & Entry Point State
   const [studioMode, setStudioMode] = useState(() => {
