@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UrlScannerLoader } from './WorkflowLoadingScreen.jsx';
 import {
   X,
   Globe,
@@ -356,6 +357,13 @@ export default function UrlResearchModal({
             >
               <AlertTriangle size={16} />
               <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Detailed Scanning Progress */}
+          {isScanning && (
+            <div style={{ marginTop: 8 }}>
+              <UrlScannerLoader url={urlInput} compact={true} />
             </div>
           )}
 

@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import WorkflowLoadingScreen, {
+  BrandResearchLoader,
+  SceneRewriteLoader,
+} from './v2/WorkflowLoadingScreen.jsx';
 import {
   Sparkles,
   Check,
@@ -47,21 +51,10 @@ export function ResearchInsightsBanner({
 
   if (isResearching) {
     return (
-      <div style={{
-        padding: '10px 14px',
-        borderRadius: 8,
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px dashed var(--accent-primary)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 14,
-      }}>
-        <Sparkles size={15} className="icon-spinner" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-          <strong style={{ color: 'var(--text-primary)' }}>Researching the brand & category…</strong> Analyzing audience footprint in the background.
-        </div>
-      </div>
+      <BrandResearchLoader
+        compact={true}
+        style={{ marginBottom: 14 }}
+      />
     );
   }
 
@@ -397,26 +390,45 @@ function CreativeProgressiveStepper({
  * 4. LOADING SKELETON
  */
 function CreativeLoadingState({ message }) {
+  const isHook = message && message.toLowerCase().includes('hook');
+  const isPlot = message && (message.toLowerCase().includes('plot') || message.toLowerCase().includes('story option'));
+  const isStory = message && (message.toLowerCase().includes('shaping') || message.toLowerCase().includes('format'));
+
+  const stages = isHook ? [
+    { title: '0–3s Pattern Interrupt', desc: 'Framing unexpected visual action to stop the social feed scroll' },
+    { title: 'Multi-Archetype Synthesis', desc: 'Generating relatable questions, bold statements, and curiosity gaps' },
+    { title: 'Pacing & Dialogue Tuning', desc: 'Calibrating speech cadence for instant retention' },
+  ] : isPlot || isStory ? [
+    { title: 'Setting & Character Consistency', desc: 'Designing unified visual environment and character profiles' },
+    { title: '4-Beat Dramatic Progression', desc: 'Structuring Start → Show → Moment → End narrative arc' },
+    { title: 'Offer Resolution & Payoff', desc: 'Aligning story climax with your brand call to action' },
+  ] : [
+    { title: 'Dilemma Framing', desc: 'Identifying everyday consumer tensions and relatable moments' },
+    { title: 'Territory Blueprints', desc: 'Synthesizing distinct creative concepts tailored to your brief' },
+    { title: 'Hook Calibration', desc: 'Aligning visual premise with your campaign objective' },
+  ];
+
+  const tips = isHook ? [
+    'The 3-Second Rule: Over 65% of viewers drop off before 3 seconds without an immediate pattern interrupt.',
+    'Curiosity Gap: Openings that create an unanswered question hold attention through the commercial.',
+  ] : [
+    'Dilemma Framing: Commercials that open with a relatable friction point outperform direct feature ads by 3.2x.',
+    'Four-Beat Flow: Hook → Dilemma → Discovery → Resolution keeps viewers engaged until the final CTA.',
+  ];
+
   return (
-    <div style={{
-      padding: '36px 20px',
-      textAlign: 'center',
-      backgroundColor: 'var(--bg-surface)',
-      border: '1px solid var(--border-default)',
-      borderRadius: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 12,
-    }}>
-      <Sparkles size={24} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-        {message}
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 360 }}>
-        Synthesizing high-retention commercial patterns specifically for your audience…
-      </div>
-    </div>
+    <WorkflowLoadingScreen
+      icon={Sparkles}
+      badgeLabel="Creative Strategy Engine"
+      title={message || 'Finding strong creative territories…'}
+      subtitle="Synthesizing high-retention commercial patterns specifically for your audience."
+      stages={stages}
+      tips={tips}
+      tipPrefix="Creative Tip"
+      nextStep="Select your favorite option to advance to the next stage"
+      compact={false}
+      style={{ margin: '12px 0' }}
+    />
   );
 }
 
@@ -1697,51 +1709,59 @@ export function SceneAIRewriteModal({
           ))}
         </div>
 
-        <textarea
-          rows={3}
-          value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && instruction.trim() && !isRewriting) {
-              e.preventDefault();
-              onApplyRewrite(instruction);
-            }
-          }}
-          placeholder="e.g. Make Ramesh tease Sunita about running out of groceries again..."
-          style={{ width: '100%', padding: '10px 12px', fontSize: 13, marginBottom: 16, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
-        />
+        {isRewriting ? (
+          <div style={{ margin: '14px 0' }}>
+            <SceneRewriteLoader sceneIndex={sceneIndex + 1} compact={true} />
+          </div>
+        ) : (
+          <>
+            <textarea
+              rows={3}
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && instruction.trim() && !isRewriting) {
+                  e.preventDefault();
+                  onApplyRewrite(instruction);
+                }
+              }}
+              placeholder="e.g. Make Ramesh tease Sunita about running out of groceries again..."
+              style={{ width: '100%', padding: '10px 12px', fontSize: 13, marginBottom: 16, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+            />
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isRewriting}
-            style={{ padding: '8px 14px', borderRadius: 6, backgroundColor: 'transparent', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isRewriting || !instruction.trim()}
-            onClick={() => onApplyRewrite(instruction)}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 6,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
-              border: 'none',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: isRewriting || !instruction.trim() ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6
-            }}
-          >
-            {isRewriting && <RefreshCw size={13} className="icon-spinner" />}
-            <span>{isRewriting ? 'Rewriting Scene…' : 'Rewrite Scene'}</span>
-          </button>
-        </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isRewriting}
+                style={{ padding: '8px 14px', borderRadius: 6, backgroundColor: 'transparent', border: '1px solid var(--border-default)', fontSize: 12, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isRewriting || !instruction.trim()}
+                onClick={() => onApplyRewrite(instruction)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: isRewriting || !instruction.trim() ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {isRewriting && <RefreshCw size={13} className="icon-spinner" />}
+                <span>{isRewriting ? 'Rewriting Scene…' : 'Rewrite Scene'}</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

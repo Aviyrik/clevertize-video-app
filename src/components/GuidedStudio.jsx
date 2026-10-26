@@ -47,6 +47,13 @@ import {
   Users,
 } from 'lucide-react';
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
+import {
+  BrandResearchLoader,
+  IdeaGenerationLoader,
+  HookGenerationLoader,
+  StoryGenerationLoader,
+  ScriptGenerationLoader,
+} from './v2/WorkflowLoadingScreen.jsx';
 
 /**
  * 7 STAGES DEFINITION FOR GUIDED CREATIVE STUDIO
@@ -1247,22 +1254,13 @@ export function Screen02Brief({
         )}
       </div>
 
-      {/* Subtle Background Research Status Strip */}
+      {/* Dynamic Background Research Status */}
       {isResearching && (
-        <div style={{
-          padding: '8px 12px',
-          borderRadius: 8,
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px dashed var(--accent-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 11,
-          color: 'var(--text-secondary)'
-        }}>
-          <Sparkles size={13} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-          <span>Looking into your brand and category in the background…</span>
-        </div>
+        <BrandResearchLoader
+          businessName={businessName}
+          category={userContext?.businessCategory}
+          compact={true}
+        />
       )}
 
       {researchData && !isResearching && (researchData.audienceInsight || researchData.creativeOpportunity) && (
@@ -1816,25 +1814,11 @@ export function Screen04Idea({
 
       {/* Loading State */}
       {isLoadingDirections ? (
-        <div style={{
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px dashed var(--accent-primary)',
-          borderRadius: 12,
-          padding: 40,
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12
-        }}>
-          <Sparkles size={24} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Finding a few strong ideas…
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Exploring creative angles tailored to your brief.
-          </div>
-        </div>
+        <IdeaGenerationLoader
+          businessName={userContext?.businessName}
+          category={userContext?.businessCategory}
+          objective={creativeDNA?.campaignObjective || briefData?.objective}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* ~3 Idea Cards */}
@@ -2033,25 +2017,10 @@ export function Screen05Opening({
 
       {/* Loading State */}
       {isLoadingHooks ? (
-        <div style={{
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px dashed var(--accent-primary)',
-          borderRadius: 12,
-          padding: 40,
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12
-        }}>
-          <Sparkles size={24} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Finding the best ways to start…
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Generating high-converting openings tuned to your style and audience.
-          </div>
-        </div>
+        <HookGenerationLoader
+          businessName={userContext?.businessName}
+          ideaTitle={selectedDirection?.title}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* 5-6 Visual Opening Options */}
@@ -2672,25 +2641,9 @@ export function Screen06Story({
       </div>
 
       {isLoadingStory ? (
-        <div style={{
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px dashed var(--accent-primary)',
-          borderRadius: 12,
-          padding: 40,
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12
-        }}>
-          <Sparkles size={24} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Building your story…
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Arranging visual flow and pacing around your brief.
-          </div>
-        </div>
+        <StoryGenerationLoader
+          businessName={userContext?.businessName}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {/* Visual Four-Part Flow: START → SHOW → MOMENT → END */}
@@ -3210,53 +3163,10 @@ export function Screen07Script({
 
   if (isBusy && (!scenes || scenes.length === 0)) {
     return (
-      <div style={{
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 16,
-        padding: '36px 28px',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 20,
-        maxWidth: 580,
-        margin: '20px auto',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
-      }}>
-        <div style={{
-          width: 64,
-          height: 64,
-          borderRadius: '50%',
-          backgroundColor: 'var(--bg-elevated)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '2px solid var(--accent-primary)',
-          boxShadow: '0 0 20px var(--accent-glow)'
-        }}>
-          <Sparkles size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
-        </div>
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            Writing and polishing your script…
-          </h2>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-            Directing 4 broadcast-ready scenes with spoken dialogue and camera setups for {userContext.businessName || 'your brand'}.
-          </p>
-        </div>
-        <div style={{
-          fontSize: 12,
-          fontFamily: "'JetBrains Mono', monospace",
-          color: 'var(--accent-primary)',
-          backgroundColor: 'var(--bg-elevated)',
-          padding: '5px 14px',
-          borderRadius: 20,
-          border: '1px solid var(--border-subtle)'
-        }}>
-          Elapsed: {elapsedTime || '00:00'}
-        </div>
-      </div>
+      <ScriptGenerationLoader
+        businessName={userContext?.businessName}
+        elapsedTime={elapsedTime}
+      />
     );
   }
 

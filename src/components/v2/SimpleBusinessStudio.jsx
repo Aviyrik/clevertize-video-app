@@ -1,6 +1,10 @@
 import { getBriefSuggestions } from '../../utils/categorySuggestions.js';
 import React, { useState, useEffect } from 'react';
 import {
+  SimpleAdPackagesLoader,
+  SimpleVideoProductionLoader,
+} from './WorkflowLoadingScreen.jsx';
+import {
   Sparkles,
   Zap,
   CheckCircle2,
@@ -695,6 +699,16 @@ export default function SimpleBusinessStudio({
               )}
             </button>
           </div>
+
+          {/* Detailed Ad Packages Generator Loading Experience */}
+          {isLoadingPackages && (
+            <div style={{ marginTop: 12 }}>
+              <SimpleAdPackagesLoader
+                businessName={businessName}
+                category={category}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -916,15 +930,10 @@ export default function SimpleBusinessStudio({
             }}
           >
             {isProducingVideo ? (
-              <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                <RotateCcw size={36} className="spin" style={{ color: 'var(--accent-primary)' }} />
-                <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                  Filming Your Commercial with Magnific AI...
-                </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 460, margin: 0, lineHeight: 1.5 }}>
-                  Rendering high-definition broadcast scenes for "{selectedPackage?.title}". This usually takes around 60-90 seconds.
-                </p>
-              </div>
+              <SimpleVideoProductionLoader
+                businessName={businessName}
+                renderStatusText={`Rendering broadcast scenes for "${selectedPackage?.title}". Synchronizing camera angles, character continuity, and audio mastering.`}
+              />
             ) : producedVideoUrl ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--success)', fontWeight: 700, fontSize: 14 }}>

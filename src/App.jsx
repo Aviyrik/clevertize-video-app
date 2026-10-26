@@ -90,6 +90,7 @@ import {
   Screen07Script,
   Screen08Video,
 } from './components/GuidedStudio';
+import { AuthSessionLoader } from './components/v2/WorkflowLoadingScreen.jsx';
 
 class WorkspaceErrorBoundary extends React.Component {
   constructor(props) {
@@ -3552,29 +3553,13 @@ export default function App() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 16,
+          padding: 20,
+          boxSizing: 'border-box',
           color: '#F5F7FA',
           fontFamily: "'Inter', system-ui, sans-serif",
         }}
       >
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.4)',
-          }}
-        >
-          <Clapperboard size={22} color="#FFFFFF" />
-        </div>
-        <div style={{ fontSize: 13, color: '#A6ACB8', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={14} className="icon-spinner" style={{ color: '#6366F1' }} />
-          <span>Starting CleverCut...</span>
-        </div>
+        <AuthSessionLoader />
       </div>
     );
   }
