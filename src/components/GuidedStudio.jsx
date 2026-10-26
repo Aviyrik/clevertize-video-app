@@ -56,16 +56,15 @@ import {
 } from './v2/WorkflowLoadingScreen.jsx';
 
 /**
- * 7 STAGES DEFINITION FOR GUIDED CREATIVE STUDIO
+ * 6 STREAMLINED STAGES FOR GUIDED CREATIVE STUDIO
  */
 export const STUDIO_STAGES = [
   { id: 'brief', num: '01', label: 'Brief' },
   { id: 'settings', num: '02', label: 'Settings' },
   { id: 'idea', num: '03', label: 'Idea' },
   { id: 'opening', num: '04', label: 'Opening' },
-  { id: 'story', num: '05', label: 'Story' },
-  { id: 'script', num: '06', label: 'Script' },
-  { id: 'video', num: '07', label: 'Video' },
+  { id: 'script', num: '05', label: 'Script' },
+  { id: 'video', num: '06', label: 'Video' },
 ];
 
 /**
@@ -2224,7 +2223,7 @@ export function Screen05Opening({
             boxShadow: '0 2px 10px var(--accent-glow)'
           }}
         >
-          <span>Continue</span>
+          <span>Continue to Script</span>
           <ArrowRight size={16} />
         </button>
       </div>
@@ -3133,8 +3132,11 @@ export function Screen07Script({
   scenes = [],
   setScenes,
   setting = '',
+  setSetting,
   character1 = '',
   character2 = '',
+  onUpdateCharacters,
+  onUpdateSetting,
   userContext = {},
   onApproveScript,
   onBack,
@@ -3149,6 +3151,27 @@ export function Screen07Script({
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
   const [isCopiedFull, setIsCopiedFull] = useState(false);
+  const [isEditingContinuity, setIsEditingContinuity] = useState(false);
+  const [editSettingVal, setEditSettingVal] = useState(setting || '');
+  const [editChar1Val, setEditChar1Val] = useState(character1 || '');
+  const [editChar2Val, setEditChar2Val] = useState(character2 || '');
+
+  useEffect(() => {
+    setEditSettingVal(setting || '');
+  }, [setting]);
+
+  useEffect(() => {
+    setEditChar1Val(character1 || '');
+    setEditChar2Val(character2 || '');
+  }, [character1, character2]);
+
+  const handleSaveContinuity = () => {
+    if (onUpdateSetting && editSettingVal) onUpdateSetting(editSettingVal);
+    if (onUpdateCharacters && (editChar1Val || editChar2Val)) {
+      onUpdateCharacters(editChar1Val, editChar2Val);
+    }
+    setIsEditingContinuity(false);
+  };
 
   const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || '').includes('Demo') ? 'Product Demo' : (userContext.creativeStyle || '').includes('Comedy') ? 'Funny' : 'Story';
   const duration = userContext.targetDuration || '20s';
@@ -3283,65 +3306,137 @@ export function Screen07Script({
       </div>
 
       {/* Continuity Context Strip (Anchored from Story World) */}
-      {(setting || character1) && (
-        <div style={{
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 8,
-          padding: '8px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-          flexWrap: 'wrap',
-          fontSize: 11,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+      {(setting || character1 || editSettingVal || editChar1Val) && (
+        isEditingContinuity ? (
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 8,
+            padding: '12px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            fontSize: 11,
+          }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Lock size={12} style={{ color: 'var(--accent-primary)' }} />
-              <span>Locked Story Continuity:</span>
-            </span>
-            {setting && (
-              <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span>🏠 Place:</span>
-                <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{setting}</strong>
+              <span>Edit Cast & Setting Continuity</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>🏠 PLACE / SETTING</label>
+                <input
+                  type="text"
+                  value={editSettingVal}
+                  onChange={(e) => setEditSettingVal(e.target.value)}
+                  placeholder="e.g. Modern clinic consultation room"
+                  style={{ width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>👩 LEAD CHARACTER</label>
+                <input
+                  type="text"
+                  value={editChar1Val}
+                  onChange={(e) => setEditChar1Val(e.target.value)}
+                  placeholder="e.g. Dr. Ananya (Doctor)"
+                  style={{ width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>👨 SUPPORTING CHARACTER</label>
+                <input
+                  type="text"
+                  value={editChar2Val}
+                  onChange={(e) => setEditChar2Val(e.target.value)}
+                  placeholder="e.g. Patient / Customer"
+                  style={{ width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => setIsEditingContinuity(false)}
+                style={{ padding: '5px 12px', borderRadius: 6, background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveContinuity}
+                style={{ padding: '5px 16px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+              >
+                Save Continuity
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 8,
+            padding: '8px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            flexWrap: 'wrap',
+            fontSize: 11,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Lock size={12} style={{ color: 'var(--accent-primary)' }} />
+                <span>Story Continuity:</span>
               </span>
-            )}
-            {character1 && (
-              <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span>👥 Cast:</span>
-                <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character1}</strong>
-                {character2 && (
-                  <>
-                    <span style={{ color: 'var(--text-tertiary)' }}>&</span>
-                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character2}</strong>
-                  </>
-                )}
-              </span>
+              {(setting || editSettingVal) && (
+                <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span>🏠 Place:</span>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{setting || editSettingVal}</strong>
+                </span>
+              )}
+              {(character1 || editChar1Val) && (
+                <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span>👥 Cast:</span>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character1 || editChar1Val}</strong>
+                  {(character2 || editChar2Val) && (
+                    <>
+                      <span style={{ color: 'var(--text-tertiary)' }}>&</span>
+                      <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character2 || editChar2Val}</strong>
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+            {(onUpdateSetting || onUpdateCharacters) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditSettingVal(setting);
+                  setEditChar1Val(character1);
+                  setEditChar2Val(character2);
+                  setIsEditingContinuity(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '2px 6px',
+                  color: 'var(--accent-primary)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+                title="Edit setting or cast names directly"
+              >
+                <Edit3 size={11} />
+                <span>Edit Cast & Setting</span>
+              </button>
             )}
           </div>
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '2px 6px',
-                color: 'var(--accent-primary)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4
-              }}
-              title="Return to Story stage to edit characters or setting"
-            >
-              <span>← Edit Story World</span>
-            </button>
-          )}
-        </div>
+        )
       )}
 
       {/* 4 Visual Scene Cards */}

@@ -3318,8 +3318,7 @@ export default function App() {
     setIsChangeOpen(false);
 
     if (studioStage === 'video') setStudioStage('script');
-    else if (studioStage === 'script') setStudioStage('story');
-    else if (studioStage === 'story') setStudioStage('opening');
+    else if (studioStage === 'script') setStudioStage('opening');
     else if (studioStage === 'opening') setStudioStage('idea');
     else if (studioStage === 'idea') setStudioStage('settings');
     else if (studioStage === 'settings') setStudioStage('brief');
@@ -4492,9 +4491,14 @@ export default function App() {
                 setExplicitChoices((prev) => ({ ...prev, opening: activeH.archetype || activeH.hookLine || customHook }));
               }
               markStageComplete('opening');
-              setStudioStage('story');
+              setStudioStage('script');
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              await loadStoryWorld(true, null, null, activeH);
+
+              // Automatically ensure story world exists in background, then synthesize master script
+              if (!storyWorldData) {
+                await loadStoryWorld(true, null, null, activeH);
+              }
+              await handleSynthesizeMasterScript();
             }}
             onBack={() => {
               setStudioStage('idea');
@@ -4503,60 +4507,24 @@ export default function App() {
           />
         )}
 
-        {studioStage === 'story' && (
-          <Screen06Story
-            storyWorldData={storyWorldData}
-            handleFileUpload={handleFileUpload}
-            setStoryWorldData={(sw) => {
-              const nextSw = typeof sw === 'function' ? sw(storyWorldData) : sw;
-              setStoryWorldData(nextSw);
-              setCreativeDNA((prev) => ({ ...prev, story: nextSw }));
-              const hasDownstream = completedStages.includes('script') || completedStages.includes('video') || scenes.length > 0 || Boolean(generatedScript);
-              if (hasDownstream) {
-                setHasStaleWarning(true);
-              }
-            }}
-            userContext={userContext}
-            updateUserContext={updateUserContext}
-            isLoadingStory={isLoadingStory}
-            constraintsList={constraintsList}
-            setConstraintsList={setConstraintsList}
-            avoidList={avoidList}
-            setAvoidList={setAvoidList}
-            onAddConstraint={(c) => setConstraintsList((prev) => [...(prev || []), c])}
-            onRemoveConstraint={(idx) => setConstraintsList((prev) => (prev || []).filter((_, i) => i !== idx))}
-            onAddAvoid={(a) => setAvoidList((prev) => [...(prev || []), a])}
-            onRemoveAvoid={(idx) => setAvoidList((prev) => (prev || []).filter((_, i) => i !== idx))}
-            onUpdateCharacters={(c1, c2) => {
-              if (c1) setCharacter1(typeof c1 === 'string' ? c1 : c1.name);
-              if (c2) setCharacter2(typeof c2 === 'string' ? c2 : c2.name);
-            }}
-            onUpdateSetting={(s) => setSetting(s)}
-            isBusy={isBusy}
-            elapsedTime={elapsedTime}
-            onContinue={async () => {
-              markStageComplete('story');
-              const ok = await handleSynthesizeMasterScript();
-              if (ok) {
-                setStudioStage('script');
-                setHasStaleWarning(false);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }}
-            onBack={() => {
-              setStudioStage('opening');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
+        {studioStage === 'story' && (() => {
+          setTimeout(() => setStudioStage('script'), 0);
+          return null;
+        })()}
 
         {studioStage === 'script' && (
           <Screen07Script
             scenes={scenes}
             setScenes={setScenes}
             setting={setting}
+            setSetting={setSetting}
             character1={character1}
             character2={character2}
+            onUpdateCharacters={(c1, c2) => {
+              if (c1) setCharacter1(typeof c1 === 'string' ? c1 : c1.name);
+              if (c2) setCharacter2(typeof c2 === 'string' ? c2 : c2.name);
+            }}
+            onUpdateSetting={(s) => setSetting(s)}
             userContext={userContext}
             isBusy={isBusy}
             elapsedTime={elapsedTime}
@@ -4567,7 +4535,7 @@ export default function App() {
               handleRunVideoProduction();
             }}
             onBack={() => {
-              setStudioStage('story');
+              setStudioStage('opening');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onTryAnotherVersion={() => {

@@ -33,27 +33,15 @@ const {
   STAGE_NUMBER_MAP,
 } = require('../src/context/studioReducer.js');
 
-test('Guided Studio V4 Architecture: 7 Stages Definition & Integrity', () => {
-  const expectedStages = [
-    { id: 'brief', num: '01', label: 'Brief' },
-    { id: 'settings', num: '02', label: 'Settings' },
-    { id: 'idea', num: '03', label: 'Idea' },
-    { id: 'opening', num: '04', label: 'Opening' },
-    { id: 'story', num: '05', label: 'Story' },
-    { id: 'script', num: '06', label: 'Script' },
-    { id: 'video', num: '07', label: 'Video' },
-  ];
-
-  assert.equal(expectedStages.length, 7);
-  assert.deepEqual(expectedStages.map(s => s.id), [
-    'brief',
-    'settings',
-    'idea',
-    'opening',
-    'story',
-    'script',
-    'video'
-  ]);
+test('Guided Studio Architecture: 6 Streamlined Stages (Story screen eliminated to prevent extra clicks)', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes("{ id: 'brief', num: '01', label: 'Brief' }"), 'Stage 01 Brief');
+  assert.ok(guidedStudioSrc.includes("{ id: 'settings', num: '02', label: 'Settings' }"), 'Stage 02 Settings');
+  assert.ok(guidedStudioSrc.includes("{ id: 'idea', num: '03', label: 'Idea' }"), 'Stage 03 Idea');
+  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '04', label: 'Opening' }"), 'Stage 04 Opening');
+  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '05', label: 'Script' }"), 'Stage 05 Script');
+  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '06', label: 'Video' }"), 'Stage 06 Video');
+  assert.ok(!guidedStudioSrc.includes("{ id: 'story', num:"), 'Story must not be a studio stage');
 });
 
 test('Guided Studio V4: Canonical Language Constraint across Flow', async () => {
@@ -2378,56 +2366,41 @@ test('Category Brief Suggestions: Healthcare/Practo receives healthcare ideas an
   assert.ok(eduResult.suggestions.some((s) => s.includes('exam') || s.includes('coaching') || s.includes('faculty')), 'Must contain coaching ideas');
 });
 
-test('Story vs. Script Differentiation: Story establishes world & characters; Script specifies dialogue & camera blocking', () => {
+test('Streamlined Script Stage: Directly follows Opening Hook, embedding Cast & Setting continuity controls', () => {
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
 
-  // 1. Story Stage (Screen06Story) explicitly communicates World & Narrative Arc
-  assert.ok(
-    guidedStudioSrc.includes("Here's your story: World & Narrative Arc"),
-    'Story page must have clear title distinguishing World & Narrative Arc'
-  );
-  assert.ok(
-    guidedStudioSrc.includes('Define your continuous physical setting, characters, and 4-beat narrative flow'),
-    'Story page subtitle must emphasize setting, characters, and narrative flow'
-  );
-  assert.ok(
-    guidedStudioSrc.includes('1. Narrative Progression (4 Beats)'),
-    'Story page must clearly delineate 4-part narrative progression'
-  );
-  assert.ok(
-    guidedStudioSrc.includes('2. People & Setting (Continuity Anchors)'),
-    'Story page must delineate people and setting continuity anchors'
-  );
-  assert.ok(
-    guidedStudioSrc.includes('3. Story Constraints & Avoid Rules (Optional)'),
-    'Story page must delineate story constraints & avoid rules'
-  );
-  assert.ok(
-    guidedStudioSrc.includes('Lock Story & Write Script →'),
-    'Story page button CTA must invite user to lock story and trigger scriptwriting'
-  );
+  // 1. STUDIO_STAGES has 6 stages with Script immediately following Opening
+  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '04', label: 'Opening' }"), 'Must have Stage 04 Opening');
+  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '05', label: 'Script' }"), 'Must have Stage 05 Script');
+  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '06', label: 'Video' }"), 'Must have Stage 06 Video');
 
-  // 2. Script Stage (Screen07Script) explicitly communicates Broadcast & Camera Direction
+  // 2. Screen05Opening directly offers Continue to Script
+  assert.ok(guidedStudioSrc.includes('Continue to Script'), 'Screen05Opening must offer Continue to Script');
+
+  // 3. App.jsx onContinue from opening directly sets studioStage to script and synthesizes master script
+  assert.ok(appSrc.includes("setStudioStage('script');"), 'Opening onContinue must fast-track directly to script stage');
+  assert.ok(appSrc.includes('await handleSynthesizeMasterScript();'), 'Opening onContinue must synthesize script directly');
+
+  // 4. Script Stage (Screen07Script) presents Story Continuity with inline edit capabilities
   assert.ok(
     guidedStudioSrc.includes("Here's your script: Broadcast & Camera Direction"),
     'Script page title must emphasize broadcast execution & camera direction'
   );
   assert.ok(
-    guidedStudioSrc.includes('Review scene-by-scene spoken dialogue, camera setups, and timing before video production'),
-    'Script page subtitle must clarify dialogue, camera setups, and timing'
-  );
-
-  // 3. Script Stage presents Locked Story Continuity context strip with direct link back to Story
-  assert.ok(
-    guidedStudioSrc.includes('Locked Story Continuity:'),
-    'Script page must display locked story continuity context strip'
+    guidedStudioSrc.includes('Story Continuity:'),
+    'Script page must display story continuity context strip'
   );
   assert.ok(
-    guidedStudioSrc.includes('Edit Story World'),
-    'Script page continuity strip must provide shortcut link back to Story World'
+    guidedStudioSrc.includes('Edit Cast & Setting'),
+    'Script page continuity strip must provide inline Edit Cast & Setting controls'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('Save Continuity'),
+    'Script page must have Save Continuity action'
   );
 
-  // 4. Script Stage has direct Video generation CTA
+  // 5. Script Stage has direct Video generation CTA
   assert.ok(
     guidedStudioSrc.includes('Generate Video Commercial') || guidedStudioSrc.includes('Generate Video →'),
     'Script stage must offer direct video generation CTA'
