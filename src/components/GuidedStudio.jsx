@@ -2633,10 +2633,10 @@ export function Screen06Story({
       {/* Title & Short Explanation */}
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          Here's your story
+          Here's your story: World & Narrative Arc
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          This is how the video will unfold from the first second to the final call to action.
+          Define your continuous physical setting, characters, and 4-beat narrative flow before writing scene dialogue.
         </p>
       </div>
 
@@ -2657,7 +2657,10 @@ export function Screen06Story({
             gap: 12
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Your Story Flow</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Layers size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>1. Narrative Progression (4 Beats)</span>
+              </div>
               <span style={{ fontSize: 10, textTransform: 'none', color: 'var(--accent-primary)', fontWeight: 600 }}>
                 {userContext.targetDuration || '20s'} Film
               </span>
@@ -2732,8 +2735,14 @@ export function Screen06Story({
             flexDirection: 'column',
             gap: 10
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
-              People & Setting
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Users size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>2. People & Setting (Continuity Anchors)</span>
+              </div>
+              <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'none', fontWeight: 500 }}>
+                Kept consistent across all scenes
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
@@ -2931,7 +2940,8 @@ export function Screen06Story({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>Customize details (Optional)</span>
+                <ShieldCheck size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>3. Story Constraints & Avoid Rules (Optional)</span>
                 {(currentConstraints.length > 0 || currentAvoid.length > 0) && (
                   <span style={{
                     fontSize: 10,
@@ -3109,7 +3119,7 @@ export function Screen06Story({
           }}
         >
           {isBusy && <RefreshCw size={14} className="icon-spinner" />}
-          <span>{isBusy ? 'Writing and polishing your script…' : 'Continue to Script →'}</span>
+          <span>{isBusy ? 'Writing and polishing your script…' : 'Lock Story & Write Script →'}</span>
         </button>
       </div>
     </div>
@@ -3201,10 +3211,10 @@ export function Screen07Script({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            Here's your script
+            Here's your script: Broadcast & Camera Direction
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Review the 4 scenes before we make the video.
+            Review scene-by-scene spoken dialogue, camera setups, and timing before video production.
           </p>
         </div>
 
@@ -3271,6 +3281,68 @@ export function Screen07Script({
           </div>
         </div>
       </div>
+
+      {/* Continuity Context Strip (Anchored from Story World) */}
+      {(setting || character1) && (
+        <div style={{
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 8,
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          flexWrap: 'wrap',
+          fontSize: 11,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Lock size={12} style={{ color: 'var(--accent-primary)' }} />
+              <span>Locked Story Continuity:</span>
+            </span>
+            {setting && (
+              <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span>🏠 Place:</span>
+                <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{setting}</strong>
+              </span>
+            )}
+            {character1 && (
+              <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span>👥 Cast:</span>
+                <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character1}</strong>
+                {character2 && (
+                  <>
+                    <span style={{ color: 'var(--text-tertiary)' }}>&</span>
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character2}</strong>
+                  </>
+                )}
+              </span>
+            )}
+          </div>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '2px 6px',
+                color: 'var(--accent-primary)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+              title="Return to Story stage to edit characters or setting"
+            >
+              <span>← Edit Story World</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 4 Visual Scene Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

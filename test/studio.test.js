@@ -2377,3 +2377,59 @@ test('Category Brief Suggestions: Healthcare/Practo receives healthcare ideas an
   const eduResult = getCategoryBriefSuggestions('Education, Coaching & Tuition', 'Aakash', 'Delhi');
   assert.ok(eduResult.suggestions.some((s) => s.includes('exam') || s.includes('coaching') || s.includes('faculty')), 'Must contain coaching ideas');
 });
+
+test('Story vs. Script Differentiation: Story establishes world & characters; Script specifies dialogue & camera blocking', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+
+  // 1. Story Stage (Screen06Story) explicitly communicates World & Narrative Arc
+  assert.ok(
+    guidedStudioSrc.includes("Here's your story: World & Narrative Arc"),
+    'Story page must have clear title distinguishing World & Narrative Arc'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('Define your continuous physical setting, characters, and 4-beat narrative flow'),
+    'Story page subtitle must emphasize setting, characters, and narrative flow'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('1. Narrative Progression (4 Beats)'),
+    'Story page must clearly delineate 4-part narrative progression'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('2. People & Setting (Continuity Anchors)'),
+    'Story page must delineate people and setting continuity anchors'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('3. Story Constraints & Avoid Rules (Optional)'),
+    'Story page must delineate story constraints & avoid rules'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('Lock Story & Write Script →'),
+    'Story page button CTA must invite user to lock story and trigger scriptwriting'
+  );
+
+  // 2. Script Stage (Screen07Script) explicitly communicates Broadcast & Camera Direction
+  assert.ok(
+    guidedStudioSrc.includes("Here's your script: Broadcast & Camera Direction"),
+    'Script page title must emphasize broadcast execution & camera direction'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('Review scene-by-scene spoken dialogue, camera setups, and timing before video production'),
+    'Script page subtitle must clarify dialogue, camera setups, and timing'
+  );
+
+  // 3. Script Stage presents Locked Story Continuity context strip with direct link back to Story
+  assert.ok(
+    guidedStudioSrc.includes('Locked Story Continuity:'),
+    'Script page must display locked story continuity context strip'
+  );
+  assert.ok(
+    guidedStudioSrc.includes('Edit Story World'),
+    'Script page continuity strip must provide shortcut link back to Story World'
+  );
+
+  // 4. Script Stage has direct Video generation CTA
+  assert.ok(
+    guidedStudioSrc.includes('Generate Video Commercial') || guidedStudioSrc.includes('Generate Video →'),
+    'Script stage must offer direct video generation CTA'
+  );
+});
