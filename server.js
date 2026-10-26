@@ -1414,6 +1414,20 @@ app.delete("/api/projects/:id", authRequired, async (req, res) => {
   }
 });
 
+// Ensure API requests that fail to match any endpoint return JSON 404, NEVER HTML index.html
+app.all("/api/*", (req, res) => {
+  res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Global JSON error handler (prevents Express from ever sending HTML error pages)
+app.use((err, req, res, next) => {
+  console.error("[error-handler]", err.message);
+  if (err.type === "entity.too.large" || err.status === 413) {
+    return res.status(413).json({ error: "Uploaded payload is too large. Please use a smaller product photo (under 5MB)." });
+  }
+  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
+});
+
 // SPA catch-all fallback for client routing
 app.get("*", (req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");

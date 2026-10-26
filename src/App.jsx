@@ -870,7 +870,20 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState('');
 
   // General UI errors & modals
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessageRaw, setErrorMessageRaw] = useState('');
+  const setErrorMessage = (val) => {
+    if (!val) {
+      setErrorMessageRaw('');
+      return;
+    }
+    const str = typeof val === 'string' ? val : val.message || String(val);
+    if (str.includes("Unexpected token '<'") || str.includes('is not valid JSON') || str.includes('<html>')) {
+      setErrorMessageRaw('The video production service returned an unexpected HTML response. The server may be restarting or temporarily busy. Please retry in a moment.');
+      return;
+    }
+    setErrorMessageRaw(str);
+  };
+  const errorMessage = errorMessageRaw;
   const [validationError, setValidationError] = useState('');
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [qualityFailures, setQualityFailures] = useState([]);
@@ -2777,6 +2790,62 @@ export default function App() {
     }
   };
 
+  /**
+   * Safe API Call Wrapper
+   * Protects against unhandled HTML error pages (e.g., 502/504 gateway timeouts or 413 payload too large)
+   * preventing cryptic "Unexpected token '<', <html> is not valid JSON" parser exceptions.
+   */
+  const safeApiCall = async (fetchPromise, defaultErrorMsg = 'Failed to dispatch render job.') => {
+    const res = await fetchPromise;
+    const contentType = res.headers.get('content-type') || '';
+    let data = null;
+    let rawText = '';
+
+    if (contentType.includes('application/json')) {
+      try {
+        data = await res.json();
+      } catch (e) {
+        // ignore parse error if response is not valid JSON
+      }
+    }
+
+    if (!data) {
+      try {
+        rawText = await res.text();
+      } catch (e) {
+        // ignore text read error
+      }
+    }
+
+    if (!res.ok) {
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
+      if (res.status === 413) {
+        throw new Error('Uploaded files are too large. Please use a smaller product photo or logo image (under 5MB).');
+      }
+      if (res.status === 502 || res.status === 504) {
+        throw new Error(`Video production service is busy or timed out (HTTP ${res.status}). Please retry in a few moments.`);
+      }
+      if (res.status === 404) {
+        throw new Error(`API endpoint not found (HTTP 404). Please ensure the backend server is running.`);
+      }
+      if (rawText && !rawText.includes('<html') && rawText.length < 240) {
+        throw new Error(rawText);
+      }
+      throw new Error(`${defaultErrorMsg} (HTTP ${res.status})`);
+    }
+
+    if (!data) {
+      if (rawText && rawText.includes('<html')) {
+        throw new Error('Received an unexpected HTML page from server instead of JSON. The service may be starting up or restarting.');
+      }
+      throw new Error(`${defaultErrorMsg} (Malformed response)`);
+    }
+
+    return data;
+  };
+
   // FAST SINGLE-CLICK PIPELINE: Brand -> Brief -> Options -> Direct GPU Video Render in ~20s
   const handleGenerateVideo = async (options = { previewOnly: false }) => {
     if (!userContext.businessName.trim()) {
@@ -2854,16 +2923,11 @@ export default function App() {
         shotSpec: pipeData.shotSpec || null,
       };
 
-      const runRes = await fetch('/api/run', {
+      const runData = await safeApiCall(fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(runPayload),
-      });
-      const runData = await runRes.json();
-
-      if (!runRes.ok || runData.error) {
-        throw new Error(runData.error || 'Failed to dispatch render job to Magnific.');
-      }
+      }), 'Failed to dispatch render job to Magnific.');
 
       // 3. Poll Magnific status
       await pollRenderStatus(runData.runId);
@@ -2921,16 +2985,11 @@ export default function App() {
         shotSpec: shotSpec || null,
       };
 
-      const res = await fetch('/api/run', {
+      const data = await safeApiCall(fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(runPayload),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to dispatch render job to Magnific.');
-      }
+      }), 'Failed to dispatch render job to Magnific.');
 
       setRenderStatusText('Rendering neural video frames…');
       await pollRenderStatus(data.runId);
@@ -2953,8 +3012,12 @@ export default function App() {
       }
       try {
         const res = await fetch(`/api/status/${encodeURIComponent(runId)}`);
-        const data = await res.json();
-        if (data.error) continue;
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          continue; // Gateway response / proxy page during polling, keep waiting
+        }
+        const data = await res.json().catch(() => null);
+        if (!data || data.error) continue;
 
         if (activeRunIdRef.current !== runId) {
           return;
@@ -3328,16 +3391,11 @@ export default function App() {
         shotSpec: shotSpec || null,
       };
 
-      const res = await fetch('/api/run', {
+      const data = await safeApiCall(fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(runPayload),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to dispatch render job.');
-      }
+      }), 'Failed to dispatch render job.');
 
       setRenderStatusText('Creating scenes and putting everything together…');
       await pollRenderStatus(data.runId);

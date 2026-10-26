@@ -19,7 +19,7 @@ services:
       - key: MAGNIFIC_API_KEY
         sync: false
       - key: MAGNIFIC_FLOW_ID
-        value: UJAMwnyikX
+        value: 0MQyTfWvQD
 
 databases:
   - name: clevertize-postgres
