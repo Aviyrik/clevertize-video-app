@@ -52,9 +52,17 @@ test('WorkflowLoadingScreen: GuidedStudio integrates multi-stage loaders across 
 
   // Check usage in Screen04Idea
   assert.ok(content.includes('<IdeaGenerationLoader'), 'Screen04Idea must render IdeaGenerationLoader when isLoadingDirections');
+  assert.ok(/function Screen04Idea\(\s*\{[^}]*userContext/.test(content), 'Screen04Idea must accept userContext in props');
 
   // Check usage in Screen05Opening
   assert.ok(content.includes('<HookGenerationLoader'), 'Screen05Opening must render HookGenerationLoader when isLoadingHooks');
+  assert.ok(/function Screen05Opening\(\s*\{[^}]*userContext/.test(content), 'Screen05Opening must accept userContext in props');
+
+  // Check App.jsx passes userContext to both screens
+  const appPath = path.resolve(process.cwd(), 'src/App.jsx');
+  const appContent = fs.readFileSync(appPath, 'utf8');
+  assert.ok(/<Screen04Idea[\s\S]*?userContext=\{userContext\}/.test(appContent), 'App.jsx must pass userContext to Screen04Idea');
+  assert.ok(/<Screen05Opening[\s\S]*?userContext=\{userContext\}/.test(appContent), 'App.jsx must pass userContext to Screen05Opening');
 
   // Check usage in Screen06Story
   assert.ok(content.includes('<StoryGenerationLoader'), 'Screen06Story must render StoryGenerationLoader when isLoadingStory');

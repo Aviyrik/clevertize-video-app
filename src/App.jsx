@@ -2060,9 +2060,11 @@ export default function App() {
   };
 
   // 2. Fetching Creative Direction Territories
-  const loadCreativeDirections = async (force = false, overrideFormat = null) => {
+  const loadCreativeDirections = async (force = false, overrideFormat = null, overrideLang = null) => {
     const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
-    if (directionsList.length && !force && loadedDirectionsFormatRef.current === activeFormat) return;
+    const activeLang = overrideLang || userContext.language || 'English';
+    const activeKey = `${activeFormat}_${activeLang}`;
+    if (directionsList.length && !force && loadedDirectionsFormatRef.current === activeKey) return;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
@@ -2080,6 +2082,7 @@ export default function App() {
           town: userContext.town || '',
           brief: userContext.brief || '',
           targetAudience: userContext.targetAudience || '',
+          language: activeLang,
           research: researchData,
           format: activeFormat,
           creativeStyle: activeFormat,
@@ -2090,8 +2093,8 @@ export default function App() {
         setDirectionsList(list);
         const rec = list.find((d) => d.recommended) || list[0];
         setSelectedDirection(rec);
-        setCreativeDNA((prev) => ({ ...prev, direction: rec, format: activeFormat }));
-        loadedDirectionsFormatRef.current = activeFormat;
+        setCreativeDNA((prev) => ({ ...prev, direction: rec, format: activeFormat, language: activeLang }));
+        loadedDirectionsFormatRef.current = activeKey;
       }
     } catch (e) {
       console.warn('[directions] load error:', e);
@@ -4366,8 +4369,10 @@ export default function App() {
               setStudioStage('idea');
               window.scrollTo({ top: 0, behavior: 'smooth' });
               const currentFormat = userContext.creativeStyle || 'UGC / Creator-style';
-              if (!directionsList.length || loadedDirectionsFormatRef.current !== currentFormat) {
-                await loadCreativeDirections(true, currentFormat);
+              const currentLang = userContext.language || 'English';
+              const activeKey = `${currentFormat}_${currentLang}`;
+              if (!directionsList.length || loadedDirectionsFormatRef.current !== activeKey) {
+                await loadCreativeDirections(true, currentFormat, currentLang);
               }
             }}
             onBack={() => {
@@ -4379,6 +4384,9 @@ export default function App() {
 
         {studioStage === 'idea' && (
           <Screen04Idea
+            userContext={userContext}
+            creativeDNA={creativeDNA}
+            briefData={userContext}
             directionsList={directionsList}
             selectedDirection={selectedDirection}
             setSelectedDirection={(d) => {
@@ -4464,6 +4472,8 @@ export default function App() {
 
         {studioStage === 'opening' && (
           <Screen05Opening
+            userContext={userContext}
+            selectedDirection={selectedDirection}
             hooksList={hooksList}
             selectedHook={selectedHook}
             setSelectedHook={(h) => {

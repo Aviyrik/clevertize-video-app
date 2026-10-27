@@ -1789,6 +1789,9 @@ export function Screen04Idea({
   isLoadingDirections = false,
   onContinue,
   onBack,
+  userContext = {},
+  creativeDNA = {},
+  briefData = {},
 }) {
   const [showCustomIdeaInput, setShowCustomIdeaInput] = useState(Boolean(customDirection));
 
@@ -1992,6 +1995,8 @@ export function Screen05Opening({
   isLoadingHooks = false,
   onContinue,
   onBack,
+  userContext = {},
+  selectedDirection = null,
 }) {
   const [editingHookId, setEditingHookId] = useState(null);
   const [editLineText, setEditLineText] = useState('');

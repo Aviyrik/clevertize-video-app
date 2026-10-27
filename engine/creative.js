@@ -93,12 +93,22 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, format = "UGC / Creator-style" }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style" }) {
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
   const isComedy = /comedy|funny/i.test(cleanFormat);
   const isStory = /story/i.test(cleanFormat) && !isDemo;
   const isUGC = /ugc|creator/i.test(cleanFormat) || (!isDemo && !isComedy && !isStory);
+
+  const langLower = String(language || "English").toLowerCase().trim();
+  const isEng = !language || (langLower.includes("eng") && !langLower.includes("hinglish"));
+  const isHinglish = langLower.includes("hinglish");
+
+  const langRule = isEng
+    ? "CANONICAL FILM LANGUAGE: English. Ideas, titles, and angles must be written in English. Do NOT impose regional Indian language stereotypes."
+    : isHinglish
+    ? "CANONICAL FILM LANGUAGE: Hinglish. Creative territories and concepts should resonate with modern, bilingual Indian audiences using conversational Hinglish culture. NEVER default to Kannada, Tamil, Telugu, or an unrelated regional language based on brand headquarters city."
+    : `CANONICAL FILM LANGUAGE: ${language}. Creative territories and concepts should authentically reflect ${language} cultural context. Never infer or substitute a different regional language based on the brand's corporate headquarters city or location.`;
 
   const formatDirectionPrompt = isDemo
     ? `MANDATORY CREATIVE FORMAT: PRODUCT DEMO ("Show the product in action")
@@ -130,6 +140,10 @@ CRITICAL CONSTRAINT: Every creative territory proposed MUST feel authentic, crea
 Each territory must strictly honour the chosen creative format below:
 ${formatDirectionPrompt}
 
+LANGUAGE AND CULTURAL CONTEXT:
+${langRule}
+CRITICAL PRINCIPLE: The film's explicit canonical language (${language}) is the ONLY source of truth. Never assume or infer a different regional language (such as Kannada, Tamil, or Telugu) from the brand name, corporate headquarters, or business location (e.g. Bangalore, Mumbai, Chennai).
+
 Mark exactly one territory as recommended: true.
 
 Output strictly valid JSON between @@JSON@@ and @@END@@:
@@ -147,9 +161,10 @@ Output strictly valid JSON between @@JSON@@ and @@END@@:
 @@END@@`;
 
   const content = `BRAND: ${businessName} (${businessType})
-TOWN: ${town || "Universal"}
+TOWN: ${town || "Universal (Pan-India National)"}
 BRIEF: ${brief || "Promote brand"}
 CHOSEN CREATIVE FORMAT: ${cleanFormat || "UGC / Creator-style"}
+CANONICAL FILM LANGUAGE: ${language}
 AUDIENCE INSIGHT: ${research?.audienceInsight || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || "Relatable problem-first story"}
 UPCOMING OCCASION: ${festival?.name || "None"}`;
@@ -270,13 +285,156 @@ UPCOMING OCCASION: ${festival?.name || "None"}`;
 }
 
 /**
+ * Validates a single hook line against the chosen canonical language.
+ * Enforces correct script and checks for incompatible regional languages.
+ * For Hinglish:
+ * - Strictly forbids Dravidian scripts (Kannada, Tamil, Telugu, Malayalam) and other non-Devanagari scripts (Bengali, Gujarati, Gurmukhi).
+ * - Requires Devanagari script (Rule M4).
+ * - Forbids South Indian transliterated colloquial tokens.
+ */
+function validateHookLine(line, language = "English") {
+  if (!line || typeof line !== "string" || !line.trim()) {
+    return { valid: false, reason: "Empty hook line" };
+  }
+  const clean = line.trim();
+  const langLower = String(language || "English").toLowerCase().trim();
+
+  const KANNADA = /[\u0C80-\u0CFF]/;
+  const TELUGU = /[\u0C00-\u0C7F]/;
+  const TAMIL = /[\u0B80-\u0BFF]/;
+  const MALAYALAM = /[\u0D00-\u0D7F]/;
+  const BENGALI = /[\u0980-\u09FF]/;
+  const GUJARATI = /[\u0A80-\u0AFF]/;
+  const GURMUKHI = /[\u0A00-\u0A7F]/;
+  const DEVANAGARI = /[\u0900-\u097F]/;
+  const LATIN = /[a-zA-Z]/;
+
+  // English: Latin only, absolutely NO Indic scripts
+  if (langLower.includes("eng") && !langLower.includes("hinglish")) {
+    if (DEVANAGARI.test(clean) || KANNADA.test(clean) || TELUGU.test(clean) || TAMIL.test(clean) || MALAYALAM.test(clean) || BENGALI.test(clean) || GUJARATI.test(clean) || GURMUKHI.test(clean)) {
+      return { valid: false, reason: `English hook contains Indic script: "${clean.slice(0, 40)}"` };
+    }
+    if (!LATIN.test(clean)) {
+      return { valid: false, reason: `English hook has no Latin characters: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Hinglish: Devanagari + English loanwords (M4), strictly NO Dravidian or other regional scripts
+  if (langLower.includes("hinglish")) {
+    if (KANNADA.test(clean)) {
+      return { valid: false, reason: `Hinglish hook contains Kannada script: "${clean.slice(0, 40)}"` };
+    }
+    if (TAMIL.test(clean) || TELUGU.test(clean) || MALAYALAM.test(clean) || BENGALI.test(clean) || GUJARATI.test(clean) || GURMUKHI.test(clean)) {
+      return { valid: false, reason: `Hinglish hook contains incompatible regional script: "${clean.slice(0, 40)}"` };
+    }
+    if (!DEVANAGARI.test(clean)) {
+      return { valid: false, reason: `Hinglish hook missing Devanagari script (Rule M4): "${clean.slice(0, 40)}"` };
+    }
+    // Semantic / content check: forbid regional Dravidian romanized tokens if injected
+    if (/\b(namma|macha|illi|hege|idu|illa|gothilla|vanakkam|ungana|machan|anna|thambi)\b/i.test(clean)) {
+      return { valid: false, reason: `Hinglish hook contains regional Dravidian tokens: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Hindi: Devanagari script, NO regional non-Devanagari scripts
+  if (langLower === "hindi") {
+    if (KANNADA.test(clean) || TAMIL.test(clean) || TELUGU.test(clean) || MALAYALAM.test(clean) || BENGALI.test(clean) || GUJARATI.test(clean) || GURMUKHI.test(clean)) {
+      return { valid: false, reason: `Hindi hook contains non-Devanagari Indic script: "${clean.slice(0, 40)}"` };
+    }
+    if (!DEVANAGARI.test(clean)) {
+      return { valid: false, reason: `Hindi hook missing Devanagari script: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Kannada: Kannada script required, NO Devanagari or other scripts
+  if (langLower === "kannada") {
+    if (!KANNADA.test(clean)) {
+      return { valid: false, reason: `Kannada hook missing Kannada script: "${clean.slice(0, 40)}"` };
+    }
+    if (DEVANAGARI.test(clean) || TAMIL.test(clean) || TELUGU.test(clean)) {
+      return { valid: false, reason: `Kannada hook contains incompatible script: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Tamil: Tamil script required
+  if (langLower === "tamil") {
+    if (!TAMIL.test(clean)) {
+      return { valid: false, reason: `Tamil hook missing Tamil script: "${clean.slice(0, 40)}"` };
+    }
+    if (DEVANAGARI.test(clean) || KANNADA.test(clean) || TELUGU.test(clean)) {
+      return { valid: false, reason: `Tamil hook contains incompatible script: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Telugu: Telugu script required
+  if (langLower === "telugu") {
+    if (!TELUGU.test(clean)) {
+      return { valid: false, reason: `Telugu hook missing Telugu script: "${clean.slice(0, 40)}"` };
+    }
+    if (DEVANAGARI.test(clean) || KANNADA.test(clean) || TAMIL.test(clean)) {
+      return { valid: false, reason: `Telugu hook contains incompatible script: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  // Marathi: Devanagari script required
+  if (langLower === "marathi") {
+    if (!DEVANAGARI.test(clean) || KANNADA.test(clean) || TAMIL.test(clean) || TELUGU.test(clean)) {
+      return { valid: false, reason: `Marathi hook invalid script: "${clean.slice(0, 40)}"` };
+    }
+    return { valid: true };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validates an entire list of generated hooks against the chosen language.
+ */
+function validateHooksList(hooks, language = "English") {
+  if (!Array.isArray(hooks) || hooks.length === 0) {
+    return { valid: false, error: "Empty or invalid hooks array" };
+  }
+  const failures = [];
+  for (let i = 0; i < hooks.length; i++) {
+    const h = hooks[i];
+    const line = (h && (h.hookLine || h.text || h.hook || "")) || "";
+    const res = validateHookLine(line, language);
+    if (!res.valid) {
+      failures.push(`Hook #${i + 1}: ${res.reason}`);
+    }
+  }
+  if (failures.length > 0) {
+    return { valid: false, error: failures.join("; "), failures };
+  }
+  return { valid: true };
+}
+
+/**
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
-async function generateHooks({ businessName, businessType, brief, direction, language = "English", format = "UGC / Creator-style" }) {
-  const isEng = !language || /eng/i.test(language);
-  const isHin = /hindi/i.test(language);
-  const isHinglish = /hinglish/i.test(language);
-  const isMar = /marathi/i.test(language);
+async function generateHooks(params = {}) {
+  const { businessName, businessType, brief, direction, format = "UGC / Creator-style" } = params;
+  const rawLang = params.language;
+  const isExplicit = rawLang !== undefined && rawLang !== null && String(rawLang).trim() !== "";
+  const language = isExplicit ? String(rawLang).trim() : "English";
+  const langLower = String(language || "English").toLowerCase().trim();
+  const isEng = !language || (langLower.includes("eng") && !langLower.includes("hinglish"));
+  const isHin = langLower === "hindi";
+  const isHinglish = langLower.includes("hinglish");
+  const isMar = langLower === "marathi";
+  const isKan = langLower === "kannada";
+  const isTam = langLower === "tamil";
+  const isTel = langLower === "telugu";
+  const isGuj = langLower === "gujarati";
+  const isBen = langLower === "bengali";
+  const isMal = langLower === "malayalam";
+  const isPun = langLower === "punjabi";
 
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
@@ -296,13 +454,47 @@ Hooks MUST establish an intriguing interpersonal dilemma, relatable emotional mo
     : `FORMAT HOOK RULE (UGC / CREATOR-STYLE):
 Hooks MUST sound like a viral Indian mobile creator speaking directly to the viewer with authentic high-energy mobile intimacy ("Stop scrolling if you...", "The truth about...", "My honest test").`;
 
-  const langRule = isEng
-    ? "STRICT: The film's canonical language is ENGLISH. Every hookLine MUST be written in natural, fluent conversational English. Absolutely NO Hindi, NO Devanagari script, NO regional Indian language words under any circumstances."
-    : isHinglish
-    ? "STRICT: The film's canonical language is HINGLISH. Write natural spoken Hinglish (conversational Hindi with everyday English loan words) in Devanagari script."
-    : isHin
-    ? "STRICT: The film's canonical language is HINDI. Spoken hookLine MUST be in authentic spoken Hindi in Devanagari script."
-    : `STRICT: The film's canonical language is ${language}. Spoken hookLine MUST be in authentic spoken ${language}.`;
+  let langRule = "";
+  if (isEng) {
+    langRule = "STRICT: The film's canonical language is ENGLISH. Every hookLine MUST be written in natural, fluent conversational English. Absolutely NO Hindi, NO Devanagari script, NO regional Indian language words or scripts under any circumstances.";
+  } else if (isHinglish) {
+    langRule = `STRICT: The film's canonical language is HINGLISH.
+- Spoken hookLine MUST be natural conversational Hindi mixed with everyday English loan words (e.g. clinic, line, doctor, phone, app, wait, busy), written fully in Devanagari script (Rule M4).
+- HARD PROHIBITION: You must NEVER output in Kannada (ಕನ್ನಡ), Tamil (தமிழ்), Telugu (తెలుగు), Malayalam (മലയാളം), or any South Indian language or script, regardless of the brand name, corporate headquarters (e.g. Bangalore/Bengaluru), or business location. The user selected HINGLISH, so the language MUST be conversational Hinglish in Devanagari script.`;
+  } else if (isHin) {
+    langRule = `STRICT: The film's canonical language is HINDI.
+- Spoken hookLine MUST be authentic spoken Hindi written in Devanagari script.
+- HARD PROHIBITION: Do NOT output in Kannada, Tamil, Telugu, English, or any other language regardless of brand location.`;
+  } else if (isKan) {
+    langRule = `STRICT: The film's canonical language is KANNADA.
+- Spoken hookLine MUST be authentic spoken Kannada written in Kannada script (ಕನ್ನಡ ಲಿಪಿ).
+- HARD PROHIBITION: Do NOT output in Hindi, Devanagari, Tamil, or Telugu.`;
+  } else if (isTam) {
+    langRule = `STRICT: The film's canonical language is TAMIL.
+- Spoken hookLine MUST be authentic spoken Tamil written in Tamil script (தமிழ்).
+- HARD PROHIBITION: Do NOT output in Hindi, Devanagari, or other regional languages.`;
+  } else if (isTel) {
+    langRule = `STRICT: The film's canonical language is TELUGU.
+- Spoken hookLine MUST be authentic spoken Telugu written in Telugu script (తెలుగు).
+- HARD PROHIBITION: Do NOT output in Hindi, Devanagari, or other regional languages.`;
+  } else if (isMar) {
+    langRule = `STRICT: The film's canonical language is MARATHI.
+- Spoken hookLine MUST be authentic spoken Marathi written in Devanagari script.`;
+  } else if (isGuj) {
+    langRule = `STRICT: The film's canonical language is GUJARATI.
+- Spoken hookLine MUST be authentic spoken Gujarati written in Gujarati script (ગુજરાતી).`;
+  } else if (isBen) {
+    langRule = `STRICT: The film's canonical language is BENGALI.
+- Spoken hookLine MUST be authentic spoken Bengali written in Bengali script (বাংলা).`;
+  } else if (isMal) {
+    langRule = `STRICT: The film's canonical language is MALAYALAM.
+- Spoken hookLine MUST be authentic spoken Malayalam written in Malayalam script (മലയാളം).`;
+  } else if (isPun) {
+    langRule = `STRICT: The film's canonical language is PUNJABI.
+- Spoken hookLine MUST be authentic spoken Punjabi written in Gurmukhi script (ਗੁਰਮੁਖੀ).`;
+  } else {
+    langRule = `STRICT: The film's canonical language is ${language}. Spoken hookLine MUST be in authentic spoken ${language}.`;
+  }
 
   const system = `You are a short-form video viral hook specialist for Instagram Reels and YouTube Shorts.
 Generate 5 to 7 high-impact commercial opening hooks (first 3 seconds).
@@ -319,11 +511,11 @@ ${formatHookRule}
 
 MANDATORY LANGUAGE ENFORCEMENT:
 ${langRule}
-CRITICAL PRINCIPLE: Never infer output language from the brand name, product category, city, country, or cultural context. The film's explicit language setting (${language}) is the ONLY source of truth.
+CRITICAL PRINCIPLE: Never infer output language from the brand name, product category, city, country, corporate headquarters, or cultural context. The film's explicit language setting (${language}) is the ONLY source of truth.
 
 Provide:
 - archetype (name of the hook style)
-- hookLine: spoken line strictly in ${language} (${isEng ? "natural conversational English only" : "Devanagari script for Hindi/Hinglish/Marathi"})
+- hookLine: spoken line strictly in ${language} (${isEng ? "natural conversational English only" : isHinglish || isHin || isMar ? "Devanagari script" : isKan ? "Kannada script (ಕನ್ನಡ)" : isTam ? "Tamil script (தமிழ்)" : isTel ? "Telugu script (తెలుగు)" : `${language} script`})
 - visualAction: vivid physical opening action in English (1-2 sentences)
 - recommended: true for the top option
 
@@ -345,20 +537,67 @@ Return valid JSON between @@JSON@@ and @@END@@:
 BRIEF: ${brief || "Promote brand"}
 CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
-CANONICAL FILM LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}
+LOCATION: ${direction?.town || "Pan-India / Universal"}`;
 
-  try {
-    const raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
-    let list = parseJSONBlock(raw);
-    if (list && Array.isArray(list.hooks)) list = list.hooks;
-    if (Array.isArray(list) && list.length) return list;
-  } catch (e) {
-    console.warn("[hooks] fallback:", e.message);
+  const MAX_RETRIES = 2;
+  let lastFailureReason = "";
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const retryCorrection = attempt > 0 && lastFailureReason
+      ? `\n\nCRITICAL RETRY CORRECTION (Attempt ${attempt + 1}):
+Your previous output was REJECTED because: ${lastFailureReason}.
+You MUST generate spoken hooks strictly complying with ${language}.
+Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்), Telugu (తెలుగు), or any other language when ${language} is requested.`
+      : "";
+
+    try {
+      const raw = await callClaude({
+        system: system + retryCorrection,
+        content: content + (attempt > 0 ? `\n\n(Retry ${attempt}: strictly adhere to ${language})` : ""),
+        maxTokens: 2000,
+        thinking: false,
+      });
+      let list = parseJSONBlock(raw);
+      if (list && Array.isArray(list.hooks)) list = list.hooks;
+      if (Array.isArray(list) && list.length > 0) {
+        list = list.map((h, i) => ({
+          ...h,
+          id: h.id || `hook_${i + 1}`,
+          hookLine: h.hookLine || h.text || h.hook || "",
+          text: h.text || h.hookLine || h.hook || "",
+          archetype: h.archetype || h.type || "Problem",
+          type: h.type || (h.archetype ? h.archetype.split("/")[0].trim() : "Problem"),
+        }));
+
+        if (!isExplicit) {
+          return list;
+        }
+
+        const val = validateHooksList(list, language);
+        if (val.valid) {
+          return list;
+        }
+        lastFailureReason = val.error;
+        console.warn(`[hooks] attempt ${attempt + 1} validation failure for language "${language}": ${val.error}`);
+      } else {
+        lastFailureReason = "Unparseable or empty hooks list";
+      }
+    } catch (e) {
+      console.warn(`[hooks] attempt ${attempt + 1} call error:`, e.message);
+      lastFailureReason = e.message;
+    }
   }
 
-  const getHookLine = (eng, hin, mar) => {
+  console.warn(`[hooks] retries exhausted for language "${language}". Utilizing verified language-appropriate fallback.`);
+
+  const getHookLine = (eng, hin, hing, mar, kan, tam, tel) => {
+    if (isKan) return kan || eng;
+    if (isTam) return tam || eng;
+    if (isTel) return tel || eng;
     if (isMar) return mar || hin;
-    if (isHin || isHinglish) return hin;
+    if (isHinglish) return hing || hin;
+    if (isHin) return hin;
     return eng; // English is the canonical default
   };
 
@@ -366,10 +605,24 @@ CANONICAL FILM LANGUAGE: ${language}`;
     {
       id: "hook_1",
       archetype: "Problem / Everyday Crisis",
+      type: "Problem",
       hookLine: getHookLine(
         "Wait, did you run out of this again?",
         "अरे, ये फिर से ख़त्म हो गया?!",
-        "अरे, हे पुन्हा संपले की काय?!"
+        "Wait, ये फिर से ख़त्म हो गया?!",
+        "अरे, हे पुन्हा संपले की काय?!",
+        "ನೋಡಿ — ಇದು ಮತ್ತೆ ಮುಗಿದುಹೋಯ್ತಾ?!",
+        "நில்லுங்கள் — இது மறுபடியும் தீர்ந்துவிட்டதா?!",
+        "ఆగండి — ఇది మళ్లీ అయిపోయిందా?!"
+      ),
+      text: getHookLine(
+        "Wait, did you run out of this again?",
+        "अरे, ये फिर से ख़त्म हो गया?!",
+        "Wait, ये फिर से ख़त्म हो गया?!",
+        "अरे, हे पुन्हा संपले की काय?!",
+        "ನೋಡಿ — ಇದು ಮತ್ತೆ ಮುಗಿದುಹೋಯ್ತಾ?!",
+        "நில்லுங்கள் — இது மறுபடியும் தீர்ந்துவிட்டதா?!",
+        "ఆగండి — ఇది మళ్లీ అయಿపోయిందా?!"
       ),
       visualAction: "A person checks an empty container or shelf with sudden realization and turns around in urgency.",
       angle: "Everyday household panic",
@@ -378,10 +631,24 @@ CANONICAL FILM LANGUAGE: ${language}`;
     {
       id: "hook_2",
       archetype: "Curiosity / Counter-Intuitive",
+      type: "Curiosity",
       hookLine: getHookLine(
         "Most people get this completely wrong.",
         "ज्यादातर लोग यहाँ गलती करते हैं।",
-        "बहुतेक लोक इथेच चूक करतात."
+        "90% लोग यहाँ सबसे बड़ी गलती करते हैं।",
+        "बहुतेक लोक इथेच चूक करतात.",
+        "ಹೆಚ್ಚಿನ ಜನರು ಇಲ್ಲಿಯೇ ತಪ್ಪು ಮಾಡುತ್ತಾರೆ.",
+        "பெரும்பாலான மக்கள் இங்குதான் தவறு செய்கிறார்கள்.",
+        "చాలా మంది ఇక్కడే పొరపాటు చేస్తారు."
+      ),
+      text: getHookLine(
+        "Most people get this completely wrong.",
+        "ज्यादातर लोग यहाँ गलती करते हैं।",
+        "90% लोग यहाँ सबसे बड़ी गलती करते हैं।",
+        "बहुतेक लोक इथेच चूक करतात.",
+        "ಹೆಚ್ಚಿನ ಜನರು ಇಲ್ಲಿಯೇ ತಪ್ಪು ಮಾಡುತ್ತಾರೆ.",
+        "பெரும்பாலான மக்கள் இங்குதான் தவறு செய்கிறார்கள்.",
+        "చాలా మంది ఇక్కడే పొరపాటు చేస్తారు."
       ),
       visualAction: isStory
         ? "A newcomer pauses hesitantly inside the entrance, taking in the energetic room before making eye contact with the lead trainer."
@@ -392,10 +659,24 @@ CANONICAL FILM LANGUAGE: ${language}`;
     {
       id: "hook_3",
       archetype: isStory ? "Relatable Dilemma" : "Creator / UGC Secret",
+      type: isStory ? "Relatable Dilemma" : "Creator / UGC",
       hookLine: getHookLine(
         isStory ? "I almost walked away today, but then this happened." : "If you live in this area, you need to know this.",
-        isStory ? "मैं आज बस वापस लौटने ही वाली थी, पर फिर कुछ ऐसा हुआ।" : "अगर आप यहाँ रहते हैं, तो ये सीक्रेट जान लीजिए।",
-        isStory ? "मी आज मागे फिरणारच होते, पण मग असं काही घडलं." : "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या."
+        isStory ? "मैं आज बस वापस लौटने ही वाली थी, पर फिर कुछ ऐसा हुआ।" : "अगर आप यहाँ रहते हैं, तो ये बात जान लीजिए।",
+        isStory ? "मैं आज बस वापस जाने ही वाली थी, पर फिर ये टर्न आया।" : "अगर आप इस एरिया में रहते हैं, तो ये सीक्रेट जान लीजिए।",
+        isStory ? "मी आज मागे फिरणारच होते, पण मग असं काही घडलं." : "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या.",
+        isStory ? "ನಾನು ಇಂದು ಹಿಂತಿರುಗಲಿದ್ದೆ, ಆದರೆ ನಂತರ ಹೀಗಾಯಿತು." : "ನೀವು ಇಲ್ಲೇ ವಾಸಿಸುತ್ತಿದ್ದರೆ, ಈ ವಿಷಯ ನಿಮಗೆ ತಿಳಿದಿರಬೇಕು.",
+        isStory ? "நான் இன்று திரும்பிச் செல்லவிருந்தேன், ஆனால் பிறகு இது நடந்தது." : "நீங்கள் இங்கே வசிக்கிறீர்கள் என்றால், இந்த ரகசியம் உங்களுக்குத் தெரிய வேண்டும்.",
+        isStory ? "నేను ఈరోజు వెనుదిరగబోయాను, కానీ తర్వాత ఇది జరిగింది." : "మీరు ఇక్కడే ఉంటున్నట్లయితే, ఈ విషయం మీకు తప్పక తెలియాలి."
+      ),
+      text: getHookLine(
+        isStory ? "I almost walked away today, but then this happened." : "If you live in this area, you need to know this.",
+        isStory ? "मैं आज बस वापस लौटने ही वाली थी, पर फिर कुछ ऐसा हुआ।" : "अगर आप यहाँ रहते हैं, तो ये बात जान लीजिए।",
+        isStory ? "मैं आज बस वापस जाने ही वाली थी, पर फिर ये टर्न आया।" : "अगर आप इस एरिया में रहते हैं, तो ये सीक्रेट जान लीजिए।",
+        isStory ? "मी आज मागे फिरणारच होते, पण मग असं काही घडलं." : "जर तुम्ही या भागात राहता, तर हे गुपित नक्की जाणून घ्या.",
+        isStory ? "ನಾನು ಇಂದು ಹಿಂತಿರುಗಲಿದ್ದೆ, ಆದರೆ ನಂತರ ಹೀಗಾಯಿತು." : "ನೀವು ಇಲ್ಲೇ ವಾಸಿಸುತ್ತಿದ್ದರೆ, ಈ ವಿಷಯ ನಿಮಗೆ ತಿಳಿದಿರಬೇಕು.",
+        isStory ? "நான் இன்று திரும்பிச் செல்லவிருந்தேன், ஆனால் பிறகு இது நடந்தது." : "நீங்கள் இங்கே வசிக்கிறீர்கள் என்றால், இந்த ரகசியம் உங்களுக்குத் தெரிய வேண்டும்.",
+        isStory ? "నేను ఈరోజు వెనుదిరగబోయాను, కానీ తర్వాత ఇది జరిగింది." : "మీరు ఇక్కడే ఉంటున్నట్లయితే, ఈ విషయం మీకు తప్పక తెలియాలి."
       ),
       visualAction: isStory
         ? "Two characters interact on the gym floor — one encouraging the other through an initial hesitation with warm reassurance."
@@ -406,10 +687,24 @@ CANONICAL FILM LANGUAGE: ${language}`;
     {
       id: "hook_4",
       archetype: "Visual Action",
+      type: "Visual",
       hookLine: getHookLine(
         "Stop doing this right now!",
-        "रुको, ये मत करना!",
-        "थांबा, हे मुळीच करू नका!"
+        "रुको, ये गलती मत करना!",
+        "रुको, ये गलती मत करना!",
+        "थांबा, ही चूक मुळीच करू नका!",
+        "ನಿಲ್ಲಿಸಿ, ಈ ತಪ್ಪು ಮಾಡಬೇಡಿ!",
+        "நில்லுங்கள், இந்த தவறை செய்யாதீர்கள்!",
+        "ఆగండి, ఈ తప్పు చేయకండి!"
+      ),
+      text: getHookLine(
+        "Stop doing this right now!",
+        "रुको, ये गलती मत करना!",
+        "रुको, ये गलती मत करना!",
+        "थांबा, ही चूक मुळीच करू नका!",
+        "ನಿಲ್ಲಿಸಿ, ಈ ತಪ್ಪು ಮಾಡಬೇಡಿ!",
+        "நில்லுங்கள், இந்த தவறை செய்யாதீர்கள்!",
+        "ఆగండి, ఈ తప్పు చేయకండి!"
       ),
       visualAction: "Hands rush in to catch a slipping product just before it hits the counter, freezing the frame.",
       angle: "Immediate motion stop",
@@ -418,10 +713,24 @@ CANONICAL FILM LANGUAGE: ${language}`;
     {
       id: "hook_5",
       archetype: "Demonstration / Proof",
+      type: "Demonstration",
       hookLine: getHookLine(
         "See the difference in literally three seconds.",
         "सिर्फ तीन सेकंड में असली फर्क देखिए।",
-        "फक्त तीन सेकंदात खरा फरक बघा."
+        "सिर्फ 3 seconds में असली फर्क देखिए।",
+        "फक्त तीन सेकंदात खरा फरक बघा.",
+        "ಕೇವಲ 3 ಸೆಕೆಂಡುಗಳಲ್ಲಿ ನಿಜವಾದ ವ್ಯತ್ಯಾಸ ನೋಡಿ.",
+        "வெறும் 3 வினாடிகளில் உண்மையான வித்தியாசத்தைப் பாருங்கள்.",
+        "కేవలం 3 సెకన్లలో అసలైన తేడాను చూడండి."
+      ),
+      text: getHookLine(
+        "See the difference in literally three seconds.",
+        "सिर्फ तीन सेकंड में असली फर्क देखिए।",
+        "सिर्फ 3 seconds में असली फर्क देखिए।",
+        "फक्त तीन सेकंदात खरा फरक बघा.",
+        "ಕೇವಲ 3 ಸೆಕೆಂಡುಗಳಲ್ಲಿ ನಿಜವಾದ ವ್ಯತ್ಯಾಸ ನೋಡಿ.",
+        "வெறும் 3 வினாடிகளில் உண்மையான வித்தியாசத்தைப் பாருங்கள்.",
+        "కేవలం 3 సెకన్లలో అసలైన తేడాను చూడండి."
       ),
       visualAction: "Split screen action contrasting slow ordinary result with instant premium result.",
       angle: "Immediate visual proof",
@@ -563,7 +872,9 @@ async function generateStoryWorld({ businessName, businessType, town, brief, dir
 
   const storyLangRule = isEng
     ? "CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly ENGLISH. Spoken dialogue in beats MUST be written in natural conversational English. Absolutely NO Hindi or Devanagari script."
-    : `CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly ${language}. Spoken dialogue in beats MUST be written in authentic ${language} (${isHin || isHinglish || isMar ? "Devanagari script" : language}).`;
+    : isHinglish
+    ? "CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly HINGLISH. Spoken dialogue in beats MUST be written in natural conversational Hinglish in Devanagari script. Under NO circumstances output in Kannada, Tamil, Telugu, or any other regional language."
+    : `CANONICAL FILM LANGUAGE DIRECTIVE: Output language is strictly ${language}. Spoken dialogue in beats MUST be written in authentic ${language} (${isHin || isMar ? "Devanagari script" : `${language} script`}).`;
 
   const system = `You are a commercial film director shaping the concise story architecture (4 beats) and core anchors for a video commercial.
 
@@ -831,7 +1142,7 @@ Follow all Product Spine Section 8 rules:
 - Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b).
 - Exactly 2 characters throughout with consistent look and wardrobe.
 - Maximum 2 spoken dialogue lines per character per scene.
-- Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)."}
+- Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : /hindi|hinglish|marathi/i.test(form.language) ? "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)." : `Spoken dialogue MUST be written in authentic ${form.language} script.`}
 - CAMERA SETUP VARIETY (Rule M13c): Use at least 3 distinct camera setups across scenes with motivated camera motion, no two consecutive scenes identical.
 - EYE-LINE RULE (Rule M13d): In EVERY scene where two characters talk or interact, the Visual description MUST explicitly state that they look at each other, face each other, or make eye contact (e.g. "Ramesh looks at Sunita as he speaks", "Sunita turns to face Ramesh"). Never omit eye contact when both characters are in the scene or speaking, and never have characters stare into distance or look away.
 ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration leads. Dialogue is concise and demonstrator-led; single presenter or dual interaction allowed without artificial conversational filler." : format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 of the 4 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
@@ -935,7 +1246,7 @@ Rules:
 - Visual MUST start with "Same setting:" preserving the approved room: ${setting || "Same room"}.
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
-- Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : "Devanagari script if Hindi/Hinglish/Marathi"}).
+- Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : /hindi|hinglish|marathi/i.test(form?.language) ? "Devanagari script if Hindi/Hinglish/Marathi" : `authentic ${form?.language} script`}).
 - Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.`;
 
   const content = `ORIGINAL SCENE:
@@ -1727,6 +2038,28 @@ CATEGORY-SPECIFIC MANDATES FOR FASHION & APPAREL:
 - STRICT NEGATIVE RULES: NEVER mention "free consultation" (unless boutique styling advice), "repairs", "maintenance", or "diagnostics".`;
   }
 
+  const langLower = String(language || "English").toLowerCase().trim();
+  const isHinglish = langLower.includes("hinglish");
+  const isHin = langLower === "hindi";
+  const isMar = langLower === "marathi";
+  const isKan = langLower === "kannada";
+  const isTam = langLower === "tamil";
+  const isTel = langLower === "telugu";
+
+  const simpleLangInstruction = isEng
+    ? "Natural conversational English. Absolutely NO Hindi, Devanagari, or Indic scripts."
+    : isHinglish
+    ? "Conversational Hinglish (Hindi with everyday English words) written strictly in Devanagari script (Rule M4). Under NO circumstances output in Kannada, Tamil, Telugu, or other South Indian languages based on brand headquarters."
+    : isHin || isMar
+    ? `Conversational ${language} written in Devanagari script.`
+    : isKan
+    ? "Conversational Kannada written in Kannada script (ಕನ್ನಡ ಲಿಪಿ)."
+    : isTam
+    ? "Conversational Tamil written in Tamil script (தமிழ்)."
+    : isTel
+    ? "Conversational Telugu written in Telugu script (తెలుగు)."
+    : `Conversational dialogue written in authentic ${language} script.`;
+
   const system = `You are an elite short-form commercial video director creating high-converting ads for Indian local businesses and brands.
 Generate exactly 3 complete, distinct, and realistic Ad Packages for this business.
 Each Ad Package must have:
@@ -1740,7 +2073,8 @@ Each Ad Package must have:
 3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).
 
 CRITICAL SCRIPT CONSTRAINTS:
-- Language: ${language}. ${isEng ? "Natural conversational English." : "Conversational dialogue written in Devanagari script."}
+- Language: ${language}. ${simpleLangInstruction}
+- CRITICAL: Never infer or substitute a regional language based on brand headquarters city or location. The explicit language setting (${language}) is the sole authority.
 - Exactly 4 scenes per package:
   Scene 1: Hook (0-3s, pattern interrupt)
   Scene 2: Build (3-8s, product/service demo in action)
@@ -1840,4 +2174,6 @@ module.exports = {
   synthesizeMasterScript,
   rewriteScene,
   generateSimpleAdPackages,
+  validateHookLine,
+  validateHooksList,
 };

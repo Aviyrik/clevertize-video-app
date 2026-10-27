@@ -927,7 +927,7 @@ app.post("/api/script/validate-and-import", async (req, res) => {
 // 2) Creative Direction
 app.post("/api/creative/directions", async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival, format, creativeStyle } = req.body || {};
+    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language } = req.body || {};
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -935,6 +935,7 @@ app.post("/api/creative/directions", async (req, res) => {
       brief,
       research,
       festival,
+      language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
     });
     res.json(result);

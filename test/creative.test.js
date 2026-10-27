@@ -617,3 +617,184 @@ test("20. Storytelling format enforces third-person cinematic perspective and ba
   assert.ok(compiled.includes("STRICT STORYTELLING CAM"), "Shot prompt compiler must include strict storytelling camera rule");
   assert.ok(compiled.includes("DO NOT hold smartphones"), "Shot prompt compiler must forbid holding smartphones");
 });
+
+test("21. Language Selection & Validation: Hinglish, Hindi, Kannada, Tamil, Telugu, and Fallback Preservation", async () => {
+  const { validateHookLine, validateHooksList } = creative;
+
+  // 1. Validator unit checks
+  assert.strictEqual(validateHookLine("Wait, ये फिर से ख़त्म हो गया?!", "Hinglish").valid, true);
+  assert.strictEqual(validateHookLine("Wait, did you run out of this again?", "Hinglish").valid, false); // pure english fails Hinglish
+  assert.strictEqual(validateHookLine("ನೋಡಿ — ಇದು ಮತ್ತೆ ಮುಗಿದುಹೋಯ್ತಾ?!", "Hinglish").valid, false); // Kannada fails Hinglish
+  assert.strictEqual(validateHookLine("ನೋಡಿ — ಇದು ಮತ್ತೆ ಮುಗಿದುಹೋಯ್ತಾ?!", "Kannada").valid, true);
+  assert.strictEqual(validateHookLine("Wait, did you run out of this again?", "Kannada").valid, false);
+  assert.strictEqual(validateHookLine("நில்லுங்கள் — இது மறுபடியும் தீர்ந்துவிட்டதா?!", "Tamil").valid, true);
+  assert.strictEqual(validateHookLine("ఆగండి — ఇది మళ్లీ అయిపోయిందా?!", "Telugu").valid, true);
+  assert.strictEqual(validateHookLine("Wait, did you run out of this again?", "English").valid, true);
+  assert.strictEqual(validateHookLine("Wait, ये फिर से ख़त्म हो गया?!", "English").valid, false); // Devanagari fails English
+
+  // 2. Practo located in Bangalore / India with Hinglish selected -> zero Kannada/Tamil/Telugu, pure Devanagari mixed
+  const practoHinglish = await creative.generateHooks({
+    businessName: "Practo",
+    businessType: "Healthcare / Clinic",
+    brief: "Consult top doctors online in 10 minutes",
+    language: "Hinglish",
+    direction: { town: "Bangalore, India", title: "Instant Doctor Consultation" }
+  });
+  assert.ok(practoHinglish.length >= 4);
+  for (const h of practoHinglish) {
+    const text = h.hookLine || h.text;
+    assert.ok(/[\u0900-\u097F]/.test(text), `Expected Devanagari in Hinglish hook: ${text}`);
+    assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false, `Kannada leaked into Hinglish hook: ${text}`);
+    assert.strictEqual(/[\u0B80-\u0BFF]/.test(text), false, `Tamil leaked into Hinglish hook: ${text}`);
+    assert.strictEqual(/[\u0C00-\u0C7F]/.test(text), false, `Telugu leaked into Hinglish hook: ${text}`);
+  }
+
+  // 3. Bengaluru-based brand with Hinglish selected: zero Kannada script
+  const blrHinglish = await creative.generateHooks({
+    businessName: "Bengaluru Fitness Club",
+    businessType: "Gym / Fitness Center",
+    brief: "Personal training sessions with diet coaching",
+    language: "Hinglish",
+    direction: { town: "Bengaluru, Karnataka" }
+  });
+  assert.ok(blrHinglish.length >= 4);
+  for (const h of blrHinglish) {
+    const text = h.hookLine || h.text;
+    assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false, `Kannada script found in Bangalore Hinglish hook: ${text}`);
+    assert.ok(/[\u0900-\u097F]/.test(text), `Devanagari expected in Hinglish hook: ${text}`);
+  }
+
+  // 4. Hindi selected: Devanagari output, zero Dravidian scripts
+  const hindiHooks = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Hindi"
+  });
+  assert.ok(hindiHooks.length >= 4);
+  for (const h of hindiHooks) {
+    const text = h.hookLine || h.text;
+    assert.ok(/[\u0900-\u097F]/.test(text), `Expected Devanagari in Hindi hook: ${text}`);
+    assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false);
+    assert.strictEqual(/[\u0B80-\u0BFF]/.test(text), false);
+    assert.strictEqual(/[\u0C00-\u0C7F]/.test(text), false);
+  }
+
+  // 5. Kannada selected: Kannada script output
+  const kannadaHooks = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Kannada"
+  });
+  assert.ok(kannadaHooks.length >= 4);
+  assert.ok(/[\u0C80-\u0CFF]/.test(kannadaHooks[0].hookLine));
+
+  // 6. Tamil selected: Tamil script output
+  const tamilHooks = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Tamil"
+  });
+  assert.ok(tamilHooks.length >= 4);
+  assert.ok(/[\u0B80-\u0BFF]/.test(tamilHooks[0].hookLine));
+
+  // 7. Telugu selected: Telugu script output
+  const teluguHooks = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Telugu"
+  });
+  assert.ok(teluguHooks.length >= 4);
+  assert.ok(/[\u0C00-\u0C7F]/.test(teluguHooks[0].hookLine));
+
+  // 8. Missing language value: defaults to English (no Indian scripts)
+  const missingLangHooks = await creative.generateHooks({
+    businessName: "Practo",
+    brief: "Instant consult"
+  });
+  assert.ok(missingLangHooks.length >= 4);
+  assert.strictEqual(/[\u0900-\u0D7F]/.test(missingLangHooks[0].hookLine), false);
+
+  // 9. Retry behavior: invalid AI output triggers retry, successful on second attempt
+  anthropicQueue.push(J({
+    hooks: [
+      { id: "h1", archetype: "Problem", hookLine: "ಇದು ತಪ್ಪು — ನೋಡಿ!", recommended: true }, // Invalid Kannada for Hinglish
+      { id: "h2", archetype: "Curiosity", hookLine: "ಕೇವಲ 3 ಸೆಕೆಂಡುಗಳಲ್ಲಿ...", recommended: false }
+    ]
+  }));
+  anthropicQueue.push(J({
+    hooks: [
+      { id: "h1", archetype: "Problem", hookLine: "Wait, डॉक्टर की अपॉइंटमेंट इतनी जल्दी?!", recommended: true }, // Valid Hinglish
+      { id: "h2", archetype: "Curiosity", hookLine: "90% लोग डॉक्टर कंसल्टेशन में ये गलती करते हैं।", recommended: false },
+      { id: "h3", archetype: "Creator / UGC", hookLine: "अगर आपको तुरंत प्रिस्क्रिप्शन चाहिए, तो ये तरीका जान लीजिए।", recommended: false },
+      { id: "h4", archetype: "Visual", hookLine: "रुको, ये लक्षण इग्नोर मत करना!", recommended: false },
+      { id: "h5", archetype: "Proof", hookLine: "सिर्फ 10 minutes में वेरीफाइड डॉक्टर से बात कीजिए।", recommended: false }
+    ]
+  }));
+  const retrySuccess = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Hinglish"
+  });
+  assert.ok(retrySuccess.length >= 4);
+  assert.strictEqual(retrySuccess[0].hookLine, "Wait, डॉक्टर की अपॉइंटमेंट इतनी जल्दी?!");
+
+  // 10. Retry exhaustion: all attempts invalid -> falls back safely to verified Hinglish fallback
+  anthropicQueue.push(J({ hooks: [{ id: "bad1", hookLine: "ಕನ್ನಡ ವಾಕ್ಯ 1" }] }));
+  anthropicQueue.push(J({ hooks: [{ id: "bad2", hookLine: "ಕನ್ನಡ ವಾಕ್ಯ 2" }] }));
+  anthropicQueue.push(J({ hooks: [{ id: "bad3", hookLine: "ಕನ್ನಡ ವಾಕ್ಯ 3" }] }));
+  const fallbackHooks = await creative.generateHooks({
+    businessName: "Practo",
+    language: "Hinglish"
+  });
+  assert.ok(fallbackHooks.length >= 4);
+  assert.ok(/[\u0900-\u097F]/.test(fallbackHooks[0].hookLine));
+  assert.strictEqual(/[\u0C80-\u0CFF]/.test(fallbackHooks[0].hookLine), false);
+
+  // 11. Downstream preservation: generateDirections includes language
+  const dirs = await creative.generateDirections({
+    businessName: "Practo",
+    language: "Hinglish"
+  });
+  assert.ok(Array.isArray(dirs) && dirs.length >= 3);
+
+  // 12. Downstream preservation: Story World preserves language
+  const storyWorld = await creative.generateStoryWorld({
+    businessName: "Practo",
+    language: "Hinglish",
+    brief: "Consult doctor on phone"
+  });
+  assert.ok(storyWorld.beats.length === 4);
+});
+
+test("22. End-to-end API: /api/creative/directions and /api/creative/hooks preserve selected language", async () => {
+  // Test /api/creative/directions accepts and forwards language
+  const dirRes = await fetch(`${base}/api/creative/directions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      businessName: "Practo",
+      businessType: "Healthcare / Clinic",
+      brief: "Consult top doctors online",
+      language: "Hinglish"
+    })
+  });
+  assert.strictEqual(dirRes.status, 200);
+  const dirData = await dirRes.json();
+  assert.ok(Array.isArray(dirData) && dirData.length >= 3);
+
+  // Test /api/creative/hooks returns Hinglish hooks with zero Kannada
+  const hookRes = await fetch(`${base}/api/creative/hooks`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      businessName: "Practo",
+      businessType: "Healthcare / Clinic",
+      brief: "Consult top doctors online",
+      language: "Hinglish",
+      direction: { town: "Bangalore, India", title: "Instant Doctor Consultation" }
+    })
+  });
+  assert.strictEqual(hookRes.status, 200);
+  const hookData = await hookRes.json();
+  assert.ok(Array.isArray(hookData) && hookData.length >= 4);
+  for (const h of hookData) {
+    const text = h.hookLine || h.text;
+    assert.ok(/[\u0900-\u097F]/.test(text));
+    assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false);
+  }
+});
