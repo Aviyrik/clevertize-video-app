@@ -2406,3 +2406,18 @@ test('Streamlined Script Stage: Directly follows Opening Hook, embedding Cast & 
     'Script stage must offer direct video generation CTA'
   );
 });
+
+test('Screen07Script: Scene Parser extracts multi-line visuals and multi-speaker dialogues with speaker badges', () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  assert.ok(guidedStudioSrc.includes('s.dialogues && s.dialogues.length > 0'), 'Screen07Script must render multiple dialogue lines if present');
+  assert.ok(guidedStudioSrc.includes('d.speaker || s.character'), 'Screen07Script must label dialogues with speaker badge');
+  assert.ok(guidedStudioSrc.includes('Visual action scene · No spoken dialogue'), 'Screen07Script must provide explicit fallback when scene has no spoken dialogue');
+  assert.ok(guidedStudioSrc.includes('Audio\\s*\\/\\s*Dialogue\\s*\\/\\s*Voiceover'), 'Parser must support standard Audio / Dialogue / Voiceover header');
+});
+
+test('Script Import (/api/script/validate-and-import): separates dialogue from visual action without hardcoded camera boilerplate', () => {
+  const serverSrc = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
+  assert.ok(!serverSrc.includes('Visual:\nBalanced medium shot in steady room lighting.'), 'Server import must not overwrite visual description with boilerplate camera line');
+  assert.ok(serverSrc.includes('sliceLines'), 'Server import must inspect sliceLines for dialogue and visual separation');
+});
+

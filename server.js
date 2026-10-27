@@ -843,6 +843,9 @@ app.post("/api/script/validate-and-import", async (req, res) => {
 
     // 1. Parse or segment into 4 scenes
     let parsed = parseOutput(rawScript);
+    const char1 = parsed.character1 || `${brand} Representative — confident, friendly, relatable presentation`;
+    const char2 = parsed.character2 || `Customer — relatable everyday buyer seeking authentic quality`;
+    const setting = parsed.setting || `Clean, inviting shop / studio space with warm natural lighting and clear product display`;
     let sceneTexts = [];
 
     if (parsed.scenes && parsed.scenes.length >= 4) {
@@ -862,16 +865,55 @@ app.post("/api/script/validate-and-import", async (req, res) => {
         const perScene = Math.max(1, Math.ceil(lines.length / 4));
         const beats = ["Scene 1 · Hook", "Scene 2 · Build", "Scene 3 · Turn", "Scene 4 · Resolution"];
         sceneTexts = [0, 1, 2, 3].map((i) => {
-          const slice = lines.slice(i * perScene, (i + 1) * perScene).join("\n") || `Scene ${i + 1} action and dialogue`;
-          return `ANNEX A\n${beats[i]}\nVisual:\nBalanced medium shot in steady room lighting.\nAnimation Elements:\nCamera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${slice}\nSound Design:\nNatural ambient room tone.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
+          const sliceLines = lines.slice(i * perScene, (i + 1) * perScene);
+          if (sliceLines.length === 0) {
+            sliceLines.push(`Scene ${i + 1} narrative and dialogue`);
+          }
+
+          const dialogueLines = [];
+          const visualLines = [];
+
+          for (const line of sliceLines) {
+            const visMatch = line.match(/^(?:Visual|Action):\s*(.+)$/i);
+            if (visMatch) {
+              visualLines.push(visMatch[1].trim());
+              continue;
+            }
+            const diaMatch = line.match(/^(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio|Dialogue|Voiceover|VO):\s*(.+)$/i);
+            if (diaMatch) {
+              dialogueLines.push(diaMatch[1].trim());
+              continue;
+            }
+            const speakerMatch = line.match(/^([A-Za-z0-9\s._'-]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
+            const isQuoted = /^["'].+["']$/.test(line.trim());
+
+            if (speakerMatch || isQuoted) {
+              dialogueLines.push(line);
+            } else {
+              visualLines.push(line);
+            }
+          }
+
+          let visualContent = visualLines.join(' ');
+          let dialogueContent = dialogueLines.join('\n');
+
+          if (!dialogueContent && visualContent) {
+            dialogueContent = visualContent;
+            visualContent = `${brand} in ${setting}.`;
+          } else if (!visualContent) {
+            const beatVisuals = [
+              `${brand} representative introduces the hook with clear product focus in ${setting}.`,
+              `${brand} representative highlights the everyday problem and relatable customer struggle.`,
+              `Engaging demonstration of ${brand} solution and key breakthrough in ${setting}.`,
+              `Clear call to action highlighting ${brand} offer and next steps in ${setting}.`
+            ];
+            visualContent = beatVisuals[i] || `Balanced medium shot in steady room lighting.`;
+          }
+
+          return `ANNEX A\n${beats[i]}\nVisual:\n${visualContent}\nAnimation Elements:\nCamera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueContent}\nSound Design:\nNatural ambient room tone.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
         });
       }
     }
-
-    // 2. Extract or infer characters & setting
-    const char1 = parsed.character1 || `${brand} Representative — confident, friendly, relatable presentation`;
-    const char2 = parsed.character2 || `Customer — relatable everyday buyer seeking authentic quality`;
-    const setting = parsed.setting || `Clean, inviting shop / studio space with warm natural lighting and clear product display`;
 
     // 3. Construct synthetic full script for gate check if needed
     let fullScriptText = rawScript;

@@ -3213,22 +3213,116 @@ export function Screen07Script({
     const beats = ['Hook / Pattern Interrupt', 'Problem & Relatability', 'Discovery & Climax', 'Call to Action & Offer'];
     const beatRole = beats[idx] || `Scene ${idx + 1}`;
 
-    // Extract dialogue and visual
-    const diaMatch = rawText.match(/(?:Dialogue|Dialogue \([^)]+\)|says):\s*"?([^"\n]+)"?/i) || rawText.match(/"([^"]+)"/);
-    const visMatch = rawText.match(/(?:Visual|Action):\s*([^\n]+)/i);
-    const audioMatch = rawText.match(/(?:Audio|Sound|SFX|Music):\s*([^\n]+)/i);
-    const camMatch = rawText.match(/(?:Camera|Shot):\s*([^\n]+)/i);
-    const charMatch = rawText.match(/(?:^|\n)([A-Z][A-Z0-9\s_]{1,16})(?:\s*\([^)]*\))?:\s*"/m);
+    const getSection = (text, startRegex, nextRegexes) => {
+      const startMatch = text.match(startRegex);
+      if (!startMatch) return '';
+      const startIdx = startMatch.index + startMatch[0].length;
+      const remaining = text.slice(startIdx);
+      let minEnd = remaining.length;
+      for (const nextRegex of nextRegexes) {
+        const nextMatch = remaining.match(nextRegex);
+        if (nextMatch && nextMatch.index < minEnd) {
+          minEnd = nextMatch.index;
+        }
+      }
+      return remaining.slice(0, minEnd).trim();
+    };
+
+    const visualSection = getSection(
+      rawText,
+      /(?:^|\n)\s*(?:Visual|Action)\s*:\s*/i,
+      [/(?:^|\n)\s*(?:Animation\s+Elements|Camera|Shot)\s*:\s*/i, /(?:^|\n)\s*(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio\s*\/\s*Dialogue|Audio|Dialogue|Voiceover)\s*:\s*/i, /(?:^|\n)\s*(?:Sound\s+Design|Sound|SFX|Music)\s*:\s*/i, /(?:^|\n)\s*Editing\s+Notes/i]
+    );
+
+    const cameraSection = getSection(
+      rawText,
+      /(?:^|\n)\s*(?:Animation\s+Elements|Camera|Shot)\s*:\s*/i,
+      [/(?:^|\n)\s*(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio\s*\/\s*Dialogue|Audio|Dialogue|Voiceover)\s*:\s*/i, /(?:^|\n)\s*(?:Sound\s+Design|Sound|SFX|Music)\s*:\s*/i, /(?:^|\n)\s*Editing\s+Notes/i]
+    );
+
+    const dialogueSection = getSection(
+      rawText,
+      /(?:^|\n)\s*(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio\s*\/\s*Dialogue|Audio|Dialogue|Voiceover)\s*:\s*/i,
+      [/(?:^|\n)\s*(?:Sound\s+Design|Sound|SFX|Music)\s*:\s*/i, /(?:^|\n)\s*Editing\s+Notes/i]
+    );
+
+    const soundSection = getSection(
+      rawText,
+      /(?:^|\n)\s*(?:Sound\s+Design|Sound|SFX|Music)\s*:\s*/i,
+      [/(?:^|\n)\s*Editing\s+Notes/i]
+    );
+
+    const defaultChar = cleanStyle === 'UGC' ? 'CREATOR' : 'ACTOR';
+
+    const dialogues = [];
+    if (dialogueSection) {
+      const lines = dialogueSection.split('\n').map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (/^(?:none|n\/a|silent|music\s+only)$/i.test(line)) continue;
+        const speakerMatch = line.match(/^([A-Za-z0-9\s._'-]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
+        if (speakerMatch) {
+          let spk = speakerMatch[1].trim();
+          let txt = speakerMatch[2].trim().replace(/^["']|["']$/g, '');
+          if (/^(?:Audio|Voiceover|VO|Dialogue)$/i.test(spk)) spk = defaultChar;
+          if (txt) {
+            dialogues.push({ speaker: spk, text: txt });
+            continue;
+          }
+        }
+        const quotedMatch = line.match(/"([^"]+)"/);
+        if (quotedMatch) {
+          dialogues.push({ speaker: defaultChar, text: quotedMatch[1].trim() });
+          continue;
+        }
+        dialogues.push({ speaker: defaultChar, text: line.replace(/^["']|["']$/g, '') });
+      }
+    }
+
+    if (dialogues.length === 0) {
+      const diaMatch = rawText.match(/(?:Dialogue|Dialogue \([^)]+\)|says):\s*"?([^"\n]+)"?/i) || rawText.match(/"([^"]+)"/);
+      if (diaMatch) {
+        const charMatch = rawText.match(/(?:^|\n)([A-Z][A-Z0-9\s_]{1,16})(?:\s*\([^)]*\))?:\s*"/m);
+        dialogues.push({
+          speaker: charMatch ? charMatch[1].trim() : defaultChar,
+          text: diaMatch[1].trim()
+        });
+      }
+    }
+
+    let visualText = visualSection;
+    if (!visualText) {
+      const visMatch = rawText.match(/(?:Visual|Action):\s*([^\n]+)/i);
+      visualText = visMatch ? visMatch[1].trim() : rawText.split('\n')[0].replace(/^SCENE\s*\d+[^:]*:\s*/i, '').trim();
+    }
+
+    let cameraText = '';
+    if (cameraSection) {
+      const camLine = cameraSection.match(/(?:^|\n)\s*Camera\s*:\s*([^\n]+)/i);
+      cameraText = camLine ? camLine[1].trim() : cameraSection.split('\n')[0].trim();
+    } else {
+      const camMatch = rawText.match(/(?:Camera|Shot):\s*([^\n]+)/i);
+      cameraText = camMatch ? camMatch[1].trim() : null;
+    }
+
+    let audioText = soundSection;
+    if (!audioText) {
+      const audioMatch = rawText.match(/(?:Audio|Sound|SFX|Music):\s*([^\n]+)/i);
+      audioText = audioMatch ? audioMatch[1].trim() : null;
+    }
+
+    const primaryChar = dialogues.length > 0 ? dialogues[0].speaker : defaultChar;
+    const primaryDialogue = dialogues.length > 0 ? dialogues.map((d) => `${d.speaker}: "${d.text}"`).join(' ') : null;
 
     return {
       title: `SCENE ${idx + 1}`,
       timing: idx === 0 ? '0–3s' : idx === 1 ? '3–8s' : idx === 2 ? '8–14s' : '14–20s',
       beatRole,
-      character: charMatch ? charMatch[1].trim() : (cleanStyle === 'UGC' ? 'CREATOR' : 'ACTOR'),
-      visual: visMatch ? visMatch[1].trim() : rawText.split('\n')[0].replace(/^SCENE\s*\d+[^:]*:\s*/i, '').trim(),
-      dialogue: diaMatch ? diaMatch[1].trim() : null,
-      audio: audioMatch ? audioMatch[1].trim() : null,
-      camera: camMatch ? camMatch[1].trim() : null,
+      character: primaryChar,
+      visual: visualText,
+      dialogue: primaryDialogue,
+      dialogues,
+      audio: audioText,
+      camera: cameraText,
       raw: rawText
     };
   };
@@ -3571,7 +3665,7 @@ export function Screen07Script({
                   {/* Visual Setup */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <Camera size={14} style={{ color: 'var(--accent-primary)', marginTop: 2, flexShrink: 0 }} />
-                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                       {s.visual}
                       {s.camera && (
                         <span style={{ color: 'var(--text-tertiary)', fontSize: 11, marginLeft: 6 }}>
@@ -3581,8 +3675,45 @@ export function Screen07Script({
                     </div>
                   </div>
 
-                  {/* Dialogue Bubble */}
-                  {s.dialogue && (
+                  {/* Spoken Dialogue Bubbles */}
+                  {s.dialogues && s.dialogues.length > 0 ? (
+                    s.dialogues.map((d, dIdx) => (
+                      <div
+                        key={dIdx}
+                        style={{
+                          backgroundColor: 'var(--bg-elevated)',
+                          padding: '10px 14px',
+                          borderRadius: '0 8px 8px 0',
+                          borderLeft: '3px solid var(--accent-primary)',
+                          borderTop: '1px solid var(--border-subtle)',
+                          borderRight: '1px solid var(--border-subtle)',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            letterSpacing: '0.04em',
+                            color: 'var(--accent-primary)',
+                            textTransform: 'uppercase',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            padding: '1px 6px',
+                            borderRadius: 3
+                          }}>
+                            {d.speaker || s.character}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Spoken dialogue</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                          "{d.text}"
+                        </div>
+                      </div>
+                    ))
+                  ) : s.dialogue ? (
                     <div style={{
                       backgroundColor: 'var(--bg-elevated)',
                       padding: '10px 14px',
@@ -3613,6 +3744,21 @@ export function Screen07Script({
                       <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                         "{s.dialogue}"
                       </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 11,
+                      color: 'var(--text-tertiary)',
+                      padding: '6px 10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: 6,
+                      border: '1px dashed var(--border-subtle)'
+                    }}>
+                      <MessageSquare size={12} style={{ color: 'var(--text-tertiary)' }} />
+                      <span>Visual action scene · No spoken dialogue</span>
                     </div>
                   )}
 
