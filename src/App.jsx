@@ -1486,14 +1486,14 @@ export default function App() {
         character1: character1 || '',
         character2: character2 || '',
         stages: {
-          directionsList,
-          selectedDirectionIndex,
-          hookAngles,
-          selectedHookIndex,
-          storyWorlds,
-          selectedStoryWorldIndex,
-          generatedScript,
-          completedStages,
+          directionsList: directionsList || [],
+          selectedDirection: selectedDirection || null,
+          selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
+          hooksList: hooksList || [],
+          selectedHook: selectedHook || null,
+          storyWorldData: storyWorldData || null,
+          generatedScript: generatedScript || null,
+          completedStages: completedStages || [],
         },
         brandContext: extractBrandProfile(userContext),
       };
@@ -1566,16 +1566,20 @@ export default function App() {
 
     if (proj.stages) {
       if (proj.stages.directionsList) setDirectionsList(proj.stages.directionsList);
+      if (proj.stages.selectedDirection) setSelectedDirection(proj.stages.selectedDirection);
       if (typeof proj.stages.selectedDirectionIndex === 'number') {
-        setSelectedDirectionIndex(proj.stages.selectedDirectionIndex);
+        setSelectedDirectionIdx(proj.stages.selectedDirectionIndex);
       }
-      if (proj.stages.hookAngles) setHookAngles(proj.stages.hookAngles);
-      if (typeof proj.stages.selectedHookIndex === 'number') {
-        setSelectedHookIndex(proj.stages.selectedHookIndex);
+      if (proj.stages.hooksList) {
+        setHooksList(proj.stages.hooksList);
+      } else if (proj.stages.hookAngles) {
+        setHooksList(proj.stages.hookAngles);
       }
-      if (proj.stages.storyWorlds) setStoryWorlds(proj.stages.storyWorlds);
-      if (typeof proj.stages.selectedStoryWorldIndex === 'number') {
-        setSelectedStoryWorldIndex(proj.stages.selectedStoryWorldIndex);
+      if (proj.stages.selectedHook) setSelectedHook(proj.stages.selectedHook);
+      if (proj.stages.storyWorldData) {
+        setStoryWorldData(proj.stages.storyWorldData);
+      } else if (proj.stages.storyWorlds) {
+        setStoryWorldData(proj.stages.storyWorlds);
       }
       if (proj.stages.generatedScript) setGeneratedScript(proj.stages.generatedScript);
       if (proj.stages.completedStages) setCompletedStages(proj.stages.completedStages);
@@ -2496,13 +2500,13 @@ export default function App() {
         character1: character1 || '',
         character2: character2 || '',
         stages: {
-          directionsList,
-          selectedDirectionIndex,
-          hookAngles,
-          selectedHookIndex,
-          storyWorlds,
-          selectedStoryWorldIndex,
-          generatedScript,
+          directionsList: directionsList || [],
+          selectedDirection: selectedDirection || null,
+          selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
+          hooksList: hooksList || [],
+          selectedHook: selectedHook || null,
+          storyWorldData: storyWorldData || null,
+          generatedScript: generatedScript || null,
           completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
         },
         completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
@@ -3059,13 +3063,13 @@ export default function App() {
             character1: character1 || '',
             character2: character2 || '',
             stages: {
-              directionsList,
-              selectedDirectionIndex,
-              hookAngles,
-              selectedHookIndex,
-              storyWorlds,
-              selectedStoryWorldIndex,
-              generatedScript,
+              directionsList: directionsList || [],
+              selectedDirection: selectedDirection || null,
+              selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
+              hooksList: hooksList || [],
+              selectedHook: selectedHook || null,
+              storyWorldData: storyWorldData || null,
+              generatedScript: generatedScript || null,
               completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
             },
             completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
@@ -3700,13 +3704,13 @@ export default function App() {
     character1: character1 || '',
     character2: character2 || '',
     stages: {
-      directionsList,
-      selectedDirectionIndex,
-      hookAngles,
-      selectedHookIndex,
-      storyWorlds,
-      selectedStoryWorldIndex,
-      generatedScript,
+      directionsList: directionsList || [],
+      selectedDirection: selectedDirection || null,
+      selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
+      hooksList: hooksList || [],
+      selectedHook: selectedHook || null,
+      storyWorldData: storyWorldData || null,
+      generatedScript: generatedScript || null,
       completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
     },
     completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],

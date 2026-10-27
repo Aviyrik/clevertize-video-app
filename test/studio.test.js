@@ -2421,3 +2421,16 @@ test('Script Import (/api/script/validate-and-import): separates dialogue from v
   assert.ok(serverSrc.includes('sliceLines'), 'Server import must inspect sliceLines for dialogue and visual separation');
 });
 
+test('Video Generation Completion: App.jsx avoids bare selectedDirectionIndex / undefined stage variables in activeVideoProject and save payloads', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  // Check that bare selectedDirectionIndex, hookAngles, etc. are not placed into stages object literals as bare variables
+  assert.ok(!appSrc.includes('selectedDirectionIndex,\n'), 'Must not reference bare selectedDirectionIndex');
+  assert.ok(!appSrc.includes('hookAngles,\n'), 'Must not reference bare hookAngles');
+  assert.ok(!appSrc.includes('selectedHookIndex,\n'), 'Must not reference bare selectedHookIndex');
+  assert.ok(!appSrc.includes('storyWorlds,\n'), 'Must not reference bare storyWorlds');
+  assert.ok(!appSrc.includes('selectedStoryWorldIndex,\n'), 'Must not reference bare selectedStoryWorldIndex');
+  // Check that selectedDirectionIdx is properly assigned to the property
+  assert.ok(appSrc.includes('selectedDirectionIndex: typeof selectedDirectionIdx === \'number\''), 'Must assign selectedDirectionIdx to selectedDirectionIndex property');
+});
+
+
