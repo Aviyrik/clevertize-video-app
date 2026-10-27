@@ -435,3 +435,177 @@ test('Multi-tenant and New User Isolation: New user starts with 0 businesses, se
     'App.jsx must require business creation before launching studio'
   );
 });
+
+test('Phase 1 Security: Protected API endpoints strictly require authentication and reject unauthenticated calls before execution', async () => {
+  // 1. Create a verified user and session token
+  const userRes = await post('/api/auth/signup', {
+    email: 'phase1-security@brand.com',
+    password: 'password123',
+    name: 'Security Test User',
+  });
+  assert.equal(userRes.status, 200);
+  const validToken = userRes.body.token;
+
+  // 2. Protected endpoints list
+  const protectedPostEndpoints = [
+    { url: '/api/run', body: { scenes: ['Scene 1'] } },
+    { url: '/api/research', body: { businessName: 'Test Brand' } },
+    { url: '/api/research/url', body: { url: 'https://example.com' } },
+    { url: '/api/script/validate-and-import', body: { rawScript: 'ANNEX A\nSCENE 1' } },
+    { url: '/api/creative/directions', body: { businessName: 'Test Brand' } },
+    { url: '/api/creative/hooks', body: { businessName: 'Test Brand' } },
+    { url: '/api/creative/plots', body: { businessName: 'Test Brand' } },
+    { url: '/api/creative/story', body: { businessName: 'Test Brand' } },
+    { url: '/api/creative/synthesize-script', body: { form: { businessName: 'Test Brand' } } },
+    { url: '/api/creative/rewrite-scene', body: { sceneText: 'Scene 1', instruction: 'make warmer' } },
+    { url: '/api/creative/simple-packages', body: { businessName: 'Test Brand', brief: 'Promote our store' } },
+  ];
+
+  // Verify unauthenticated requests (no token) return 401
+  for (const ep of protectedPostEndpoints) {
+    const unauthRes = await post(ep.url, ep.body);
+    assert.equal(unauthRes.status, 401, `Unauthenticated POST ${ep.url} must return 401`);
+    assert.ok(unauthRes.body.error, `Unauthenticated POST ${ep.url} must return error message`);
+  }
+
+  // Verify unauthenticated GET /api/status/:runId returns 401
+  const unauthStatus = await get('/api/status/test_run_123');
+  assert.equal(unauthStatus.status, 401, 'Unauthenticated GET /api/status/:runId must return 401');
+
+  // Verify invalid/expired bearer token returns 401
+  const invalidRes = await post('/api/run', { scenes: ['Scene 1'] }, 'fake-invalid-token-xyz');
+  assert.equal(invalidRes.status, 401, 'Invalid token must return 401');
+
+  // Verify authenticated requests with valid bearer token are accepted past auth middleware
+  const authStatus = await get('/api/status/unknown_run', validToken);
+  // Reached Magnific runStatus handler (which may throw 500 for non-existent run or return status, but not 401)
+  assert.notEqual(authStatus.status, 401, 'Valid token must pass auth middleware for /api/status/:runId');
+
+  const authValidate = await post('/api/script/validate-and-import', { rawScript: '' }, validToken);
+  // Reached validation handler inside endpoint (returns 400 because rawScript is empty, proving auth passed)
+  assert.equal(authValidate.status, 400, 'Valid token passes auth and executes endpoint validation logic');
+});
+
+test('Phase 1 Data Integrity: User Data Isolation and Logout prevents cross-user leakage', async () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // 1. handleLogout must remove clevertize_local_projects from localStorage
+  assert.ok(
+    appSrc.includes("localStorage.removeItem('clevertize_local_projects')"),
+    'handleLogout must remove clevertize_local_projects from localStorage'
+  );
+  assert.ok(
+    appSrc.includes("localStorage.removeItem(`clevertize_local_projects_${currentUser.id}`)"),
+    'handleLogout must remove user-specific projects from localStorage'
+  );
+  assert.ok(
+    appSrc.includes("localStorage.removeItem('clevertize_token')") &&
+    appSrc.includes("localStorage.removeItem('clevertize_user')") &&
+    appSrc.includes("localStorage.removeItem('clevertize_user_context')"),
+    'handleLogout must remove token, user, and user_context'
+  );
+
+  // 2. Initial state must not read unauthenticated shared clevertize_local_projects
+  assert.ok(
+    appSrc.includes('clevertize_local_projects_${user.id}'),
+    'userProjects initial state must be isolated to authenticated user ID'
+  );
+
+  // 3. handleAuthSuccess must clean state and remove stale clevertize_local_projects when user has no cached projects
+  assert.ok(
+    appSrc.includes("localStorage.removeItem('clevertize_local_projects')"),
+    'handleAuthSuccess must isolate local storage projects per user'
+  );
+});
+
+test('Phase 1 UX Integrity: Script Generation establishes isBusy and prevents blank screen flash', async () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+
+  // 1. Opening stage continue must set isBusy(true) and startTimer() before entering script stage
+  assert.ok(
+    appSrc.includes("setIsBusy(true);") && appSrc.includes("setStudioStage('script');"),
+    'Opening continue handler must set isBusy(true) when transitioning to script stage'
+  );
+
+  // 2. GuidedStudio Screen07Script renders ScriptGenerationLoader when isBusy and scenes is empty
+  assert.ok(
+    studioSrc.includes('if (!scenes || scenes.length === 0)') &&
+    studioSrc.includes('<ScriptGenerationLoader') &&
+    studioSrc.includes('businessName={userContext?.businessName}'),
+    'Screen07Script must render ScriptGenerationLoader when scenes are empty and busy'
+  );
+
+  // 3. When scenes are empty and not busy (e.g. failure), renders friendly retry UI instead of blank cards
+  assert.ok(
+    studioSrc.includes('No Script Scenes Generated Yet') &&
+    studioSrc.includes('Retry Script Generation'),
+    'Screen07Script must render friendly error and retry CTA when scenes are empty'
+  );
+});
+
+test('Phase 1 Data Integrity: Save Script Duplicate Request Prevention and Backend Idempotency', async () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+
+  // 1. App.jsx has isSavingProject in-flight guard
+  assert.ok(
+    appSrc.includes('const [isSavingProject, setIsSavingProject] = useState(false);'),
+    'App.jsx must declare isSavingProject state'
+  );
+  assert.ok(
+    appSrc.includes('if (isSavingProject) return;'),
+    'handleSaveCurrentProject must exit early if save is already in-flight'
+  );
+  assert.ok(
+    appSrc.includes('resolvedProjectId = activeProjectId ||') &&
+    appSrc.includes('setActiveProjectId(resolvedProjectId)'),
+    'handleSaveCurrentProject must establish stable project ID upfront before dispatching'
+  );
+
+  // 2. GuidedStudio Save Script button has disabled state and visual saving feedback
+  assert.ok(
+    studioSrc.includes('disabled={isSavingProject || isProjectSaved}'),
+    'Save Script button must be disabled when isSavingProject or isProjectSaved'
+  );
+  assert.ok(
+    studioSrc.includes("isSavingProject ? 'Saving...' : isProjectSaved ? 'Saved to Library' : 'Save Script'"),
+    'Save Script button must render dynamic Saving... label'
+  );
+
+  // 3. Backend Idempotency: Rapid duplicate POST /api/projects with same ID updates record without creating duplicates
+  const userRes = await post('/api/auth/signup', {
+    email: 'idempotent-test@brand.com',
+    password: 'password123',
+    name: 'Idempotent Tester',
+  });
+  assert.equal(userRes.status, 200);
+  const token = userRes.body.token;
+
+  const projectId = `proj_test_${Date.now()}`;
+  const save1 = await post('/api/projects', {
+    id: projectId,
+    title: 'First Save Ad Film',
+    businessName: 'Idempotent Store',
+    brief: 'Special Diwali Sale',
+    scenes: ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4'],
+  }, token);
+  assert.equal(save1.status, 200);
+
+  // Rapid second save with the same project ID
+  const save2 = await post('/api/projects', {
+    id: projectId,
+    title: 'Updated Save Ad Film',
+    businessName: 'Idempotent Store',
+    brief: 'Special Diwali Sale - Updated',
+    scenes: ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4'],
+  }, token);
+  assert.equal(save2.status, 200);
+
+  // Retrieve user projects: must contain EXACTLY 1 project, not 2
+  const listRes = await get('/api/projects', token);
+  assert.equal(listRes.status, 200);
+  assert.equal(listRes.body.projects.length, 1, 'Duplicate save requests with same ID must update record, not duplicate');
+  assert.equal(listRes.body.projects[0].id, projectId);
+  assert.equal(listRes.body.projects[0].title, 'Updated Save Ad Film');
+});

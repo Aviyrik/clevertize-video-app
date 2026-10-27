@@ -196,9 +196,13 @@ export default function ExistingScriptModal({
     setErrorMsg('');
 
     try {
+      const token = localStorage.getItem('clevertize_token');
       const res = await fetch('/api/script/validate-and-import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           rawScript: scriptText,
           businessName: businessName || 'My Business',

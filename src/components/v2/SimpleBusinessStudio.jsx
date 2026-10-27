@@ -135,9 +135,13 @@ export default function SimpleBusinessStudio({
     setIsLoadingPackages(true);
 
     try {
+      const token = localStorage.getItem('clevertize_token');
       const res = await fetch('/api/creative/simple-packages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           businessName,
           businessType,

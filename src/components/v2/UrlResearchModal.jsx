@@ -108,9 +108,13 @@ export default function UrlResearchModal({
     setErrorMsg('');
 
     try {
+      const token = localStorage.getItem('clevertize_token');
       const res = await fetch('/api/research/url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           url: urlInput.trim(),
         }),

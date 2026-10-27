@@ -974,8 +974,13 @@ export default function App() {
   });
   const [userProjects, setUserProjects] = useState(() => {
     try {
-      const local = localStorage.getItem('clevertize_local_projects');
-      return local ? JSON.parse(local) : [];
+      const rawUser = localStorage.getItem('clevertize_user');
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      if (user && user.id) {
+        const userSaved = localStorage.getItem(`clevertize_local_projects_${user.id}`);
+        if (userSaved) return JSON.parse(userSaved);
+      }
+      return [];
     } catch {
       return [];
     }
@@ -983,10 +988,20 @@ export default function App() {
   const [userBusinesses, setUserBusinesses] = useState([]);
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
+  const [isSavingProject, setIsSavingProject] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  const getAuthHeaders = (extra = {}) => {
+    const token = authToken || localStorage.getItem('clevertize_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extra,
+    };
+  };
 
   // Helper to check whether incoming URL research data matches a given business
   const isMatchingBusiness = (biz, incomingName, incomingUrl) => {
@@ -1346,9 +1361,13 @@ export default function App() {
           const parsedList = JSON.parse(userSaved);
           setUserProjects(parsedList);
           localStorage.setItem('clevertize_local_projects', userSaved);
+        } else {
+          setUserProjects([]);
+          localStorage.removeItem('clevertize_local_projects');
         }
       } catch (e) {
         console.warn('Error restoring user projects from cache:', e);
+        setUserProjects([]);
       }
     }
 
@@ -1379,9 +1398,12 @@ export default function App() {
       localStorage.removeItem('clevertize_token');
       localStorage.removeItem('clevertize_user');
       localStorage.removeItem('clevertize_user_context');
+      localStorage.removeItem('clevertize_local_projects');
       if (currentUser?.id) {
         localStorage.removeItem(`clevertize_user_context_${currentUser.id}`);
+        localStorage.removeItem(`clevertize_local_projects_${currentUser.id}`);
       }
+      localStorage.removeItem('clevertize_brand_name');
     } catch {}
     setAuthToken(null);
     setCurrentUser(null);
@@ -1458,6 +1480,7 @@ export default function App() {
   };
 
   const handleSaveCurrentProject = async () => {
+    if (isSavingProject) return;
     if (!currentUser || !authToken) {
       setIsAuthModalOpen(true);
       setToastMessage('Please sign in or create an account to save your project.');
@@ -1465,13 +1488,17 @@ export default function App() {
       return;
     }
 
+    setIsSavingProject(true);
+    const resolvedProjectId = activeProjectId || `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setActiveProjectId(resolvedProjectId);
+
     try {
       const title = userContext.businessName
         ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || 'Ad Film'}`
         : 'Untitled Script';
 
       const payload = {
-        id: activeProjectId || undefined,
+        id: resolvedProjectId,
         title,
         businessName: userContext.businessName || '',
         businessType: userContext.businessType || '',
@@ -1538,6 +1565,8 @@ export default function App() {
       console.error('Error saving project:', err);
       setToastMessage('Failed to save project. Check your connection.');
       setTimeout(() => setToastMessage(''), 4000);
+    } finally {
+      setIsSavingProject(false);
     }
   };
 
@@ -2025,7 +2054,7 @@ export default function App() {
     try {
       const res = await fetch('/api/research', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName: brand,
           businessType: bType,
@@ -2079,7 +2108,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/directions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName: brand,
           businessType: bType,
@@ -2180,7 +2209,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/hooks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName: brand,
           businessType: bType,
@@ -2225,7 +2254,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/plots', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName: brand,
           businessType: bType,
@@ -2266,7 +2295,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/story', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName: brand,
           businessType: bType,
@@ -2384,7 +2413,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/synthesize-script', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           form,
           creativeDNA: activeDNA,
@@ -2433,7 +2462,7 @@ export default function App() {
     try {
       const res = await fetch('/api/creative/rewrite-scene', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           sceneText: scenes[rewriteTargetSceneIndex],
           sceneIndex: rewriteTargetSceneIndex,
@@ -2879,7 +2908,7 @@ export default function App() {
       // 1. Run the entire automated Creative Intelligence pipeline
       const pipelineRes = await fetch('/api/pipeline/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
       const pipeData = await pipelineRes.json();
@@ -2932,7 +2961,7 @@ export default function App() {
 
       const runData = await safeApiCall(fetch('/api/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
       }), 'Failed to dispatch render job to Magnific.');
 
@@ -2994,7 +3023,7 @@ export default function App() {
 
       const data = await safeApiCall(fetch('/api/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
       }), 'Failed to dispatch render job to Magnific.');
 
@@ -3018,7 +3047,7 @@ export default function App() {
         return;
       }
       try {
-        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`);
+        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`, { headers: getAuthHeaders() });
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           continue; // Gateway response / proxy page during polling, keep waiting
@@ -3399,7 +3428,7 @@ export default function App() {
 
       const data = await safeApiCall(fetch('/api/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
       }), 'Failed to dispatch render job.');
 
@@ -4505,14 +4534,22 @@ export default function App() {
                 setExplicitChoices((prev) => ({ ...prev, opening: activeH.archetype || activeH.hookLine || customHook }));
               }
               markStageComplete('opening');
+              setIsBusy(true);
+              startTimer();
               setStudioStage('script');
               window.scrollTo({ top: 0, behavior: 'smooth' });
 
               // Automatically ensure story world exists in background, then synthesize master script
-              if (!storyWorldData) {
-                await loadStoryWorld(true, null, null, activeH);
+              try {
+                if (!storyWorldData) {
+                  await loadStoryWorld(true, null, null, activeH);
+                }
+                await handleSynthesizeMasterScript();
+              } catch (err) {
+                setIsBusy(false);
+                stopTimer();
+                setErrorMessage(err.message || 'Failed to synthesize master script. You can retry from the opening hook.');
               }
-              await handleSynthesizeMasterScript();
             }}
             onBack={() => {
               setStudioStage('idea');
@@ -4561,6 +4598,7 @@ export default function App() {
             }}
             onSaveProject={handleSaveCurrentProject}
             isProjectSaved={isCurrentProjectSaved}
+            isSavingProject={isSavingProject}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
           />
         )}

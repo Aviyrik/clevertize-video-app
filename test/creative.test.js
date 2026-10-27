@@ -27,9 +27,14 @@ global.fetch = async (url, opts = {}) => {
 
 const { app } = require("../server");
 const creative = require("../engine/creative");
+const db = require("../engine/db");
 
-let base, server;
-test.before(() => new Promise((r) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); }));
+let base, server, testToken;
+test.before(async () => {
+  const u = await db.createUser({ email: "creative-test@example.com", password: "password123", name: "Creative Tester" });
+  testToken = await db.createSession(u.id);
+  await new Promise((r) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); });
+});
 test.after(() => server.close());
 
 test("1. performAdaptiveResearch returns structured footprint, insights, and gap question", async () => {
@@ -246,9 +251,20 @@ test("8. End-to-end API: /api/research endpoint handles request and returns JSON
     sources: ["Brand Footprint Analysis"]
   }));
 
-  const res = await fetch(`${base}/api/research`, {
+  // Unauthenticated request must be rejected with 401
+  const unauthRes = await fetch(`${base}/api/research`, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    body: JSON.stringify({ businessName: "GreenRoot Organics", brief: "bowl" })
+  });
+  assert.strictEqual(unauthRes.status, 401);
+
+  const res = await fetch(`${base}/api/research`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${testToken}`
+    },
     body: JSON.stringify({
       businessName: "GreenRoot Organics",
       businessType: "Organic Cafe",
@@ -474,10 +490,21 @@ test("16. generateSimpleAdPackages produces 3 distinct ad packages with 4 scenes
 });
 
 test("17. /api/creative/simple-packages endpoint generates ad packages and validates brief", async () => {
-  // Test validation error if brief missing
-  const badRes = await fetch(`${base}/api/creative/simple-packages`, {
+  // Unauthenticated request must be rejected with 401
+  const unauthRes = await fetch(`${base}/api/creative/simple-packages`, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    body: JSON.stringify({ businessName: "Kanti Sweets", brief: "test" })
+  });
+  assert.strictEqual(unauthRes.status, 401);
+
+  // Test validation error if brief missing (authenticated)
+  const badRes = await fetch(`${base}/api/creative/simple-packages`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${testToken}`
+    },
     body: JSON.stringify({ businessName: "Kanti Sweets", brief: "" })
   });
   assert.strictEqual(badRes.status, 400);
@@ -487,7 +514,10 @@ test("17. /api/creative/simple-packages endpoint generates ad packages and valid
   // Test successful generation
   const res = await fetch(`${base}/api/creative/simple-packages`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${testToken}`
+    },
     body: JSON.stringify({
       businessName: "Kanti Sweets",
       businessType: "Sweet Shop",
@@ -762,10 +792,28 @@ test("21. Language Selection & Validation: Hinglish, Hindi, Kannada, Tamil, Telu
 });
 
 test("22. End-to-end API: /api/creative/directions and /api/creative/hooks preserve selected language", async () => {
+  // Unauthenticated requests must be rejected with 401
+  const unauthDir = await fetch(`${base}/api/creative/directions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ businessName: "Practo", brief: "test" })
+  });
+  assert.strictEqual(unauthDir.status, 401);
+
+  const unauthHook = await fetch(`${base}/api/creative/hooks`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ businessName: "Practo", brief: "test" })
+  });
+  assert.strictEqual(unauthHook.status, 401);
+
   // Test /api/creative/directions accepts and forwards language
   const dirRes = await fetch(`${base}/api/creative/directions`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${testToken}`
+    },
     body: JSON.stringify({
       businessName: "Practo",
       businessType: "Healthcare / Clinic",
@@ -780,7 +828,10 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
   // Test /api/creative/hooks returns Hinglish hooks with zero Kannada
   const hookRes = await fetch(`${base}/api/creative/hooks`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${testToken}`
+    },
     body: JSON.stringify({
       businessName: "Practo",
       businessType: "Healthcare / Clinic",

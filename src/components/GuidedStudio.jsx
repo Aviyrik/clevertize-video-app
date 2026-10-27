@@ -3151,6 +3151,7 @@ export function Screen07Script({
   elapsedTime = '00:00',
   onSaveProject,
   isProjectSaved = false,
+  isSavingProject = false,
   onOpenScriptModal,
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
@@ -3199,12 +3200,69 @@ export function Screen07Script({
     }
   };
 
-  if (isBusy && (!scenes || scenes.length === 0)) {
+  if (!scenes || scenes.length === 0) {
+    if (isBusy) {
+      return (
+        <ScriptGenerationLoader
+          businessName={userContext?.businessName}
+          elapsedTime={elapsedTime}
+        />
+      );
+    }
     return (
-      <ScriptGenerationLoader
-        businessName={userContext?.businessName}
-        elapsedTime={elapsedTime}
-      />
+      <div style={{ maxWidth: 640, margin: '60px auto', padding: '40px 24px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, textAlign: 'center' }}>
+        <div style={{ width: 44, height: 44, margin: '0 auto 16px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--error, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <RotateCcw size={20} />
+        </div>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+          No Script Scenes Generated Yet
+        </h3>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
+          The script generation encountered an issue or has not completed. You can try generating again or return to the opening hook.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 8,
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-secondary)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Back to Hook
+            </button>
+          )}
+          {onTryAnotherVersion && (
+            <button
+              type="button"
+              onClick={onTryAnotherVersion}
+              style={{
+                padding: '9px 20px',
+                borderRadius: 8,
+                backgroundColor: 'var(--accent-primary)',
+                border: 'none',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <RotateCcw size={14} />
+              <span>Retry Script Generation</span>
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -3820,6 +3878,7 @@ export function Screen07Script({
           {onSaveProject && (
             <button
               type="button"
+              disabled={isSavingProject || isProjectSaved}
               onClick={onSaveProject}
               style={{
                 padding: '10px 14px',
@@ -3828,15 +3887,22 @@ export function Screen07Script({
                 border: '1px solid var(--border-default)',
                 fontSize: 12,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: (isSavingProject || isProjectSaved) ? 'not-allowed' : 'pointer',
+                opacity: isSavingProject ? 0.7 : 1,
                 color: isProjectSaved ? 'var(--success)' : 'var(--accent-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
               }}
             >
-              {isProjectSaved ? <Check size={13} style={{ color: 'var(--success)' }} /> : <Bookmark size={13} />}
-              <span>{isProjectSaved ? 'Saved to Library' : 'Save Script'}</span>
+              {isSavingProject ? (
+                <div style={{ width: 13, height: 13, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              ) : isProjectSaved ? (
+                <Check size={13} style={{ color: 'var(--success)' }} />
+              ) : (
+                <Bookmark size={13} />
+              )}
+              <span>{isSavingProject ? 'Saving...' : isProjectSaved ? 'Saved to Library' : 'Save Script'}</span>
             </button>
           )}
 

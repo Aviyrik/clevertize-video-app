@@ -55,12 +55,19 @@ global.fetch = async (url, opts = {}) => {
 };
 
 const { app } = require("../server");
-let base, server;
-test.before(() => new Promise((r) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); }));
+const db = require("../engine/db");
+let base, server, testToken;
+test.before(async () => {
+  const u = await db.createUser({ email: "test-server@example.com", password: "password123", name: "Test Server" });
+  testToken = await db.createSession(u.id);
+  await new Promise((r) => { server = app.listen(0, () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); });
+});
 test.after(() => server.close());
 
-const post = async (p, body) => {
-  const r = await realFetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body || {}) });
+const post = async (p, body, token = testToken) => {
+  const headers = { "content-type": "application/json" };
+  if (token) headers["authorization"] = `Bearer ${token}`;
+  const r = await realFetch(base + p, { method: "POST", headers, body: JSON.stringify(body || {}) });
   return { status: r.status, body: await r.json() };
 };
 const lastUserText = () => calls.anthropic.at(-1).messages[0].content.at(-1).text;
@@ -138,6 +145,10 @@ test("approve saves the record once; run strips edit-only notes; download allowl
   const p = parseOutput(GOOD);
   const logo = { mime: "image/png", data: Buffer.from("logo").toString("base64") };
   const productPhoto = { mime: "image/jpeg", data: Buffer.from("prod").toString("base64") };
+  // unauthenticated call must be rejected with 401 before any work starts
+  const unauthRun = await post("/api/run", { scenes: p.scenes }, null);
+  assert.equal(unauthRun.status, 401);
+
   // without the product photo: gracefully fallbacks to text/synthetic product without crashing
   const miss = await post("/api/run", { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, logo });
   assert.equal(miss.status, 200);
@@ -153,7 +164,12 @@ test("approve saves the record once; run strips edit-only notes; download allowl
   assert.ok(sent.scenes_2.every((x) => x.startsWith("SETTING — IDENTICAL IN EVERY SCENE")));
   const bad = await realFetch(base + "/api/download?url=" + encodeURIComponent("http://169.254.169.254/latest"));
   assert.equal(bad.status, 400);
-  const s = await (await realFetch(base + "/api/status/run_1")).json();
+
+  // unauthenticated status check must be rejected with 401
+  const unauthStatus = await realFetch(base + "/api/status/run_1");
+  assert.equal(unauthStatus.status, 401);
+
+  const s = await (await realFetch(base + "/api/status/run_1", { headers: { authorization: `Bearer ${testToken}` } })).json();
   assert.equal(s.videoUrl, "https://cdn.example.com/out.mp4");
 });
 
@@ -194,6 +210,10 @@ test("plots with no text at all are retried", async () => {
 });
 
 test("V2 Entry Point: /api/research/url validates input and returns structured extraction", async () => {
+  // Unauthenticated request must return 401
+  const unauth = await post("/api/research/url", { url: "https://example.com" }, null);
+  assert.equal(unauth.status, 401);
+
   // Empty URL -> 400
   const badRes = await post("/api/research/url", { url: "" });
   assert.equal(badRes.status, 400);
@@ -245,6 +265,10 @@ test("V2 Entry Point: /api/research/url extracts domain brand and standard categ
 });
 
 test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs quality gate", async () => {
+  // Unauthenticated request must return 401
+  const unauth = await post("/api/script/validate-and-import", { rawScript: "ANNEX A\nSCENE 1" }, null);
+  assert.equal(unauth.status, 401);
+
   // Empty script -> 400
   const badRes = await post("/api/script/validate-and-import", { rawScript: "" });
   assert.equal(badRes.status, 400);

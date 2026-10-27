@@ -239,6 +239,53 @@ const sendErr = (res, e, tag) => {
   res.status(e.status || 500).json({ error: e.message, failures: e.failures });
 };
 
+// ---- Auth Middleware & Helpers (Phase 1 Security) ----
+
+function extractToken(req) {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  if (req.headers["x-session-token"]) {
+    return String(req.headers["x-session-token"]).trim();
+  }
+  return null;
+}
+
+async function authRequired(req, res, next) {
+  try {
+    const token = extractToken(req);
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required. Please log in." });
+    }
+    const user = await db.getUserBySessionToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Session expired or invalid. Please log in again." });
+    }
+    req.user = user;
+    req.sessionToken = token;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Authentication error." });
+  }
+}
+
+async function optionalAuth(req, res, next) {
+  try {
+    const token = extractToken(req);
+    if (token) {
+      const user = await db.getUserBySessionToken(token);
+      if (user) {
+        req.user = user;
+        req.sessionToken = token;
+      }
+    }
+    next();
+  } catch (err) {
+    next();
+  }
+}
+
 // start: validate form → Stage 1 → Checkpoint 1
 app.post("/api/session", async (req, res) => {
   try {
@@ -398,7 +445,7 @@ app.post("/api/session/:id/approve", (req, res) => {
 // ---- Creative Intelligence Workspace V2 Endpoints ----
 
 // 1) Adaptive Research (Tiers 0-3)
-app.post("/api/research", async (req, res) => {
+app.post("/api/research", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, town, area, websiteUrl, brief } = req.body || {};
     const result = await creative.performAdaptiveResearch({
@@ -635,7 +682,7 @@ function extractProductImageFromHtml(html, pageUrl) {
 }
 
 // 1B) URL Web Scraping & Structured Business Analysis (V2 Entry Point)
-app.post("/api/research/url", async (req, res) => {
+app.post("/api/research/url", authRequired, async (req, res) => {
   const { url, businessName, businessType, town } = req.body || {};
   if (!url || typeof url !== "string" || !url.trim()) {
     return res.status(400).json({ error: "Please enter a valid website URL." });
@@ -829,7 +876,7 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 });
 
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
-app.post("/api/script/validate-and-import", async (req, res) => {
+app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
     const { rawScript, businessName, businessType, language, creativeStyle } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
@@ -967,7 +1014,7 @@ app.post("/api/script/validate-and-import", async (req, res) => {
 });
 
 // 2) Creative Direction
-app.post("/api/creative/directions", async (req, res) => {
+app.post("/api/creative/directions", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language } = req.body || {};
     const result = await creative.generateDirections({
@@ -988,7 +1035,7 @@ app.post("/api/creative/directions", async (req, res) => {
 });
 
 // 3) Hook Intelligence
-app.post("/api/creative/hooks", async (req, res) => {
+app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, brief, direction, language, format, creativeStyle } = req.body || {};
     const result = await creative.generateHooks({
@@ -1007,7 +1054,7 @@ app.post("/api/creative/hooks", async (req, res) => {
 });
 
 // 4) Plot Generation
-app.post("/api/creative/plots", async (req, res) => {
+app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, brief, direction, hook, format, language } = req.body || {};
     const result = await creative.generatePlots({
@@ -1027,7 +1074,7 @@ app.post("/api/creative/plots", async (req, res) => {
 });
 
 // 5) Story Architecture & World Building
-app.post("/api/creative/story", async (req, res) => {
+app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, town, brief, direction, hook, plot, format, language } = req.body || {};
     const result = await creative.generateStoryWorld({
@@ -1049,7 +1096,7 @@ app.post("/api/creative/story", async (req, res) => {
 });
 
 // 6) Master Script Synthesis & Quality Gate
-app.post("/api/creative/synthesize-script", async (req, res) => {
+app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
   try {
     const { form, creativeDNA, constraints, avoid } = req.body || {};
     if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
@@ -1068,7 +1115,7 @@ app.post("/api/creative/synthesize-script", async (req, res) => {
 });
 
 // 7) Scene-Level AI Rewriter
-app.post("/api/creative/rewrite-scene", async (req, res) => {
+app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
     const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
@@ -1090,7 +1137,7 @@ app.post("/api/creative/rewrite-scene", async (req, res) => {
 
 // ---- 2) start the Magnific flow ----
 // 8) Simple Business Studio — 3 Ready-Made Ad Packages
-app.post("/api/creative/simple-packages", async (req, res) => {
+app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
   try {
     const { businessName, businessType, town, brief, targetAudience, language, creativeStyle } = req.body || {};
     if (!businessName || !businessName.trim()) {
@@ -1114,7 +1161,7 @@ app.post("/api/creative/simple-packages", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.post("/api/run", async (req, res) => {
+app.post("/api/run", authRequired, async (req, res) => {
   try {
     const {
       scenes,
@@ -1193,7 +1240,7 @@ app.post("/api/run", async (req, res) => {
 
 // ---- 3) poll a run ----
 const videoUrls = new Set(); // only URLs Magnific gave us can be downloaded through /api/download
-app.get("/api/status/:runId", async (req, res) => {
+app.get("/api/status/:runId", authRequired, async (req, res) => {
   try {
     const s = await magnific.runStatus(req.params.runId);
     if (s.videoUrl) videoUrls.add(s.videoUrl);
@@ -1229,52 +1276,7 @@ app.get("/api/config", (req, res) => {
   });
 });
 
-// ---- Auth Middleware & Helpers (Phase C & E) ----
 
-function extractToken(req) {
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-  if (req.headers["x-session-token"]) {
-    return String(req.headers["x-session-token"]).trim();
-  }
-  return null;
-}
-
-async function authRequired(req, res, next) {
-  try {
-    const token = extractToken(req);
-    if (!token) {
-      return res.status(401).json({ error: "Authentication required. Please log in." });
-    }
-    const user = await db.getUserBySessionToken(token);
-    if (!user) {
-      return res.status(401).json({ error: "Session expired or invalid. Please log in again." });
-    }
-    req.user = user;
-    req.sessionToken = token;
-    next();
-  } catch (err) {
-    res.status(500).json({ error: err.message || "Authentication error." });
-  }
-}
-
-async function optionalAuth(req, res, next) {
-  try {
-    const token = extractToken(req);
-    if (token) {
-      const user = await db.getUserBySessionToken(token);
-      if (user) {
-        req.user = user;
-        req.sessionToken = token;
-      }
-    }
-    next();
-  } catch (err) {
-    next();
-  }
-}
 
 // ---- Authentication Endpoints (Phase C) ----
 
