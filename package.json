@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js"
+    "test": "node --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js test/video_logo.test.js"
   },
   "dependencies": {
     "@astryxdesign/cli": "^0.6.5",

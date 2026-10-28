@@ -6,6 +6,7 @@ import {
   StudioActionTypes,
   isStaleResponse,
 } from './context/studioReducer.js';
+import { videoLogoPayload } from './utils/videoLogo.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -1302,6 +1303,7 @@ export default function App() {
   const resetAllCreativeFilmState = () => {
     setVideoUrl('');
     updateUserContext('productPhoto', null);
+    updateUserContext('videoLogo', undefined);
     setScenes([]);
     setGeneratedScript(null);
     setShotSpec(null);
@@ -2036,7 +2038,7 @@ export default function App() {
       brief: userContext.brief?.trim() || '',
       shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-      logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+      logo: videoLogoPayload(userContext),
     };
   };
 
@@ -2958,7 +2960,8 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: pipeData.shotSpec || null,
         aspectRatio: aspectRatioOf(userContext.platform),
       };
@@ -3021,7 +3024,8 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: shotSpec || null,
         aspectRatio: aspectRatioOf(userContext.platform),
       };
@@ -3308,6 +3312,7 @@ export default function App() {
           ...(clearBrand ? { businessName: '', businessType: 'Retail Store', town: '', websiteUrl: '', logo: null } : brand),
           brief: '',
           productPhoto: null,
+          videoLogo: undefined,
           leadCharacter: '',
           supportingCharacter: '',
           environment: '',
@@ -3427,7 +3432,8 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: shotSpec || null,
         aspectRatio: aspectRatioOf(userContext.platform),
       };
@@ -3795,6 +3801,7 @@ export default function App() {
               brandLogo: biz.logo || biz.brandLogo || null,
               logo: biz.logo || biz.brandLogo || null,
               productPhoto: null,
+              videoLogo: undefined,
             }));
             setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
             setTimeout(() => setToastMessage(''), 3000);
@@ -3919,6 +3926,7 @@ export default function App() {
                   brandLogo: biz.logo || biz.brandLogo || null,
                   logo: biz.logo || biz.brandLogo || null,
               productPhoto: null,
+              videoLogo: undefined,
             }));
                 setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
                 setTimeout(() => setToastMessage(''), 3000);

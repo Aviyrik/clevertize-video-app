@@ -47,6 +47,7 @@ import {
   Users,
 } from 'lucide-react';
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
+import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
 import {
   BrandResearchLoader,
   IdeaGenerationLoader,
@@ -1729,6 +1730,143 @@ export function Screen03Settings({
                   }}
                 />
               </label>
+            )}
+          </div>
+          );
+        })()}
+
+        {/* 6. Logo Image (Optional) — chosen per video; prefilled from the business profile logo */}
+        {(() => {
+          const logo = videoLogoOf(userContext);
+          const profileLogo = profileLogoOf(userContext);
+          const fromProfile = userContext.videoLogo === undefined && Boolean(logo);
+          const profileUnusable = userContext.videoLogo === undefined && !logo && Boolean(profileLogo);
+          const canRestoreProfile = userContext.videoLogo === null && Boolean(toImageFile(profileLogo));
+          const bType = String(userContext.businessType || '').toLowerCase();
+          const productShown = !/gym|fitness|salon|beauty|spa|clinic|dental|health|coaching|tuition|consult|service|agency|interior|repair/.test(bType);
+          const pickLogo = (e) => {
+            const file = e.target.files?.[0];
+            if (file && handleFileUpload) handleFileUpload(file, 'videoLogo');
+          };
+          return (
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Building2 size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>{productShown ? 6 : 5}. Logo Image (Optional)</span>
+              </label>
+              {logo && (
+                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={12} />
+                  Attached
+                </span>
+              )}
+            </div>
+
+            {logo ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                backgroundColor: 'var(--bg-elevated)',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                flexWrap: 'wrap',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={`data:${logo.mime};base64,${logo.data}`}
+                    alt="Logo"
+                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {logo.name}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                      {fromProfile ? 'From your business profile · used in this video' : 'Used in this video'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    <Upload size={11} />
+                    <span>Replace</span>
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => updateUserContext('videoLogo', null)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: 'var(--error)',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3
+                    }}
+                  >
+                    <Trash2 size={11} />
+                    <span>Remove</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                <label style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px dashed var(--border-default)',
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s ease'
+                }}>
+                  <Upload size={13} />
+                  <span>Upload logo image (Optional)</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
+                </label>
+                {profileUnusable && (
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    Your business profile logo can't be used in videos — upload a PNG, JPG or WebP.
+                  </span>
+                )}
+                {canRestoreProfile && (
+                  <button
+                    type="button"
+                    onClick={() => updateUserContext('videoLogo', undefined)}
+                    style={{ padding: 0, backgroundColor: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Use my business profile logo
+                  </button>
+                )}
+              </div>
             )}
           </div>
           );

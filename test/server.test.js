@@ -352,6 +352,34 @@ test("Simple Studio / api/run: missing setting or character1 auto-resolves grace
   assert.ok(!Object.values(sent).some((v) => typeof v === "string" && v.startsWith("data:image/")), "Must not send any placeholder image");
 });
 
+test("/api/run: only the logo sent with the render decides the logo flow — the business-profile logo is never used", async () => {
+  const { parseOutput } = require("../engine/parse");
+  const p = parseOutput(GOOD);
+  const body = { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting };
+  const profileLogo = `data:image/png;base64,${Buffer.from("profile-logo").toString("base64")}`;
+  const saved = await post("/api/businesses", { businessName: "Logo Brand", businessType: "Retail Store", logo: profileLogo });
+  assert.equal(saved.status, 200);
+
+  // owner removed the logo for this video: no-logo flow, and no logo input at all
+  await post("/api/run", { ...body, logo: null });
+  assert.equal(calls.magnificRun.at(-1).flow, "kLqd16BU1G");
+  assert.ok(!Object.values(calls.magnificRun.at(-1).inputs).some((v) => typeof v === "string" && v.startsWith("data:image/")));
+
+  // an empty logo object (the old silent-failure shape) is "no logo", not a broken logo
+  await post("/api/run", { ...body, logo: {} });
+  assert.equal(calls.magnificRun.at(-1).flow, "kLqd16BU1G");
+
+  // logo sent with the render: logo flow, image in that flow's own logo key
+  const logo = { mime: "image/png", data: Buffer.from("brief-logo").toString("base64") };
+  await post("/api/run", { ...body, logo, aspectRatio: "16:9" });
+  assert.equal(calls.magnificRun.at(-1).flow, "wPlQ7EIQVN");
+  assert.equal(calls.magnificRun.at(-1).inputs.logo_5, `data:image/png;base64,${logo.data}`);
+  const productPhoto = { mime: "image/jpeg", data: Buffer.from("prod").toString("base64") };
+  await post("/api/run", { ...body, logo, productPhoto });
+  assert.equal(calls.magnificRun.at(-1).flow, "0MQyTfWvQD");
+  assert.equal(calls.magnificRun.at(-1).inputs.images, `data:image/png;base64,${logo.data}`);
+});
+
 test("/api/run routes 16:9 renders to the landscape flows and rejects unknown aspect ratios", async () => {
   const { parseOutput } = require("../engine/parse");
   const p = parseOutput(GOOD);

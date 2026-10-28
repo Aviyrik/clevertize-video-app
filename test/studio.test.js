@@ -1,8 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
+// keep test users out of data/ — that folder is the app's real local database
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-test-'));
 process.env.ANTHROPIC_API_KEY = 'test';
 process.env.MAGNIFIC_API_KEY = 'test';
 process.env.FESTIVAL_LIVE = 'off';
