@@ -234,6 +234,8 @@ function mapProjectRow(row) {
     completedStages: typeof row.completed_stages === 'string' ? JSON.parse(row.completed_stages) : (row.completed_stages || []),
     explicitChoices: typeof row.explicit_choices === 'string' ? JSON.parse(row.explicit_choices) : (row.explicit_choices || {}),
     creativeDNA: typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {}),
+    shotSpec: row.shot_spec || (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).shotSpec) || null,
+    stages: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).stages) || null,
     scenes: typeof row.scenes === 'string' ? JSON.parse(row.scenes) : (row.scenes || []),
     character1: row.character1 || '',
     character2: row.character2 || '',
@@ -409,6 +411,9 @@ async function deleteUser(userId) {
   const projects = readJsonFile('projects.json', []);
   writeJsonFile('projects.json', projects.filter((p) => p.userId !== userId));
 
+  const runs = readJsonFile('video_runs.json', []);
+  writeJsonFile('video_runs.json', runs.filter((r) => r.userId !== userId));
+
   const users = readJsonFile('users.json', []);
   const filteredUsers = users.filter((u) => u.id !== userId);
   const changed = filteredUsers.length !== users.length;
@@ -462,6 +467,7 @@ async function createSession(userId) {
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
+    await pool.query('DELETE FROM sessions WHERE expires_at <= NOW()');
     await pool.query(
       'INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES ($1, $2, $3, $4)',
       [token, userId, now.toISOString(), expiresAt.toISOString()]
@@ -626,6 +632,12 @@ async function saveBusiness(businessData, userId) {
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
+    if (id) {
+      const ownerCheck = await pool.query('SELECT user_id FROM businesses WHERE id = $1', [id]);
+      if (ownerCheck.rows.length && ownerCheck.rows[0].user_id !== userId) {
+        throw Object.assign(new Error('Business ID belongs to another user.'), { status: 403 });
+      }
+    }
     const res = await pool.query(
       `INSERT INTO businesses (
         id, user_id, business_name, business_type, town, target_audience, website_url, logo, product_images, brand_tone, created_at, updated_at
@@ -651,6 +663,12 @@ async function saveBusiness(businessData, userId) {
   let existingIndex = -1;
   if (id) {
     existingIndex = businesses.findIndex((b) => b.id === id && b.userId === userId);
+    if (
+      existingIndex < 0 &&
+      businesses.some((b) => b.id === id && b.userId !== userId)
+    ) {
+      throw Object.assign(new Error('Business ID belongs to another user.'), { status: 403 });
+    }
   }
 
   const record = {
@@ -742,6 +760,8 @@ async function saveProject(projectData, userId) {
     qualityGatePassed,
     status,
     videoUrl,
+    shotSpec,
+    stages,
   } = projectData || {};
 
   const now = new Date().toISOString();
@@ -750,7 +770,9 @@ async function saveProject(projectData, userId) {
   const projTitle = title || (brief ? brief.slice(0, 40) + '…' : `${businessName || 'Brand'} Ad Script`);
   const cStages = Array.isArray(completedStages) ? completedStages : [];
   const eChoices = explicitChoices || {};
-  const cDNA = creativeDNA || {};
+  const cDNA = Object.assign({}, creativeDNA || {});
+  if (shotSpec) cDNA.shotSpec = shotSpec;
+  if (stages) cDNA.stages = stages;
   const scList = Array.isArray(scenes) ? scenes : [];
   const pStatus = status || (scList.length >= 4 ? 'script_ready' : 'in_progress');
 
@@ -853,6 +875,8 @@ async function saveProject(projectData, userId) {
     completedStages: cStages,
     explicitChoices: eChoices,
     creativeDNA: cDNA,
+    shotSpec: shotSpec || cDNA.shotSpec || (existingIndex >= 0 ? projects[existingIndex].shotSpec : null),
+    stages: stages || cDNA.stages || (existingIndex >= 0 ? projects[existingIndex].stages : null),
     scenes: scList,
     character1: character1 || '',
     character2: character2 || '',

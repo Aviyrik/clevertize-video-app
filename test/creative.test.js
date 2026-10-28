@@ -849,3 +849,112 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
     assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false);
   }
 });
+
+test("23. normalizeUserScript fast-path: already-structured valid Annex-A script is not rewritten", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+
+  const res = await normalizeUserScript({
+    rawScript: GOOD_SCRIPT,
+    businessName: "Sharma General Store",
+    businessType: "Kirana / general store",
+    town: "Indore",
+    language: "Hindi",
+    creativeStyle: "Storytelling",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.passedGate, true);
+  assert.strictEqual(res.isAlreadyNormalized, true, "Must flag as already normalized without redundant AI rewrite");
+  assert.strictEqual(res.scenes.length, 4);
+  assert.ok(res.shotSpec, "Must compile shot specification for valid script");
+  assert.strictEqual(res.shotSpec.shots.length, 4);
+});
+
+test("24. normalizeUserScript adapts plain-text user script into 4 scenes and preserves dialogue, claims, and CTA", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const rawUserText = `Come to Palasia Dental Clinic this week for free checkups!
+Dr. Amit checks your teeth with painless digital scanner.
+Get 50% discount on laser cleaning until Sunday.
+Call 9876543210 or visit palasiadental.com now!`;
+
+  const res = await normalizeUserScript({
+    rawScript: rawUserText,
+    businessName: "Palasia Dental Clinic",
+    businessType: "Healthcare / Clinic",
+    town: "Indore",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+    brief: "Dental checkup and cleaning offer",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.totalScenes, 4);
+  assert.strictEqual(res.scenes.length, 4);
+  assert.ok(res.character1, "Must establish Character 1");
+  assert.ok(res.character2, "Must establish Character 2");
+  assert.ok(res.setting, "Must establish continuous Setting");
+  assert.ok(res.shotSpec, "Must compile shotSpec from normalized script");
+  assert.strictEqual(res.shotSpec.shots.length, 4);
+
+  // Verify dialogue and claims preservation
+  const combinedText = res.scenes.join("\n");
+  assert.ok(
+    combinedText.includes("Palasia Dental Clinic") || combinedText.includes("Dental") || combinedText.includes("checkup"),
+    "Must preserve brand and clinical offering"
+  );
+  assert.ok(
+    res.scenes.every((s) => s.includes("Visual:") && s.includes("Audio / Dialogue / Voiceover:")),
+    "Every scene must have visual and dialogue blocks"
+  );
+});
+
+test("25. normalizeUserScript rejects empty or whitespace-only script content", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  await assert.rejects(
+    async () => {
+      await normalizeUserScript({ rawScript: "   ", businessName: "Test Store" });
+    },
+    /Script content is required/i
+  );
+});
+
+test("26. B-03: fallbackNormalizeScript handles short/one-line script safely without placeholder dialogue", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const shortScript = "Visit Apex Footwear on MG Road this weekend for 50% discount on sports shoes! Call 9876543210 today.";
+
+  const res = await normalizeUserScript({
+    rawScript: shortScript,
+    businessName: "Apex Footwear",
+    businessType: "Footwear & Shoes",
+    town: "Indore",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.scenes.length, 4);
+
+  const fullText = res.scenes.join("\n");
+  // Must NOT contain placeholder text like "Scene 2 action for Apex Footwear" or "narrative and dialogue"
+  assert.ok(!fullText.includes("Scene 2 action"), "Must not invent placeholder 'Scene 2 action'");
+  assert.ok(!fullText.includes("Scene 3 action"), "Must not invent placeholder 'Scene 3 action'");
+  assert.ok(!fullText.includes("narrative and dialogue"), "Must not invent placeholder dialogue");
+
+  // Must preserve user's real claims and CTA
+  assert.ok(fullText.includes("Apex Footwear"), "Must preserve brand name");
+  assert.ok(fullText.includes("50% discount") || fullText.includes("sports shoes"), "Must preserve product claim");
+  assert.ok(fullText.includes("9876543210"), "Must preserve user CTA");
+
+  // Middle beats without allocated dialogue must be visual action with natural ambient audio
+  assert.ok(res.scenes[1].includes("(None - visual demonstration") || res.scenes[1].includes("natural room tone"), "Middle beat must be visual action");
+});
+
+test("27. B-03: normalizeUserScript rejects scripts too brief to infer creative details with clear actionable error", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  await assert.rejects(
+    async () => {
+      await normalizeUserScript({ rawScript: "Buy shoes.", businessName: "Apex" });
+    },
+    /Script content is too brief/i
+  );
+});

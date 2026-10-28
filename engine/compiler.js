@@ -22,18 +22,32 @@ const FRAMING_HIERARCHY = {
  * Extracts clean visual action and camera details from an Annex-A scene string.
  */
 function extractSceneParts(sceneText) {
+  if (!sceneText || typeof sceneText !== "string") {
+    return { visual: "", camera: "smooth subtle push-in", dialogue: "None" };
+  }
+
   const visualMatch = sceneText.match(/Visual:\s*([\s\S]*?)(?:\n\s*Animation Elements:|$)/i);
   let visual = visualMatch ? visualMatch[1].trim() : "";
   // Strip "Same setting:" prefix for clean action parsing
   visual = visual.replace(/^Same setting:\s*/i, "").trim();
+  if (!visual) {
+    // Fallback for non-standard or edited scene text
+    visual = sceneText.replace(/\n\s*Editing Notes[^\n]*:[\s\S]*$/i, "").split("\n")[0].trim();
+  }
 
-  const cameraMatch = sceneText.match(/•\s*Camera:\s*([^\n]+)/i);
+  const cameraMatch = sceneText.match(/•?\s*Camera:\s*([^\n]+)/i);
   const camera = cameraMatch ? cameraMatch[1].trim() : "smooth subtle push-in";
 
   const { lines } = dialogueOf(sceneText);
-  const dialogue = lines.map((l) => `${l.speaker}: "${l.text}"`).join(" | ");
+  let dialogue = lines.map((l) => `${l.speaker}: "${l.text}"`).join(" | ");
+  if (!dialogue) {
+    const diaMatch = sceneText.match(/(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio|Dialogue|VO):\s*(.+)$/im);
+    if (diaMatch && !/^\(?none\b/i.test(diaMatch[1].trim())) {
+      dialogue = diaMatch[1].trim();
+    }
+  }
 
-  return { visual, camera, dialogue };
+  return { visual, camera, dialogue: dialogue || "None" };
 }
 
 /**
@@ -137,6 +151,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
 }
 
 module.exports = {
+  extractSceneParts,
   compileShotSpecification,
   compileShotPrompt,
   FRAMING_HIERARCHY,

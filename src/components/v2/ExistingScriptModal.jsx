@@ -220,70 +220,63 @@ export default function ExistingScriptModal({
       const data = await res.json();
       setValidationResult(data);
     } catch (err) {
-      console.warn('[validate-and-import] fallback to local parser:', err.message);
-      // Client-side fallback if server endpoint is unreachable
-      const lines = scriptText.split('\n').filter((l) => l.trim().length > 0);
-      const perScene = Math.max(1, Math.ceil(lines.length / 4));
+      console.warn('[validate-and-import] validation notice:', err.message);
+      // If server returned a business or validation error, display actionable error directly
+      if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError') && !err.message.includes('fetch')) {
+        setErrorMsg(err.message);
+        setValidationResult(null);
+        return;
+      }
+
+      if (scriptText.trim().length < 15) {
+        setErrorMsg('Script content is too brief to adapt. Please provide your business offering, a key benefit, or a call-to-action.');
+        setValidationResult(null);
+        return;
+      }
+
+      // Safe client-side fallback if server endpoint is truly unreachable (offline network)
+      const rawSentences = scriptText.trim()
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+        .filter((s) => s.length > 0 && !/^SCENE\s*\d+/i.test(s) && !/^ANNEX\s*A/i.test(s));
+
       const beats = ['Scene 1 · Hook', 'Scene 2 · Build', 'Scene 3 · Turn', 'Scene 4 · Resolution'];
+      const char1 = `${businessName || 'Brand'} Host`;
+      const char2 = 'Customer';
       const scenes = [0, 1, 2, 3].map((i) => {
-        const sliceLines = lines.slice(i * perScene, (i + 1) * perScene);
-        if (sliceLines.length === 0) {
-          sliceLines.push(`Scene ${i + 1} narrative and dialogue`);
-        }
+        let userLine = '';
+        if (i === 0) userLine = rawSentences[0] || '';
+        else if (i === 1) userLine = rawSentences.length >= 3 ? rawSentences[1] : '';
+        else if (i === 2) userLine = rawSentences.length >= 4 ? rawSentences[2] : '';
+        else userLine = rawSentences.length >= 2 ? rawSentences[rawSentences.length - 1] : rawSentences[0] || '';
 
-        const dialogueLines = [];
-        const visualLines = [];
+        // Never generate fake spoken dialogue
+        const dialogueContent = userLine
+          ? `${char1}: "${userLine.replace(/"/g, "'")}"`
+          : '(None - visual demonstration with natural room tone)';
 
-        for (const line of sliceLines) {
-          const visMatch = line.match(/^(?:Visual|Action):\s*(.+)$/i);
-          if (visMatch) {
-            visualLines.push(visMatch[1].trim());
-            continue;
-          }
-          const diaMatch = line.match(/^(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio|Dialogue|Voiceover|VO):\s*(.+)$/i);
-          if (diaMatch) {
-            dialogueLines.push(diaMatch[1].trim());
-            continue;
-          }
-          const speakerMatch = line.match(/^([A-Za-z0-9\s._'-]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
-          const isQuoted = /^["'].+["']$/.test(line.trim());
+        const beatVisuals = [
+          `Same setting: ${char1} introduces the hook with clear product focus in studio setting. Characters look at each other with warm engagement.`,
+          `Same setting: ${char1} demonstrates key product features while ${char2} examines the quality. Characters look at each other with engaged interest.`,
+          `Same setting: ${char2} experiences the benefit with clear relief and delight. Characters look at each other with shared satisfaction.`,
+          `Same setting: Both characters face camera with confident, welcoming smiles, presenting the final invitation for ${businessName || 'Brand'}.`
+        ];
 
-          if (speakerMatch || isQuoted) {
-            dialogueLines.push(line);
-          } else {
-            visualLines.push(line);
-          }
-        }
-
-        let visualContent = visualLines.join(' ');
-        let dialogueContent = dialogueLines.join('\n');
-
-        if (!dialogueContent && visualContent) {
-          dialogueContent = visualContent;
-          visualContent = `${businessName || 'Brand'} in Single Room Environment.`;
-        } else if (!visualContent) {
-          const beatVisuals = [
-            `${businessName || 'Brand'} representative introduces the hook with clear product focus in studio setting.`,
-            `${businessName || 'Brand'} representative highlights the everyday problem and relatable struggle.`,
-            `Engaging demonstration of ${businessName || 'Brand'} solution and key breakthrough.`,
-            `Clear call to action highlighting ${businessName || 'Brand'} offer and next steps.`
-          ];
-          visualContent = beatVisuals[i] || `Balanced room shot.`;
-        }
-
-        return `ANNEX A\n${beats[i]}\nVisual:\n${visualContent}\nAnimation Elements:\nCamera: smooth push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueContent}\nSound Design:\nRoom ambience.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
+        return `ANNEX A\n${beats[i]}\nVisual:\n${beatVisuals[i]}\nAnimation Elements:\n• Camera: smooth motivated push-in\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueContent}\nSound Design:\nAmbience: natural room tone.\nEditing Notes:\nDuration ~4s`;
       });
 
       setValidationResult({
-        status: 'success',
-        passedGate: true,
-        failures: [],
+        status: 'warning',
+        passedGate: false,
+        gatePassed: false,
+        failures: ['Parsed offline without server AI verification. Please verify scene timings and dialogue before rendering.'],
         scenes,
-        character1: `${businessName || 'Brand'} Host`,
-        character2: 'Customer',
-        setting: 'Single Room Environment',
+        character1: char1,
+        character2: char2,
+        setting: `${businessName || 'Brand'} Studio Environment`,
         fullScriptText: scriptText,
         totalScenes: 4,
+        shotSpec: null,
       });
     } finally {
       setIsValidating(false);
@@ -307,6 +300,7 @@ export default function ExistingScriptModal({
       setting: validationResult.setting,
       language: selectedLang,
       creativeStyle: selectedStyle,
+      shotSpec: validationResult.shotSpec || null,
     });
     onClose();
   };

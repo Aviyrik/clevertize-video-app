@@ -937,12 +937,14 @@ export default function App() {
     setting: st,
     language: lang,
     creativeStyle: stl,
+    shotSpec: sp,
   }) => {
     if (c1) setCharacter1(c1);
     if (c2) setCharacter2(c2);
     if (st) setSetting(st);
     if (lang) updateUserContext('language', lang);
     if (stl) updateUserContext('creativeStyle', stl);
+    if (sp) setShotSpec(sp);
 
     setScenes(importedScenes);
     setGeneratedScript(importedScript);
@@ -1439,9 +1441,12 @@ export default function App() {
       localStorage.removeItem('clevertize_token');
       localStorage.removeItem('clevertize_user');
       localStorage.removeItem('clevertize_user_context');
+      localStorage.removeItem('clevertize_local_projects');
       if (currentUser?.id) {
         localStorage.removeItem(`clevertize_user_context_${currentUser.id}`);
+        localStorage.removeItem(`clevertize_local_projects_${currentUser.id}`);
       }
+      localStorage.removeItem('clevertize_brand_name');
     } catch {}
 
     setAuthToken(null);
@@ -1528,6 +1533,7 @@ export default function App() {
         setting: setting || '',
         character1: character1 || '',
         character2: character2 || '',
+        shotSpec: shotSpec || null,
         stages: {
           directionsList: directionsList || [],
           selectedDirection: selectedDirection || null,
@@ -1537,6 +1543,11 @@ export default function App() {
           storyWorldData: storyWorldData || null,
           generatedScript: generatedScript || null,
           completedStages: completedStages || [],
+          shotSpec: shotSpec || null,
+        },
+        creativeDNA: {
+          ...(creativeDNA || {}),
+          shotSpec: shotSpec || null,
         },
         brandContext: extractBrandProfile(userContext),
       };
@@ -1610,6 +1621,13 @@ export default function App() {
     if (proj.setting) setSetting(proj.setting);
     if (proj.character1) setCharacter1(proj.character1);
     if (proj.character2) setCharacter2(proj.character2);
+
+    const restoredShotSpec = proj.shotSpec || proj.stages?.shotSpec || proj.creativeDNA?.shotSpec || null;
+    if (restoredShotSpec && Array.isArray(restoredShotSpec.shots)) {
+      setShotSpec(restoredShotSpec);
+    } else {
+      setShotSpec(null);
+    }
 
     if (proj.stages) {
       if (proj.stages.directionsList) setDirectionsList(proj.stages.directionsList);
@@ -2499,6 +2517,19 @@ export default function App() {
         const updated = [...scenes];
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
+        if (shotSpec && Array.isArray(shotSpec.shots)) {
+          setShotSpec((prev) => {
+            if (!prev || !Array.isArray(prev.shots)) return prev;
+            return {
+              ...prev,
+              staticWorld: {
+                ...(prev.staticWorld || {}),
+                setting,
+                characters: [character1, character2].filter(Boolean).join(' | '),
+              },
+            };
+          });
+        }
         setIsSceneRewriteOpen(false);
       }
     } catch (err) {
@@ -3036,7 +3067,14 @@ export default function App() {
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
-        shotSpec: shotSpec || null,
+        shotSpec: shotSpec ? {
+          ...shotSpec,
+          staticWorld: {
+            ...(shotSpec.staticWorld || {}),
+            setting: effectiveSetting,
+            characters: [effectiveChar1, effectiveChar2].filter(Boolean).join(' | '),
+          },
+        } : null,
       };
 
       const data = await safeApiCall(fetch('/api/run', {
@@ -3445,7 +3483,14 @@ export default function App() {
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
-        shotSpec: shotSpec || null,
+        shotSpec: shotSpec ? {
+          ...shotSpec,
+          staticWorld: {
+            ...(shotSpec.staticWorld || {}),
+            setting: effectiveSetting,
+            characters: [effectiveChar1, effectiveChar2].filter(Boolean).join(' | '),
+          },
+        } : null,
       };
 
       const data = await safeApiCall(fetch('/api/run', {

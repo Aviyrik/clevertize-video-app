@@ -11,7 +11,7 @@ const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
-const { compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
+const { extractSceneParts, compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
 const db = require("./engine/db");
 
@@ -714,13 +714,48 @@ app.post("/api/research/url", authRequired, async (req, res) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
-    const response = await global.fetch(targetUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
-        "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
-      },
-    });
+
+    let currentUrl = targetUrl;
+    let hops = 0;
+    const maxRedirects = 3;
+    let response = null;
+
+    while (hops <= maxRedirects) {
+      const disallowedCheck = isDisallowedUrl(currentUrl);
+      if (disallowedCheck) {
+        clearTimeout(timeout);
+        return res.status(400).json({ error: `Redirect destination rejected: ${disallowedCheck}` });
+      }
+
+      response = await global.fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
+          "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
+        },
+      });
+
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        hops++;
+        if (hops > maxRedirects) {
+          throw new Error("Too many redirects during web research.");
+        }
+        const location = response.headers.get("location");
+        if (!location) {
+          throw new Error("Redirect response missing location header.");
+        }
+        const nextUrl = new URL(location, currentUrl).toString();
+        const nextDisallowed = isDisallowedUrl(nextUrl);
+        if (nextDisallowed) {
+          clearTimeout(timeout);
+          return res.status(400).json({ error: `Redirect destination rejected: ${nextDisallowed}` });
+        }
+        currentUrl = nextUrl;
+        continue;
+      }
+      break;
+    }
     clearTimeout(timeout);
 
     if (response && response.ok) {
@@ -883,135 +918,25 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
 app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
-    const { rawScript, businessName, businessType, language, creativeStyle } = req.body || {};
+    const { rawScript, businessName, businessType, town, language, creativeStyle, brief } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
       return res.status(400).json({ error: "Please enter or paste script text to validate." });
     }
 
-    const brand = String(businessName || "My Business").trim();
-    const bType = String(businessType || "Retail Business").trim();
-    const lang = String(language || "English").trim();
-    const style = String(creativeStyle || "UGC / Creator-style").trim();
+    // Inspect sliceLines for dialogue and visual separation during script normalization
+    const sliceLines = (lines, start, end) => lines.slice(start, end);
 
-    // 1. Parse or segment into 4 scenes
-    let parsed = parseOutput(rawScript);
-    const char1 = parsed.character1 || `${brand} Representative — confident, friendly, relatable presentation`;
-    const char2 = parsed.character2 || `Customer — relatable everyday buyer seeking authentic quality`;
-    const setting = parsed.setting || `Clean, inviting shop / studio space with warm natural lighting and clear product display`;
-    let sceneTexts = [];
-
-    if (parsed.scenes && parsed.scenes.length >= 4) {
-      sceneTexts = parsed.scenes.slice(0, 4);
-    } else {
-      // Split on common scene demarcators: "Scene 1", "SCENE 1", "ANNEX A", "\n\n\n", or 4 paragraph chunks
-      const chunks = rawScript
-        .split(/(?:ANNEX\s+A|SCENE\s+[1-4]|Scene\s+[1-4]|---|\n\s*\n\s*\n)/i)
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      if (chunks.length >= 4) {
-        sceneTexts = chunks.slice(0, 4).map((c, idx) => `ANNEX A\nSCENE ${idx + 1}\n${c}`);
-      } else {
-        // Divide script into 4 structured narrative beats
-        const lines = rawScript.split("\n").map((l) => l.trim()).filter(Boolean);
-        const perScene = Math.max(1, Math.ceil(lines.length / 4));
-        const beats = ["Scene 1 · Hook", "Scene 2 · Build", "Scene 3 · Turn", "Scene 4 · Resolution"];
-        sceneTexts = [0, 1, 2, 3].map((i) => {
-          const sliceLines = lines.slice(i * perScene, (i + 1) * perScene);
-          if (sliceLines.length === 0) {
-            sliceLines.push(`Scene ${i + 1} narrative and dialogue`);
-          }
-
-          const dialogueLines = [];
-          const visualLines = [];
-
-          for (const line of sliceLines) {
-            const visMatch = line.match(/^(?:Visual|Action):\s*(.+)$/i);
-            if (visMatch) {
-              visualLines.push(visMatch[1].trim());
-              continue;
-            }
-            const diaMatch = line.match(/^(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio|Dialogue|Voiceover|VO):\s*(.+)$/i);
-            if (diaMatch) {
-              dialogueLines.push(diaMatch[1].trim());
-              continue;
-            }
-            const speakerMatch = line.match(/^([A-Za-z0-9\s._'-]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
-            const isQuoted = /^["'].+["']$/.test(line.trim());
-
-            if (speakerMatch || isQuoted) {
-              dialogueLines.push(line);
-            } else {
-              visualLines.push(line);
-            }
-          }
-
-          let visualContent = visualLines.join(' ');
-          let dialogueContent = dialogueLines.join('\n');
-
-          if (!dialogueContent && visualContent) {
-            dialogueContent = visualContent;
-            visualContent = `${brand} in ${setting}.`;
-          } else if (!visualContent) {
-            const beatVisuals = [
-              `${brand} representative introduces the hook with clear product focus in ${setting}.`,
-              `${brand} representative highlights the everyday problem and relatable customer struggle.`,
-              `Engaging demonstration of ${brand} solution and key breakthrough in ${setting}.`,
-              `Clear call to action highlighting ${brand} offer and next steps in ${setting}.`
-            ];
-            visualContent = beatVisuals[i] || `Balanced medium shot in steady room lighting.`;
-          }
-
-          return `ANNEX A\n${beats[i]}\nVisual:\n${visualContent}\nAnimation Elements:\nCamera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueContent}\nSound Design:\nNatural ambient room tone.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
-        });
-      }
-    }
-
-    // 3. Construct synthetic full script for gate check if needed
-    let fullScriptText = rawScript;
-    let gateParsed = parsed;
-    if (!parsed.header || !parsed.header.business || !parsed.character1 || !parsed.character2 || !parsed.setting) {
-      fullScriptText = `@@HEADER@@\nBusiness: ${brand}\nFormat: ${style}\nLens: 2, Everyday Moments\nHook: Relatable Hook\nMoment: Everyday\n\n@@CHARACTER1@@\n${char1}\n\n@@CHARACTER2@@\n${char2}\n\n@@SETTING@@\n${setting}\n\n` +
-        sceneTexts.map((s) => `@@SCENE@@\n${s}`).join("\n\n") +
-        `\n\n@@RECORD@@\n{"format":"${style}","characters":"${char1} & ${char2}","setting":"${setting}"}`;
-      gateParsed = parseOutput(fullScriptText);
-    }
-
-    // 4. Run Section 8 Quality Gate
-    const mockForm = {
-      businessName: brand,
-      businessType: bType,
-      language: lang,
-      creativeStyle: style,
-      scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
-      product: brand,
-    };
-
-    let fails = [];
-    try {
-      fails = runGate(gateParsed, mockForm, {
-        scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
-        approvedFormat: style,
-      }) || [];
-    } catch (gErr) {
-      console.warn("[runGate check warn]", gErr.message);
-      fails = [gErr.message];
-    }
-
-    const passedGate = Array.isArray(fails) && fails.length === 0;
-
-    return res.json({
-      status: "success",
-      passedGate,
-      gatePassed: passedGate,
-      failures: fails,
-      scenes: sceneTexts,
-      character1: char1,
-      character2: char2,
-      setting: setting,
-      fullScriptText,
-      totalScenes: sceneTexts.length,
+    const result = await creative.normalizeUserScript({
+      rawScript,
+      businessName,
+      businessType,
+      town,
+      language,
+      creativeStyle,
+      brief,
     });
+
+    return res.json(result);
   } catch (err) {
     console.error("[api/script/validate-and-import]", err.message);
     res.status(500).json({ error: err.message || "Failed to validate script." });
@@ -1208,12 +1133,33 @@ app.post("/api/run", authRequired, async (req, res) => {
     // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
     let processedScenes;
     if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
-      processedScenes = shotSpec.shots.map((sh) =>
-        compileShotPrompt(sh, shotSpec.staticWorld || { setting: resolvedSetting, characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
+      // Synchronize staticWorld with latest continuity fields from request (continuity edits MUST take effect)
+      const effectiveStaticWorld = {
+        setting: resolvedSetting,
+        characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "),
+        businessType: businessType || shotSpec.project?.businessType || bCat,
+        style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
+      };
+
+      processedScenes = shotSpec.shots.map((sh, idx) => {
+        const currentSceneText = scenes[idx] || "";
+        const parts = extractSceneParts(currentSceneText);
+        // Synchronize shot with latest scene text so manual scene edits and AI rewrites are NEVER ignored
+        const updatedShot = {
+          ...sh,
+          primaryAction: parts.visual ? (parts.visual.split(".")[0] ? parts.visual.split(".")[0].trim() + "." : parts.visual) : sh.primaryAction,
+          fullVisual: parts.visual || sh.fullVisual,
+          cameraMovement: (parts.camera && parts.camera !== "smooth subtle push-in") ? parts.camera : (sh.cameraMovement || parts.camera),
+          dialogue: parts.dialogue !== "None" ? parts.dialogue : (sh.dialogue || "None"),
+        };
+
+        return compileShotPrompt(updatedShot, effectiveStaticWorld, {
           duration: duration || "15s",
           shotCount: scenes.length,
-        })
-      );
+          style: shotSpec.project?.style || req.body?.creativeStyle,
+          format: shotSpec.format,
+        });
+      });
     } else {
       // Robust fallback to continuous scene compilation
       processedScenes = scenes.map((sc) => sceneForGeneration(sc, {
@@ -1601,7 +1547,8 @@ app.post("/api/businesses", authRequired, async (req, res) => {
     const saved = await db.saveBusiness(req.body, req.user.id);
     res.json({ success: true, status: "success", business: saved });
   } catch (err) {
-    res.status(400).json({ error: err.message || "Failed to save business profile." });
+    const statusCode = err.status || 400;
+    res.status(statusCode).json({ error: err.message || "Failed to save business profile." });
   }
 });
 

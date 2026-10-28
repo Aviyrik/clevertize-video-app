@@ -649,5 +649,204 @@ test("Phase 1.3 Security: Redirect-safe video downloads prevent SSRF redirect by
   assert.ok(approvedRes.headers.get("content-disposition")?.includes("attachment"));
 });
 
+test("Track B Security (F-01): /api/research/url stops SSRF redirects to loopback and private subnets", async () => {
+  const user = await db.createUser({ email: "ssrf-scraper@test.com", password: "password123", name: "Scraper Tester" });
+  const token = await db.createSession(user.id);
+
+  // 1. Direct private URL rejected
+  const directLocal = await post("/api/research/url", { url: "http://127.0.0.1:8080/api/config" }, token);
+  assert.equal(directLocal.status, 400);
+  assert.match(directLocal.body.error, /restricted|loopback/i);
+
+  // 2. Redirect to localhost rejected
+  const redirectLocal = await post("/api/research/url", { url: "https://cdn.example.com/redirect-to-localhost" }, token);
+  assert.equal(redirectLocal.status, 400);
+  assert.match(redirectLocal.body.error, /Redirect destination rejected/i);
+
+  // 3. Redirect to metadata IP (169.254.169.254) rejected
+  const redirectMeta = await post("/api/research/url", { url: "https://cdn.example.com/redirect-to-metadata" }, token);
+  assert.equal(redirectMeta.status, 400);
+  assert.match(redirectMeta.body.error, /Redirect destination rejected/i);
+});
+
+test("Track B Data Isolation (F-02): saveBusiness rejects cross-user business ID overwriting with HTTP 403", async () => {
+  const userA = await db.createUser({ email: "biz-owner-a@test.com", password: "password123", name: "Owner A" });
+  const tokenA = await db.createSession(userA.id);
+
+  const userB = await db.createUser({ email: "biz-attacker-b@test.com", password: "password123", name: "Attacker B" });
+  const tokenB = await db.createSession(userB.id);
+
+  // User A creates a business
+  const saveA = await post("/api/businesses", {
+    businessName: "Owner A Pharmacy",
+    businessType: "Healthcare, Clinic & Pharmacy",
+    town: "Indore",
+  }, tokenA);
+  assert.equal(saveA.status, 200);
+  const bizId = saveA.body.business.id;
+  assert.ok(bizId);
+
+  // User B attempts to overwrite User A's business using the same ID -> must fail with HTTP 403
+  const hijackAttempt = await post("/api/businesses", {
+    id: bizId,
+    businessName: "Hijacked Pharmacy",
+    businessType: "Retail Store",
+    town: "Delhi",
+  }, tokenB);
+  assert.equal(hijackAttempt.status, 403);
+  assert.match(hijackAttempt.body.error, /belongs to another user/i);
+
+  // Verify User A's business remains untouched
+  const fetchARes = await realFetch(base + `/api/businesses/${bizId}`, {
+    headers: { authorization: `Bearer ${tokenA}` },
+  });
+  assert.equal(fetchARes.status, 200);
+  const fetchA = await fetchARes.json();
+  assert.equal(fetchA.business.businessName, "Owner A Pharmacy");
+});
+
+test("Track B Persistence (F-04 & F-06): deleteUser purges video_runs.json and createSession prunes expired sessions", async () => {
+  const user = await db.createUser({ email: "cascade-cleanup@test.com", password: "password123", name: "Cleanup Tester" });
+  const token = await db.createSession(user.id);
+
+  // Persist video run for this user
+  await db.saveVideoRun("run_cleanup_test", user.id, { status: "COMPLETED", videoUrl: "https://cdn.example.com/cleaned.mp4" });
+  assert.equal(await db.userOwnsVideoRun(user.id, "run_cleanup_test"), true);
+
+  // Delete user account
+  const deleted = await db.deleteUser(user.id);
+  assert.equal(deleted, true);
+
+  // Verify run record was cascaded and purged
+  const runAfter = await db.getVideoRun("run_cleanup_test");
+  assert.equal(runAfter, null, "Video run must be deleted when user is deleted");
+});
+
+test("B-01: /api/run keeps shotSpec synchronized with scene edits and continuity edits", async () => {
+  const user = await db.createUser({ email: "shot-sync-tester@test.com", password: "password123", name: "Shot Sync Tester" });
+  const token = await db.createSession(user.id);
+
+  // Setup initial shotSpec with old data
+  const initialShotSpec = {
+    shots: [
+      { shotNumber: 1, framing: "Medium close-up", primaryAction: "Old Hook action.", fullVisual: "Old Hook action.", cameraMovement: "push-in", dialogue: "Old Hook" },
+      { shotNumber: 2, framing: "Medium shot", primaryAction: "Old Build action.", fullVisual: "Old Build action.", cameraMovement: "steady", dialogue: "Old Build" },
+      { shotNumber: 3, framing: "Medium close-up", primaryAction: "Old Turn action.", fullVisual: "Old Turn action.", cameraMovement: "close-up", dialogue: "Old Turn" },
+      { shotNumber: 4, framing: "Medium shot", primaryAction: "Old CTA action.", fullVisual: "Old CTA action.", cameraMovement: "pull-out", dialogue: "Old CTA" },
+    ],
+    staticWorld: {
+      setting: "Old Stale Clinic Interior",
+      characters: "Old Dr. Stale | Old Patient",
+    },
+    project: { duration: "15s", style: "UGC / Creator-style" },
+  };
+
+  // User edits Scene 2 in studio, and updates continuity to a new Setting and Lead Character
+  const editedScenes = [
+    "ANNEX A\nSCENE 1 – HOOK\nVisual:\nSame setting: Dr. Aryan welcomes patient.\nAnimation Elements:\n• Camera: smooth subtle push-in\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Welcome to modern dental care.\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 2 – BUILD (EDITED)\nVisual:\nSame setting: Dr. Aryan demonstrates painless ultrasonic cleaning tool.\nAnimation Elements:\n• Camera: eye-level two-shot\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Zero pain, completely comfortable.\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 3 – TURN\nVisual:\nSame setting: Patient looks relieved and smiles.\nAnimation Elements:\n• Camera: close-up on smile\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPatient: \"That was so fast!\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 4 – RESOLUTION\nVisual:\nSame setting: Both smile towards camera.\nAnimation Elements:\n• Camera: medium shot\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Call Palasia Dental today!\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+  ];
+
+  const editedSetting = "High-Tech Palasia Dental Studio in Indore";
+  const editedChar1 = "Dr. Aryan (Chief Dentist)";
+  const editedChar2 = "Rohit (Patient)";
+
+  const runRes = await post("/api/run", {
+    scenes: editedScenes,
+    character1: editedChar1,
+    character2: editedChar2,
+    setting: editedSetting,
+    shotSpec: initialShotSpec, // Contains old stale shots and old staticWorld
+    businessName: "Palasia Dental Studio",
+    businessType: "Healthcare / Dental Clinic",
+  }, token);
+
+  assert.equal(runRes.status, 200);
+  const sent = calls.magnificRun.at(-1).inputs;
+
+  // 1. Verify that the continuity edit reached setting_2 and character_1_2
+  assert.equal(sent.setting_2, editedSetting);
+  assert.equal(sent.character_1_2, editedChar1);
+  assert.equal(sent.character_2_2, editedChar2);
+
+  // 2. Verify that the compiled shot prompts reflect the EDITED scene 2, NOT the stale shot 2
+  const scene2Prompt = sent.scenes_2[1];
+  assert.ok(scene2Prompt.includes("painless ultrasonic cleaning tool"), "Scene 2 prompt must include the edited visual action");
+  assert.ok(scene2Prompt.includes("Zero pain, completely comfortable"), "Scene 2 prompt must include the edited dialogue");
+  assert.ok(!scene2Prompt.includes("Old Build action"), "Scene 2 prompt must NOT contain stale shot data");
+  assert.ok(scene2Prompt.includes(editedSetting), "Static world in prompt must reflect updated setting");
+});
+
+test("B-02: Project persistence preserves shotSpec across save and reopen, and compiles properly", async () => {
+  const user = await db.createUser({ email: "save-reopen-tester@test.com", password: "password123", name: "Save Reopen Tester" });
+  const token = await db.createSession(user.id);
+
+  const testShotSpec = {
+    shots: [
+      { shotNumber: 1, framing: "Medium close-up", primaryAction: "Host introduces fresh tea.", fullVisual: "Host introduces fresh tea.", cameraMovement: "push-in", dialogue: "Fresh tea here!" },
+      { shotNumber: 2, framing: "Medium shot", primaryAction: "Host brews ginger tea.", fullVisual: "Host brews ginger tea.", cameraMovement: "eye-level", dialogue: "Real ginger brewed daily." },
+      { shotNumber: 3, framing: "Medium close-up", primaryAction: "Customer sips tea.", fullVisual: "Customer sips tea.", cameraMovement: "close-up", dialogue: "So refreshing!" },
+      { shotNumber: 4, framing: "Medium shot", primaryAction: "Both toast with cups.", fullVisual: "Both toast with cups.", cameraMovement: "medium hold", dialogue: "Order on Chai Point now." },
+    ],
+    staticWorld: {
+      setting: "Warm Chai Point Cafe in Bengaluru",
+      characters: "Priya (Host) | Arjun (Customer)",
+    },
+    project: { duration: "15s", style: "UGC / Creator-style" },
+  };
+
+  const projectPayload = {
+    title: "Chai Point Commercial",
+    businessName: "Chai Point",
+    businessType: "Sweets, Bakery & Restaurant",
+    town: "Bengaluru",
+    scenes: [
+      "ANNEX A\nSCENE 1 – HOOK\nVisual:\nSame setting: Priya introduces fresh tea.\nAnimation Elements:\n• Camera: push-in\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Fresh tea here!\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 2 – BUILD\nVisual:\nSame setting: Priya brews ginger tea.\nAnimation Elements:\n• Camera: eye-level\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Real ginger brewed daily.\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 3 – TURN\nVisual:\nSame setting: Arjun sips tea.\nAnimation Elements:\n• Camera: close-up\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nArjun: \"So refreshing!\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 4 – RESOLUTION\nVisual:\nSame setting: Both toast with cups.\nAnimation Elements:\n• Camera: medium hold\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Order on Chai Point now.\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+    ],
+    setting: "Warm Chai Point Cafe in Bengaluru",
+    character1: "Priya (Host)",
+    character2: "Arjun (Customer)",
+    shotSpec: testShotSpec,
+  };
+
+  // 1. Save project
+  const saveRes = await post("/api/projects", projectPayload, token);
+  assert.equal(saveRes.status, 200);
+  const projectId = saveRes.body.project.id;
+  assert.ok(projectId);
+
+  // 2. Reopen project via GET /api/projects/:id
+  const getRes = await realFetch(base + `/api/projects/${projectId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(getRes.status, 200);
+  const reopened = await getRes.json();
+  assert.ok(reopened.project);
+  assert.ok(reopened.project.shotSpec, "Reopened project must restore shotSpec");
+  assert.equal(reopened.project.shotSpec.shots.length, 4);
+
+  // 3. Generate video using reopened project data without live Magnific call
+  const runFromReopened = await post("/api/run", {
+    scenes: reopened.project.scenes,
+    character1: reopened.project.character1,
+    character2: reopened.project.character2,
+    setting: reopened.project.setting,
+    shotSpec: reopened.project.shotSpec,
+    businessName: reopened.project.businessName,
+    businessType: reopened.project.businessType,
+  }, token);
+
+  assert.equal(runFromReopened.status, 200);
+  const sentInputs = calls.magnificRun.at(-1).inputs;
+  assert.equal(sentInputs.scenes_2.length, 4);
+  assert.ok(sentInputs.scenes_2[0].startsWith("COMPOSITION & FRAMING:"), "Must compile structured prompt via compileShotPrompt");
+  assert.ok(sentInputs.scenes_2[0].includes("Warm Chai Point Cafe in Bengaluru"));
+});
+
 
 
