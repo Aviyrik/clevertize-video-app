@@ -1,15 +1,42 @@
-// Magnific Flows API: input discovery, input mapping, run, status.
+// Magnific Flows API: flow routing, input discovery, input mapping, run, status.
 const BASE = "https://api.magnific.com/v1/ai/flows";
 const SPEC_TTL_MS = 5 * 60 * 1000; // flow keys change when the flow is edited — don't cache forever
 
 const key = () => process.env.MAGNIFIC_API_KEY;
-const flowId = () => process.env.MAGNIFIC_FLOW_ID || "0MQyTfWvQD";
 
-let specCache = null; // { id, inputs, at }
+// One flow per (aspect ratio, product image?, logo image?) — the flow is chosen from what the user
+// actually uploaded, so no flow is ever fed a placeholder image. IDs come from the server env only.
+const FLOWS = [
+  { aspectRatio: "9:16", product: true, logo: true, env: "FLOW_916_PRODUCT_LOGO", id: "0MQyTfWvQD" },
+  { aspectRatio: "9:16", product: true, logo: false, env: "FLOW_916_PRODUCT_NOLOGO", id: "rl5XxtcFH6" },
+  { aspectRatio: "9:16", product: false, logo: true, env: "FLOW_916_NOPRODUCT_LOGO", id: "TeYJVNR8Ta" },
+  { aspectRatio: "9:16", product: false, logo: false, env: "FLOW_916_NOPRODUCT_NOLOGO", id: "kLqd16BU1G" },
+  { aspectRatio: "16:9", product: true, logo: true, env: "FLOW_169_PRODUCT_LOGO", id: "MXcPDCmYv9" },
+  { aspectRatio: "16:9", product: true, logo: false, env: "FLOW_169_PRODUCT_NOLOGO", id: "Pi7b42C8Sz" },
+  { aspectRatio: "16:9", product: false, logo: true, env: "FLOW_169_NOPRODUCT_LOGO", id: "wPlQ7EIQVN" },
+  { aspectRatio: "16:9", product: false, logo: false, env: "FLOW_169_NOPRODUCT_NOLOGO", id: "jSkvLD0Vkf" },
+];
+const ASPECT_RATIOS = ["9:16", "16:9"];
+const FLOW_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
-async function getFlowInputs(force = false) {
-  const id = flowId();
-  if (!force && specCache && specCache.id === id && Date.now() - specCache.at < SPEC_TTL_MS) return specCache.inputs;
+function selectFlow({ aspectRatio = "9:16", hasProduct, hasLogo }) {
+  const flow = FLOWS.find((f) => f.aspectRatio === aspectRatio && f.product === Boolean(hasProduct) && f.logo === Boolean(hasLogo));
+  if (!flow) throw Object.assign(new Error(`Unsupported aspect ratio "${aspectRatio}" — use ${ASPECT_RATIOS.join(" or ")}.`), { status: 400 });
+  const id = String(process.env[flow.env] || "").trim() || flow.id;
+  // never fall back to another combination's flow — a wrong flow wastes a render
+  if (!FLOW_ID_RE.test(id)) {
+    throw new Error(`Magnific flow for ${aspectRatio}, product=${hasProduct ? "yes" : "no"}, logo=${hasLogo ? "yes" : "no"} is not configured — set ${flow.env} in .env`);
+  }
+  return id;
+}
+
+const hasImage = (dataUrl) => typeof dataUrl === "string" && /^data:image\/[\w.+-]+;base64,\S/.test(dataUrl);
+
+const specCache = new Map(); // flowId -> { inputs, at }
+
+async function getFlowInputs(id, force = false) {
+  const cached = specCache.get(id);
+  if (!force && cached && Date.now() - cached.at < SPEC_TTL_MS) return cached.inputs;
 
   const r = await fetch(`${BASE}/${id}`, {
     headers: { "x-magnific-api-key": key() },
@@ -22,102 +49,72 @@ async function getFlowInputs(force = false) {
 
   const inputs = data.inputs || data.data?.inputs || [];
   if (!inputs.length) throw new Error("Flow spec returned no inputs");
-  specCache = { id, inputs, at: Date.now() };
-  console.log(`[flow] inputs: ${inputs.map((i) => `${i.id || i.name} [${i.label || "-"}]${i.required ? "*" : ""}`).join(", ")}`);
+  specCache.set(id, { inputs, at: Date.now() });
+  console.log(`[flow ${id}] inputs: ${inputs.map((i) => `${i.id || i.name} [${i.label || "-"}]${i.required ? "*" : ""}`).join(", ")}`);
   return inputs;
 }
 
+// Each flow names its inputs differently (scenes_2 / scenes_7, poduct / product_2, images / logo_5),
+// so inputs are matched against the flow's own spec — by label and by key, with "_" read as a space.
 function mapInputs(flowInputs, values) {
   const out = {};
   const used = new Set();
   const keyOf = (i) => String(i.id || i.name || "");
+  const textOf = (i) => `${i.label || ""} ${i.name || ""} ${keyOf(i)}`.toLowerCase().replace(/[_-]+/g, " ");
 
-  const pick = (test) =>
-    flowInputs.find((i) => {
-      if (used.has(keyOf(i))) return false;
-      const label = String(i.label || i.name || "").toLowerCase();
-      return test(label, i);
-    });
+  const pick = (test) => flowInputs.find((i) => !used.has(keyOf(i)) && test(textOf(i), i));
   const assign = (input, value) => {
-    if (!input || value == null || value === "" || (Array.isArray(value) && !value.length)) return;
+    if (!input || value == null || value === "" || (Array.isArray(value) && !value.length)) return null;
     out[keyOf(input)] = value;
     used.add(keyOf(input));
+    return keyOf(input);
   };
 
-  assign(pick((label, i) => label.includes("scene") || i.type === "list"), values.scenes);
-  assign(pick((label) => label.includes("character") && /1|one/.test(label)), values.character1);
-  assign(pick((label) => label.includes("character") && /2|two/.test(label)), values.character2);
-  assign(pick((label) => /setting|environment|location|world/.test(label)), values.setting);
-  // Image inputs are matched by label OR key. In the current flow: "poduct" = product, "images" = logo.
+  assign(pick((t, i) => /\bscenes?\b/.test(t) || i.type === "list"), values.scenes);
+  assign(pick((t) => /\bcharacter\s*\(?\s*(1|one)\b/.test(t)), values.character1);
+  assign(pick((t) => /\bcharacter\s*\(?\s*(2|two)\b/.test(t)), values.character2);
+  assign(pick((t) => /\b(setting|environment|location|world)\b/.test(t)), values.setting);
+  // "poduct" is a typo in the 0MQyTfWvQD flow; its logo slot is called "images"
   const PRODUCT_RE = /\b(product|poduct|prodct|prouct|produt)s?\b/;
   const LOGO_RE = /\b(logo|brand ?mark|brand ?logo)\b/;
-  const LOGO_KEY = process.env.MAGNIFIC_LOGO_INPUT || "images";
-  const isImage = (i) => /image|media|asset|file/i.test(`${i.type || ""} ${i.kind || ""}`);
+  const LOGO_KEY_RE = /^images?(_\d+)?$/i;
+  const isImage = (t, i) => /image|media|asset|file/i.test(`${i.type || ""} ${i.kind || ""}`) || /\b(image|photo|picture)s?\b/.test(t);
 
   // 1) named matches first, so neither image can land in the other's slot
-  const productInput = pick((label, i) => PRODUCT_RE.test(label) || PRODUCT_RE.test(keyOf(i).toLowerCase()));
-  if (values.productDataUrl) assign(productInput, values.productDataUrl);
-  const logoInput = pick((label, i) => LOGO_RE.test(label) || LOGO_RE.test(keyOf(i).toLowerCase()) || keyOf(i) === LOGO_KEY);
-  if (values.logoDataUrl) {
-    assign(logoInput, values.logoDataUrl);
-  } else if (logoInput && logoInput.required) {
-    assign(logoInput, TRANSPARENT_PNG_FALLBACK);
-  }
+  const productInput = pick((t) => PRODUCT_RE.test(t));
+  let product = values.productDataUrl ? assign(productInput, values.productDataUrl) : null;
+  const logoInput = pick((t, i) => LOGO_RE.test(t) || LOGO_KEY_RE.test(keyOf(i)));
+  let logo = values.logoDataUrl ? assign(logoInput, values.logoDataUrl) : null;
 
   // 2) fallbacks only if the named slot wasn't found
   if (values.productDataUrl && !productInput) {
-    assign(pick((label, i) => i !== logoInput && isImage(i)), values.productDataUrl);
+    product = assign(pick((t, i) => i !== logoInput && isImage(t, i)), values.productDataUrl);
   }
   if (values.logoDataUrl && !logoInput) {
-    assign(pick((label, i) => i !== productInput && isImage(i)), values.logoDataUrl);
+    logo = assign(pick((t, i) => i !== productInput && isImage(t, i)), values.logoDataUrl);
   }
 
   const missing = flowInputs.filter((i) => i.required && out[keyOf(i)] === undefined).map((i) => i.label || keyOf(i));
-  return { inputs: out, missing };
+  return { inputs: out, missing, placed: { product, logo } };
 }
 
-// 1x1 68-byte valid PNG data URL used when a flow requires a product or logo image slot
-// but the user has provided product/brand context textually without uploading a photo.
-// 512x512 clean neutral PNG data URL used when flow requires an image input
-// but the user has not uploaded a photo (satisfies minimum resolution requirements of neural vision/diffusion encoders)
-const TRANSPARENT_PNG_FALLBACK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAIXklEQVR4nO3WoREAIBDAMPbf9w8JW4BoRHxl18w+AEDL+h0AALxnAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEGQAACDIAABBkAAAgyAAAQJABAIAgAwAAQQYAAIIMAAAEXY8r6IHhGqqiAAAAAElFTkSuQmCC";
+// Last-known input keys, used only when a flow's spec can't be fetched. Keyed by flow ID — never
+// shared between flows. 0MQyTfWvQD: exactly as "Use Flow as API" shows them (7 Oct 2026).
+const KNOWN_KEYS = {
+  "0MQyTfWvQD": { scenes: "scenes_2", character1: "character_1_2", character2: "character_2_2", setting: "setting_2", product: "poduct", logo: "images" },
+};
 
-// The flow's input keys, exactly as "Use Flow as API" shows them (7 Oct 2026). Override in .env if the flow is edited.
-function flowKeys() {
-  const e = process.env;
-  return {
-    scenes: e.MAGNIFIC_SCENES_INPUT || "scenes_2",
-    character1: e.MAGNIFIC_CHARACTER1_INPUT || "character_1_2",
-    character2: e.MAGNIFIC_CHARACTER2_INPUT || "character_2_2",
-    setting: e.MAGNIFIC_SETTING_INPUT || "setting_2",
-    product: e.MAGNIFIC_PRODUCT_INPUT || "poduct",
-    logo: e.MAGNIFIC_LOGO_INPUT || "images",
-  };
-}
-
-// Build the inputs straight from the known keys — no guessing.
-function explicitInputs(values) {
-  const k = flowKeys();
+function keyedInputs(keys, values) {
   const inputs = {};
-  const put = (key, v) => { if (v != null && v !== "" && !(Array.isArray(v) && !v.length)) inputs[key] = v; };
-  put(k.scenes, values.scenes);
-  put(k.character1, values.character1);
-  put(k.character2, values.character2);
-  put(k.setting, values.setting);
-
-  // Guarantee product input is satisfied:
-  // 1. If productDataUrl is provided (uploaded image), use it.
-  // 2. Otherwise, fallback to clean transparent PNG so flow requirement is never broken.
-  const productVal = values.productDataUrl || TRANSPARENT_PNG_FALLBACK;
-  put(k.product, productVal);
-
-  // Guarantee logo input is satisfied (flow requires images slot):
-  const logoVal = values.logoDataUrl || TRANSPARENT_PNG_FALLBACK;
-  put(k.logo, logoVal);
-
+  const put = (k, v) => { if (k && v != null && v !== "" && !(Array.isArray(v) && !v.length)) inputs[k] = v; };
+  put(keys.scenes, values.scenes);
+  put(keys.character1, values.character1);
+  put(keys.character2, values.character2);
+  put(keys.setting, values.setting);
+  put(keys.product, values.productDataUrl);
+  put(keys.logo, values.logoDataUrl);
   return inputs;
 }
-const fallbackInputs = explicitInputs;
 
 function sanitizePayloadForLogging(payload) {
   const sanitized = {};
@@ -201,25 +198,34 @@ async function startRun(values) {
   // Pre-flight check before API call
   validateMagnificRequest(values);
 
-  let inputs;
-  let spec = null;
-  try {
-    spec = await getFlowInputs();
-  } catch (e) {
-    console.warn(`[run] flow spec unavailable (${e.message}) — using last-known input names`);
-  }
+  // Route on what was really uploaded — an empty or malformed data URL counts as "no image"
+  const aspectRatio = values.aspectRatio || "9:16";
+  const hasProduct = hasImage(values.productDataUrl);
+  const hasLogo = hasImage(values.logoDataUrl);
+  const flowId = selectFlow({ aspectRatio, hasProduct, hasLogo });
+  const routed = { ...values, productDataUrl: hasProduct ? values.productDataUrl : null, logoDataUrl: hasLogo ? values.logoDataUrl : null };
+  console.log(`[run] flow=${flowId} (${aspectRatio}, product=${hasProduct ? "yes" : "no"}, logo=${hasLogo ? "yes" : "no"})`);
   console.log(`[run] received from the form: ${receivedSummary(values)}`);
-  inputs = explicitInputs(values);
 
-  if (spec) {
-    console.log(`[run] flow inputs (info only): ${spec.map((i) => `${i.label || i.name || i.id}${i.required ? " *required" : ""}`).join(", ")}`);
+  let inputs;
+  try {
+    const mapped = mapInputs(await getFlowInputs(flowId), routed);
+    const unplaced = [hasProduct && !mapped.placed.product && "product image", hasLogo && !mapped.placed.logo && "logo image"].filter(Boolean);
+    if (unplaced.length) throw Object.assign(new Error(`Magnific flow ${flowId} has no input for the ${unplaced.join(" or ")}`), { mapping: true });
+    if (mapped.missing.length) throw Object.assign(new Error(`Magnific flow ${flowId} needs inputs we could not fill: ${mapped.missing.join(", ")}`), { mapping: true });
+    inputs = mapped.inputs;
+  } catch (e) {
+    if (e.mapping) throw e;
+    if (!KNOWN_KEYS[flowId]) throw new Error(`Could not read the input list for Magnific flow ${flowId}: ${e.message}`);
+    console.warn(`[run] flow spec unavailable (${e.message}) — using last-known input names for ${flowId}`);
+    inputs = keyedInputs(KNOWN_KEYS[flowId], routed);
   }
 
   // Safe server-side payload logging: redacts base64 images and displays clean key overview
   console.log(`[run] sending keys: ${Object.keys(inputs).join(", ")}`);
   console.log(`[run] sanitized payload:\n${JSON.stringify(sanitizePayloadForLogging(inputs), null, 2)}`);
 
-  const r = await fetch(`${BASE}/${flowId()}/run`, {
+  const r = await fetch(`${BASE}/${flowId}/run`, {
     method: "POST",
     headers: { "x-magnific-api-key": key(), "content-type": "application/json" },
     body: JSON.stringify({ inputs }),
@@ -227,7 +233,7 @@ async function startRun(values) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
-    specCache = null; // keys may have changed — re-read the spec next time
+    specCache.delete(flowId); // keys may have changed — re-read this flow's spec next time
     console.error(`[run] Magnific HTTP ${r.status} error response:`, JSON.stringify(data));
     throw new Error(`Magnific HTTP ${r.status}: ${JSON.stringify(data).slice(0, 400)}`);
   }
@@ -286,8 +292,10 @@ module.exports = {
   runStatus,
   findVideoUrl,
   mapInputs,
-  explicitInputs,
+  selectFlow,
+  getFlowInputs,
+  FLOWS,
+  KNOWN_KEYS,
   validateMagnificRequest,
   sanitizePayloadForLogging,
-  TRANSPARENT_PNG_FALLBACK,
 };

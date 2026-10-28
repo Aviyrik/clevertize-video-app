@@ -79,7 +79,7 @@ function compileShotSpecification(parsedScript, form = {}) {
 
   return {
     project: {
-      aspectRatio: "9:16",
+      aspectRatio: /16:9/.test(platform) ? "16:9" : "9:16",
       duration,
       platform,
       language,
@@ -107,10 +107,14 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
   const totalSec = parseInt(totalDuration, 10) || 15;
   const shotCount = options.shotCount || 4;
   const perShotSec = (totalSec / shotCount).toFixed(1);
+  // landscape renders (16:9 flows) must not be told to compose for a vertical frame
+  const wide = options.aspectRatio === "16:9";
+  const framing = wide ? shot.framing.replace(/vertical/gi, "horizontal").replace(/9:16/g, "16:9") : shot.framing;
+  const frame = wide ? "horizontal 16:9" : "vertical 9:16";
 
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")
-    `COMPOSITION & FRAMING: ${shot.framing}. Subject/character fills primary vertical 9:16 viewing area with clear head-and-chest or waist-up visibility. Hero product/service is clearly discernible. ${/story/i.test(staticWorld.style || options.style || options.format || "") ? "STRICT STORYTELLING CAM: Cinematic third-person perspective only. The camera observes the characters objectively. Actors DO NOT hold smartphones or film themselves." : ""}`,
+    `COMPOSITION & FRAMING: ${framing}. Subject/character fills primary ${frame} viewing area with clear head-and-chest or waist-up visibility. Hero product/service is clearly discernible. ${/story/i.test(staticWorld.style || options.style || options.format || "") ? "STRICT STORYTELLING CAM: Cinematic third-person perspective only. The camera observes the characters objectively. Actors DO NOT hold smartphones or film themselves." : ""}`,
 
     // 2. Static World (Environment, Lighting, Wardrobe consistency)
     `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}.${staticWorld.businessType ? ` Business domain: ${staticWorld.businessType}.` : ""} Same lighting, color palette, and atmosphere throughout.`,

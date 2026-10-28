@@ -39,20 +39,35 @@ global.fetch = async (url, opts = {}) => {
     calls.anthropic.push(JSON.parse(opts.body));
     return json({ content: [{ type: "thinking", thinking: "..." }, { type: "text", text: queue.shift() }], stop_reason: "end_turn" });
   }
-  if (u.endsWith("/run")) { calls.magnificRun.push(JSON.parse(opts.body)); return json({ id: "run_1" }); }
+  if (u.endsWith("/run")) { calls.magnificRun.push({ flow: u.split("/flows/")[1].split("/")[0], ...JSON.parse(opts.body) }); return json({ id: "run_1" }); }
   if (u.includes("/flows/runs/")) return json({ status: "COMPLETED", result: { video: "https://cdn.example.com/out.mp4" } });
-  if (u.includes("api.magnific.com/v1/ai/flows/")) {
-    return json({ inputs: [
+  if (u.includes("api.magnific.com/v1/ai/flows/")) return json({ inputs: flowSpec(u.split("/flows/")[1]) });
+  return realFetch(url, opts);
+};
+
+// Each routed flow has its own input names, like the real ones (0MQyTfWvQD: "poduct"/"images"; others: *_7, product_2, logo_5)
+const FLOW_IMAGES = { "0MQyTfWvQD": "both", rl5XxtcFH6: "product", TeYJVNR8Ta: "logo", kLqd16BU1G: "none", MXcPDCmYv9: "both", Pi7b42C8Sz: "product", wPlQ7EIQVN: "logo", jSkvLD0Vkf: "none" };
+function flowSpec(id) {
+  if (id === "0MQyTfWvQD") {
+    return [
       { id: "scenes_2", type: "list", required: true },
       { id: "character_1_2", required: true },
       { id: "character_2_2", required: true },
       { id: "setting_2", required: true },
       { id: "poduct", type: "image", required: true },
       { id: "images", type: "image", required: true },
-    ] });
+    ];
   }
-  return realFetch(url, opts);
-};
+  const kind = FLOW_IMAGES[id];
+  return [
+    { id: "scenes_7", type: "list", required: true },
+    { id: "character_1_7", required: true },
+    { id: "character_2_7", required: true },
+    { id: "setting_7", required: true },
+    ...(kind === "both" || kind === "product" ? [{ id: "product_2", type: "image", required: true }] : []),
+    ...(kind === "both" || kind === "logo" ? [{ id: "logo_5", type: "image", required: true }] : []),
+  ];
+}
 
 const { app } = require("../server");
 const db = require("../engine/db");
@@ -149,13 +164,17 @@ test("approve saves the record once; run strips edit-only notes; download allowl
   const unauthRun = await post("/api/run", { scenes: p.scenes }, null);
   assert.equal(unauthRun.status, 401);
 
-  // without the product photo: gracefully fallbacks to text/synthetic product without crashing
+  // without the product photo: routed to the 9:16 no-product flow — no blank image is sent
   const miss = await post("/api/run", { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, logo });
   assert.equal(miss.status, 200);
   assert.equal(miss.body.runId, "run_1");
-  // with both: sent to the exact keys from the API
+  assert.equal(calls.magnificRun.at(-1).flow, "TeYJVNR8Ta");
+  assert.deepEqual(Object.keys(calls.magnificRun.at(-1).inputs).sort(), ["character_1_7", "character_2_7", "logo_5", "scenes_7", "setting_7"]);
+  assert.match(calls.magnificRun.at(-1).inputs.logo_5, /^data:image\/png;base64,/);
+  // with both: the original 0MQyTfWvQD flow, sent to its exact keys from the API
   const r = await post("/api/run", { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, logo, productPhoto });
   assert.equal(r.body.runId, "run_1");
+  assert.equal(calls.magnificRun.at(-1).flow, "0MQyTfWvQD");
   const sent = calls.magnificRun.at(-1).inputs;
   assert.deepEqual(Object.keys(sent).sort(), ["character_1_2", "character_2_2", "images", "poduct", "scenes_2", "setting_2"]);
   assert.match(sent.images, /^data:image\/png;base64,/);
@@ -326,9 +345,42 @@ test("Simple Studio / api/run: missing setting or character1 auto-resolves grace
   assert.equal(res.status, 200, "Must succeed with HTTP 200 without pre-flight validation failure");
   assert.ok(res.body.runId, "Must return runId");
 
+  assert.equal(calls.magnificRun.at(-1).flow, "kLqd16BU1G", "no product, no logo, 9:16 -> kLqd16BU1G");
   const sent = calls.magnificRun.at(-1).inputs;
-  assert.ok(sent.character_1_2, "Must send resolved character1");
-  assert.ok(sent.setting_2, "Must send resolved setting");
+  assert.ok(sent.character_1_7, "Must send resolved character1");
+  assert.ok(sent.setting_7, "Must send resolved setting");
+  assert.ok(!Object.values(sent).some((v) => typeof v === "string" && v.startsWith("data:image/")), "Must not send any placeholder image");
+});
+
+test("/api/run routes 16:9 renders to the landscape flows and rejects unknown aspect ratios", async () => {
+  const { parseOutput } = require("../engine/parse");
+  const p = parseOutput(GOOD);
+  const logo = { mime: "image/png", data: Buffer.from("logo").toString("base64") };
+  const productPhoto = { mime: "image/jpeg", data: Buffer.from("prod").toString("base64") };
+  const body = { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting };
+
+  const cases = [
+    [{ productPhoto, logo }, "MXcPDCmYv9"],
+    [{ productPhoto }, "Pi7b42C8Sz"],
+    [{ logo }, "wPlQ7EIQVN"],
+    [{}, "jSkvLD0Vkf"],
+  ];
+  for (const [images, flow] of cases) {
+    const r = await post("/api/run", { ...body, ...images, aspectRatio: "16:9" });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(calls.magnificRun.at(-1).flow, flow);
+  }
+  // product-only 16:9: product lands in that flow's own "product_2" key
+  await post("/api/run", { ...body, productPhoto, aspectRatio: "16:9" });
+  assert.match(calls.magnificRun.at(-1).inputs.product_2, /^data:image\/jpeg;base64,/);
+
+  // the browser can pick the ratio, never the flow
+  await post("/api/run", { ...body, flowId: "jSkvLD0Vkf", productPhoto, logo });
+  assert.equal(calls.magnificRun.at(-1).flow, "0MQyTfWvQD");
+
+  const bad = await post("/api/run", { ...body, aspectRatio: "4:3" });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /aspect ratio/i);
 });
 
 

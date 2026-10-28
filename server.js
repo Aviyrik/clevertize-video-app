@@ -1154,8 +1154,12 @@ app.post("/api/run", authRequired, async (req, res) => {
       brief,
       businessType,
       businessName,
+      aspectRatio,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+    // 9:16 unless the owner picked a landscape platform; the flow itself is chosen server-side
+    const ratio = aspectRatio || shotSpec?.project?.aspectRatio || "9:16";
+    if (ratio !== "9:16" && ratio !== "16:9") throw Object.assign(new Error(`Unsupported aspect ratio "${ratio}" — use 9:16 or 16:9.`), { status: 400 });
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
 
@@ -1183,6 +1187,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         compileShotPrompt(sh, shotSpec.staticWorld || { setting: resolvedSetting, characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
           duration: duration || "15s",
           shotCount: scenes.length,
+          aspectRatio: ratio,
         })
       );
     } else {
@@ -1206,6 +1211,7 @@ app.post("/api/run", authRequired, async (req, res) => {
       productName: resolvedProduct,
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
+      aspectRatio: ratio,
     });
     res.json({ runId, shotCount: processedScenes.length });
   } catch (e) {

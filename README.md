@@ -55,7 +55,7 @@ This application includes a Node.js Express backend and a built React frontend. 
 4. Add your Environment Secrets:
    - `ANTHROPIC_API_KEY`: Your Claude API key
    - `MAGNIFIC_API_KEY`: Your Magnific API key
-   - `MAGNIFIC_FLOW_ID`: `UJAMwnyikX`
+   - Flow IDs (`FLOW_916_PRODUCT_LOGO` … `FLOW_169_NOPRODUCT_NOLOGO`) are preset in `render.yaml`; see `.env.example`
 5. Click **Deploy**. Your app is live with a public HTTPS URL and automatic CI/CD deploys on every `git push origin main`!
 
 ### Option 2: Deploy on Railway
@@ -64,7 +64,7 @@ This application includes a Node.js Express backend and a built React frontend. 
 3. Under **Variables**, add:
    - `ANTHROPIC_API_KEY`
    - `MAGNIFIC_API_KEY`
-   - `MAGNIFIC_FLOW_ID=UJAMwnyikX`
+   - Optional: the 8 `FLOW_*` flow IDs from `.env.example` (built-in defaults are used when unset)
    - `PORT=3000`
 4. Railway will automatically build the frontend (`npm run build`) and launch the production server (`npm start`).
 

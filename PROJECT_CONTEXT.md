@@ -57,7 +57,9 @@ ANTHROPIC_MODEL=claude-sonnet-4-6
 # Video Rendering Engine (Magnific AI)
 # Get from: https://magnific.ai/
 MAGNIFIC_API_KEY=your_magnific_api_key_here
-MAGNIFIC_FLOW_ID=0MQyTfWvQD
+# Flow routing: the server picks one of 8 flows (aspect ratio x product image x logo image).
+# All optional — unset means the built-in ID. See .env.example for the full list.
+FLOW_916_PRODUCT_LOGO=0MQyTfWvQD
 
 # Database Storage (PostgreSQL - Optional)
 # Neon, Supabase, Render, Railway, or local PostgreSQL.

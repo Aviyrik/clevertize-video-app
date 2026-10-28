@@ -1357,6 +1357,8 @@ export function Screen03Settings({
     { id: 'Facebook Video / 9:16', label: 'Facebook' },
     { id: 'WhatsApp Status / 9:16', label: 'WhatsApp' },
     { id: 'Other / 9:16', label: 'Other' },
+    { id: 'YouTube Landscape / 16:9', label: 'YouTube 16:9' },
+    { id: 'LinkedIn Video / 16:9', label: 'LinkedIn 16:9' },
   ];
 
   const DURATIONS = ['15s', '20s', '30s'];

@@ -18,8 +18,22 @@ services:
         sync: false
       - key: MAGNIFIC_API_KEY
         sync: false
-      - key: MAGNIFIC_FLOW_ID
+      - key: FLOW_916_PRODUCT_LOGO
         value: 0MQyTfWvQD
+      - key: FLOW_916_PRODUCT_NOLOGO
+        value: rl5XxtcFH6
+      - key: FLOW_916_NOPRODUCT_LOGO
+        value: TeYJVNR8Ta
+      - key: FLOW_916_NOPRODUCT_NOLOGO
+        value: kLqd16BU1G
+      - key: FLOW_169_PRODUCT_LOGO
+        value: MXcPDCmYv9
+      - key: FLOW_169_PRODUCT_NOLOGO
+        value: Pi7b42C8Sz
+      - key: FLOW_169_NOPRODUCT_LOGO
+        value: wPlQ7EIQVN
+      - key: FLOW_169_NOPRODUCT_NOLOGO
+        value: jSkvLD0Vkf
 
 databases:
   - name: clevertize-postgres

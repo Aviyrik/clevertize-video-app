@@ -7,11 +7,12 @@ const { runGate } = require("../engine/gate");
 const {
   findVideoUrl,
   mapInputs,
-  explicitInputs,
+  selectFlow,
+  FLOWS,
   validateMagnificRequest,
   sanitizePayloadForLogging,
-  TRANSPARENT_PNG_FALLBACK,
 } = require("../engine/magnific");
+const { compileShotPrompt } = require("../engine/compiler");
 const { withDaysUntil } = require("../engine/festivals");
 const { buildSystem, buildUserContent } = require("../engine/prompt");
 
@@ -249,43 +250,86 @@ test("prompt fills the script rule and labels images", () => {
 // SECTION 12 TEST SCENARIOS (A - K)
 // =========================================================================
 
-test("A: text-only brand + brief without product photo populates required product slot with fallback", () => {
-  const inputs = explicitInputs({
-    scenes: ["Scene 1", "Scene 2"],
-    character1: "Priya",
-    character2: "Rahul",
-    setting: "Modern Kitchen",
-    product: "Modular Kitchen Cabinets",
-  });
-  assert.ok(inputs.poduct, "poduct slot must be populated");
-  assert.equal(inputs.poduct, TRANSPARENT_PNG_FALLBACK);
-  assert.equal(inputs.character_1_2, "Priya");
-  assert.equal(inputs.setting_2, "Modern Kitchen");
+test("A: text-only brand + brief without product photo routes to a no-product flow (no placeholder image)", () => {
+  assert.equal(selectFlow({ aspectRatio: "9:16", hasProduct: false, hasLogo: false }), "kLqd16BU1G");
+  const spec = [
+    { id: "scenes_2", type: "list", required: true },
+    { id: "character_1_2", required: true },
+    { id: "character_2_2", required: true },
+    { id: "setting_2", required: true },
+    { id: "poduct", type: "image", required: true },
+    { id: "images", type: "image", required: true },
+  ];
+  // even if a flow did ask for images, nothing is invented — the gaps are reported instead
+  const r = mapInputs(spec, { scenes: ["Scene 1"], character1: "Priya", character2: "Rahul", setting: "Modern Kitchen", product: "Modular Kitchen Cabinets" });
+  assert.equal(r.inputs.poduct, undefined);
+  assert.equal(r.inputs.images, undefined);
+  assert.deepEqual(r.missing, ["poduct", "images"]);
+  assert.equal(r.inputs.character_1_2, "Priya");
+  assert.equal(r.inputs.setting_2, "Modern Kitchen");
 });
 
-test("B: explicit product image uploaded populates product slot directly with image data URL", () => {
+test("B: explicit product image routes to a product flow and lands in that flow's own product key", () => {
   const customDataUrl = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
-  const inputs = explicitInputs({
-    scenes: ["Scene 1"],
-    character1: "Priya",
-    character2: "Rahul",
-    setting: "Kitchen",
-    product: "Modular Kitchen",
-    productDataUrl: customDataUrl,
-  });
-  assert.equal(inputs.poduct, customDataUrl);
+  assert.equal(selectFlow({ aspectRatio: "9:16", hasProduct: true, hasLogo: false }), "rl5XxtcFH6");
+  const spec = [
+    { id: "scenes_2", type: "list", required: true },
+    { id: "character_1_2", required: true },
+    { id: "character_2_2", required: true },
+    { id: "setting_2", required: true },
+    { id: "product_2", type: "image", required: true },
+  ];
+  const r = mapInputs(spec, { scenes: ["Scene 1"], character1: "Priya", character2: "Rahul", setting: "Kitchen", productDataUrl: customDataUrl });
+  assert.equal(r.inputs.product_2, customDataUrl);
+  assert.equal(r.placed.product, "product_2");
+  assert.deepEqual(r.missing, []);
 });
 
-test("C: brand with only service description populates product slot", () => {
-  const inputs = explicitInputs({
-    scenes: ["Scene 1"],
-    character1: "Dr. Mehta",
-    character2: "Patient",
-    setting: "Dental Clinic",
-    product: "Dental consultation and teeth whitening service",
-  });
-  assert.ok(inputs.poduct);
-  assert.equal(inputs.poduct, TRANSPARENT_PNG_FALLBACK);
+test("C: logo-only flow keys (scenes_7, character_1_7, logo_5) are discovered, never borrowed from another flow", () => {
+  assert.equal(selectFlow({ aspectRatio: "16:9", hasProduct: false, hasLogo: true }), "wPlQ7EIQVN");
+  const spec = [
+    { id: "scenes_7", type: "list", required: true },
+    { id: "character_1_7", required: true },
+    { id: "character_2_7", required: true },
+    { id: "setting_7", required: true },
+    { id: "logo_5", type: "image", required: true },
+  ];
+  const r = mapInputs(spec, { scenes: ["s"], character1: "Dr. Mehta", character2: "Patient", setting: "Dental Clinic", logoDataUrl: "data:image/png;base64,TE9HTw==" });
+  assert.deepEqual(r.inputs, { scenes_7: ["s"], character_1_7: "Dr. Mehta", character_2_7: "Patient", setting_7: "Dental Clinic", logo_5: "data:image/png;base64,TE9HTw==" });
+  assert.equal(r.placed.logo, "logo_5");
+  assert.deepEqual(r.missing, []);
+});
+
+test("selectFlow covers all 8 combinations, honours env overrides and names a misconfigured variable", () => {
+  const seen = new Set();
+  for (const aspectRatio of ["9:16", "16:9"]) for (const hasProduct of [true, false]) for (const hasLogo of [true, false]) {
+    const id = selectFlow({ aspectRatio, hasProduct, hasLogo });
+    const row = FLOWS.find((f) => f.id === id);
+    assert.ok(row && row.aspectRatio === aspectRatio && row.product === hasProduct && row.logo === hasLogo, id);
+    seen.add(id);
+  }
+  assert.equal(seen.size, 8);
+  assert.equal(selectFlow({ hasProduct: true, hasLogo: true }), "0MQyTfWvQD", "defaults to 9:16");
+
+  process.env.FLOW_169_PRODUCT_NOLOGO = "CustomFlow01";
+  try {
+    assert.equal(selectFlow({ aspectRatio: "16:9", hasProduct: true, hasLogo: false }), "CustomFlow01");
+    process.env.FLOW_169_PRODUCT_NOLOGO = "not a/valid id";
+    assert.throws(() => selectFlow({ aspectRatio: "16:9", hasProduct: true, hasLogo: false }), /FLOW_169_PRODUCT_NOLOGO/);
+  } finally {
+    delete process.env.FLOW_169_PRODUCT_NOLOGO;
+  }
+  assert.throws(() => selectFlow({ aspectRatio: "4:3", hasProduct: false, hasLogo: false }), /aspect ratio/);
+});
+
+test("shot prompts describe the frame that will actually be rendered", () => {
+  const shot = { framing: "Medium close-up (subject and hero product prominent in vertical frame)", primaryAction: "She smiles.", fullVisual: "She smiles.", cameraMovement: "push-in", dialogue: "None" };
+  const world = { setting: "Shop", characters: "A | B" };
+  const tall = compileShotPrompt(shot, world, {});
+  assert.ok(tall.includes("vertical frame). Subject/character fills primary vertical 9:16 viewing area"));
+  const wide = compileShotPrompt(shot, world, { aspectRatio: "16:9" });
+  assert.ok(wide.includes("horizontal frame). Subject/character fills primary horizontal 16:9 viewing area"));
+  assert.doesNotMatch(wide, /vertical|9:16/);
 });
 
 test("D: empty product with no fallback fails pre-flight validation immediately", () => {
@@ -320,7 +364,7 @@ test("F: payload logging redacts base64 images and displays clean summary", () =
     scenes_2: ["Scene 1", "Scene 2"],
     character_1_2: "Priya",
     setting_2: "Kitchen",
-    poduct: TRANSPARENT_PNG_FALLBACK,
+    poduct: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6==",
     images: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA==",
   };
   const sanitized = sanitizePayloadForLogging(testPayload);

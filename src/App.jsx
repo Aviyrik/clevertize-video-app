@@ -189,6 +189,9 @@ const BUSINESS_TYPE_PRESETS = [
   'Other',
 ];
 
+// Render aspect ratio follows the platform: "… / 16:9" platforms render landscape, everything else vertical
+const aspectRatioOf = (platform) => (/16:9/.test(platform || '') ? '16:9' : '9:16');
+
 // Production Platform Options
 const PLATFORM_PRESETS = [
   { id: 'Instagram Reels / 9:16', label: 'Instagram Reels', sub: '9:16 Vertical' },
@@ -2957,6 +2960,7 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
         shotSpec: pipeData.shotSpec || null,
+        aspectRatio: aspectRatioOf(userContext.platform),
       };
 
       const runData = await safeApiCall(fetch('/api/run', {
@@ -3019,6 +3023,7 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
         shotSpec: shotSpec || null,
+        aspectRatio: aspectRatioOf(userContext.platform),
       };
 
       const data = await safeApiCall(fetch('/api/run', {
@@ -3424,6 +3429,7 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
         shotSpec: shotSpec || null,
+        aspectRatio: aspectRatioOf(userContext.platform),
       };
 
       const data = await safeApiCall(fetch('/api/run', {
