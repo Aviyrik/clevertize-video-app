@@ -1364,20 +1364,20 @@ export function Screen03Settings({
 
   const STYLES = [
     {
+      id: 'Conversational / Dialogue',
+      label: 'Conversational',
+      icon: '💬',
+      tagline: 'Two people in dialogue.',
+      detail: 'Relatable back-and-forth chat, customer & merchant banter',
+      recommended: false,
+    },
+    {
       id: 'UGC / Creator-style',
       label: 'UGC',
       icon: '📱',
       tagline: 'Feels like a real person made it.',
       detail: 'Direct-to-camera, creator rhythm & natural mobile energy',
       recommended: true,
-    },
-    {
-      id: 'Storytelling',
-      label: 'Story',
-      icon: '🎬',
-      tagline: 'A short story with people.',
-      detail: '2-character relatable dilemma & emotional payoff',
-      recommended: false,
     },
     {
       id: 'Product Demo',
@@ -1388,11 +1388,11 @@ export function Screen03Settings({
       recommended: false,
     },
     {
-      id: 'Situational Comedy',
-      label: 'Funny',
-      icon: '😄',
-      tagline: 'Setup, funny moment, payoff.',
-      detail: 'Witty relatable problem, playful banter & comic punchline',
+      id: 'Storytelling',
+      label: 'Story',
+      icon: '🎬',
+      tagline: 'A short story with people.',
+      detail: '2-character relatable dilemma & emotional payoff',
       recommended: false,
     },
   ];

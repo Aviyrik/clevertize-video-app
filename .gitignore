@@ -32,3 +32,9 @@ Thumbs.db
 *.zip
 data/*.json
 !data/.gitkeep
+
+# Python cache & report scripts
+__pycache__/
+*.pyc
+generate_excel_report.py
+generate_csvs.py

@@ -164,6 +164,8 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
   const activeFormat = canonicalFormat || creativeDNA?.format || story?.format || 'UGC / Creator-style';
   const formatLabel = activeFormat === 'UGC / Creator-style' || activeFormat === 'UGC'
     ? 'UGC / Creator'
+    : activeFormat === 'Conversational / Dialogue' || activeFormat === 'Conversational'
+    ? 'Conversational'
     : activeFormat === 'Situational Comedy' || activeFormat === 'Comedy'
     ? 'Comedy'
     : activeFormat;
@@ -551,6 +553,18 @@ export function CreativePanelsWorkspace({
   // Format presets for Stage 4
   const FORMAT_PRESETS = [
     {
+      id: 'Conversational / Dialogue',
+      label: 'Conversational',
+      icon: MessageSquare,
+      tagline: '2-person dialogue, peer banter & customer-merchant chat',
+    },
+    {
+      id: 'Product Demo',
+      label: 'Product Demo',
+      icon: Package,
+      tagline: 'Product in focus within 4s, tactile sensory proof',
+    },
+    {
       id: 'UGC / Creator-style',
       label: 'UGC / Creator',
       icon: Camera,
@@ -561,18 +575,6 @@ export function CreativePanelsWorkspace({
       label: 'Storytelling',
       icon: Clapperboard,
       tagline: '2-character emotional dilemma & relatable narrative arc',
-    },
-    {
-      id: 'Product Demo',
-      label: 'Product Demo',
-      icon: Package,
-      tagline: 'Product in focus within 4s, tactile sensory proof',
-    },
-    {
-      id: 'Situational Comedy',
-      label: 'Comedy',
-      icon: Smile,
-      tagline: 'Humorous setup, comic escalation & punchline payoff',
     },
   ];
 

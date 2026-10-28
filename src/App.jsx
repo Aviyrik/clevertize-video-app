@@ -937,13 +937,24 @@ export default function App() {
     setting: st,
     language: lang,
     creativeStyle: stl,
+    targetDuration: dur,
+    aspectRatio: ratio,
+    platform: plt,
     shotSpec: sp,
+    productPhoto: pPhoto,
   }) => {
     if (c1) setCharacter1(c1);
     if (c2) setCharacter2(c2);
     if (st) setSetting(st);
+    if (pPhoto) updateUserContext('productPhoto', pPhoto);
     if (lang) updateUserContext('language', lang);
-    if (stl) updateUserContext('creativeStyle', stl);
+    if (dur) updateUserContext('targetDuration', dur);
+    if (ratio) updateUserContext('aspectRatio', ratio);
+    if (plt) updateUserContext('platform', plt);
+    if (stl) {
+      updateUserContext('creativeStyle', stl);
+      setCreativeDNA((prev) => ({ ...prev, format: stl }));
+    }
     if (sp) setShotSpec(sp);
 
     setScenes(importedScenes);
@@ -953,7 +964,7 @@ export default function App() {
     setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story']);
     setStudioStage('script');
     setActiveAppView('studio');
-    setToastMessage('Script validated and imported into Stage 07!');
+    setToastMessage(pPhoto ? 'Script & product image attached into Stage 07!' : 'Script validated and imported into Stage 07!');
     setTimeout(() => setToastMessage(''), 4000);
   };
 
@@ -2040,6 +2051,7 @@ export default function App() {
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
       `Platform: ${userContext.platform || 'Instagram Reels / 9:16'}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
+      userContext.brandTone?.trim() ? `Brand Tone/Voice: ${userContext.brandTone.trim()}` : null,
       `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
       userContext.offer?.trim() ? `Offer/USP: ${userContext.offer.trim()}` : null,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
@@ -2057,6 +2069,7 @@ export default function App() {
       duration: targetDur,
       platform: userContext.platform || 'Instagram Reels / 9:16',
       creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+      brandTone: userContext.brandTone?.trim() || 'Warm & Authentic',
       area: userContext.area?.trim() || '',
       specialty: specialtyParts.join(' | '),
       offer: userContext.offer?.trim() || '',
@@ -2152,6 +2165,7 @@ export default function App() {
           brief: userContext.brief || '',
           targetAudience: userContext.targetAudience || '',
           language: activeLang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
           research: researchData,
           format: activeFormat,
           creativeStyle: activeFormat,
@@ -2252,6 +2266,7 @@ export default function App() {
           brief: userContext.brief || '',
           direction: activeDir,
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
           format: activeFormat,
           creativeStyle: activeFormat,
         }),
@@ -2299,6 +2314,7 @@ export default function App() {
           hook: selectedHook || { hookLine: customHook || '' },
           format: userContext.creativeStyle || 'Storytelling',
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
         }),
       });
       if (res.ok) {
@@ -2342,6 +2358,7 @@ export default function App() {
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
           format: activeFormat,
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
         }),
       });
       if (res.ok) {
@@ -4004,6 +4021,7 @@ export default function App() {
               initialBrief={userContext.brief}
               initialLanguage={creativeDNA.language || 'English'}
               initialStyle={creativeDNA.creativeStyle || 'UGC / Creator-style'}
+              brandTone={userContext.brandTone || 'Warm & Authentic'}
               brandLogo={userContext.brandLogo || userContext.logo}
               onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}
               onProduceVideo={handleSimpleProduceVideo}
@@ -4875,6 +4893,9 @@ export default function App() {
         businessType={userContext.businessType}
         language={userContext.language}
         creativeStyle={userContext.creativeStyle}
+        targetDuration={userContext.targetDuration || '20s'}
+        aspectRatio={userContext.aspectRatio || (userContext.platform?.includes('16:9') ? '16:9' : userContext.platform?.includes('1:1') ? '1:1' : '9:16')}
+        brandTone={userContext.brandTone || 'Warm & Authentic'}
       />
 
       {/* URL Research Modal (V2 Entry Point) */}

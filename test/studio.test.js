@@ -1660,6 +1660,16 @@ test('V2 Entry Point 2 (Script): ExistingScriptModal validates and fast-tracks d
   assert.ok(completedStages.includes('story'), 'Must mark stages up to story as completed');
 });
 
+test('V2 Script Import Modal: 2-step review modal renders editable World Continuity Lock & 4 production scenes', () => {
+  const scriptModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ExistingScriptModal.jsx'), 'utf8');
+  assert.ok(scriptModalSrc.includes('modalStep === 2'), 'Must support step 2 review screen');
+  assert.ok(scriptModalSrc.includes('World Continuity Lock'), 'Must display World Continuity Lock section');
+  assert.ok(scriptModalSrc.includes('AI Consistency Anchor'), 'Must label continuity anchor');
+  assert.ok(scriptModalSrc.includes('Production Shots (Compiled for Video Generation)'), 'Must display compiled production shots');
+  assert.ok(scriptModalSrc.includes('Back to Script Input'), 'Must provide navigation back to step 1');
+  assert.ok(scriptModalSrc.includes('compileStructuredScene'), 'Must recompile scenes into standard Annex-A format');
+});
+
 test('V2 Entry Point 3 (URL): UrlResearchModal handles URL extraction and pre-populates Stage 02 brief', () => {
   const urlModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
   assert.ok(urlModalSrc.includes('/api/research/url'), 'Must call /api/research/url endpoint');

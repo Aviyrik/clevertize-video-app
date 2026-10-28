@@ -827,3 +827,39 @@ export function AuthSessionLoader({ style = {} }) {
   );
 }
 
+/**
+ * 11. Script Verification & Quality Gate Loader
+ */
+export function ScriptVerificationLoader({ businessName, compact = true, style = {} }) {
+  return (
+    <WorkflowLoadingScreen
+      icon={Film}
+      badgeLabel="Script Quality Gate & AI Normalizer"
+      title="Verifying Script & Checking Quality Gate…"
+      subtitle={`Analyzing 4-scene narrative structure and formatting camera prompts for ${businessName || 'video production'}.`}
+      stages={[
+        { title: 'Deconstructing 4 Story Beats', desc: 'Parsing Hook, Problem, Realization, and Resolution beats' },
+        { title: 'Section 8 Quality Gate Check', desc: 'Verifying single setting, character continuity, and mobile framing rules' },
+        { title: 'Structuring Video Prompts', desc: 'Separating visual action from dialogue and compiling camera movements' },
+      ]}
+      tips={[
+        'Section 8 Quality Gate ensures characters and setting stay 100% consistent across all 4 shots in the video.',
+        'Visual Separation: Text overlays are cleanly separated from visual scenes to prevent distorted text rendering.',
+        'Single Setting Continuity: Holding one continuous environment prevents background morphing in AI video generation.',
+        'Spoken Dialogue Timing: Each scene is paced to fit 3–5 seconds of natural speech cadence.',
+      ]}
+      tipPrefix="Quality Gate Insight"
+      estimatedDuration="~4–8s"
+      metadata={[
+        businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
+        { label: 'Quality Gate', value: '18 Automated Checks', isPill: true },
+        { label: 'Target Structure', value: '4 Camera Beats', isPill: true },
+      ].filter(Boolean)}
+      nextStep="Review extracted cast continuity and customized production shots"
+      compact={compact}
+      style={style}
+    />
+  );
+}
+
+

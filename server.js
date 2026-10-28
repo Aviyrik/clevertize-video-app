@@ -84,6 +84,7 @@ function validateForm(b) {
     duration: s(b.duration) || "15s",
     platform: s(b.platform) || "Instagram Reels / 9:16",
     creativeStyle: s(b.creativeStyle) || "UGC / Creator-style",
+    brandTone: s(b.brandTone) || "Warm & Authentic",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",
     product: s(b.product),
     productName: s(b.productName),
@@ -918,7 +919,7 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
 app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
-    const { rawScript, businessName, businessType, town, language, creativeStyle, brief } = req.body || {};
+    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
       return res.status(400).json({ error: "Please enter or paste script text to validate." });
     }
@@ -934,6 +935,10 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
       language,
       creativeStyle,
       brief,
+      brandTone,
+      targetDuration: targetDuration || duration,
+      aspectRatio,
+      platform,
     });
 
     return res.json(result);
@@ -946,7 +951,7 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
 // 2) Creative Direction
 app.post("/api/creative/directions", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language } = req.body || {};
+    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language, brandTone } = req.body || {};
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -956,6 +961,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       festival,
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -967,7 +973,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language, format, creativeStyle } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone } = req.body || {};
     const result = await creative.generateHooks({
       businessName,
       businessType,
@@ -975,6 +981,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       direction,
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -986,7 +993,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
 // 4) Plot Generation
 app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, format, language } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language, brandTone } = req.body || {};
     const result = await creative.generatePlots({
       businessName,
       businessType,
@@ -995,6 +1002,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       hook,
       format: format || "Storytelling",
       language: language || "English",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1006,7 +1014,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, format, language } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone } = req.body || {};
     const result = await creative.generateStoryWorld({
       businessName,
       businessType,
@@ -1017,6 +1025,7 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       plot,
       format: format || "Storytelling",
       language: language || "English",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1047,7 +1056,7 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
     const rewritten = await creative.rewriteScene({
       sceneText,
@@ -1057,6 +1066,7 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       form,
       characters,
       setting,
+      brandTone: brandTone || form?.brandTone,
     });
     res.json({ scene: rewritten });
   } catch (e) {
@@ -1069,7 +1079,7 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
 // 8) Simple Business Studio — 3 Ready-Made Ad Packages
 app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, targetAudience, language, creativeStyle } = req.body || {};
+    const { businessName, businessType, town, brief, targetAudience, language, creativeStyle, brandTone } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
     }
@@ -1084,6 +1094,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       targetAudience: targetAudience || "",
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
+      brandTone,
     });
     res.json({ status: "success", packages });
   } catch (e) {

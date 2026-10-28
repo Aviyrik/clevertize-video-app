@@ -58,6 +58,7 @@ export default function SimpleBusinessStudio({
   initialBrief = '',
   initialLanguage = 'English',
   initialStyle = 'UGC / Creator-style',
+  brandTone = 'Warm & Authentic',
   brandLogo = null,
   onSwitchToDirectorMode,
   onProduceVideo, // (packageData) => Promise<videoUrl>
@@ -152,6 +153,7 @@ export default function SimpleBusinessStudio({
           brief: brief.trim(),
           language,
           creativeStyle,
+          brandTone,
         }),
       });
 
