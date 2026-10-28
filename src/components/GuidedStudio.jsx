@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { downloadVideoWithTicket } from '../utils/downloadVideo.js';
 import {
   Sparkles,
   Check,
@@ -4417,17 +4418,22 @@ export function Screen08Video({
               )}
             </button>
 
-            <a
-              href={videoUrl}
-              download={`${userContext.businessName || 'clevertize'}-video.mp4`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`);
+                } catch (err) {
+                  alert(err.message || 'Download failed');
+                }
+              }}
               style={{
                 padding: '10px 20px',
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-primary)',
                 color: '#ffffff',
-                textDecoration: 'none',
+                border: 'none',
+                cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'inline-flex',
@@ -4438,7 +4444,7 @@ export function Screen08Video({
             >
               <Download size={14} />
               <span>Download Video</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -107,20 +107,31 @@ async function ensurePgTables() {
       CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
 
+      CREATE TABLE IF NOT EXISTS video_runs (
+        run_id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(64) DEFAULT 'PENDING',
+        video_url TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_video_runs_user ON video_runs(user_id);
+
       -- Enable Row Level Security (RLS) on all tables to secure Supabase Data API
       ALTER TABLE users ENABLE ROW LEVEL SECURITY;
       ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
       ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
       ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE video_runs ENABLE ROW LEVEL SECURITY;
 
       -- Revoke public PostgREST API access from anon/authenticated roles if running on Supabase
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects FROM anon;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs FROM anon;
         END IF;
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects FROM authenticated;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs FROM authenticated;
         END IF;
       END $$;
     `);
@@ -734,7 +745,8 @@ async function saveProject(projectData, userId) {
   } = projectData || {};
 
   const now = new Date().toISOString();
-  const projectId = id || `proj_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const targetId = id || (projectData && projectData.idempotencyKey) || null;
+  const projectId = targetId || `proj_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const projTitle = title || (brief ? brief.slice(0, 40) + '…' : `${businessName || 'Brand'} Ad Script`);
   const cStages = Array.isArray(completedStages) ? completedStages : [];
   const eChoices = explicitChoices || {};
@@ -745,6 +757,12 @@ async function saveProject(projectData, userId) {
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
+    if (targetId) {
+      const ownerCheck = await pool.query('SELECT user_id FROM projects WHERE id = $1', [targetId]);
+      if (ownerCheck.rows.length && ownerCheck.rows[0].user_id !== userId) {
+        throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+      }
+    }
     const res = await pool.query(
       `INSERT INTO projects (
         id, user_id, business_id, title, business_name, business_type, town, brief,
@@ -805,12 +823,24 @@ async function saveProject(projectData, userId) {
 
   const projects = readJsonFile('projects.json', []);
   let existingIndex = -1;
-  if (id) {
-    existingIndex = projects.findIndex((p) => p.id === id && p.userId === userId);
+  if (targetId) {
+    existingIndex = projects.findIndex(
+      (p) => (p.id === targetId || (p.idempotencyKey && p.idempotencyKey === targetId)) && p.userId === userId
+    );
+    // Security check: if ID belongs to another user, prevent overwrite/hijacking
+    if (
+      existingIndex < 0 &&
+      projects.some(
+        (p) => (p.id === targetId || (p.idempotencyKey && p.idempotencyKey === targetId)) && p.userId !== userId
+      )
+    ) {
+      throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+    }
   }
 
   const record = {
     id: existingIndex >= 0 ? projects[existingIndex].id : projectId,
+    idempotencyKey: (projectData && projectData.idempotencyKey) || (existingIndex >= 0 ? projects[existingIndex].idempotencyKey : undefined),
     userId,
     businessId: businessId || null,
     title: String(projTitle).trim(),
@@ -866,6 +896,134 @@ async function deleteProject(projectId, userId) {
   return changed;
 }
 
+async function saveVideoRun(runId, userId, initialData = {}) {
+  if (!runId || !userId) throw new Error('runId and userId are required to persist video run');
+  const now = new Date().toISOString();
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query(
+      `INSERT INTO video_runs (run_id, user_id, status, video_url, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $5)
+       ON CONFLICT (run_id) DO UPDATE SET
+         status = EXCLUDED.status,
+         video_url = COALESCE(EXCLUDED.video_url, video_runs.video_url),
+         updated_at = EXCLUDED.updated_at`,
+      [runId, userId, initialData.status || 'PENDING', initialData.videoUrl || null, now]
+    );
+    return { runId, userId, status: initialData.status || 'PENDING', videoUrl: initialData.videoUrl || null, createdAt: now, updatedAt: now };
+  }
+
+  const runs = readJsonFile('video_runs.json', []);
+  const existingIdx = runs.findIndex((r) => r.runId === runId);
+  const record = {
+    runId,
+    userId,
+    status: initialData.status || 'PENDING',
+    videoUrl: initialData.videoUrl || null,
+    createdAt: existingIdx >= 0 ? runs[existingIdx].createdAt : now,
+    updatedAt: now,
+  };
+  if (existingIdx >= 0) {
+    runs[existingIdx] = record;
+  } else {
+    runs.push(record);
+  }
+  writeJsonFile('video_runs.json', runs);
+  return record;
+}
+
+async function getVideoRun(runId) {
+  if (!runId) return null;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'SELECT run_id AS "runId", user_id AS "userId", status, video_url AS "videoUrl", created_at AS "createdAt", updated_at AS "updatedAt" FROM video_runs WHERE run_id = $1 LIMIT 1',
+      [runId]
+    );
+    return res.rows.length ? res.rows[0] : null;
+  }
+  const runs = readJsonFile('video_runs.json', []);
+  return runs.find((r) => r.runId === runId) || null;
+}
+
+async function userOwnsVideoRun(userId, runId) {
+  if (!userId || !runId) return false;
+  const run = await getVideoRun(runId);
+  return Boolean(run && run.userId === userId);
+}
+
+async function updateVideoRun(runId, updateData = {}) {
+  if (!runId) return null;
+  const now = new Date().toISOString();
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `UPDATE video_runs
+       SET status = COALESCE($2, status),
+           video_url = COALESCE($3, video_url),
+           updated_at = $4
+       WHERE run_id = $1
+       RETURNING run_id AS "runId", user_id AS "userId", status, video_url AS "videoUrl", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [runId, updateData.status || null, updateData.videoUrl || null, now]
+    );
+    return res.rows.length ? res.rows[0] : null;
+  }
+  const runs = readJsonFile('video_runs.json', []);
+  const idx = runs.findIndex((r) => r.runId === runId);
+  if (idx < 0) return null;
+  runs[idx] = {
+    ...runs[idx],
+    status: updateData.status !== undefined ? updateData.status : runs[idx].status,
+    videoUrl: updateData.videoUrl !== undefined ? updateData.videoUrl : runs[idx].videoUrl,
+    updatedAt: now,
+  };
+  writeJsonFile('video_runs.json', runs);
+  return runs[idx];
+}
+
+async function userOwnsVideoUrl(userId, videoUrl) {
+  if (!userId || !videoUrl) return false;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `SELECT 1 FROM projects WHERE user_id = $1 AND video_url = $2
+       UNION
+       SELECT 1 FROM video_runs WHERE user_id = $1 AND video_url = $2
+       LIMIT 1`,
+      [userId, videoUrl]
+    );
+    return (res.rowCount || 0) > 0;
+  }
+  const projects = readJsonFile('projects.json', []);
+  if (projects.some((p) => p.userId === userId && p.videoUrl === videoUrl)) return true;
+  const runs = readJsonFile('video_runs.json', []);
+  return runs.some((r) => r.userId === userId && r.videoUrl === videoUrl);
+}
+
+async function isVideoUrlRegistered(videoUrl) {
+  if (!videoUrl) return false;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `SELECT 1 FROM projects WHERE video_url = $1
+       UNION
+       SELECT 1 FROM video_runs WHERE video_url = $1
+       LIMIT 1`,
+      [videoUrl]
+    );
+    return (res.rowCount || 0) > 0;
+  }
+  const projects = readJsonFile('projects.json', []);
+  if (projects.some((p) => p.videoUrl === videoUrl)) return true;
+  const runs = readJsonFile('video_runs.json', []);
+  return runs.some((r) => r.videoUrl === videoUrl);
+}
+
 module.exports = {
   isPostgresConfigured,
   ensurePgTables,
@@ -886,4 +1044,10 @@ module.exports = {
   saveProject,
   deleteProject,
   updateUserProfile,
+  userOwnsVideoUrl,
+  isVideoUrlRegistered,
+  saveVideoRun,
+  getVideoRun,
+  userOwnsVideoRun,
+  updateVideoRun,
 };

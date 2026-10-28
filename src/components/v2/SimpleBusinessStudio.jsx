@@ -1,4 +1,5 @@
 import { getBriefSuggestions } from '../../utils/categorySuggestions.js';
+import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import React, { useState, useEffect } from 'react';
 import {
   SimpleAdPackagesLoader,
@@ -63,6 +64,8 @@ export default function SimpleBusinessStudio({
   onSaveProject,
   onEditBrand,
   isProducingVideo = false,
+  isSavingProject = false,
+  isProjectSaved = false,
   producedVideoUrl = null,
   videoRunError = null,
 }) {
@@ -991,11 +994,15 @@ export default function SimpleBusinessStudio({
 
                 {/* Video Actions */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <a
-                    href={producedVideoUrl}
-                    download={`${(businessName || 'ad').replace(/\s+/g, '_')}_commercial.mp4`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await downloadVideoWithTicket(producedVideoUrl, `${(businessName || 'ad').replace(/\s+/g, '_')}_commercial.mp4`);
+                      } catch (err) {
+                        alert(err.message || 'Download failed');
+                      }
+                    }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1006,13 +1013,39 @@ export default function SimpleBusinessStudio({
                       color: '#FFFFFF',
                       fontSize: 13,
                       fontWeight: 700,
-                      textDecoration: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
                       boxShadow: '0 2px 10px var(--accent-glow)',
                     }}
                   >
                     <Download size={14} />
                     <span>Download Video (MP4)</span>
-                  </a>
+                  </button>
+
+                  {onSaveProject && (
+                    <button
+                      type="button"
+                      onClick={() => onSaveProject(selectedPackage)}
+                      disabled={isSavingProject}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '10px 18px',
+                        borderRadius: 8,
+                        backgroundColor: isProjectSaved ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-elevated)',
+                        border: `1px solid ${isProjectSaved ? 'var(--success)' : 'var(--border-default)'}`,
+                        color: isProjectSaved ? 'var(--success)' : 'var(--text-primary)',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: isSavingProject ? 'not-allowed' : 'pointer',
+                        opacity: isSavingProject ? 0.7 : 1,
+                      }}
+                    >
+                      {isProjectSaved ? <Check size={14} /> : <CheckCircle2 size={14} />}
+                      <span>{isSavingProject ? 'Saving...' : isProjectSaved ? 'Saved to Library' : 'Save Project'}</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"

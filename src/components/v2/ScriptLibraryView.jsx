@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import {
   FileText,
   Clock,
@@ -590,11 +591,20 @@ export default function ScriptLibraryView({
                       </div>
 
                       <a
-                        href={proj.videoUrl}
+                        href="#"
                         download={`${(proj.title || 'commercial_video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            await downloadVideoWithTicket(
+                              proj.videoUrl,
+                              `${(proj.title || 'commercial_video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`
+                            );
+                          } catch (err) {
+                            alert(err.message || 'Download failed');
+                          }
+                        }}
                         aria-label={`Download generated video for ${proj.title || 'project'}`}
                         style={{
                           display: 'inline-flex',

@@ -118,11 +118,14 @@ const STAGES = ["direction", "plot", "story", "script"];
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const sessions = new Map();
 
-function getSession(id) {
+function getSession(id, userId) {
   const now = Date.now();
   for (const [k, v] of sessions) if (now - v.touched > SESSION_TTL_MS) sessions.delete(k);
   const s = sessions.get(id);
   if (!s) throw Object.assign(new Error("This session has expired (or the server restarted). Please start again."), { status: 404 });
+  if (!userId || !s.userId || s.userId !== userId) {
+    throw Object.assign(new Error("Access denied. You do not own this session."), { status: 403 });
+  }
   s.touched = now;
   return s;
 }
@@ -287,12 +290,13 @@ async function optionalAuth(req, res, next) {
 }
 
 // start: validate form → Stage 1 → Checkpoint 1
-app.post("/api/session", async (req, res) => {
+app.post("/api/session", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
     const fest = await getFestivals();
     const s = {
       id: crypto.randomUUID(),
+      userId: req.user.id,
       touched: Date.now(),
       form,
       fest,
@@ -308,12 +312,13 @@ app.post("/api/session", async (req, res) => {
 
 // FAST SINGLE-CLICK PIPELINE (Phase 4):
 // Runs Brand understanding → Direction → Plot → Story → Script Quality Gate → Shot Specs automatically
-app.post("/api/pipeline/generate", async (req, res) => {
+app.post("/api/pipeline/generate", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
     const fest = await getFestivals();
     const s = {
       id: crypto.randomUUID(),
+      userId: req.user.id,
       touched: Date.now(),
       form,
       fest,
@@ -390,9 +395,9 @@ app.post("/api/pipeline/generate", async (req, res) => {
 });
 
 // approve a checkpoint (with the chosen option) → run the next stage
-app.post("/api/session/:id/next", async (req, res) => {
+app.post("/api/session/:id/next", authRequired, async (req, res) => {
   try {
-    const s = getSession(req.params.id);
+    const s = getSession(req.params.id, req.user.id);
     const { checkpoint, choice } = req.body || {};
     const idx = Number(choice);
     if (checkpoint === "direction" || checkpoint === "plot") {
@@ -414,9 +419,9 @@ app.post("/api/session/:id/next", async (req, res) => {
 });
 
 // owner asks for a change at a checkpoint → revise that stage (M18a), later stages are cleared
-app.post("/api/session/:id/change", async (req, res) => {
+app.post("/api/session/:id/change", authRequired, async (req, res) => {
   try {
-    const s = getSession(req.params.id);
+    const s = getSession(req.params.id, req.user.id);
     const { checkpoint } = req.body || {};
     const note = String(req.body?.note || "").trim();
     if (!STAGES.includes(checkpoint)) throw Object.assign(new Error(`Unknown checkpoint "${checkpoint}"`), { status: 400 });
@@ -430,9 +435,9 @@ app.post("/api/session/:id/change", async (req, res) => {
 });
 
 // Checkpoint 4 approved → save the script record for next time (M19)
-app.post("/api/session/:id/approve", (req, res) => {
+app.post("/api/session/:id/approve", authRequired, (req, res) => {
   try {
-    const s = getSession(req.params.id);
+    const s = getSession(req.params.id, req.user.id);
     if (!s.script) throw Object.assign(new Error("No approved script yet."), { status: 400 });
     if (!s.script.saved) {
       store.save(s.form.businessName, s.form.town, s.script.record, s.script.parsed.header);
@@ -1231,6 +1236,8 @@ app.post("/api/run", authRequired, async (req, res) => {
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
     });
+    // Persist runId association with authenticated user immediately
+    await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });
     res.json({ runId, shotCount: processedScenes.length });
   } catch (e) {
     console.error("[run]", e.message);
@@ -1239,30 +1246,219 @@ app.post("/api/run", authRequired, async (req, res) => {
 });
 
 // ---- 3) poll a run ----
-const videoUrls = new Set(); // only URLs Magnific gave us can be downloaded through /api/download
+const videoUrls = new Set(); // legacy fallback cache
+const videoOwnership = new Map(); // videoUrl -> { userId, runId, createdAt }
+const downloadTickets = new Map(); // ticketId -> { userId, videoUrl, expiresAt, used }
+const DOWNLOAD_TICKET_TTL_MS = 60 * 1000; // 60 seconds
+
+function cleanExpiredTickets() {
+  const now = Date.now();
+  for (const [k, v] of downloadTickets) {
+    if (v.expiresAt <= now || v.used) {
+      downloadTickets.delete(k);
+    }
+  }
+}
+
+function isApprovedVideoHost(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const disallowed = isDisallowedUrl(urlString);
+    if (disallowed) return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "cdn.example.com" ||
+      host === "magnific.ai" ||
+      host.endsWith(".magnific.ai") ||
+      host.endsWith(".cloudfront.net") ||
+      host.endsWith(".amazonaws.com") ||
+      host === "storage.googleapis.com" ||
+      host.endsWith(".storage.googleapis.com") ||
+      host.endsWith(".googleusercontent.com")
+    ) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 app.get("/api/status/:runId", authRequired, async (req, res) => {
   try {
+    const runRecord = await db.getVideoRun(req.params.runId);
+    if (!runRecord) {
+      return res.status(404).json({ error: "Video generation run not found." });
+    }
+    if (runRecord.userId !== req.user.id) {
+      return res.status(403).json({ error: "Access denied. You do not own this video generation task." });
+    }
+
     const s = await magnific.runStatus(req.params.runId);
-    if (s.videoUrl) videoUrls.add(s.videoUrl);
+    if (s.videoUrl) {
+      videoUrls.add(s.videoUrl);
+      videoOwnership.set(s.videoUrl, {
+        userId: runRecord.userId,
+        runId: req.params.runId,
+        createdAt: Date.now(),
+      });
+      await db.updateVideoRun(req.params.runId, { videoUrl: s.videoUrl, status: s.status });
+    }
     res.json(s);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ---- 4) stream the finished video ----
+// ---- Issue short-lived, single-purpose download ticket ----
+app.post("/api/download/ticket", authRequired, async (req, res) => {
+  cleanExpiredTickets();
+  const url = String(req.body?.url || req.body?.videoUrl || "").trim();
+  if (!url) return res.status(400).json({ error: "Missing video URL." });
+
+  // 1. SSRF and approved video storage host check
+  if (!isApprovedVideoHost(url)) {
+    return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+  }
+
+  // 2. Ownership verification: in-memory registry or database check
+  const inMemoryRecord = videoOwnership.get(url);
+  let isOwner = inMemoryRecord && inMemoryRecord.userId === req.user.id;
+  if (!isOwner) {
+    isOwner = await db.userOwnsVideoUrl(req.user.id, url);
+  }
+
+  if (!isOwner) {
+    if (inMemoryRecord || (await db.isVideoUrlRegistered(url))) {
+      return res.status(403).json({ error: "Access denied. You do not own this video." });
+    }
+    return res.status(404).json({ error: "Video not found or access denied." });
+  }
+
+  const ticketId = `dl_${crypto.randomBytes(24).toString("hex")}`;
+  const expiresAt = Date.now() + DOWNLOAD_TICKET_TTL_MS;
+  downloadTickets.set(ticketId, {
+    userId: req.user.id,
+    videoUrl: url,
+    expiresAt,
+    used: false,
+  });
+
+  res.json({
+    success: true,
+    ticket: ticketId,
+    expiresAt,
+    downloadUrl: `/api/download?ticket=${encodeURIComponent(ticketId)}`,
+  });
+});
+
+async function fetchApprovedVideo(initialUrl, maxRedirects = 5) {
+  let currentUrl = initialUrl;
+  let hops = 0;
+
+  while (hops <= maxRedirects) {
+    if (!isApprovedVideoHost(currentUrl)) {
+      throw Object.assign(
+        new Error(`Redirect destination host not permitted: ${currentUrl}`),
+        { status: 400 }
+      );
+    }
+
+    const res = await fetch(currentUrl, {
+      redirect: "manual",
+    });
+
+    if ([301, 302, 303, 307, 308].includes(res.status)) {
+      hops++;
+      if (hops > maxRedirects) {
+        throw Object.assign(new Error("Too many redirects during video download."), { status: 502 });
+      }
+      const location = res.headers.get("location");
+      if (!location) {
+        throw Object.assign(new Error("Redirect missing location header."), { status: 502 });
+      }
+      const nextUrl = new URL(location, currentUrl).toString();
+      if (!isApprovedVideoHost(nextUrl)) {
+        throw Object.assign(
+          new Error(`Redirect destination host not permitted: ${nextUrl}`),
+          { status: 400 }
+        );
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+
+    return res;
+  }
+}
+
+// ---- 4) stream the finished video (user-isolated & host-allowlisted) ----
 app.get("/api/download", async (req, res) => {
-  const url = String(req.query.url || "");
-  if (!videoUrls.has(url)) return res.status(400).send("Unknown video URL");
+  cleanExpiredTickets();
+  const ticketId = String(req.query.ticket || "").trim();
+  const token = extractToken(req);
+
+  let targetUrl = "";
+
+  if (ticketId) {
+    const ticketRecord = downloadTickets.get(ticketId);
+    if (!ticketRecord) {
+      return res.status(401).json({ error: "Invalid or expired download ticket." });
+    }
+    if (ticketRecord.expiresAt <= Date.now()) {
+      downloadTickets.delete(ticketId);
+      return res.status(401).json({ error: "Download ticket has expired." });
+    }
+    if (ticketRecord.used) {
+      downloadTickets.delete(ticketId);
+      return res.status(401).json({ error: "Download ticket has already been used." });
+    }
+    ticketRecord.used = true;
+    targetUrl = ticketRecord.videoUrl;
+  } else if (token) {
+    const user = await db.getUserBySessionToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid or expired session token." });
+    }
+    const url = String(req.query.url || "").trim();
+    if (!url) return res.status(400).json({ error: "Missing video URL." });
+
+    if (!isApprovedVideoHost(url)) {
+      return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+    }
+
+    const inMemoryRecord = videoOwnership.get(url);
+    let isOwner = inMemoryRecord && inMemoryRecord.userId === user.id;
+    if (!isOwner) {
+      isOwner = await db.userOwnsVideoUrl(user.id, url);
+    }
+
+    if (!isOwner) {
+      if (inMemoryRecord || (await db.isVideoUrlRegistered(url))) {
+        return res.status(403).json({ error: "Access denied. You do not own this video." });
+      }
+      return res.status(404).json({ error: "Video not found or access denied." });
+    }
+    targetUrl = url;
+  } else {
+    return res.status(401).json({ error: "Authentication or valid download ticket required." });
+  }
+
+  if (!isApprovedVideoHost(targetUrl)) {
+    return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+  }
+
   try {
-    const r = await fetch(url);
-    if (!r.ok || !r.body) return res.status(502).send(`Video fetch failed (HTTP ${r.status})`);
-    res.setHeader("Content-Disposition", 'attachment; filename="ad-film.mp4"');
+    const r = await fetchApprovedVideo(targetUrl);
+    if (!r.ok || !r.body) return res.status(502).json({ error: `Video fetch failed (HTTP ${r.status})` });
+    res.setHeader("Content-Disposition", 'attachment; filename="commercial_video.mp4"');
     res.setHeader("Content-Type", r.headers.get("content-type") || "video/mp4");
     if (r.headers.get("content-length")) res.setHeader("Content-Length", r.headers.get("content-length"));
     Readable.fromWeb(r.body).pipe(res);
   } catch (e) {
-    res.status(500).send(e.message);
+    const statusCode = e.status || 500;
+    res.status(statusCode).json({ error: e.message });
   }
 });
 
@@ -1435,7 +1631,8 @@ app.post("/api/projects", authRequired, async (req, res) => {
     const saved = await db.saveProject(req.body, req.user.id);
     res.json({ success: true, status: "success", project: saved });
   } catch (err) {
-    res.status(400).json({ error: err.message || "Failed to save project." });
+    const statusCode = err.status || 400;
+    res.status(statusCode).json({ error: err.message || "Failed to save project." });
   }
 });
 
@@ -1485,4 +1682,4 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 
-module.exports = { app, validateForm };
+module.exports = { app, validateForm, sessions, downloadTickets };

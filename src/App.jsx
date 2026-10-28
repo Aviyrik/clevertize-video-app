@@ -989,6 +989,8 @@ export default function App() {
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const isSavingProjectRef = useRef(false);
+  const currentSavingProjectIdRef = useRef(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
@@ -1304,6 +1306,8 @@ export default function App() {
     setShotSpec(null);
     setSessionId(null);
     setActiveProjectId(null);
+    currentSavingProjectIdRef.current = null;
+    isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(false);
 
     setDirectionsList([]);
@@ -1480,16 +1484,28 @@ export default function App() {
   };
 
   const handleSaveCurrentProject = async () => {
-    if (isSavingProject) return;
+    // 1. Synchronous in-flight guard: blocks rapid concurrent invocations before React state updates
+    if (isSavingProjectRef.current || isSavingProject) {
+      console.warn('[saveProject] Concurrent save blocked by synchronous guard');
+      return;
+    }
+    isSavingProjectRef.current = true;
+    setIsSavingProject(true);
+
     if (!currentUser || !authToken) {
+      isSavingProjectRef.current = false;
+      setIsSavingProject(false);
       setIsAuthModalOpen(true);
       setToastMessage('Please sign in or create an account to save your project.');
       setTimeout(() => setToastMessage(''), 4000);
       return;
     }
 
-    setIsSavingProject(true);
-    const resolvedProjectId = activeProjectId || `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    // 2. Stable project ID for this logical save operation
+    if (!currentSavingProjectIdRef.current) {
+      currentSavingProjectIdRef.current = activeProjectId || `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+    const resolvedProjectId = currentSavingProjectIdRef.current;
     setActiveProjectId(resolvedProjectId);
 
     try {
@@ -1527,19 +1543,18 @@ export default function App() {
 
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (res.ok && (data.success || data.project)) {
-        setActiveProjectId(data.project.id);
+        const savedId = data.project.id || resolvedProjectId;
+        setActiveProjectId(savedId);
+        currentSavingProjectIdRef.current = savedId;
         setIsCurrentProjectSaved(true);
         setUserProjects((prev) => {
-          const idx = prev.findIndex((p) => p.id === data.project.id);
+          const idx = prev.findIndex((p) => p.id === savedId);
           let next;
           if (idx >= 0) {
             next = [...prev];
@@ -1566,6 +1581,7 @@ export default function App() {
       setToastMessage('Failed to save project. Check your connection.');
       setTimeout(() => setToastMessage(''), 4000);
     } finally {
+      isSavingProjectRef.current = false;
       setIsSavingProject(false);
     }
   };
@@ -1573,6 +1589,8 @@ export default function App() {
   const handleOpenProject = (proj) => {
     if (!proj) return;
     setActiveProjectId(proj.id);
+    currentSavingProjectIdRef.current = proj.id;
+    isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(true);
 
     if (proj.brandContext) {
@@ -2592,7 +2610,7 @@ export default function App() {
     try {
       const res = await fetch('/api/session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -2631,7 +2649,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'direction',
           choice: selectedDirectionIdx,
@@ -2676,7 +2694,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'plot',
           choice: selectedPlotIdx,
@@ -2719,7 +2737,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'story',
         }),
@@ -2780,7 +2798,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/change`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: targetCheckpoint,
           note,
@@ -2994,7 +3012,7 @@ export default function App() {
       if (sessionId) {
         await fetch(`/api/session/${sessionId}/approve`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
         }).catch((e) => console.warn('Approve save call failed:', e));
       }
 
@@ -3279,6 +3297,10 @@ export default function App() {
       setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
 
       setSessionId(null);
+      setActiveProjectId(null);
+      currentSavingProjectIdRef.current = null;
+      isSavingProjectRef.current = false;
+      setIsCurrentProjectSaved(false);
       setDirectionData(null);
       setPlotData(null);
       setStoryData(null);
@@ -3940,6 +3962,9 @@ export default function App() {
               brandLogo={userContext.brandLogo || userContext.logo}
               onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}
               onProduceVideo={handleSimpleProduceVideo}
+              onSaveProject={handleSaveCurrentProject}
+              isSavingProject={isSavingProject}
+              isProjectSaved={isCurrentProjectSaved}
               isProducingVideo={isRendering}
               producedVideoUrl={videoUrl}
               videoRunError={errorMessage}
