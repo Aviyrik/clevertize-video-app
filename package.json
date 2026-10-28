@@ -7,16 +7,15 @@
     "start": "node server.js",
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test test/engine.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js"
+    "test": "node --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js"
   },
   "dependencies": {
     "@astryxdesign/cli": "^0.6.5",
     "@astryxdesign/core": "^0.6.5",
     "@astryxdesign/theme-neutral": "^0.6.5",
     "@stylexjs/stylex": "^0.19.1",
-    "adm-zip": "^0.5.16",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.3",
     "lucide-react": "^1.52.0",
     "pg": "^8.23.1",
     "react": "^19.0.0",

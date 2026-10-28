@@ -2592,7 +2592,7 @@ export default function App() {
     try {
       const res = await fetch('/api/session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -2631,7 +2631,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'direction',
           choice: selectedDirectionIdx,
@@ -2676,7 +2676,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'plot',
           choice: selectedPlotIdx,
@@ -2719,7 +2719,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/next`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: 'story',
         }),
@@ -2780,7 +2780,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/session/${sessionId}/change`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           checkpoint: targetCheckpoint,
           note,
@@ -2994,7 +2994,7 @@ export default function App() {
       if (sessionId) {
         await fetch(`/api/session/${sessionId}/approve`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
         }).catch((e) => console.warn('Approve save call failed:', e));
       }
 

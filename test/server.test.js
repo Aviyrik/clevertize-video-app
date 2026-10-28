@@ -189,6 +189,25 @@ test("unknown session -> 404", async () => {
   assert.equal(r.status, 404);
 });
 
+test("checkpoint + pipeline endpoints require login and never call Claude without it", async () => {
+  const before = calls.anthropic.length;
+  for (const p of ["/api/session", "/api/pipeline/generate", "/api/session/x/next", "/api/session/x/change", "/api/session/x/approve"]) {
+    const r = await post(p, FORM, null);
+    assert.equal(r.status, 401, p);
+  }
+  assert.equal(calls.anthropic.length, before, "no Claude calls for unauthenticated requests");
+});
+
+test("a session belongs to the user who opened it", async () => {
+  queue = [DIRECTION];
+  const own = (await post("/api/session", FORM)).body.sessionId;
+  const other = await db.createUser({ email: "other-owner@example.com", password: "password123", name: "Other" });
+  const otherToken = await db.createSession(other.id);
+  const r = await post(`/api/session/${own}/next`, { checkpoint: "direction", choice: 0 }, otherToken);
+  assert.equal(r.status, 404);
+  assert.equal((await post(`/api/session/${own}/approve`, {}, otherToken)).status, 404);
+});
+
 test("plots with a differently named text field are normalised (no 'undefined')", async () => {
   const odd = J({ framing: "x", plots: [
     { plot: "Son walks in to buy a phone for his mother", hook_pattern: "Interval twist", hook_library: "TrueFan AI" },
@@ -231,6 +250,11 @@ test("V2 Entry Point: /api/research/url validates input and returns structured e
 
   const privRes = await post("/api/research/url", { url: "http://192.168.1.1/router" });
   assert.equal(privRes.status, 400);
+
+  // IPv6 forms that used to slip past the hostname check
+  for (const url of ["http://[::ffff:127.0.0.1]/", "http://[::ffff:169.254.169.254]/latest/meta-data/", "http://[fe80::1]/"]) {
+    assert.equal((await post("/api/research/url", { url })).status, 400, url);
+  }
 
   // Valid URL -> structured result with fallback or success
   const res = await post("/api/research/url", {
