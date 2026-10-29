@@ -190,8 +190,8 @@ const BUSINESS_TYPE_PRESETS = [
   'Other',
 ];
 
-// Render aspect ratio follows the platform: "… / 16:9" platforms render landscape, everything else vertical
-const aspectRatioOf = (platform) => (/16:9/.test(platform || '') ? '16:9' : '9:16');
+// Render aspect ratio follows the platform: "… / 16:9" renders landscape, "… / 1:1" square, everything else vertical
+const aspectRatioOf = (platform) => (/16:9/.test(platform || '') ? '16:9' : /1:1/.test(platform || '') ? '1:1' : '9:16');
 
 // Production Platform Options
 const PLATFORM_PRESETS = [

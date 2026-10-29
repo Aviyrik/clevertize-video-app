@@ -34,6 +34,14 @@ services:
         value: wPlQ7EIQVN
       - key: FLOW_169_NOPRODUCT_NOLOGO
         value: jSkvLD0Vkf
+      - key: FLOW_11_PRODUCT_LOGO
+        value: 79RyJALGdZ
+      - key: FLOW_11_PRODUCT_NOLOGO
+        value: jUySLD0Vkf
+      - key: FLOW_11_NOPRODUCT_LOGO
+        value: 8aQhIrUjeZ
+      - key: FLOW_11_NOPRODUCT_NOLOGO
+        value: iGcG3uKdQH
 
 databases:
   - name: clevertize-postgres

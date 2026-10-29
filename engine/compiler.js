@@ -79,7 +79,7 @@ function compileShotSpecification(parsedScript, form = {}) {
 
   return {
     project: {
-      aspectRatio: /16:9/.test(platform) ? "16:9" : "9:16",
+      aspectRatio: /16:9/.test(platform) ? "16:9" : /1:1/.test(platform) ? "1:1" : "9:16",
       duration,
       platform,
       language,
@@ -107,10 +107,10 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
   const totalSec = parseInt(totalDuration, 10) || 15;
   const shotCount = options.shotCount || 4;
   const perShotSec = (totalSec / shotCount).toFixed(1);
-  // landscape renders (16:9 flows) must not be told to compose for a vertical frame
-  const wide = options.aspectRatio === "16:9";
-  const framing = wide ? shot.framing.replace(/vertical/gi, "horizontal").replace(/9:16/g, "16:9") : shot.framing;
-  const frame = wide ? "horizontal 16:9" : "vertical 9:16";
+  // landscape (16:9) and square (1:1) renders must not be told to compose for a vertical frame
+  const reframe = { "16:9": ["horizontal", "16:9"], "1:1": ["square", "1:1"] }[options.aspectRatio];
+  const framing = reframe ? shot.framing.replace(/vertical/gi, reframe[0]).replace(/9:16/g, reframe[1]) : shot.framing;
+  const frame = reframe ? reframe.join(" ") : "vertical 9:16";
 
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")

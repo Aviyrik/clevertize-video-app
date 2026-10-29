@@ -15,8 +15,12 @@ const FLOWS = [
   { aspectRatio: "16:9", product: true, logo: false, env: "FLOW_169_PRODUCT_NOLOGO", id: "Pi7b42C8Sz" },
   { aspectRatio: "16:9", product: false, logo: true, env: "FLOW_169_NOPRODUCT_LOGO", id: "wPlQ7EIQVN" },
   { aspectRatio: "16:9", product: false, logo: false, env: "FLOW_169_NOPRODUCT_NOLOGO", id: "jSkvLD0Vkf" },
+  { aspectRatio: "1:1", product: true, logo: true, env: "FLOW_11_PRODUCT_LOGO", id: "79RyJALGdZ" },
+  { aspectRatio: "1:1", product: true, logo: false, env: "FLOW_11_PRODUCT_NOLOGO", id: "jUySLD0Vkf" },
+  { aspectRatio: "1:1", product: false, logo: true, env: "FLOW_11_NOPRODUCT_LOGO", id: "8aQhIrUjeZ" },
+  { aspectRatio: "1:1", product: false, logo: false, env: "FLOW_11_NOPRODUCT_NOLOGO", id: "iGcG3uKdQH" },
 ];
-const ASPECT_RATIOS = ["9:16", "16:9"];
+const ASPECT_RATIOS = ["9:16", "16:9", "1:1"];
 const FLOW_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
 function selectFlow({ aspectRatio = "9:16", hasProduct, hasLogo }) {
@@ -295,6 +299,7 @@ module.exports = {
   selectFlow,
   getFlowInputs,
   FLOWS,
+  ASPECT_RATIOS,
   KNOWN_KEYS,
   validateMagnificRequest,
   sanitizePayloadForLogging,

@@ -300,16 +300,26 @@ test("C: logo-only flow keys (scenes_7, character_1_7, logo_5) are discovered, n
   assert.deepEqual(r.missing, []);
 });
 
-test("selectFlow covers all 8 combinations, honours env overrides and names a misconfigured variable", () => {
+test("selectFlow covers all 12 combinations, honours env overrides and names a misconfigured variable", () => {
   const seen = new Set();
-  for (const aspectRatio of ["9:16", "16:9"]) for (const hasProduct of [true, false]) for (const hasLogo of [true, false]) {
+  for (const aspectRatio of ["9:16", "16:9", "1:1"]) for (const hasProduct of [true, false]) for (const hasLogo of [true, false]) {
     const id = selectFlow({ aspectRatio, hasProduct, hasLogo });
     const row = FLOWS.find((f) => f.id === id);
     assert.ok(row && row.aspectRatio === aspectRatio && row.product === hasProduct && row.logo === hasLogo, id);
     seen.add(id);
   }
-  assert.equal(seen.size, 8);
+  assert.equal(seen.size, 12);
   assert.equal(selectFlow({ hasProduct: true, hasLogo: true }), "0MQyTfWvQD", "defaults to 9:16");
+  assert.deepEqual(
+    [[true, true], [true, false], [false, true], [false, false]].map(([hasProduct, hasLogo]) => selectFlow({ aspectRatio: "1:1", hasProduct, hasLogo })),
+    ["79RyJALGdZ", "jUySLD0Vkf", "8aQhIrUjeZ", "iGcG3uKdQH"],
+  );
+  process.env.FLOW_11_NOPRODUCT_LOGO = "bad id!";
+  try {
+    assert.throws(() => selectFlow({ aspectRatio: "1:1", hasProduct: false, hasLogo: true }), /FLOW_11_NOPRODUCT_LOGO/);
+  } finally {
+    delete process.env.FLOW_11_NOPRODUCT_LOGO;
+  }
 
   process.env.FLOW_169_PRODUCT_NOLOGO = "CustomFlow01";
   try {
@@ -330,6 +340,9 @@ test("shot prompts describe the frame that will actually be rendered", () => {
   const wide = compileShotPrompt(shot, world, { aspectRatio: "16:9" });
   assert.ok(wide.includes("horizontal frame). Subject/character fills primary horizontal 16:9 viewing area"));
   assert.doesNotMatch(wide, /vertical|9:16/);
+  const square = compileShotPrompt(shot, world, { aspectRatio: "1:1" });
+  assert.ok(square.includes("square frame). Subject/character fills primary square 1:1 viewing area"));
+  assert.doesNotMatch(square, /vertical|9:16/);
 });
 
 test("D: empty product with no fallback fails pre-flight validation immediately", () => {

@@ -1360,6 +1360,9 @@ export function Screen03Settings({
     { id: 'Other / 9:16', label: 'Other' },
     { id: 'YouTube Landscape / 16:9', label: 'YouTube 16:9' },
     { id: 'LinkedIn Video / 16:9', label: 'LinkedIn 16:9' },
+    { id: 'Instagram Feed / 1:1', label: 'Instagram Feed 1:1' },
+    { id: 'Facebook Feed / 1:1', label: 'Facebook Feed 1:1' },
+    { id: 'LinkedIn Feed / 1:1', label: 'LinkedIn Feed 1:1' },
   ];
 
   const DURATIONS = ['15s', '20s', '30s'];

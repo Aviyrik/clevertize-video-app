@@ -1157,9 +1157,9 @@ app.post("/api/run", authRequired, async (req, res) => {
       aspectRatio,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
-    // 9:16 unless the owner picked a landscape platform; the flow itself is chosen server-side
+    // 9:16 unless the owner picked a landscape or square platform; the flow itself is chosen server-side
     const ratio = aspectRatio || shotSpec?.project?.aspectRatio || "9:16";
-    if (ratio !== "9:16" && ratio !== "16:9") throw Object.assign(new Error(`Unsupported aspect ratio "${ratio}" — use 9:16 or 16:9.`), { status: 400 });
+    if (!magnific.ASPECT_RATIOS.includes(ratio)) throw Object.assign(new Error(`Unsupported aspect ratio "${ratio}" — use ${magnific.ASPECT_RATIOS.join(", ")}.`), { status: 400 });
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
 

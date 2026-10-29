@@ -46,7 +46,7 @@ global.fetch = async (url, opts = {}) => {
 };
 
 // Each routed flow has its own input names, like the real ones (0MQyTfWvQD: "poduct"/"images"; others: *_7, product_2, logo_5)
-const FLOW_IMAGES = { "0MQyTfWvQD": "both", rl5XxtcFH6: "product", TeYJVNR8Ta: "logo", kLqd16BU1G: "none", MXcPDCmYv9: "both", Pi7b42C8Sz: "product", wPlQ7EIQVN: "logo", jSkvLD0Vkf: "none" };
+const FLOW_IMAGES = { "0MQyTfWvQD": "both", rl5XxtcFH6: "product", TeYJVNR8Ta: "logo", kLqd16BU1G: "none", MXcPDCmYv9: "both", Pi7b42C8Sz: "product", wPlQ7EIQVN: "logo", jSkvLD0Vkf: "none", "79RyJALGdZ": "both", jUySLD0Vkf: "product", "8aQhIrUjeZ": "logo", iGcG3uKdQH: "none" };
 function flowSpec(id) {
   if (id === "0MQyTfWvQD") {
     return [
@@ -59,13 +59,16 @@ function flowSpec(id) {
     ];
   }
   const kind = FLOW_IMAGES[id];
+  // the 1:1 flows use yet another suffix and the irregular "poduct" / "images" names
+  const square = ["79RyJALGdZ", "jUySLD0Vkf", "8aQhIrUjeZ", "iGcG3uKdQH"].includes(id);
+  const v = square ? 9 : 7;
   return [
-    { id: "scenes_7", type: "list", required: true },
-    { id: "character_1_7", required: true },
-    { id: "character_2_7", required: true },
-    { id: "setting_7", required: true },
-    ...(kind === "both" || kind === "product" ? [{ id: "product_2", type: "image", required: true }] : []),
-    ...(kind === "both" || kind === "logo" ? [{ id: "logo_5", type: "image", required: true }] : []),
+    { id: `scenes_${v}`, type: "list", required: true },
+    { id: `character_1_${v}`, required: true },
+    { id: `character_2_${v}`, required: true },
+    { id: `setting_${v}`, required: true },
+    ...(kind === "both" || kind === "product" ? [{ id: square ? "poduct_3" : "product_2", type: "image", required: true }] : []),
+    ...(kind === "both" || kind === "logo" ? [{ id: square ? "images_4" : "logo_5", type: "image", required: true }] : []),
   ];
 }
 
@@ -409,6 +412,35 @@ test("/api/run routes 16:9 renders to the landscape flows and rejects unknown as
   const bad = await post("/api/run", { ...body, aspectRatio: "4:3" });
   assert.equal(bad.status, 400);
   assert.match(bad.body.error, /aspect ratio/i);
+});
+
+test("/api/run routes 1:1 renders to the square flows using each flow's own input keys", async () => {
+  const { parseOutput } = require("../engine/parse");
+  const p = parseOutput(GOOD);
+  const logo = { mime: "image/png", data: Buffer.from("logo").toString("base64") };
+  const productPhoto = { mime: "image/jpeg", data: Buffer.from("prod").toString("base64") };
+  const body = { scenes: p.scenes, character1: p.character1, character2: p.character2, setting: p.setting, aspectRatio: "1:1" };
+
+  const cases = [
+    [{ productPhoto, logo }, "79RyJALGdZ", ["character_1_9", "character_2_9", "images_4", "poduct_3", "scenes_9", "setting_9"]],
+    [{ productPhoto }, "jUySLD0Vkf", ["character_1_9", "character_2_9", "poduct_3", "scenes_9", "setting_9"]],
+    [{ logo }, "8aQhIrUjeZ", ["character_1_9", "character_2_9", "images_4", "scenes_9", "setting_9"]],
+    [{}, "iGcG3uKdQH", ["character_1_9", "character_2_9", "scenes_9", "setting_9"]],
+  ];
+  for (const [images, flow, keys] of cases) {
+    const r = await post("/api/run", { ...body, ...images });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(calls.magnificRun.at(-1).flow, flow);
+    assert.deepEqual(Object.keys(calls.magnificRun.at(-1).inputs).sort(), keys, flow);
+  }
+  const both = calls.magnificRun.at(-4).inputs;
+  assert.match(both.poduct_3, /^data:image\/jpeg;base64,/);
+  assert.match(both.images_4, /^data:image\/png;base64,/);
+
+  // the 9:16 product+logo flow straight after still gets its own keys (spec cache is per flow ID)
+  await post("/api/run", { ...body, aspectRatio: "9:16", productPhoto, logo });
+  assert.equal(calls.magnificRun.at(-1).flow, "0MQyTfWvQD");
+  assert.deepEqual(Object.keys(calls.magnificRun.at(-1).inputs).sort(), ["character_1_2", "character_2_2", "images", "poduct", "scenes_2", "setting_2"]);
 });
 
 
