@@ -124,6 +124,10 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
   const perShotSec = (totalSec / shotCount).toFixed(1);
   const aspectRatio = options.aspectRatio || options.dimension || staticWorld.aspectRatio || (String(staticWorld.platform || options.platform).includes("16:9") ? "16:9" : String(staticWorld.platform || options.platform).includes("1:1") ? "1:1" : "9:16");
 
+  // landscape (16:9) and square (1:1) shots must not still be described as "in vertical frame"
+  const reframe = { "16:9": ["horizontal", "16:9"], "1:1": ["square", "1:1"] }[aspectRatio];
+  const framing = reframe ? shot.framing.replace(/vertical/gi, reframe[0]).replace(/9:16/g, reframe[1]) : shot.framing;
+
   const framingDirective = aspectRatio === "16:9"
     ? "WIDESCREEN 16:9 COMPOSITION: Cinematic landscape horizontal framing. Wide horizontal depth with comfortable two-shot or medium wide staging, ample room context, and natural lateral camera tracking."
     : aspectRatio === "1:1"
@@ -139,7 +143,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     ? "CONVERSATIONAL DIALOGUE STAGING: Natural over-the-shoulder and two-shot framing capturing authentic human dialogue, active listening, and responsive facial reactions."
     : activeFormat.includes("comedy")
     ? "COMEDIC TIMING & EXPRESSION: Clear two-shot framing capturing humorous facial expressions, comic timing, and witty character interaction."
-    : "UGC / CREATOR STAGING: Mobile-native vertical framing with authentic intimacy, natural handheld energy, and creator point-of-view.";
+    : `UGC / CREATOR STAGING: Mobile-native ${reframe ? "" : "vertical "}framing with authentic intimacy, natural handheld energy, and creator point-of-view.`;
 
   const productPhoto = options.productPhoto || staticWorld.productPhoto;
   const productVisualRef = productPhoto
@@ -148,7 +152,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
 
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")
-    `COMPOSITION & FRAMING: ${shot.framing}. ${framingDirective} Hero product/service is clearly discernible. ${formatDirective}`,
+    `COMPOSITION & FRAMING: ${framing}. ${framingDirective} Hero product/service is clearly discernible. ${formatDirective}`,
 
     productVisualRef,
 

@@ -14,6 +14,8 @@ const magnific = require("./engine/magnific");
 const { extractSceneParts, compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
 const db = require("./engine/db");
+const netguard = require("./engine/netguard"); // called as netguard.safeFetch so tests can point it at a local server
+const { isDisallowedUrl } = netguard;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -123,7 +125,27 @@ function endFrame(f) {
 // → Stage 4 script + quality gate → Checkpoint 4 Script (approve → record saved → send to Magnific).
 const STAGES = ["direction", "plot", "story", "script"];
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+const MAX_SESSIONS_PER_USER = 10; // each session holds the form (and its photos) in memory
 const sessions = new Map();
+
+function openSession(form, fest, userId) {
+  const now = Date.now();
+  for (const [k, v] of sessions) if (now - v.touched > SESSION_TTL_MS) sessions.delete(k);
+  const own = [...sessions.values()].filter((v) => v.userId === userId).sort((a, b) => a.touched - b.touched);
+  for (const old of own.slice(0, Math.max(0, own.length - MAX_SESSIONS_PER_USER + 1))) sessions.delete(old.id);
+  const s = {
+    id: crypto.randomUUID(),
+    userId,
+    touched: now,
+    form,
+    fest,
+    today: todayIST(),
+    previous: store.previousFor(form.businessName, form.town),
+    system: buildSystem(form.scriptMode),
+  };
+  sessions.set(s.id, s);
+  return s;
+}
 
 function getSession(id, userId) {
   const now = Date.now();
@@ -300,18 +322,7 @@ async function optionalAuth(req, res, next) {
 app.post("/api/session", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
-    const fest = await getFestivals();
-    const s = {
-      id: crypto.randomUUID(),
-      userId: req.user.id,
-      touched: Date.now(),
-      form,
-      fest,
-      today: todayIST(),
-      previous: store.previousFor(form.businessName, form.town),
-      system: buildSystem(form.scriptMode),
-    };
-    sessions.set(s.id, s);
+    const s = openSession(form, await getFestivals(), req.user.id);
     const out = await produce(s, "direction");
     res.json({ sessionId: s.id, ...out });
   } catch (e) { sendErr(res, e, "session"); }
@@ -322,18 +333,7 @@ app.post("/api/session", authRequired, async (req, res) => {
 app.post("/api/pipeline/generate", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
-    const fest = await getFestivals();
-    const s = {
-      id: crypto.randomUUID(),
-      userId: req.user.id,
-      touched: Date.now(),
-      form,
-      fest,
-      today: todayIST(),
-      previous: store.previousFor(form.businessName, form.town),
-      system: buildSystem(form.scriptMode),
-    };
-    sessions.set(s.id, s);
+    const s = openSession(form, await getFestivals(), req.user.id);
 
     // Pre-flight check: ensure required creative parameters and product context can be satisfied
     magnific.validateMagnificRequest(
@@ -475,37 +475,6 @@ app.post("/api/research", authRequired, async (req, res) => {
   }
 });
 
-function isDisallowedUrl(urlString) {
-  try {
-    const parsed = new URL(urlString);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return "Only HTTP and HTTPS protocols are permitted.";
-    }
-    const host = parsed.hostname.toLowerCase();
-    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
-      return "Access to local or private hostnames is restricted.";
-    }
-    // Check IPv4 addresses
-    const ipv4Match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-    if (ipv4Match) {
-      const [, o1, o2, o3, o4] = ipv4Match.map(Number);
-      if (o1 > 255 || o2 > 255 || o3 > 255 || o4 > 255) return "Invalid IP address.";
-      if (o1 === 0 || o1 === 127) return "Access to loopback/local IP addresses is restricted.";
-      if (o1 === 10) return "Access to private 10.x.x.x addresses is restricted.";
-      if (o1 === 172 && o2 >= 16 && o2 <= 31) return "Access to private 172.16-31.x.x addresses is restricted.";
-      if (o1 === 192 && o2 === 168) return "Access to private 192.168.x.x addresses is restricted.";
-      if (o1 === 169 && o2 === 254) return "Access to cloud metadata / link-local addresses is restricted.";
-    }
-    // Check IPv6 loopback and link-local
-    if (host === "::1" || host === "[::1]" || host.startsWith("fe80:") || host.startsWith("fc00:") || host.startsWith("fd00:")) {
-      return "Access to local or private IPv6 addresses is restricted.";
-    }
-    return null;
-  } catch (err) {
-    return "Invalid URL format.";
-  }
-}
-
 const STANDARD_BUSINESS_CATEGORIES = [
   "Saree, Clothing & Apparel",
   "Jewellery & Accessories",
@@ -597,6 +566,18 @@ function matchClosestCategory(catStr, defaultCat = "Other Local Business") {
   const exact = STANDARD_BUSINESS_CATEGORIES.find((c) => c.toLowerCase() === s);
   if (exact) return exact;
   return defaultCat;
+}
+
+const SCRAPER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0";
+
+// Identify an image by its magic bytes (content-type headers from scraped sites can't be trusted)
+function sniffImageMime(buf) {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (buf.subarray(0, 4).toString("latin1") === "GIF8") return "image/gif";
+  if (buf.subarray(0, 4).toString("latin1") === "RIFF" && buf.subarray(8, 12).toString("latin1") === "WEBP") return "image/webp";
+  return null;
 }
 
 function resolveScrapedUrl(relative, base) {
@@ -719,61 +700,30 @@ app.post("/api/research/url", authRequired, async (req, res) => {
   let fetchError = null;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    // safeFetch re-checks the resolved IP and every redirect hop (SSRF), and caps the page size
+    const response = await netguard.safeFetch(targetUrl, {
+      timeoutMs: 8000,
+      maxBytes: 5 * 1024 * 1024,
+      truncate: true,
+      headers: {
+        "User-Agent": SCRAPER_UA,
+        "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
+      },
+    });
 
-    let currentUrl = targetUrl;
-    let hops = 0;
-    const maxRedirects = 3;
-    let response = null;
-
-    while (hops <= maxRedirects) {
-      const disallowedCheck = isDisallowedUrl(currentUrl);
-      if (disallowedCheck) {
-        clearTimeout(timeout);
-        return res.status(400).json({ error: `Redirect destination rejected: ${disallowedCheck}` });
-      }
-
-      response = await global.fetch(currentUrl, {
-        signal: controller.signal,
-        redirect: "manual",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
-          "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
-        },
-      });
-
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        hops++;
-        if (hops > maxRedirects) {
-          throw new Error("Too many redirects during web research.");
-        }
-        const location = response.headers.get("location");
-        if (!location) {
-          throw new Error("Redirect response missing location header.");
-        }
-        const nextUrl = new URL(location, currentUrl).toString();
-        const nextDisallowed = isDisallowedUrl(nextUrl);
-        if (nextDisallowed) {
-          clearTimeout(timeout);
-          return res.status(400).json({ error: `Redirect destination rejected: ${nextDisallowed}` });
-        }
-        currentUrl = nextUrl;
-        continue;
-      }
-      break;
-    }
-    clearTimeout(timeout);
-
-    if (response && response.ok) {
-      const text = await response.text();
+    if (response.ok) {
+      const text = response.body.toString("utf8");
       fullFetchedHtml = text;
       fetchedHtml = text.slice(0, 60000);
       fetchSucceeded = true;
     } else {
-      fetchError = `HTTP ${response ? response.status : "unknown"} from target server`;
+      fetchError = `HTTP ${response.status} from target server`;
     }
   } catch (err) {
+    // a restricted target (private/metadata address, directly or after a redirect) is refused outright
+    if (err.code === "EBLOCKED") {
+      return res.status(400).json({ error: err.redirected ? `Redirect destination rejected: ${err.message}` : err.message });
+    }
     fetchError = err.message || "Network request failed";
   }
 
@@ -803,29 +753,22 @@ app.post("/api/research/url", authRequired, async (req, res) => {
     productImageUrl = extractProductImageFromHtml(fullFetchedHtml || fetchedHtml, targetUrl);
     if (productImageUrl) {
       try {
-        const imgCtrl = new AbortController();
-        const imgTimeout = setTimeout(() => imgCtrl.abort(), 6000);
-        const imgRes = await global.fetch(productImageUrl, {
-          signal: imgCtrl.signal,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Clevertize-Bot/2.0",
-          },
+        // The image URL comes from the scraped page, so it gets the same SSRF checks as the page itself
+        const imgRes = await netguard.safeFetch(productImageUrl, {
+          timeoutMs: 6000,
+          maxBytes: 4.5 * 1024 * 1024,
+          headers: { "User-Agent": SCRAPER_UA },
         });
-        clearTimeout(imgTimeout);
-        if (imgRes && imgRes.ok) {
-          const rawMime = (imgRes.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
-          const mime = /^image\/(jpeg|png|webp|gif)/i.test(rawMime) ? rawMime : "image/jpeg";
-          const arrayBuf = await imgRes.arrayBuffer();
-          if (arrayBuf.byteLength > 0 && arrayBuf.byteLength <= 4.5 * 1024 * 1024) {
-            const b64 = Buffer.from(arrayBuf).toString("base64");
-            productPhoto = {
-              name: "Product Photo",
-              mime,
-              data: b64,
-              previewUrl: productImageUrl,
-              fromWebsite: true,
-            };
-          }
+        // Only hand back bytes that really are an image — never arbitrary responses
+        const mime = imgRes.ok ? sniffImageMime(imgRes.body) : null;
+        if (mime) {
+          productPhoto = {
+            name: "Product Photo",
+            mime,
+            data: imgRes.body.toString("base64"),
+            previewUrl: productImageUrl,
+            fromWebsite: true,
+          };
         }
       } catch (e) {
         console.warn("[api/research/url] Failed to fetch image buffer for:", productImageUrl, e.message);
@@ -1144,6 +1087,10 @@ app.post("/api/run", authRequired, async (req, res) => {
       businessName,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+    // 9:16 unless the owner picked 16:9 or 1:1; the Magnific flow itself is chosen server-side from this
+    const platformRatio = typeof platform === "string" ? (platform.includes("16:9") ? "16:9" : platform.includes("1:1") ? "1:1" : null) : null;
+    const ratio = aspectRatio || dimension || shotSpec?.project?.aspectRatio || platformRatio || "9:16";
+    if (!magnific.ASPECT_RATIOS.includes(ratio)) throw Object.assign(new Error(`Unsupported aspect ratio "${ratio}" — use ${magnific.ASPECT_RATIOS.join(", ")}.`), { status: 400 });
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
 
@@ -1190,7 +1137,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         return compileShotPrompt(updatedShot, effectiveStaticWorld, {
           duration: duration || "15s",
           shotCount: scenes.length,
-          aspectRatio: aspectRatio || dimension || (platform && platform.includes("16:9") ? "16:9" : platform && platform.includes("1:1") ? "1:1" : "9:16"),
+          aspectRatio: ratio,
           platform: platform,
           style: shotSpec.project?.style || req.body?.creativeStyle,
           format: shotSpec.format,
@@ -1203,7 +1150,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         character1: resolvedChar1,
         character2: resolvedChar2,
         duration: duration || "15s",
-        aspectRatio: aspectRatio || dimension || (platform && platform.includes("16:9") ? "16:9" : platform && platform.includes("1:1") ? "1:1" : "9:16"),
+        aspectRatio: ratio,
         platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
@@ -1219,6 +1166,7 @@ app.post("/api/run", authRequired, async (req, res) => {
       productName: resolvedProduct,
       productDataUrl: img ? `data:${img.mime};base64,${img.data}` : null,
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
+      aspectRatio: ratio,
     });
     // Persist runId association with authenticated user immediately
     await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });

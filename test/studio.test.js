@@ -1,8 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
+// keep test users out of data/ — that folder is the app's real local database
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-test-'));
 process.env.ANTHROPIC_API_KEY = 'test';
 process.env.MAGNIFIC_API_KEY = 'test';
 process.env.FESTIVAL_LIVE = 'off';
@@ -1043,28 +1046,32 @@ test('Studio Stage 01 Business: Brand logo upload control and preview exist', ()
   assert.ok(guidedStudioSrc.includes('Current Brand'), 'GuidedStudio must have Current Brand section');
 });
 
-test('Magnific explicitInputs: Always satisfies logo requirement even when omitted', () => {
+test('Magnific routing: renders without a logo go to a no-logo flow instead of getting a blank placeholder', () => {
   const magnific = require('../engine/magnific.js');
-  
-  // 1. Without logo provided:
-  const inputsWithoutLogo = magnific.explicitInputs({
-    scenes: ['Scene 1', 'Scene 2'],
-    character1: 'Char 1',
-    character2: 'Char 2',
-    setting: 'Setting 1',
-  });
-  assert.ok(inputsWithoutLogo.images, 'Logo slot "images" must be populated');
-  assert.equal(inputsWithoutLogo.images, magnific.TRANSPARENT_PNG_FALLBACK, 'Must fallback to transparent 1x1 PNG');
+  assert.equal(magnific.TRANSPARENT_PNG_FALLBACK, undefined, 'Placeholder image must be gone');
 
-  // 2. With logo provided:
-  const inputsWithLogo = magnific.explicitInputs({
+  // 1. Without logo provided: the no-logo flow is chosen
+  assert.equal(magnific.selectFlow({ aspectRatio: '9:16', hasProduct: true, hasLogo: false }), 'rl5XxtcFH6');
+
+  // 2. With logo provided: the logo lands in the flow's logo slot ("images" in 0MQyTfWvQD)
+  const spec = [
+    { id: 'scenes_2', type: 'list', required: true },
+    { id: 'character_1_2', required: true },
+    { id: 'character_2_2', required: true },
+    { id: 'setting_2', required: true },
+    { id: 'poduct', type: 'image', required: true },
+    { id: 'images', type: 'image', required: true },
+  ];
+  const mapped = magnific.mapInputs(spec, {
     scenes: ['Scene 1', 'Scene 2'],
     character1: 'Char 1',
     character2: 'Char 2',
     setting: 'Setting 1',
+    productDataUrl: 'data:image/jpeg;base64,PRODUCT',
     logoDataUrl: 'data:image/png;base64,CUSTOM_LOGO_DATA',
   });
-  assert.equal(inputsWithLogo.images, 'data:image/png;base64,CUSTOM_LOGO_DATA', 'Must use provided logo data URL');
+  assert.equal(mapped.inputs.images, 'data:image/png;base64,CUSTOM_LOGO_DATA', 'Must use provided logo data URL');
+  assert.equal(mapped.inputs.poduct, 'data:image/jpeg;base64,PRODUCT');
 });
 
 test('Studio Stage 06 Story: Synthesis loading screen dynamically paces steps using elapsed time', () => {

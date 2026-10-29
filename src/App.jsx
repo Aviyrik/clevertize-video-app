@@ -6,6 +6,7 @@ import {
   StudioActionTypes,
   isStaleResponse,
 } from './context/studioReducer.js';
+import { videoLogoPayload } from './utils/videoLogo.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -188,6 +189,9 @@ const BUSINESS_TYPE_PRESETS = [
   'Professional, Legal & Business Services',
   'Other',
 ];
+
+// Render aspect ratio: the Settings dimension choice, else read from the platform ("… / 16:9", "… / 1:1"), else vertical
+const aspectRatioOf = (ctx = {}) => ctx.aspectRatio || ctx.dimension || (/16:9/.test(ctx.platform || '') ? '16:9' : /1:1/.test(ctx.platform || '') ? '1:1' : '9:16');
 
 // Production Platform Options
 const PLATFORM_PRESETS = [
@@ -1317,6 +1321,7 @@ export default function App() {
   const resetAllCreativeFilmState = () => {
     setVideoUrl('');
     updateUserContext('productPhoto', null);
+    updateUserContext('videoLogo', undefined);
     setScenes([]);
     setGeneratedScript(null);
     setShotSpec(null);
@@ -2091,7 +2096,7 @@ export default function App() {
       brief: userContext.brief?.trim() || '',
       shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-      logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+      logo: videoLogoPayload(userContext),
     };
   };
 
@@ -3030,8 +3035,10 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: pipeData.shotSpec || null,
+        aspectRatio: aspectRatioOf(userContext),
       };
 
       const runData = await safeApiCall(fetch('/api/run', {
@@ -3092,7 +3099,8 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3101,6 +3109,7 @@ export default function App() {
             characters: [effectiveChar1, effectiveChar2].filter(Boolean).join(' | '),
           },
         } : null,
+        aspectRatio: aspectRatioOf(userContext),
       };
 
       const data = await safeApiCall(fetch('/api/run', {
@@ -3400,6 +3409,7 @@ export default function App() {
           ...(clearBrand ? { businessName: '', businessType: 'Retail Store', town: '', websiteUrl: '', logo: null } : brand),
           brief: '',
           productPhoto: null,
+          videoLogo: undefined,
           leadCharacter: '',
           supportingCharacter: '',
           environment: '',
@@ -3520,7 +3530,8 @@ export default function App() {
         specialty: userContext.specialty || '',
         brief: userContext.brief || '',
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
-        logo: userContext.logo ? { mime: userContext.logo.mime, data: userContext.logo.data } : null,
+        // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
+        logo: videoLogoPayload(userContext),
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3909,6 +3920,7 @@ export default function App() {
               brandLogo: biz.logo || biz.brandLogo || null,
               logo: biz.logo || biz.brandLogo || null,
               productPhoto: null,
+              videoLogo: undefined,
             }));
             setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
             setTimeout(() => setToastMessage(''), 3000);
@@ -4033,6 +4045,7 @@ export default function App() {
                   brandLogo: biz.logo || biz.brandLogo || null,
                   logo: biz.logo || biz.brandLogo || null,
               productPhoto: null,
+              videoLogo: undefined,
             }));
                 setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
                 setTimeout(() => setToastMessage(''), 3000);
