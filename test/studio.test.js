@@ -2443,4 +2443,38 @@ test('Video Generation Completion: App.jsx avoids bare selectedDirectionIndex / 
   assert.ok(appSrc.includes('selectedDirectionIndex: typeof selectedDirectionIdx === \'number\''), 'Must assign selectedDirectionIdx to selectedDirectionIndex property');
 });
 
+test('New Film Project & Restart Film: Global confirmation modal and Simple Studio reset integration', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const appShellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+
+  // 1. AppShell supports both onStartNewFilm and onRestartFilm
+  assert.ok(appShellSrc.includes('onRestartFilm'), 'AppShell must support onRestartFilm prop');
+  assert.ok(appShellSrc.includes('onRestartFilm || onStartNewFilm'), 'Restart Film button must invoke onRestartFilm or onStartNewFilm');
+  assert.ok(appShellSrc.includes('onClick={onStartNewFilm}'), 'New Film Project CTA must invoke onStartNewFilm');
+
+  // 2. App.jsx wires onRestartFilm and onStartNewFilm to AppShell
+  assert.ok(appSrc.includes('onRestartFilm='), 'App.jsx must pass onRestartFilm to AppShell');
+  assert.ok(appSrc.includes('onStartNewFilm='), 'App.jsx must pass onStartNewFilm to AppShell');
+
+  // 3. New Film Confirmation modal is rendered outside conditional studioMode branch (global root)
+  const appShellCloseIndex = appSrc.indexOf('</AppShell>');
+  const newFilmModalIndex = appSrc.indexOf('{isNewFilmConfirmOpen && (');
+  assert.ok(appShellCloseIndex > 0, '</AppShell> must exist in App.jsx');
+  assert.ok(newFilmModalIndex > 0, '{isNewFilmConfirmOpen && ( must exist in App.jsx');
+  assert.ok(
+    newFilmModalIndex > appShellCloseIndex,
+    'New Film confirmation modal must be placed at the global root level outside </AppShell> so it renders in Simple Studio, Director Mode, and all views'
+  );
+
+  // 4. Toast notification is also global
+  const toastIndex = appSrc.indexOf('{toastMessage && (');
+  assert.ok(toastIndex > appShellCloseIndex, 'Toast notification must be placed globally outside </AppShell>');
+
+  // 5. SimpleBusinessStudio is equipped with a dynamic key referencing brandResetKey for full UI reset
+  assert.ok(appSrc.includes('key={`simple-studio-${brandResetKey}'), 'SimpleBusinessStudio must have dynamic key tied to brandResetKey');
+
+  // 6. hasActiveWork guard avoids redundant confirmation modal on blank projects
+  assert.ok(appSrc.includes('const hasActiveWork = Boolean('), 'handleStartNewProject must detect active work');
+});
+
 

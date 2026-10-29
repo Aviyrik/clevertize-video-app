@@ -3312,6 +3312,17 @@ export default function App() {
       handleExecuteNewProject(false);
       return;
     }
+    const hasActiveWork = Boolean(
+      (scenes && scenes.length > 0) ||
+      generatedScript ||
+      videoUrl ||
+      (userContext.brief && userContext.brief.trim().length > 0) ||
+      (studioStage !== 'brief' && studioStage !== 'entry' && completedStages && completedStages.length > 0)
+    );
+    if (!hasActiveWork) {
+      handleExecuteNewProject(false);
+      return;
+    }
     setIsNewFilmConfirmOpen(true);
   };
 
@@ -3401,7 +3412,7 @@ export default function App() {
 
       setCompletedStages([]);
       setStudioStage('brief');
-      setActiveAppView('hub');
+      setActiveAppView('studio');
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -3866,6 +3877,9 @@ export default function App() {
             }
             handleStartNewProject(false);
           }}
+          onRestartFilm={() => {
+            handleStartNewProject(false);
+          }}
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
@@ -4028,6 +4042,7 @@ export default function App() {
             />
           ) : studioMode === 'simple' ? (
             <SimpleBusinessStudio
+              key={`simple-studio-${brandResetKey}-${activeProjectId || 'new'}`}
               businessName={userContext.businessName}
               businessType={userContext.businessType}
               town={userContext.town}
@@ -4734,170 +4749,170 @@ export default function App() {
           onApplyRewrite={handleApplySceneRewrite}
           isRewriting={isRewritingScene}
         />
-
-        {/* New Film Confirmation Modal */}
-        {isNewFilmConfirmOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              padding: 20,
-            }}
-            onClick={() => setIsNewFilmConfirmOpen(false)}
-          >
-            <div
-              style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 12,
-                maxWidth: 480,
-                width: '100%',
-                padding: 24,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      backgroundColor: 'var(--accent-subtle)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--accent-primary)',
-                    }}
-                  >
-                    <RotateCcw size={18} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Start a New Film?
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsNewFilmConfirmOpen(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
-                <p style={{ margin: '0 0 10px 0' }}>
-                  This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
-                </p>
-                {userContext.businessName ? (
-                  <div
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: 12,
-                      color: 'var(--text-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                    <span>
-                      Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsNewFilmConfirmOpen(false);
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleExecuteNewProject(false);
-                  }}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    boxShadow: '0 2px 8px var(--accent-glow)',
-                  }}
-                >
-                  <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
-                  <span style={{ pointerEvents: 'none' }}>Start New Film</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Floating Toast Notification */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              zIndex: 9999,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--accent-primary)',
-              color: 'var(--text-primary)',
-              padding: '12px 20px',
-              borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
-            <span>{toastMessage}</span>
-          </div>
-        )}
         </main>
           </>
         )}
       </AppShell>
+
+      {/* New Film Confirmation Modal (Global across Simple Studio, Director Mode, and Views) */}
+      {isNewFilmConfirmOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setIsNewFilmConfirmOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 12,
+              maxWidth: 480,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: 'var(--accent-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent-primary)',
+                  }}
+                >
+                  <RotateCcw size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Start a New Film?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewFilmConfirmOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              <p style={{ margin: '0 0 10px 0' }}>
+                This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
+              </p>
+              {userContext.businessName ? (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: 12,
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                  <span>
+                    Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsNewFilmConfirmOpen(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleExecuteNewProject(false);
+                }}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 2px 8px var(--accent-glow)',
+                }}
+              >
+                <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
+                <span style={{ pointerEvents: 'none' }}>Start New Film</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification (Global across all views) */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            backgroundColor: 'var(--bg-elevated)',
+            border: '1px solid var(--accent-primary)',
+            color: 'var(--text-primary)',
+            padding: '12px 20px',
+            borderRadius: 8,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Existing Script Modal (V2 Entry Point) */}
       <ExistingScriptModal
