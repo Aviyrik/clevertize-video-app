@@ -47,6 +47,7 @@ export default function AppShell({
   completedStages = [],
   onNavigateStage,
   onStartNewFilm,
+  onRestartFilm,
   businessName = '',
   businessType = '',
   town = '',
@@ -1059,7 +1060,7 @@ export default function AppShell({
 
               <button
                 type="button"
-                onClick={onStartNewFilm}
+                onClick={onRestartFilm || onStartNewFilm}
                 style={{
                   backgroundColor: 'var(--bg-elevated)',
                   border: '1px solid var(--border-default)',

@@ -40,6 +40,28 @@ global.fetch = async (url, opts = {}) => {
     return json({ content: [{ type: "thinking", thinking: "..." }, { type: "text", text: queue.shift() }], stop_reason: "end_turn" });
   }
   if (u.endsWith("/run")) { calls.magnificRun.push({ flow: u.split("/flows/")[1].split("/")[0], ...JSON.parse(opts.body) }); return json({ id: "run_1" }); }
+  if (u.includes("redirect-to-localhost")) {
+    return new Response(null, { status: 302, headers: { location: "http://localhost:3000/api/config" } });
+  }
+  if (u.includes("redirect-to-metadata")) {
+    return new Response(null, { status: 302, headers: { location: "http://169.254.169.254/latest/meta-data/" } });
+  }
+  if (u.includes("redirect-to-private")) {
+    return new Response(null, { status: 302, headers: { location: "http://192.168.1.1/admin" } });
+  }
+  if (u.includes("redirect-to-evil")) {
+    return new Response(null, { status: 302, headers: { location: "https://evil-unapproved.com/hacked.mp4" } });
+  }
+  if (u.includes("redirect-to-approved")) {
+    return new Response(null, { status: 302, headers: { location: "https://cdn.example.com/final-valid.mp4" } });
+  }
+  if (u.includes("cdn.example.com/")) {
+    return new Response(Buffer.from("dummy video content"), {
+      status: 200,
+      headers: { "content-type": "video/mp4" },
+    });
+  }
+  if (u.includes("/flows/runs/run_fail")) return json({ status: "FAILED", error: "Generation render timeout" });
   if (u.includes("/flows/runs/")) return json({ status: "COMPLETED", result: { video: "https://cdn.example.com/out.mp4" } });
   if (u.includes("api.magnific.com/v1/ai/flows/")) return json({ inputs: flowSpec(u.split("/flows/")[1]) });
   return realFetch(url, opts);
@@ -47,6 +69,9 @@ global.fetch = async (url, opts = {}) => {
 
 // Each routed flow has its own input names, like the real ones (0MQyTfWvQD: "poduct"/"images"; others: *_7, product_2, logo_5)
 const FLOW_IMAGES = { "0MQyTfWvQD": "both", rl5XxtcFH6: "product", TeYJVNR8Ta: "logo", kLqd16BU1G: "none", MXcPDCmYv9: "both", Pi7b42C8Sz: "product", wPlQ7EIQVN: "logo", jSkvLD0Vkf: "none", "79RyJALGdZ": "both", jUySLD0Vkf: "product", "8aQhIrUjeZ": "logo", iGcG3uKdQH: "none" };
+// Input keys differ per routed flow (scenes_2 vs scenes_7 …): look an input up by its base name
+const inputOf = (inputs, name) => inputs[Object.keys(inputs).find((k) => k.replace(/_\d+$/, "") === name)];
+
 function flowSpec(id) {
   if (id === "0MQyTfWvQD") {
     return [
@@ -72,7 +97,7 @@ function flowSpec(id) {
   ];
 }
 
-const { app } = require("../server");
+const { app, sessions, downloadTickets } = require("../server");
 const db = require("../engine/db");
 let base, server, testToken;
 test.before(async () => {
@@ -184,7 +209,14 @@ test("approve saves the record once; run strips edit-only notes; download allowl
   assert.match(sent.poduct, /^data:image\/jpeg;base64,/);
   assert.doesNotMatch(sent.scenes_2.join("\n"), /Music mood note|Editing Notes/);
   assert.ok(sent.scenes_2.every((x) => x.startsWith("SETTING — IDENTICAL IN EVERY SCENE")));
-  const bad = await realFetch(base + "/api/download?url=" + encodeURIComponent("http://169.254.169.254/latest"));
+  // unauthenticated download must be rejected with 401
+  const unauthDl = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/out.mp4"));
+  assert.equal(unauthDl.status, 401);
+
+  // SSRF attempt on unapproved host rejected with 400
+  const bad = await realFetch(base + "/api/download?url=" + encodeURIComponent("http://169.254.169.254/latest"), {
+    headers: { authorization: `Bearer ${testToken}` },
+  });
   assert.equal(bad.status, 400);
 
   // unauthenticated status check must be rejected with 401
@@ -193,6 +225,30 @@ test("approve saves the record once; run strips edit-only notes; download allowl
 
   const s = await (await realFetch(base + "/api/status/run_1", { headers: { authorization: `Bearer ${testToken}` } })).json();
   assert.equal(s.videoUrl, "https://cdn.example.com/out.mp4");
+
+  // owner can download their own video using Bearer token
+  const ownerDl = await realFetch(base + "/api/download?url=" + encodeURIComponent(s.videoUrl), {
+    headers: { authorization: `Bearer ${testToken}` },
+  });
+  assert.equal(ownerDl.status, 200);
+
+  // long-lived tokens in query parameters are strictly rejected with 401
+  const queryTokenAttempt = await realFetch(base + "/api/download?url=" + encodeURIComponent(s.videoUrl) + "&token=" + encodeURIComponent(testToken));
+  assert.equal(queryTokenAttempt.status, 401);
+
+  // owner requests short-lived single-purpose download ticket
+  const ticketRes = await realFetch(base + "/api/download/ticket", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${testToken}` },
+    body: JSON.stringify({ url: s.videoUrl }),
+  });
+  assert.equal(ticketRes.status, 200);
+  const ticketData = await ticketRes.json();
+  assert.ok(ticketData.ticket);
+
+  // download succeeds using short-lived ticket
+  const ticketDl = await realFetch(base + "/api/download?ticket=" + encodeURIComponent(ticketData.ticket));
+  assert.equal(ticketDl.status, 200);
 });
 
 test("script that never passes -> 422 with failures; owner's plot kept", async () => {
@@ -226,8 +282,8 @@ test("a session belongs to the user who opened it", async () => {
   const other = await db.createUser({ email: "other-owner@example.com", password: "password123", name: "Other" });
   const otherToken = await db.createSession(other.id);
   const r = await post(`/api/session/${own}/next`, { checkpoint: "direction", choice: 0 }, otherToken);
-  assert.equal(r.status, 404);
-  assert.equal((await post(`/api/session/${own}/approve`, {}, otherToken)).status, 404);
+  assert.equal(r.status, 403);
+  assert.equal((await post(`/api/session/${own}/approve`, {}, otherToken)).status, 403);
 });
 
 test("plots with a differently named text field are normalised (no 'undefined')", async () => {
@@ -442,5 +498,514 @@ test("/api/run routes 1:1 renders to the square flows using each flow's own inpu
   assert.equal(calls.magnificRun.at(-1).flow, "0MQyTfWvQD");
   assert.deepEqual(Object.keys(calls.magnificRun.at(-1).inputs).sort(), ["character_1_2", "character_2_2", "images", "poduct", "scenes_2", "setting_2"]);
 });
+
+test("Phase 1.1 Security: Legacy session endpoints require authentication and enforce session ownership", async () => {
+  // 1. Unauthenticated requests to session endpoints are rejected with 401
+  const unauthSession = await post("/api/session", FORM, null);
+  assert.equal(unauthSession.status, 401);
+
+  const unauthPipeline = await post("/api/pipeline/generate", FORM, null);
+  assert.equal(unauthPipeline.status, 401);
+
+  const unauthNext = await post("/api/session/dummy_session/next", { checkpoint: "direction", choice: 0 }, null);
+  assert.equal(unauthNext.status, 401);
+
+  const unauthChange = await post("/api/session/dummy_session/change", { checkpoint: "direction", note: "more drama" }, null);
+  assert.equal(unauthChange.status, 401);
+
+  const unauthApprove = await post("/api/session/dummy_session/approve", {}, null);
+  assert.equal(unauthApprove.status, 401);
+
+  // 2. Create User A and User B
+  const userA = await db.createUser({ email: "userA@session-test.com", password: "password123", name: "User A" });
+  const tokenA = await db.createSession(userA.id);
+
+  const userB = await db.createUser({ email: "userB@session-test.com", password: "password123", name: "User B" });
+  const tokenB = await db.createSession(userB.id);
+
+  // User A creates a session
+  queue = [DIRECTION];
+  const createRes = await post("/api/session", FORM, tokenA);
+  assert.equal(createRes.status, 200);
+  const sessionAId = createRes.body.sessionId;
+  assert.ok(sessionAId);
+
+  // User B attempts to tamper with User A's session -> 403 Forbidden
+  const tamperNext = await post(`/api/session/${sessionAId}/next`, { checkpoint: "direction", choice: 0 }, tokenB);
+  assert.equal(tamperNext.status, 403);
+  assert.match(tamperNext.body.error, /Access denied|Unauthorized/i);
+
+  const tamperChange = await post(`/api/session/${sessionAId}/change`, { checkpoint: "direction", note: "tamper" }, tokenB);
+  assert.equal(tamperChange.status, 403);
+  assert.match(tamperChange.body.error, /Access denied|Unauthorized/i);
+
+  const tamperApprove = await post(`/api/session/${sessionAId}/approve`, {}, tokenB);
+  assert.equal(tamperApprove.status, 403);
+  assert.match(tamperApprove.body.error, /Access denied|Unauthorized/i);
+
+  // User A can legitimately interact with their own session
+  queue = [PLOT];
+  const userANext = await post(`/api/session/${sessionAId}/next`, { checkpoint: "direction", choice: 0 }, tokenA);
+  assert.equal(userANext.status, 200);
+  assert.equal(userANext.body.stage, "plot");
+
+  // 3. Regression test: Session with missing userId metadata must be rejected
+  const missingUserSessionId = "session_missing_user_metadata";
+  sessions.set(missingUserSessionId, {
+    id: missingUserSessionId,
+    touched: Date.now(),
+    form: FORM,
+  });
+  const orphanReq = await post(`/api/session/${missingUserSessionId}/next`, { checkpoint: "direction", choice: 0 }, tokenA);
+  assert.equal(orphanReq.status, 403);
+  assert.match(orphanReq.body.error, /Access denied|Unauthorized/i);
+});
+
+test("Phase 1.2 Security: Video downloads enforce ownership, ticket scopes, and host allowlist", async () => {
+  // Create User A and User B
+  const userA = await db.createUser({ email: "userA-dl@test.com", password: "password123", name: "User A DL" });
+  const tokenA = await db.createSession(userA.id);
+
+  const userB = await db.createUser({ email: "userB-dl@test.com", password: "password123", name: "User B DL" });
+  const tokenB = await db.createSession(userB.id);
+
+  // User A produces / registers a video project
+  const userAVideoUrl = "https://cdn.example.com/user_a_commercial.mp4";
+  await db.saveProject({
+    title: "User A Ad Film",
+    businessName: "User A Brand",
+    videoUrl: userAVideoUrl,
+    scenes: ["Scene 1", "Scene 2", "Scene 3", "Scene 4"],
+  }, userA.id);
+
+  // 1. Missing credentials: GET /api/download without auth and without ticket -> 401
+  const noCredsRes = await realFetch(base + "/api/download?url=" + encodeURIComponent(userAVideoUrl));
+  assert.equal(noCredsRes.status, 401);
+
+  // 2. Invalid credentials: GET /api/download with fake ticket -> 401
+  const fakeTicketRes = await realFetch(base + "/api/download?ticket=fake_invalid_ticket_xyz");
+  assert.equal(fakeTicketRes.status, 401);
+
+  // 3. Long-lived token in query parameters is strictly rejected -> 401
+  const queryTokenAttempt = await realFetch(base + "/api/download?url=" + encodeURIComponent(userAVideoUrl) + "&token=" + encodeURIComponent(tokenA));
+  assert.equal(queryTokenAttempt.status, 401);
+
+  // 4. Cross-user access: User B attempts to generate download ticket for User A's video -> 403 Forbidden
+  const userBTicketRes = await realFetch(base + "/api/download/ticket", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${tokenB}` },
+    body: JSON.stringify({ url: userAVideoUrl }),
+  });
+  assert.equal(userBTicketRes.status, 403);
+
+  // 5. Cross-user access: User B attempts direct download of User A's video -> 403 Forbidden
+  const userBTamper = await realFetch(base + "/api/download?url=" + encodeURIComponent(userAVideoUrl), {
+    headers: { authorization: `Bearer ${tokenB}` },
+  });
+  assert.equal(userBTamper.status, 403);
+
+  // 6. User A generates single-purpose download ticket -> 200 OK
+  const userATicketRes = await realFetch(base + "/api/download/ticket", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${tokenA}` },
+    body: JSON.stringify({ url: userAVideoUrl }),
+  });
+  assert.equal(userATicketRes.status, 200);
+  const ticketData = await userATicketRes.json();
+  assert.ok(ticketData.ticket);
+  assert.ok(ticketData.expiresAt > Date.now());
+
+  // 7. Valid download using the ticket -> 200 OK
+  const validTicketDl = await realFetch(base + "/api/download?ticket=" + encodeURIComponent(ticketData.ticket));
+  assert.equal(validTicketDl.status, 200);
+  assert.ok(validTicketDl.headers.get("content-disposition")?.includes("attachment"));
+
+  // 8. Ticket single-use verification: reusing the ticket -> 401
+  const reuseTicketRes = await realFetch(base + "/api/download?ticket=" + encodeURIComponent(ticketData.ticket));
+  assert.equal(reuseTicketRes.status, 401);
+
+  // 9. Expired ticket verification
+  const expiredTicketId = "dl_test_expired_ticket_123";
+  downloadTickets.set(expiredTicketId, {
+    userId: userA.id,
+    videoUrl: userAVideoUrl,
+    expiresAt: Date.now() - 5000, // expired 5 seconds ago
+    used: false,
+  });
+  const expiredDlRes = await realFetch(base + "/api/download?ticket=" + encodeURIComponent(expiredTicketId));
+  assert.equal(expiredDlRes.status, 401);
+
+  // 10. Direct authenticated download via Bearer header -> 200 OK
+  const userADirectDl = await realFetch(base + "/api/download?url=" + encodeURIComponent(userAVideoUrl), {
+    headers: { authorization: `Bearer ${tokenA}` },
+  });
+  assert.equal(userADirectDl.status, 200);
+
+  // 11. SSRF and unapproved hosts are rejected with 400
+  const evilHosts = [
+    "http://169.254.169.254/latest/meta-data/",
+    "http://localhost:3000/api/config",
+    "http://127.0.0.1:3000/api/projects",
+    "https://evil-attacker.com/malicious.mp4",
+    "https://cdn.example.com.attacker.com/fake.mp4",
+  ];
+  for (const evil of evilHosts) {
+    const rTicket = await realFetch(base + "/api/download/ticket", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${tokenA}` },
+      body: JSON.stringify({ url: evil }),
+    });
+    assert.equal(rTicket.status, 400, `Expected 400 on ticket request for unapproved host: ${evil}`);
+
+    const rDl = await realFetch(base + "/api/download?url=" + encodeURIComponent(evil), {
+      headers: { authorization: `Bearer ${tokenA}` },
+    });
+    assert.equal(rDl.status, 400, `Expected 400 on download for unapproved host: ${evil}`);
+  }
+});
+
+test("Phase 1.3 Security: Video generation job ownership & status polling isolation", async () => {
+  const user1 = await db.createUser({ email: "user1-run@test.com", password: "password123", name: "User 1 Run" });
+  const token1 = await db.createSession(user1.id);
+
+  const user2 = await db.createUser({ email: "user2-run@test.com", password: "password123", name: "User 2 Run" });
+  const token2 = await db.createSession(user2.id);
+
+  // 1. User 1 dispatches video generation job
+  const runPayload = {
+    scenes: ["Scene 1: Hook", "Scene 2: Problem", "Scene 3: Climax", "Scene 4: CTA"],
+    businessName: "User 1 Brand",
+    businessType: "Retail",
+  };
+  const runRes = await post("/api/run", runPayload, token1);
+  assert.equal(runRes.status, 200);
+  const runId = runRes.body.runId;
+  assert.ok(runId);
+
+  // Verify runId is persisted in database and associated with User 1
+  const runRecord = await db.getVideoRun(runId);
+  assert.ok(runRecord);
+  assert.equal(runRecord.userId, user1.id);
+  assert.equal(await db.userOwnsVideoRun(user1.id, runId), true);
+  assert.equal(await db.userOwnsVideoRun(user2.id, runId), false);
+
+  // 2. User 2 attempts to poll status of User 1's run -> 403 Forbidden
+  const tamperPoll = await realFetch(base + `/api/status/${runId}`, {
+    headers: { authorization: `Bearer ${token2}` },
+  });
+  assert.equal(tamperPoll.status, 403);
+  const tamperData = await tamperPoll.json();
+  assert.match(tamperData.error, /Access denied/i);
+
+  // 3. User 2 polling an unknown run -> 404 Not Found
+  const unknownPoll = await realFetch(base + `/api/status/unknown_run_999`, {
+    headers: { authorization: `Bearer ${token2}` },
+  });
+  assert.equal(unknownPoll.status, 404);
+
+  // 4. User 1 legitimately polls their own run -> 200 OK
+  const ownerPoll = await realFetch(base + `/api/status/${runId}`, {
+    headers: { authorization: `Bearer ${token1}` },
+  });
+  assert.equal(ownerPoll.status, 200);
+  const ownerData = await ownerPoll.json();
+  assert.equal(ownerData.videoUrl, "https://cdn.example.com/out.mp4");
+
+  // 5. Video ownership is assigned to User 1 (run creator), NOT User 2
+  assert.equal(await db.userOwnsVideoUrl(user1.id, ownerData.videoUrl), true);
+  assert.equal(await db.userOwnsVideoUrl(user2.id, ownerData.videoUrl), false);
+
+  // 6. Upstream failure handling: when Magnific run fails, status is returned cleanly without assigning video ownership
+  await db.saveVideoRun("run_fail", user1.id, { status: "PENDING" });
+  const failPoll = await realFetch(base + `/api/status/run_fail`, {
+    headers: { authorization: `Bearer ${token1}` },
+  });
+  assert.equal(failPoll.status, 200);
+  const failData = await failPoll.json();
+  assert.equal(failData.status, "FAILED");
+  assert.equal(Boolean(failData.videoUrl), false);
+});
+
+test("Phase 1.3 Security: Redirect-safe video downloads prevent SSRF redirect bypass", async () => {
+  const user = await db.createUser({ email: "redirect-tester@test.com", password: "password123", name: "Redirect Tester" });
+  const token = await db.createSession(user.id);
+
+  // Register video URLs for user in database
+  const redirectUrls = [
+    { key: "localhost", url: "https://cdn.example.com/redirect-to-localhost" },
+    { key: "metadata", url: "https://cdn.example.com/redirect-to-metadata" },
+    { key: "private", url: "https://cdn.example.com/redirect-to-private" },
+    { key: "evil", url: "https://cdn.example.com/redirect-to-evil" },
+    { key: "approved", url: "https://cdn.example.com/redirect-to-approved" },
+  ];
+
+  for (const item of redirectUrls) {
+    await db.saveProject({
+      title: `Redirect Film ${item.key}`,
+      businessName: "Safe Streamer",
+      videoUrl: item.url,
+      scenes: ["S1", "S2", "S3", "S4"],
+    }, user.id);
+  }
+
+  // 1. Redirect to localhost must be rejected with 400
+  const localRes = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/redirect-to-localhost"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(localRes.status, 400);
+  const localData = await localRes.json();
+  assert.match(localData.error, /Redirect destination host not permitted/i);
+
+  // 2. Redirect to cloud metadata IP (169.254.169.254) must be rejected with 400
+  const metaRes = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/redirect-to-metadata"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(metaRes.status, 400);
+  const metaData = await metaRes.json();
+  assert.match(metaData.error, /Redirect destination host not permitted/i);
+
+  // 3. Redirect to private RFC1918 address (192.168.1.1) must be rejected with 400
+  const privRes = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/redirect-to-private"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(privRes.status, 400);
+  const privData = await privRes.json();
+  assert.match(privData.error, /Redirect destination host not permitted/i);
+
+  // 4. Redirect to unapproved host (evil-unapproved.com) must be rejected with 400
+  const evilRes = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/redirect-to-evil"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(evilRes.status, 400);
+  const evilData = await evilRes.json();
+  assert.match(evilData.error, /Redirect destination host not permitted/i);
+
+  // 5. Redirect to an approved host destination succeeds with 200 OK
+  const approvedRes = await realFetch(base + "/api/download?url=" + encodeURIComponent("https://cdn.example.com/redirect-to-approved"), {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(approvedRes.status, 200);
+  assert.ok(approvedRes.headers.get("content-disposition")?.includes("attachment"));
+});
+
+test("Track B Security (F-01): /api/research/url stops SSRF redirects to loopback and private subnets", async () => {
+  const user = await db.createUser({ email: "ssrf-scraper@test.com", password: "password123", name: "Scraper Tester" });
+  const token = await db.createSession(user.id);
+
+  // 1. Direct private URL rejected
+  const directLocal = await post("/api/research/url", { url: "http://127.0.0.1:8080/api/config" }, token);
+  assert.equal(directLocal.status, 400);
+  assert.match(directLocal.body.error, /restricted|loopback/i);
+
+  // The scraper uses netguard.safeFetch (not global.fetch), so a local server stands in for
+  // cdn.example.com and issues the redirects — the real redirect check runs on each hop.
+  const http = require("http");
+  const netguard = require("../engine/netguard");
+  const redirector = http.createServer((req, res) => {
+    const to = { "/redirect-to-localhost": "http://localhost:3000/api/config", "/redirect-to-metadata": "http://169.254.169.254/latest/meta-data/" }[req.url];
+    res.writeHead(to ? 302 : 404, to ? { location: to } : {}).end();
+  });
+  await new Promise((r) => redirector.listen(0, "127.0.0.1", r));
+  const port = redirector.address().port;
+  const realSafeFetch = netguard.safeFetch;
+  netguard.safeFetch = (url, opts) => realSafeFetch(url.replace("https://cdn.example.com", `http://cdn.test:${port}`), {
+    ...opts,
+    lookup: (host, o, cb) => (host === "cdn.test" ? (o.all ? cb(null, [{ address: "127.0.0.1", family: 4 }]) : cb(null, "127.0.0.1", 4)) : netguard.guardedLookup(host, o, cb)),
+  });
+  try {
+    // 2. Redirect to localhost rejected
+    const redirectLocal = await post("/api/research/url", { url: "https://cdn.example.com/redirect-to-localhost" }, token);
+    assert.equal(redirectLocal.status, 400);
+    assert.match(redirectLocal.body.error, /Redirect destination rejected/i);
+
+    // 3. Redirect to metadata IP (169.254.169.254) rejected
+    const redirectMeta = await post("/api/research/url", { url: "https://cdn.example.com/redirect-to-metadata" }, token);
+    assert.equal(redirectMeta.status, 400);
+    assert.match(redirectMeta.body.error, /Redirect destination rejected/i);
+  } finally {
+    netguard.safeFetch = realSafeFetch;
+    redirector.close();
+  }
+});
+
+test("Track B Data Isolation (F-02): saveBusiness rejects cross-user business ID overwriting with HTTP 403", async () => {
+  const userA = await db.createUser({ email: "biz-owner-a@test.com", password: "password123", name: "Owner A" });
+  const tokenA = await db.createSession(userA.id);
+
+  const userB = await db.createUser({ email: "biz-attacker-b@test.com", password: "password123", name: "Attacker B" });
+  const tokenB = await db.createSession(userB.id);
+
+  // User A creates a business
+  const saveA = await post("/api/businesses", {
+    businessName: "Owner A Pharmacy",
+    businessType: "Healthcare, Clinic & Pharmacy",
+    town: "Indore",
+  }, tokenA);
+  assert.equal(saveA.status, 200);
+  const bizId = saveA.body.business.id;
+  assert.ok(bizId);
+
+  // User B attempts to overwrite User A's business using the same ID -> must fail with HTTP 403
+  const hijackAttempt = await post("/api/businesses", {
+    id: bizId,
+    businessName: "Hijacked Pharmacy",
+    businessType: "Retail Store",
+    town: "Delhi",
+  }, tokenB);
+  assert.equal(hijackAttempt.status, 403);
+  assert.match(hijackAttempt.body.error, /belongs to another user/i);
+
+  // Verify User A's business remains untouched
+  const fetchARes = await realFetch(base + `/api/businesses/${bizId}`, {
+    headers: { authorization: `Bearer ${tokenA}` },
+  });
+  assert.equal(fetchARes.status, 200);
+  const fetchA = await fetchARes.json();
+  assert.equal(fetchA.business.businessName, "Owner A Pharmacy");
+});
+
+test("Track B Persistence (F-04 & F-06): deleteUser purges video_runs.json and createSession prunes expired sessions", async () => {
+  const user = await db.createUser({ email: "cascade-cleanup@test.com", password: "password123", name: "Cleanup Tester" });
+  const token = await db.createSession(user.id);
+
+  // Persist video run for this user
+  await db.saveVideoRun("run_cleanup_test", user.id, { status: "COMPLETED", videoUrl: "https://cdn.example.com/cleaned.mp4" });
+  assert.equal(await db.userOwnsVideoRun(user.id, "run_cleanup_test"), true);
+
+  // Delete user account
+  const deleted = await db.deleteUser(user.id);
+  assert.equal(deleted, true);
+
+  // Verify run record was cascaded and purged
+  const runAfter = await db.getVideoRun("run_cleanup_test");
+  assert.equal(runAfter, null, "Video run must be deleted when user is deleted");
+});
+
+test("B-01: /api/run keeps shotSpec synchronized with scene edits and continuity edits", async () => {
+  const user = await db.createUser({ email: "shot-sync-tester@test.com", password: "password123", name: "Shot Sync Tester" });
+  const token = await db.createSession(user.id);
+
+  // Setup initial shotSpec with old data
+  const initialShotSpec = {
+    shots: [
+      { shotNumber: 1, framing: "Medium close-up", primaryAction: "Old Hook action.", fullVisual: "Old Hook action.", cameraMovement: "push-in", dialogue: "Old Hook" },
+      { shotNumber: 2, framing: "Medium shot", primaryAction: "Old Build action.", fullVisual: "Old Build action.", cameraMovement: "steady", dialogue: "Old Build" },
+      { shotNumber: 3, framing: "Medium close-up", primaryAction: "Old Turn action.", fullVisual: "Old Turn action.", cameraMovement: "close-up", dialogue: "Old Turn" },
+      { shotNumber: 4, framing: "Medium shot", primaryAction: "Old CTA action.", fullVisual: "Old CTA action.", cameraMovement: "pull-out", dialogue: "Old CTA" },
+    ],
+    staticWorld: {
+      setting: "Old Stale Clinic Interior",
+      characters: "Old Dr. Stale | Old Patient",
+    },
+    project: { duration: "15s", style: "UGC / Creator-style" },
+  };
+
+  // User edits Scene 2 in studio, and updates continuity to a new Setting and Lead Character
+  const editedScenes = [
+    "ANNEX A\nSCENE 1 – HOOK\nVisual:\nSame setting: Dr. Aryan welcomes patient.\nAnimation Elements:\n• Camera: smooth subtle push-in\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Welcome to modern dental care.\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 2 – BUILD (EDITED)\nVisual:\nSame setting: Dr. Aryan demonstrates painless ultrasonic cleaning tool.\nAnimation Elements:\n• Camera: eye-level two-shot\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Zero pain, completely comfortable.\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 3 – TURN\nVisual:\nSame setting: Patient looks relieved and smiles.\nAnimation Elements:\n• Camera: close-up on smile\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPatient: \"That was so fast!\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+    "ANNEX A\nSCENE 4 – RESOLUTION\nVisual:\nSame setting: Both smile towards camera.\nAnimation Elements:\n• Camera: medium shot\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDr. Aryan: \"Call Palasia Dental today!\"\nSound Design:\nAmbience: natural.\nEditing Notes:\nDuration ~4s",
+  ];
+
+  const editedSetting = "High-Tech Palasia Dental Studio in Indore";
+  const editedChar1 = "Dr. Aryan (Chief Dentist)";
+  const editedChar2 = "Rohit (Patient)";
+
+  const runRes = await post("/api/run", {
+    scenes: editedScenes,
+    character1: editedChar1,
+    character2: editedChar2,
+    setting: editedSetting,
+    shotSpec: initialShotSpec, // Contains old stale shots and old staticWorld
+    businessName: "Palasia Dental Studio",
+    businessType: "Healthcare / Dental Clinic",
+  }, token);
+
+  assert.equal(runRes.status, 200);
+  const sent = calls.magnificRun.at(-1).inputs;
+
+  // 1. Verify that the continuity edit reached setting_2 and character_1_2
+  assert.equal(inputOf(sent, "setting"), editedSetting);
+  assert.equal(inputOf(sent, "character_1"), editedChar1);
+  assert.equal(inputOf(sent, "character_2"), editedChar2);
+
+  // 2. Verify that the compiled shot prompts reflect the EDITED scene 2, NOT the stale shot 2
+  const scene2Prompt = inputOf(sent, "scenes")[1];
+  assert.ok(scene2Prompt.includes("painless ultrasonic cleaning tool"), "Scene 2 prompt must include the edited visual action");
+  assert.ok(scene2Prompt.includes("Zero pain, completely comfortable"), "Scene 2 prompt must include the edited dialogue");
+  assert.ok(!scene2Prompt.includes("Old Build action"), "Scene 2 prompt must NOT contain stale shot data");
+  assert.ok(scene2Prompt.includes(editedSetting), "Static world in prompt must reflect updated setting");
+});
+
+test("B-02: Project persistence preserves shotSpec across save and reopen, and compiles properly", async () => {
+  const user = await db.createUser({ email: "save-reopen-tester@test.com", password: "password123", name: "Save Reopen Tester" });
+  const token = await db.createSession(user.id);
+
+  const testShotSpec = {
+    shots: [
+      { shotNumber: 1, framing: "Medium close-up", primaryAction: "Host introduces fresh tea.", fullVisual: "Host introduces fresh tea.", cameraMovement: "push-in", dialogue: "Fresh tea here!" },
+      { shotNumber: 2, framing: "Medium shot", primaryAction: "Host brews ginger tea.", fullVisual: "Host brews ginger tea.", cameraMovement: "eye-level", dialogue: "Real ginger brewed daily." },
+      { shotNumber: 3, framing: "Medium close-up", primaryAction: "Customer sips tea.", fullVisual: "Customer sips tea.", cameraMovement: "close-up", dialogue: "So refreshing!" },
+      { shotNumber: 4, framing: "Medium shot", primaryAction: "Both toast with cups.", fullVisual: "Both toast with cups.", cameraMovement: "medium hold", dialogue: "Order on Chai Point now." },
+    ],
+    staticWorld: {
+      setting: "Warm Chai Point Cafe in Bengaluru",
+      characters: "Priya (Host) | Arjun (Customer)",
+    },
+    project: { duration: "15s", style: "UGC / Creator-style" },
+  };
+
+  const projectPayload = {
+    title: "Chai Point Commercial",
+    businessName: "Chai Point",
+    businessType: "Sweets, Bakery & Restaurant",
+    town: "Bengaluru",
+    scenes: [
+      "ANNEX A\nSCENE 1 – HOOK\nVisual:\nSame setting: Priya introduces fresh tea.\nAnimation Elements:\n• Camera: push-in\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Fresh tea here!\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 2 – BUILD\nVisual:\nSame setting: Priya brews ginger tea.\nAnimation Elements:\n• Camera: eye-level\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Real ginger brewed daily.\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 3 – TURN\nVisual:\nSame setting: Arjun sips tea.\nAnimation Elements:\n• Camera: close-up\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nArjun: \"So refreshing!\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+      "ANNEX A\nSCENE 4 – RESOLUTION\nVisual:\nSame setting: Both toast with cups.\nAnimation Elements:\n• Camera: medium hold\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPriya: \"Order on Chai Point now.\"\nSound Design:\nAmbience: cafe.\nEditing Notes:\nDuration ~4s",
+    ],
+    setting: "Warm Chai Point Cafe in Bengaluru",
+    character1: "Priya (Host)",
+    character2: "Arjun (Customer)",
+    shotSpec: testShotSpec,
+  };
+
+  // 1. Save project
+  const saveRes = await post("/api/projects", projectPayload, token);
+  assert.equal(saveRes.status, 200);
+  const projectId = saveRes.body.project.id;
+  assert.ok(projectId);
+
+  // 2. Reopen project via GET /api/projects/:id
+  const getRes = await realFetch(base + `/api/projects/${projectId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(getRes.status, 200);
+  const reopened = await getRes.json();
+  assert.ok(reopened.project);
+  assert.ok(reopened.project.shotSpec, "Reopened project must restore shotSpec");
+  assert.equal(reopened.project.shotSpec.shots.length, 4);
+
+  // 3. Generate video using reopened project data without live Magnific call
+  const runFromReopened = await post("/api/run", {
+    scenes: reopened.project.scenes,
+    character1: reopened.project.character1,
+    character2: reopened.project.character2,
+    setting: reopened.project.setting,
+    shotSpec: reopened.project.shotSpec,
+    businessName: reopened.project.businessName,
+    businessType: reopened.project.businessType,
+  }, token);
+
+  assert.equal(runFromReopened.status, 200);
+  const sentInputs = calls.magnificRun.at(-1).inputs;
+  assert.equal(inputOf(sentInputs, "scenes").length, 4);
+  assert.ok(inputOf(sentInputs, "scenes")[0].startsWith("COMPOSITION & FRAMING:"), "Must compile structured prompt via compileShotPrompt");
+  assert.ok(inputOf(sentInputs, "scenes")[0].includes("Warm Chai Point Cafe in Bengaluru"));
+});
+
 
 

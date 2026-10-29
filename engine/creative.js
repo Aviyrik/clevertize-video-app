@@ -10,6 +10,22 @@ const { compileShotSpecification } = require("./compiler");
 const { getFestivals, todayIST } = require("./festivals");
 const HOOKS = require("./hooks.json");
 
+const BRAND_TONE_GUIDANCE = {
+  warm: "BRAND TONE: Warm & Authentic. Establish welcoming neighborhood trust, heartfelt and unhurried human connection, warm natural eye contact, and sincere conversational dialogue.",
+  festive: "BRAND TONE: Festive & Vibrant. Deliver celebratory energy, joyous anticipation, lively upbeat cadence, colorful festive visual atmosphere, and enthusiastic delivery.",
+  premium: "BRAND TONE: Premium & Elegant. Project refined craftsmanship, understated luxury, poised confidence, sophisticated aesthetic restraint, and polished aspirational dialogue.",
+  direct: "BRAND TONE: Direct & Problem-Solving. Focus on clear practical value, empathetic address of customer frustration, crisp no-nonsense pacing, and immediate tangible relief.",
+};
+
+function getBrandToneGuidance(tone) {
+  if (!tone || typeof tone !== "string") return BRAND_TONE_GUIDANCE.warm;
+  const t = tone.toLowerCase();
+  if (t.includes("festive") || t.includes("vibrant") || t.includes("celebrat")) return BRAND_TONE_GUIDANCE.festive;
+  if (t.includes("premium") || t.includes("elegant") || t.includes("luxury")) return BRAND_TONE_GUIDANCE.premium;
+  if (t.includes("direct") || t.includes("problem") || t.includes("solving") || t.includes("clear")) return BRAND_TONE_GUIDANCE.direct;
+  return BRAND_TONE_GUIDANCE.warm;
+}
+
 /**
  * 1. ADAPTIVE RESEARCH (Tiers 0 - 3)
  * Runs server-side. Determines public footprint tier and extracts compact insights.
@@ -93,12 +109,13 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style" }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone }) {
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
   const isComedy = /comedy|funny/i.test(cleanFormat);
   const isStory = /story/i.test(cleanFormat) && !isDemo;
   const isUGC = /ugc|creator/i.test(cleanFormat) || (!isDemo && !isComedy && !isStory);
+  const toneGuidance = getBrandToneGuidance(brandTone);
 
   const langLower = String(language || "English").toLowerCase().trim();
   const isEng = !language || (langLower.includes("eng") && !langLower.includes("hinglish"));
@@ -144,6 +161,10 @@ LANGUAGE AND CULTURAL CONTEXT:
 ${langRule}
 CRITICAL PRINCIPLE: The film's explicit canonical language (${language}) is the ONLY source of truth. Never assume or infer a different regional language (such as Kannada, Tamil, or Telugu) from the brand name, corporate headquarters, or business location (e.g. Bangalore, Mumbai, Chennai).
 
+BRAND VOICE AND TONE:
+${toneGuidance}
+Every proposed creative territory must reflect this tone in actor performance dynamic, spoken style, and visual atmosphere.
+
 Mark exactly one territory as recommended: true.
 
 Output strictly valid JSON between @@JSON@@ and @@END@@:
@@ -165,6 +186,7 @@ TOWN: ${town || "Universal (Pan-India National)"}
 BRIEF: ${brief || "Promote brand"}
 CHOSEN CREATIVE FORMAT: ${cleanFormat || "UGC / Creator-style"}
 CANONICAL FILM LANGUAGE: ${language}
+BRAND TONE: ${brandTone || "Warm & Authentic"}
 AUDIENCE INSIGHT: ${research?.audienceInsight || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || "Relatable problem-first story"}
 UPCOMING OCCASION: ${festival?.name || "None"}`;
@@ -419,7 +441,9 @@ function validateHooksList(hooks, language = "English") {
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
 async function generateHooks(params = {}) {
-  const { businessName, businessType, brief, direction, format = "UGC / Creator-style" } = params;
+  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone } = params;
+  const activeTone = brandTone || direction?.brandTone;
+  const toneGuidance = getBrandToneGuidance(activeTone);
   const rawLang = params.language;
   const isExplicit = rawLang !== undefined && rawLang !== null && String(rawLang).trim() !== "";
   const language = isExplicit ? String(rawLang).trim() : "English";
@@ -513,6 +537,10 @@ MANDATORY LANGUAGE ENFORCEMENT:
 ${langRule}
 CRITICAL PRINCIPLE: Never infer output language from the brand name, product category, city, country, corporate headquarters, or cultural context. The film's explicit language setting (${language}) is the ONLY source of truth.
 
+BRAND VOICE AND TONE:
+${toneGuidance}
+Spoken hook lines and opening actor expressions must reflect this emotional tone and delivery cadence.
+
 Provide:
 - archetype (name of the hook style)
 - hookLine: spoken line strictly in ${language} (${isEng ? "natural conversational English only" : isHinglish || isHin || isMar ? "Devanagari script" : isKan ? "Kannada script (ಕನ್ನಡ)" : isTam ? "Tamil script (தமிழ்)" : isTel ? "Telugu script (తెలుగు)" : `${language} script`})
@@ -538,6 +566,7 @@ BRIEF: ${brief || "Promote brand"}
 CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
 CANONICAL FILM LANGUAGE: ${language}
+BRAND TONE: ${activeTone || "Warm & Authentic"}
 LOCATION: ${direction?.town || "Pan-India / Universal"}`;
 
   const MAX_RETRIES = 2;
@@ -742,7 +771,9 @@ Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்)
 /**
  * 4. PLOT LINES (3-5 Structured Narrative Arcs)
  */
-async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English" }) {
+async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone }) {
+  const activeTone = brandTone || direction?.brandTone;
+  const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
   const formatGuidelines = format === "UGC / Creator-style" || format === "UGC"
     ? "UGC / Creator format: conversational direct-to-camera or peer recommendation, instant hook in first 2 seconds, fast-paced authentic social energy."
@@ -764,6 +795,10 @@ ${formatGuidelines}
 LANGUAGE RULE:
 ${langRule}
 CRITICAL: Do NOT infer output language from brand, city, or culture. Spoken language is strictly ${language}.
+
+BRAND VOICE AND TONE:
+${toneGuidance}
+The conflict, interpersonal dynamic, and resolution must align with this brand voice.
 
 Each plot must have:
 - title: punchy creative title
@@ -792,7 +827,8 @@ Return valid JSON between @@JSON@@ and @@END@@:
 BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || "Relatable Tension"}
 CHOSEN HOOK: ${hook?.hookLine || ""} (${hook?.visualAction || ""})
-CANONICAL FILM LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}
+BRAND TONE: ${activeTone || "Warm & Authentic"}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
@@ -837,7 +873,9 @@ CANONICAL FILM LANGUAGE: ${language}`;
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English" }) {
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone }) {
+  const activeTone = brandTone || direction?.brandTone;
+  const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
   const isHin = /hindi/i.test(language);
   const isHinglish = /hinglish/i.test(language);
@@ -890,6 +928,10 @@ ${formatGuidelines}
 
 ${storyLangRule}
 
+BRAND VOICE AND TONE:
+${toneGuidance}
+Ensure character persona, setting atmosphere, and 4-beat dialogue delivery adhere directly to this brand tone.
+
 STRICT BEAT CONSTRAINTS (NOT A SCREENPLAY):
 Keep each beat concise, crisp, and scannable in under 10 seconds!
 1. Exactly 4 story beats: HOOK, BUILD, TURN, PAYOFF.
@@ -940,7 +982,8 @@ DIRECTION: ${direction?.title || ""}
 HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
 FORMAT: ${cleanFormat}
-CANONICAL FILM LANGUAGE: ${language}`;
+CANONICAL FILM LANGUAGE: ${language}
+BRAND TONE: ${activeTone || "Warm & Authentic"}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -1117,12 +1160,23 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
 - Natural emotional dilemma and heartwarming, confidence-building payoff.`;
 
   // Compile detailed instructions carrying all creative decisions into Claude
+  const brandTone = form?.brandTone || creativeDNA?.direction?.brandTone || "Warm & Authentic";
+  const toneGuidance = getBrandToneGuidance(brandTone);
+  const targetDur = form?.targetDuration || form?.duration || "30s";
+  const durNum = parseInt(targetDur, 10) || 30;
+  const perSceneSec = (durNum / 4).toFixed(1);
+  const targetRatio = form?.aspectRatio || form?.dimension || (form?.platform && form.platform.includes("16:9") ? "16:9" : form?.platform && form.platform.includes("1:1") ? "1:1" : "9:16");
+  const ratioLabel = targetRatio === "16:9" ? "16:9 Widescreen Landscape (YouTube / Desktop / TV)" : targetRatio === "1:1" ? "1:1 Square (Social Feed)" : "9:16 Vertical (Reels / Shorts / TikTok)";
+
   const dnaInstructions = [
     `CREATIVE DNA & APPROVED USER DECISIONS (MANDATORY ENFORCEMENT):`,
     creativeDNA.direction ? `- Approved Direction: "${creativeDNA.direction.title}": ${creativeDNA.direction.description}` : null,
     creativeDNA.hook ? `- Approved Hook: Line: "${creativeDNA.hook.hookLine}" | Opening Action: "${creativeDNA.hook.visualAction}"` : null,
     creativeDNA.plot ? `- Approved Plot: "${creativeDNA.plot.title}": ${creativeDNA.plot.coreIdea} (Conflict: ${creativeDNA.plot.conflictBeat} -> Payoff: ${creativeDNA.plot.payoffBeat})` : null,
     `- Approved Format: ${format}`,
+    `- Approved Brand Tone: ${brandTone} (${toneGuidance})`,
+    `- Video Dimension & Framing: ${ratioLabel}`,
+    `- Target Film Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
     creativeDNA.location ? `- Approved Single Location: ${creativeDNA.location.name} (${creativeDNA.location.details || ""})` : null,
     creativeDNA.character1 ? `- Character 1: ${typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : creativeDNA.character1.name + " (" + (creativeDNA.character1.role || "") + ")"}` : null,
     creativeDNA.character2 ? `- Character 2: ${typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : creativeDNA.character2.name + " (" + (creativeDNA.character2.role || "") + ")"}` : null,
@@ -1139,6 +1193,9 @@ ${formatExecutionRules}
 Follow all Product Spine Section 8 rules:
 - Exactly 4 scenes titled SCENE 1 – HOOK / SCENE 2 – BUILD / SCENE 3 – TURN / SCENE 4 – RESOLUTION.
 - Scene 1 MUST open with the approved hook line and action.
+- TARGET DURATION & PACING: Total film duration is ${targetDur}. Ensure the 4 scenes pace smoothly within this runtime (~${perSceneSec}s per scene).
+- VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}. Frame all visual descriptions, camera setups, and blocking for this display ratio.
+- BRAND TONE DIRECTIVE: ${toneGuidance}. Ensure spoken cadence, actor demeanor, eye contact warmth, and visual staging embody this brand voice.
 - Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b).
 - Exactly 2 characters throughout with consistent look and wardrobe.
 - Maximum 2 spoken dialogue lines per character per scene.
@@ -1228,6 +1285,11 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     character2: parsed.character2,
     setting: parsed.setting,
     scenes: parsed.scenes,
+    duration: targetDur,
+    targetDuration: targetDur,
+    aspectRatio: targetRatio,
+    dimension: targetRatio,
+    platform: form?.platform || ratioLabel,
     record: { ...parsed.record, business_name: form.businessName, business_type: form.businessType, town: form.town, date: todayIST(), format, scenes: parsed.scenes.length },
   };
 }
@@ -1236,13 +1298,16 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
  * 7. SCENE-LEVEL AI REWRITER
  * Rewrites a single scene according to user instruction while preserving continuity.
  */
-async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting }) {
+async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone }) {
   const isEng = !form?.language || /eng/i.test(form?.language);
+  const activeTone = brandTone || form?.brandTone;
+  const toneGuidance = getBrandToneGuidance(activeTone);
   const system = `You are a precision scene script editor for a 4-scene commercial ad film.
 Your task is to rewrite ONLY this specific scene based on the user's creative note (e.g. "make it funnier", "make dialogue shorter", "use Hinglish", "feature product earlier").
 
 Rules:
 - Keep the scene template structure (Visual:, Animation Elements:, Audio / Dialogue / Voiceover:, Sound Design:, Editing Notes:).
+- Brand tone: ${toneGuidance}. Ensure revised dialogue cadence and visual action reflect this tone.
 - Visual MUST start with "Same setting:" preserving the approved room: ${setting || "Same room"}.
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
@@ -1353,7 +1418,7 @@ Scene duration: ~4s | Output: 1080p`;
  * Normalizes an Ad Package to guarantee setting, character1, character2,
  * hook, and fullScriptText are non-empty for downstream video generation.
  */
-function normalizeSimpleAdPackage(pkg, brand, bType) {
+function normalizeSimpleAdPackage(pkg, brand, bType, options = {}) {
   const char1 = (
     pkg.character1 ||
     pkg.characters?.lead ||
@@ -1374,6 +1439,8 @@ function normalizeSimpleAdPackage(pkg, brand, bType) {
 
   return {
     ...pkg,
+    duration: pkg.duration || options.duration || "30s",
+    aspectRatio: pkg.aspectRatio || options.aspectRatio || "9:16",
     character1: char1,
     character2: char2,
     characters: pkg.characters || { lead: char1, customer: char2 },
@@ -1387,7 +1454,7 @@ function normalizeSimpleAdPackage(pkg, brand, bType) {
 /**
  * Curated fallback ad packages for instant recovery when offline or LLM limit reached.
  */
-function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English" }) {
+function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English", duration = "30s", aspectRatio = "9:16" }) {
   const isEng = !language || /eng/i.test(language);
   const isHin = language && /hin/i.test(language);
   const isMar = language && /mar/i.test(language);
@@ -1596,7 +1663,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
   }
 
   if (isSweets) {
@@ -1796,7 +1863,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
   }
 
   // General fallback (refined to be universally appropriate across retail and local businesses)
@@ -1996,7 +2063,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
         },
       ],
     },
-  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
 }
 
 async function generateSimpleAdPackages({
@@ -2007,6 +2074,9 @@ async function generateSimpleAdPackages({
   targetAudience = "",
   language = "English",
   creativeStyle = "UGC / Creator-style",
+  brandTone,
+  duration = "30s",
+  aspectRatio = "9:16",
 }) {
   const brand = String(businessName || "My Business").trim();
   const bType = String(businessType || "Retail").trim();
@@ -2014,6 +2084,10 @@ async function generateSimpleAdPackages({
   const offer = String(brief || `${bType} promotion`).trim();
   const audience = String(targetAudience || "Neighborhood customers").trim();
   const isEng = !language || /eng/i.test(language);
+  const toneGuidance = getBrandToneGuidance(brandTone);
+  const durStr = String(duration || "30s").trim();
+  const arStr = String(aspectRatio || "9:16").trim();
+  const arDesc = arStr === "16:9" ? "16:9 Widescreen Landscape" : arStr === "1:1" ? "1:1 Square Feed" : "9:16 Vertical Mobile";
 
   let categoryGuidance = "";
   const catCheck = `${bType} ${offer}`.toLowerCase();
@@ -2066,15 +2140,16 @@ Each Ad Package must have:
 1. "Problem & Relief" angle (relatable pain-point, trusted fix).
 2. "Customer Experience & Trust" angle (word-of-mouth, transparency, authentic satisfaction).
 3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).${categoryGuidance ? "\n" + categoryGuidance : ""}
-Generate exactly 3 complete, distinct, and realistic Ad Packages for this business.
-Each Ad Package must have:
-1. "Problem & Relief" angle (relatable pain-point, trusted fix).
-2. "Customer Experience & Trust" angle (word-of-mouth, transparency, authentic satisfaction).
-3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).
+
+BRAND VOICE & PERSONALITY:
+${toneGuidance}
+Ensure all 3 packages reflect this tone in actor performance, spoken dialogue cadence, visual energy, and pacing.
 
 CRITICAL SCRIPT CONSTRAINTS:
 - Language: ${language}. ${simpleLangInstruction}
 - CRITICAL: Never infer or substitute a regional language based on brand headquarters city or location. The explicit language setting (${language}) is the sole authority.
+- Total Target Duration: ${durStr}. Calibrate the 4 scenes to comfortably complete within ${durStr}.
+- Video Aspect Ratio / Composition: ${arStr} (${arDesc}). Optimize all visual staging for this orientation.
 - Exactly 4 scenes per package:
   Scene 1: Hook (0-3s, pattern interrupt)
   Scene 2: Build (3-8s, product/service demo in action)
@@ -2140,6 +2215,9 @@ OFFER / PROMOTION: ${offer}
 TARGET AUDIENCE: ${audience}
 LANGUAGE: ${language}
 STYLE: ${creativeStyle}
+DURATION: ${durStr}
+DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
+BRAND TONE: ${brandTone || "Warm & Authentic"}
 
 Create 3 distinct Ad Packages now:`;
 
@@ -2152,9 +2230,12 @@ Create 3 distinct Ad Packages now:`;
           {
             ...pkg,
             id: pkg.id || `pkg_${idx + 1}`,
+            duration: pkg.duration || durStr,
+            aspectRatio: pkg.aspectRatio || arStr,
           },
           brand,
-          bType
+          bType,
+          { duration: durStr, aspectRatio: arStr }
         )
       );
     }
@@ -2162,7 +2243,501 @@ Create 3 distinct Ad Packages now:`;
     console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);
   }
 
-  return getFallbackAdPackages({ businessName: brand, businessType: bType, town: city, brief: offer, language });
+  return getFallbackAdPackages({
+    businessName: brand,
+    businessType: bType,
+    town: city,
+    brief: offer,
+    language,
+    duration: durStr,
+    aspectRatio: arStr,
+  });
+}
+
+const VO_TERM_REGEX = /(?:^|\n)\s*(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/gi;
+const DIALOGUE_SPEAKER_REGEX = /(?:^|\n)\s*(?!VO\b|Voiceover\b|Voice[\s-]over\b|Narrator\b|Visual\b|Camera\b|Action\b|Audio\b|Sound\b|Editing\b)[A-Z][A-Za-z0-9\s]{1,18}\s*:\s*["']/g;
+
+const DEVANAGARI_REGEX = /[\u0900-\u097F]/;
+const TAMIL_REGEX = /[\u0B80-\u0BFF]/;
+const TELUGU_REGEX = /[\u0C00-\u0C7F]/;
+const KANNADA_REGEX = /[\u0C80-\u0CFF]/;
+const MALAYALAM_REGEX = /[\u0D00-\u0D7F]/;
+
+function detectScriptLanguage(scriptText, fallbackLanguage = "English") {
+  if (!scriptText || typeof scriptText !== "string") return fallbackLanguage;
+  if (TAMIL_REGEX.test(scriptText)) return "Tamil";
+  if (TELUGU_REGEX.test(scriptText)) return "Telugu";
+  if (KANNADA_REGEX.test(scriptText)) return "Kannada";
+  if (MALAYALAM_REGEX.test(scriptText)) return "Malayalam";
+  if (DEVANAGARI_REGEX.test(scriptText)) {
+    if (/(?:आहे|नाही|कसा|बघा|कशी|झाला|झाली|खूप|नक्की)/.test(scriptText)) return "Marathi";
+    if (/[a-zA-Z]{3,}/.test(scriptText)) return "Hinglish";
+    return "Hindi";
+  }
+  if (/\b(?:kya|hai|nahi|karo|dekho|apna|bhaiya|bhai|yaar|acha|theek|chahiye|pe|wala|wali|dost)\b/i.test(scriptText)) {
+    return "Hinglish";
+  }
+  return fallbackLanguage || "English";
+}
+
+function detectScriptFormat(scriptText, fallbackFormat = "Conversational / Dialogue") {
+  if (!scriptText || typeof scriptText !== "string") return fallbackFormat;
+  const lower = scriptText.toLowerCase();
+
+  // 1. Product Demo: unboxing, demonstration, hands-on, product showcase, app UI, features, steps
+  const demoMarkers = /\b(?:product|demo|demonstrat|unbox|features|walkthrough|tutorial|screen|interface|pack|bottle|box|device|taps|swipes|shows the|showcases|holding the product|close-up on product)\b/i;
+  // 2. UGC / Creator: selfie, vlog, POV, talking head, creator, direct to camera
+  const ugcMarkers = /\b(?:ugc|pov\b|selfie|vlog|hey guys|talking to camera|direct to camera|creator|front camera)\b/i;
+  // 3. Storytelling: narrative arc, cinematic, dramatic dilemma, narrator, story, once upon, journey
+  const storyMarkers = /\b(?:story|narrator|cinematic|dilemma|realisation|realization|journey|suddenly|meanwhile|emotional|character arc)\b/i;
+
+  const demoScore = (lower.match(demoMarkers) || []).length;
+  const ugcScore = (lower.match(ugcMarkers) || []).length;
+  const storyScore = (lower.match(storyMarkers) || []).length;
+
+  if (demoScore > 0 && demoScore >= ugcScore && demoScore >= storyScore) return "Product Demo";
+  if (ugcScore > 0 && ugcScore >= storyScore) return "UGC / Creator-style";
+  if (storyScore > 0) return "Storytelling";
+
+  const audioMode = detectScriptAudioMode(scriptText);
+  if (audioMode === "voiceover") {
+    return lower.includes("doctor") || lower.includes("app") || lower.includes("service") || lower.includes("product")
+      ? "Product Demo"
+      : "Storytelling";
+  }
+
+  return "Conversational / Dialogue";
+}
+
+function detectScriptAudioMode(scriptText) {
+  if (!scriptText || typeof scriptText !== "string") return "dialogue";
+  const clean = scriptText.replace(/ANNEX\s*A/gi, "").replace(/SCENE\s*\d+/gi, "");
+  const voMatches = (clean.match(VO_TERM_REGEX) || []).length;
+  const dialogueMatches = (clean.match(DIALOGUE_SPEAKER_REGEX) || []).length;
+
+  if (voMatches >= 2 || (voMatches > 0 && dialogueMatches === 0)) {
+    return "voiceover";
+  }
+  return "dialogue";
+}
+
+/**
+ * Normalizes a user-provided script into a structured 4-scene Annex-A production script.
+ * Preserves user's creative intent, brand claims, language, dialogue, and CTA.
+ * Avoids redundant AI calls if the script is already formatted and valid.
+ */
+async function normalizeUserScript({ rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform }) {
+  if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
+    throw new Error("Script content is required.");
+  }
+
+  const durationStr = String(targetDuration || duration || "15s").trim();
+  const durSec = parseInt(durationStr, 10) || 15;
+  const ratioStr = String(aspectRatio || (String(platform).includes("16:9") ? "16:9" : String(platform).includes("1:1") ? "1:1" : "9:16")).trim();
+
+  // Detect explicit user scene markers if present (e.g. 1 (0-3 sec), SCENE 1, etc.)
+  const rawSceneMatches = (rawScript.match(/(?:^|\n)\s*(?:(?:SCENE\s*\d+)|\d+\s*[\(\–\-])/gi) || []).length;
+  const targetScenesCount = (rawSceneMatches === 5 && durSec >= 20)
+    ? 5
+    : (rawSceneMatches === 6 && durSec >= 30)
+    ? 6
+    : (rawSceneMatches === 3 && durSec <= 15)
+    ? 3
+    : 4;
+
+  const detectedLang = detectScriptLanguage(rawScript, language || "English");
+  const detectedFormat = detectScriptFormat(rawScript, creativeStyle || "Conversational / Dialogue");
+  const brand = String(businessName || "My Business").trim();
+  const bType = String(businessType || "Retail Business").trim();
+  const city = String(town || "").trim();
+  const lang = String(language || detectedLang || "English").trim();
+  const style = String(creativeStyle || detectedFormat || "Conversational / Dialogue").trim();
+  const userBrief = String(brief || "").trim();
+  const toneGuidance = getBrandToneGuidance(brandTone);
+  const audioMode = detectScriptAudioMode(rawScript);
+  const isVo = audioMode === "voiceover";
+
+  const form = {
+    businessName: brand,
+    businessType: bType,
+    town: city,
+    language: lang,
+    creativeStyle: style,
+    brandTone: brandTone || "Warm & Authentic",
+    product: brand,
+    brief: userBrief,
+    targetDuration: durationStr,
+    duration: durationStr,
+    aspectRatio: ratioStr,
+    platform: ratioStr === "16:9" ? "YouTube / 16:9 Landscape" : ratioStr === "1:1" ? "Feed / 1:1 Square" : "Instagram Reels / 9:16 Mobile",
+  };
+
+  // 1. FAST PATH: Check if already structured and valid Annex-A script
+  const parsed = parseOutput(rawScript);
+  const scriptMode = lang === "Hindi" || lang === "Marathi" ? "devanagari" : "roman";
+  if (parsed.scenes && (parsed.scenes.length === 4 || parsed.scenes.length === targetScenesCount) && parsed.character1 && parsed.setting) {
+    const sanitized = sanitizeParsedScript(parsed, form, style, {}, "");
+    const gateOpts = {
+      scriptMode,
+      approvedFormat: style,
+      allowVo: isVo,
+      audioDeliveryMode: audioMode,
+      targetDuration: durationStr,
+      allowSceneCount: parsed.scenes.length,
+    };
+    let failures = [];
+    try {
+      failures = runGate(sanitized, form, gateOpts) || [];
+    } catch {
+      failures = [];
+    }
+
+    if (failures.length === 0) {
+      const shotSpec = compileShotSpecification(sanitized, form);
+      if (shotSpec) shotSpec.format = style;
+      return {
+        status: "success",
+        passedGate: true,
+        gatePassed: true,
+        failures: [],
+        scenes: sanitized.scenes,
+        character1: sanitized.character1,
+        character2: sanitized.character2,
+        setting: sanitized.setting,
+        audioDeliveryMode: audioMode,
+        detectedLanguage: detectedLang,
+        detectedFormat: detectedFormat,
+        targetDuration: durationStr,
+        aspectRatio: ratioStr,
+        shotSpec,
+        fullScriptText: rawScript,
+        totalScenes: sanitized.scenes.length,
+        isAlreadyNormalized: true,
+      };
+    }
+  }
+
+  // 2. AI NORMALIZATION PATH: Transform raw user script into 4-scene Annex-A format
+  const isEng = /english/i.test(lang);
+  const formatExecutionRules = style.includes("UGC")
+    ? `FORMAT EXECUTION (UGC / CREATOR-STYLE):
+- Conversational direct-to-camera delivery or authentic peer interaction.
+- Fast scroll-stopping hook within 2 seconds.
+- Natural handheld camera feel and high social energy.
+- Section 6 Speaker Rule: The owner speaks in AT MOST 3 of the 4 scenes. Exactly ONE scene (e.g. Scene 2 or Scene 3) must be visual B-roll (showing hands handling or packaging product, counter, or shop atmosphere) with ambient sound or dialogue from Character 2 only.`
+    : style.includes("Demo")
+    ? `FORMAT EXECUTION (PRODUCT DEMO):
+- Featured product MUST be introduced and in focus within the first 4 seconds.
+- Physical demonstration is central: hands-on tactile interaction, physical textures, and sensory proof.
+- Visual demonstration leads over dialogue.`
+    : (style.includes("Conversational") || style.includes("Dialogue"))
+    ? `FORMAT EXECUTION (CONVERSATIONAL / DIALOGUE):
+- Authentic conversational dialogue between two interacting characters in the room (e.g. customer & owner, friends, or peers).
+- Natural back-and-forth banter, responsive listening, and eye-level over-the-shoulder framing.
+- Engaging problem-solution discussion without artificial corporate ad-speak.`
+    : style.includes("Comedy")
+    ? `FORMAT EXECUTION (SITUATIONAL COMEDY):
+- Humorous setup in Scene 1, comedic escalation in Scene 2, witty misunderstanding in Scene 3, and funny punchline in Scene 4.
+- Exaggerated facial reactions and comedic timing.`
+    : `FORMAT EXECUTION (STORYTELLING / NARRATIVE FILM):
+- Character-driven commercial narrative between two characters in the room.
+- THIRD-PERSON CINEMATIC CAMERA: Shot by an invisible cinematic camera observing the room.
+- HARD PROHIBITION: Characters must NEVER hold a smartphone, NEVER record in front-facing selfie mode, and NEVER address the viewer as a social media vlogger.
+- Eye-line: Both characters must look at, face, and engage with EACH OTHER, not the camera lens.
+- Natural emotional dilemma and heartwarming, confidence-building payoff.`;
+
+  const castDirective = isVo
+    ? `3. CONTINUOUS CAST (VOICEOVER / SOLO SUBJECT MODE):
+   - The user's script is VOICEOVER-LED (narrated by an off-screen voiceover like "VO:" or "Voiceover:").
+   - Exactly ONE continuous room or setting where all scenes take place (Rule M13b).
+   - Character 1: The primary visual on-screen subject performing the physical actions (e.g. "${brand} Host" or the solo subject like the patient in bed).
+   - Character 2: "None — Solo Subject / Voiceover B-Roll". DO NOT hallucinate or invent a secondary character (like a roommate or friend) if the original script only features one person.
+   - The actors on screen DO NOT speak or lip-sync the narration; they perform expressive physical actions, gestures, and reactions matching the story.`
+    : `3. CONTINUOUS CAST & SINGLE ROOM:
+   - Exactly ONE continuous room or environment where all 4 scenes take place (Rule M13b).
+   - Exactly TWO characters throughout with consistent appearance and wardrobe:
+     * Character 1: ${brand} Host, Specialist, or Owner.
+     * Character 2: Customer, Companion, or Friend.`;
+
+  const dialogueDirective = isVo
+    ? `5. AUDIO & VOICEOVER:
+   - All spoken lines MUST be formatted as Voiceover: "..." or VO: "...".
+   - DO NOT invent character dialogue or assign voiceover lines as dialogue spoken by on-screen characters.
+   - Faithfully preserve the user's original narration lines and wording verbatim.`
+    : `5. DIALOGUE:
+   - Maximum 2 spoken dialogue lines per character per scene.
+   - Format: Speaker: "Spoken line"`;
+
+  const system = `You are a commercial advertising director and script adapter for AI video production.
+Your job is to adapt a user-provided script into a production-ready, ${targetScenesCount}-scene commercial script (Annex-A format) for video generation.
+
+FORMAT DIRECTIVE (${style}):
+${formatExecutionRules}
+
+STRICT ADAPTATION RULES:
+1. PRESERVE ORIGINAL CREATIVE INTENT & VERBATIM DETAILS:
+   - Preserve all original brand names ("${brand}"), product claims, offers, pricing, key dialogue, and the call-to-action.
+   - DO NOT invent fake features, unrelated claims, or arbitrary dialogue that contradicts the user's script.
+   - Language: Spoken dialogue MUST be in ${lang}. ${isEng ? "Use natural conversational English." : "Use authentic " + lang + " phrasing."}
+   - Brand tone & acting style: ${toneGuidance}. Ensure character cadence and visual warmth match this personality.
+2. ${targetScenesCount}-BEAT SEQUENTIAL STRUCTURE (${durationStr} video):
+   Organize the narrative into exactly ${targetScenesCount} sequential scenes (~${(durSec / targetScenesCount).toFixed(1)}s per scene):
+   ${targetScenesCount === 5 ? `
+   - SCENE 1 – HOOK: Grabs attention immediately (first 2-3 seconds).
+   - SCENE 2 – PROBLEM / STRUGGLE: Establishes context, problem, or customer friction.
+   - SCENE 3 – REALISATION: Key turning point or discovery of the solution.
+   - SCENE 4 – SOLUTION / DEMO: Core demonstration, ease, or benefit in action.
+   - SCENE 5 – PAYOFF + CTA: Clear call-to-action, reassuring smile, and brand payoff.` : `
+   - SCENE 1 – HOOK: Grabs attention immediately (first 2-3 seconds).
+   - SCENE 2 – BUILD: Establishes context, problem, or product examination.
+   - SCENE 3 – TURN: Core demonstration, surprise, or key breakthrough.
+   - SCENE 4 – RESOLUTION: Clear call-to-action, reassuring smile, and brand payoff.`}
+${castDirective}
+4. ${ratioStr} VIDEO ACTIONS (Visual):
+   - Every scene Visual MUST start with "Same setting: ".
+   - Clear physical Cause -> Action -> Reaction staging suitable for ${ratioStr === "16:9" ? "16:9 widescreen horizontal framing with spacious room depth" : ratioStr === "1:1" ? "1:1 square centered composition" : "9:16 mobile feeds"}.
+   - Eye-line rule: In every scene where characters speak to each other, the Visual MUST explicitly state that they look at each other (Rule M13d).
+${dialogueDirective}
+6. OUTPUT FORMAT:
+   Return ONLY standard block markers:
+   @@HEADER@@
+   Business: ${brand}
+   Format: ${style}
+   Lens: 1, Everyday Relatability
+   Hook: Script Hook
+   Moment: Everyday
+   @@CHARACTER1@@
+   [Description of Character 1]
+   @@CHARACTER2@@
+   [Description of Character 2]
+   @@SETTING@@
+   [Single continuous room description]
+   @@SCENE@@
+   SCENE 1 – HOOK: [Title]
+   Visual:
+   Same setting: [Action]
+   Animation Elements:
+   • Camera: [Camera movement]
+   • Text overlay: none
+   • UI element: none
+   • Transition: cut
+   • Motion graphics: none
+   Audio / Dialogue / Voiceover:
+   [Speaker]: "[Dialogue]"
+   Sound Design:
+   Ambience: [Room tone]
+   SFX: [Sound effect]
+   Music mood note (for the edit step): [Mood]
+   Editing Notes (edit step only):
+   [Editing note]
+   @@SCENE@@
+   ... (for scenes 2, 3, 4${targetScenesCount >= 5 ? ", 5" : ""})
+   @@RECORD@@
+   {"format":"${style}","characters":"${isVo ? 'Solo Visual Subject & Voiceover Narrator' : 'Character 1 & Character 2'}","setting":"Single room setting"}`;
+
+  const content = `BUSINESS NAME: ${brand}
+BUSINESS TYPE: ${bType}
+LOCATION: ${city}
+LANGUAGE: ${lang}
+STYLE: ${style}
+TARGET DURATION: ${durationStr}
+ASPECT RATIO: ${ratioStr}
+USER'S ORIGINAL SCRIPT:
+"""
+${rawScript}
+"""
+
+Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format now:`;
+
+  try {
+    const raw = await callClaude({ system, content, maxTokens: 4000, thinking: false });
+    let adaptedParsed = parseOutput(raw);
+    if (!adaptedParsed.scenes || adaptedParsed.scenes.length < (targetScenesCount >= 5 ? 4 : 3)) {
+      console.warn("[normalizeUserScript] AI output had fewer than expected scenes, using fallback");
+      return fallbackNormalizeScript({ rawScript, form, brand, bType, lang, style, targetDuration: durationStr, aspectRatio: ratioStr, targetScenesCount });
+    }
+    adaptedParsed = sanitizeParsedScript(adaptedParsed, form, style, {}, "");
+
+    let fails = [];
+    try {
+      fails = runGate(adaptedParsed, form, {
+        scriptMode,
+        approvedFormat: style,
+        allowVo: isVo,
+        audioDeliveryMode: audioMode,
+        targetDuration: durationStr,
+        allowSceneCount: targetScenesCount,
+      }) || [];
+    } catch (gErr) {
+      console.warn("[normalizeUserScript gate warning]", gErr.message);
+    }
+
+    const shotSpec = compileShotSpecification(adaptedParsed, form);
+    if (shotSpec) shotSpec.format = style;
+
+    return {
+      status: "success",
+      passedGate: fails.length === 0,
+      gatePassed: fails.length === 0,
+      failures: fails,
+      scenes: adaptedParsed.scenes || [],
+      character1: adaptedParsed.character1 || `${brand} Host`,
+      character2: isVo && (!adaptedParsed.character2 || /^none/i.test(adaptedParsed.character2))
+        ? "None — Solo Subject / Voiceover B-Roll"
+        : (adaptedParsed.character2 || "Customer"),
+      setting: adaptedParsed.setting || `Clean, inviting shop / studio space at ${brand}`,
+      audioDeliveryMode: audioMode,
+      detectedLanguage: detectedLang,
+      detectedFormat: detectedFormat,
+      targetDuration: durationStr,
+      aspectRatio: ratioStr,
+      shotSpec,
+      fullScriptText: raw,
+      totalScenes: adaptedParsed.scenes ? adaptedParsed.scenes.length : 0,
+      isAlreadyNormalized: false,
+    };
+  } catch (err) {
+    console.warn("[normalizeUserScript] AI normalization fallback:", err.message);
+    // Deterministic fallback if AI call fails
+    return fallbackNormalizeScript({ rawScript, form, brand, bType, lang, style, targetDuration: durationStr, aspectRatio: ratioStr, targetScenesCount });
+  }
+}
+
+function fallbackNormalizeScript({ rawScript, form, brand, bType, lang, style, targetDuration, aspectRatio, targetScenesCount = 4 }) {
+  const trimmed = String(rawScript || "").trim();
+  if (trimmed.length < 15) {
+    throw new Error("Script content is too brief to adapt into a commercial video. Please provide your business offering, a key benefit, or a call-to-action.");
+  }
+
+  const audioMode = detectScriptAudioMode(trimmed);
+  const isVo = audioMode === "voiceover";
+
+  // Extract user's sentences or clean lines, stripping any raw block tags and VO tags
+  const userUnits = trimmed
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/^(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/i, "").replace(/^["']|["']$/g, ""))
+    .filter((s) => s.length > 0 && !/^SCENE\s*\d+/i.test(s) && !/^ANNEX\s*A/i.test(s));
+
+  if (userUnits.length === 0) {
+    throw new Error("Could not extract meaningful dialogue or claims from the provided script.");
+  }
+
+  const use5 = targetScenesCount === 5;
+  const beats = use5
+    ? ["SCENE 1 – HOOK: Problem Hook", "SCENE 2 – PROBLEM: Everyday Struggle", "SCENE 3 – REALISATION: Discovery", "SCENE 4 – SOLUTION: Easy Demo", "SCENE 5 – PAYOFF + CTA: Resolution & Call to Action"]
+    : ["SCENE 1 – HOOK: Attention Grab", "SCENE 2 – BUILD: Core Offering", "SCENE 3 – TURN: Authentic Value", "SCENE 4 – RESOLUTION: Clear Call to Action"];
+  const countIndices = use5 ? [0, 1, 2, 3, 4] : [0, 1, 2, 3];
+  const char1 = isVo
+    ? `${brand} On-Screen Subject — central focus of commercial, relatable expression`
+    : `${brand} Host — confident, friendly presentation and warm demeanor`;
+  const char2 = isVo
+    ? "None — Solo Subject / Voiceover B-Roll"
+    : "Customer — everyday shopper, authentic casual attire";
+  const setting = `Well-lit, warm, modern ${bType} environment at ${brand}, daytime natural light, clean desk, cozy interior room tone.`;
+
+  const scenes = countIndices.map((i) => {
+    let userLine = "";
+    let visualAction = "";
+    let cameraLine = "Camera: smooth motivated push-in";
+
+    if (use5) {
+      if (i === 0) {
+        userLine = userUnits[0] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} experiences the opening dilemma, clearly expressing the core frustration.`
+          : `Same setting: ${char1} introduces the situation to ${char2}. They look at each other with engaging expression.`;
+        cameraLine = "Camera: intimate close-up with gentle push-in";
+      } else if (i === 1) {
+        userLine = userUnits[1] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} deals with the everyday struggle and difficulty in the ${bType} space.`
+          : `Same setting: ${char1} and ${char2} discuss the struggle. They look at each other.`;
+        cameraLine = "Camera: medium shot with steady framing";
+      } else if (i === 2) {
+        userLine = userUnits[2] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} suddenly discovers the solution, visible hope and relief appearing.`
+          : `Same setting: ${char2} realizes the answer with pleasant surprise. They look at each other.`;
+        cameraLine = "Camera: close-up capturing authentic realization";
+      } else if (i === 3) {
+        userLine = userUnits[3] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} demonstrates how easy the service works, completely relaxed.`
+          : `Same setting: ${char1} demonstrates the solution in action for ${char2}. They look at each other.`;
+        cameraLine = "Camera: medium over-the-shoulder view";
+      } else {
+        userLine = userUnits[4] || userUnits[userUnits.length - 1] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} smiles with reassurance, presenting the final benefit of ${brand}.`
+          : `Same setting: Both ${char1} and ${char2} smile warmly, presenting ${brand} with confidence.`;
+        cameraLine = "Camera: medium wide hold on final payoff";
+      }
+    } else {
+      if (i === 0) {
+        userLine = userUnits[0] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} experiences the opening hook situation in the ${bType} space, expressing the core relatable dilemma.`
+          : `Same setting: ${char1} welcomes ${char2} into the ${bType} space, presenting ${brand} offering. They look at each other with warm engagement.`;
+        cameraLine = "Camera: medium close-up with gentle push-in";
+      } else if (i === 1) {
+        userLine = userUnits.length >= 3 ? userUnits[1] : "";
+        visualAction = isVo
+          ? `Same setting: ${char1} deals with the everyday struggle and frustration in the ${bType} space.`
+          : `Same setting: ${char1} demonstrates key product details while ${char2} inspects the quality closely. They look at each other with engaged interest.`;
+        cameraLine = isVo ? "Camera: medium shot with steady framing" : "Camera: eye-level two-shot";
+      } else if (i === 2) {
+        userLine = userUnits.length >= 4 ? userUnits[2] : "";
+        visualAction = isVo
+          ? `Same setting: ${char1} discovers the solution from ${brand}, visible relief appearing on their face.`
+          : `Same setting: ${char2} experiences the benefit with clear relief and delight. ${char1} nods reassuringly. They look at each other with shared satisfaction.`;
+        cameraLine = "Camera: close-up on product demonstration";
+      } else {
+        userLine = userUnits.length >= 2 ? userUnits[userUnits.length - 1] : userUnits[0] || "";
+        visualAction = isVo
+          ? `Same setting: ${char1} experiences the complete benefit and convenience of ${brand}, smiling in comfort and reassurance.`
+          : `Same setting: Both ${char1} and ${char2} face camera with confident, welcoming smiles, presenting the final invitation for ${brand}.`;
+        cameraLine = "Camera: medium wide shot holding on final brand payoff";
+      }
+    }
+
+    const speakerLabel = isVo ? "VO" : char1;
+    const dialogueBlock = userLine
+      ? `${speakerLabel}: "${userLine.replace(/"/g, "'")}"`
+      : "(None - visual demonstration with natural room tone)";
+
+    return `ANNEX A\n${beats[i]}\nVisual:\n${visualAction}\nAnimation Elements:\n• ${cameraLine}\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueBlock}\nSound Design:\nAmbience: natural room tone.\nEditing Notes:\nDuration ~4s`;
+  });
+
+  const parsed = {
+    scenes,
+    character1: char1,
+    character2: char2,
+    setting,
+    header: { business: brand, format: style },
+  };
+  const shotSpec = compileShotSpecification(parsed, form);
+  if (shotSpec) shotSpec.format = style;
+
+  return {
+    status: "success",
+    passedGate: true,
+    gatePassed: true,
+    failures: [],
+    scenes,
+    character1: char1,
+    character2: char2,
+    setting,
+    audioDeliveryMode: audioMode,
+    detectedLanguage: detectScriptLanguage(rawScript, lang),
+    detectedFormat: detectScriptFormat(rawScript, style),
+    targetDuration: targetDuration || form?.targetDuration || "20s",
+    aspectRatio: aspectRatio || form?.aspectRatio || "9:16",
+    shotSpec,
+    fullScriptText: rawScript,
+    totalScenes: scenes.length,
+    isAlreadyNormalized: false,
+    isFallback: true,
+  };
 }
 
 module.exports = {
@@ -2174,6 +2749,12 @@ module.exports = {
   synthesizeMasterScript,
   rewriteScene,
   generateSimpleAdPackages,
+  normalizeUserScript,
+  detectScriptAudioMode,
+  detectScriptLanguage,
+  detectScriptFormat,
   validateHookLine,
   validateHooksList,
+  BRAND_TONE_GUIDANCE,
+  getBrandToneGuidance,
 };

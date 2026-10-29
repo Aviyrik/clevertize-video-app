@@ -14,11 +14,15 @@ const J = (o) => `@@JSON@@\n${JSON.stringify(o)}\n@@END@@`;
 
 const realFetch = global.fetch;
 let anthropicQueue = [];
+let lastAnthropicBody = null;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
   if (u.startsWith("https://api.anthropic.com")) {
+    if (opts.body) {
+      try { lastAnthropicBody = JSON.parse(opts.body); } catch (_) {}
+    }
     const text = anthropicQueue.shift() || "{}";
     return json({ content: [{ type: "thinking", thinking: "..." }, { type: "text", text }], stop_reason: "end_turn" });
   }
@@ -848,4 +852,740 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
     assert.ok(/[\u0900-\u097F]/.test(text));
     assert.strictEqual(/[\u0C80-\u0CFF]/.test(text), false);
   }
+});
+
+test("23. normalizeUserScript fast-path: already-structured valid Annex-A script is not rewritten", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+
+  const res = await normalizeUserScript({
+    rawScript: GOOD_SCRIPT,
+    businessName: "Sharma General Store",
+    businessType: "Kirana / general store",
+    town: "Indore",
+    language: "Hindi",
+    creativeStyle: "Storytelling",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.passedGate, true);
+  assert.strictEqual(res.isAlreadyNormalized, true, "Must flag as already normalized without redundant AI rewrite");
+  assert.strictEqual(res.scenes.length, 4);
+  assert.ok(res.shotSpec, "Must compile shot specification for valid script");
+  assert.strictEqual(res.shotSpec.shots.length, 4);
+});
+
+test("24. normalizeUserScript adapts plain-text user script into 4 scenes and preserves dialogue, claims, and CTA", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const rawUserText = `Come to Palasia Dental Clinic this week for free checkups!
+Dr. Amit checks your teeth with painless digital scanner.
+Get 50% discount on laser cleaning until Sunday.
+Call 9876543210 or visit palasiadental.com now!`;
+
+  const res = await normalizeUserScript({
+    rawScript: rawUserText,
+    businessName: "Palasia Dental Clinic",
+    businessType: "Healthcare / Clinic",
+    town: "Indore",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+    brief: "Dental checkup and cleaning offer",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.totalScenes, 4);
+  assert.strictEqual(res.scenes.length, 4);
+  assert.ok(res.character1, "Must establish Character 1");
+  assert.ok(res.character2, "Must establish Character 2");
+  assert.ok(res.setting, "Must establish continuous Setting");
+  assert.ok(res.shotSpec, "Must compile shotSpec from normalized script");
+  assert.strictEqual(res.shotSpec.shots.length, 4);
+
+  // Verify dialogue and claims preservation
+  const combinedText = res.scenes.join("\n");
+  assert.ok(
+    combinedText.includes("Palasia Dental Clinic") || combinedText.includes("Dental") || combinedText.includes("checkup"),
+    "Must preserve brand and clinical offering"
+  );
+  assert.ok(
+    res.scenes.every((s) => s.includes("Visual:") && s.includes("Audio / Dialogue / Voiceover:")),
+    "Every scene must have visual and dialogue blocks"
+  );
+});
+
+test("25. normalizeUserScript rejects empty or whitespace-only script content", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  await assert.rejects(
+    async () => {
+      await normalizeUserScript({ rawScript: "   ", businessName: "Test Store" });
+    },
+    /Script content is required/i
+  );
+});
+
+test("26. B-03: fallbackNormalizeScript handles short/one-line script safely without placeholder dialogue", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const shortScript = "Visit Apex Footwear on MG Road this weekend for 50% discount on sports shoes! Call 9876543210 today.";
+
+  const res = await normalizeUserScript({
+    rawScript: shortScript,
+    businessName: "Apex Footwear",
+    businessType: "Footwear & Shoes",
+    town: "Indore",
+    language: "English",
+    creativeStyle: "UGC / Creator-style",
+  });
+
+  assert.strictEqual(res.status, "success");
+  assert.strictEqual(res.scenes.length, 4);
+
+  const fullText = res.scenes.join("\n");
+  // Must NOT contain placeholder text like "Scene 2 action for Apex Footwear" or "narrative and dialogue"
+  assert.ok(!fullText.includes("Scene 2 action"), "Must not invent placeholder 'Scene 2 action'");
+  assert.ok(!fullText.includes("Scene 3 action"), "Must not invent placeholder 'Scene 3 action'");
+  assert.ok(!fullText.includes("narrative and dialogue"), "Must not invent placeholder dialogue");
+
+  // Must preserve user's real claims and CTA
+  assert.ok(fullText.includes("Apex Footwear"), "Must preserve brand name");
+  assert.ok(fullText.includes("50% discount") || fullText.includes("sports shoes"), "Must preserve product claim");
+  assert.ok(fullText.includes("9876543210"), "Must preserve user CTA");
+
+  // Middle beats without allocated dialogue must be visual action with natural ambient audio
+  assert.ok(res.scenes[1].includes("(None - visual demonstration") || res.scenes[1].includes("natural room tone"), "Middle beat must be visual action");
+});
+
+test("27. B-03: normalizeUserScript rejects scripts too brief to infer creative details with clear actionable error", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  await assert.rejects(
+    async () => {
+      await normalizeUserScript({ rawScript: "Buy shoes.", businessName: "Apex" });
+    },
+    /Script content is too brief/i
+  );
+});
+
+test("28. Brand Tone Guidance: getBrandToneGuidance maps all 4 tones correctly and prompt.js injects BRAND_TONE", () => {
+  const { getBrandToneGuidance, BRAND_TONE_GUIDANCE } = require("../engine/creative");
+  const { buildUserContent } = require("../engine/prompt");
+
+  assert.strictEqual(getBrandToneGuidance("Warm & Authentic"), BRAND_TONE_GUIDANCE.warm);
+  assert.strictEqual(getBrandToneGuidance("Festive & Vibrant"), BRAND_TONE_GUIDANCE.festive);
+  assert.strictEqual(getBrandToneGuidance("Premium & Elegant"), BRAND_TONE_GUIDANCE.premium);
+  assert.strictEqual(getBrandToneGuidance("Direct & Problem-Solving"), BRAND_TONE_GUIDANCE.direct);
+
+  // Case-insensitive / partial match checks
+  assert.strictEqual(getBrandToneGuidance("luxury premium vibes"), BRAND_TONE_GUIDANCE.premium);
+  assert.strictEqual(getBrandToneGuidance("celebration festive mood"), BRAND_TONE_GUIDANCE.festive);
+  assert.strictEqual(getBrandToneGuidance("clear problem solving"), BRAND_TONE_GUIDANCE.direct);
+  assert.strictEqual(getBrandToneGuidance(null), BRAND_TONE_GUIDANCE.warm);
+  assert.strictEqual(getBrandToneGuidance(""), BRAND_TONE_GUIDANCE.warm);
+
+  // Test buildUserContent in engine/prompt.js
+  const testForm = {
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    language: "English",
+    brandTone: "Festive & Vibrant",
+  };
+  const mockFest = { moments: [], source: "test", checked: "today" };
+  const promptArr = buildUserContent(testForm, mockFest, [], "2026-10-28", "TEST STAGE");
+  const promptText = promptArr.map((p) => (typeof p === "string" ? p : p.text || "")).join("\n");
+  assert.ok(promptText.includes("BRAND_TONE: Festive & Vibrant"), "prompt.js must contain BRAND_TONE");
+  assert.ok(promptText.includes("reflect this personality"), "prompt.js must guide emotional tone and spoken cadence");
+});
+
+test("29. Brand Tone Wiring: Claude prompts in creative engine receive tone guidance", async () => {
+  const {
+    generateDirections,
+    generateHooks,
+    generatePlots,
+    generateStoryWorld,
+    generateSimpleAdPackages,
+  } = require("../engine/creative");
+
+  // 1. Directions
+  anthropicQueue.push(J([{ id: "dir_1", title: "Festive Joy", description: "Joyful celebration", angle: "Festive", recommended: true }]));
+  await generateDirections({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brandTone: "Festive & Vibrant",
+  });
+  assert.ok(lastAnthropicBody, "Anthropic request was captured");
+  assert.ok(lastAnthropicBody.system.includes("Festive & Vibrant"), "Directions system prompt must include brand tone");
+  const userContentDirections = lastAnthropicBody.messages?.[0]?.content || "";
+  assert.ok(userContentDirections.includes("BRAND TONE: Festive & Vibrant"), "Directions content must contain brand tone");
+
+  // 2. Hooks
+  anthropicQueue.push(J([{ id: "hook_1", archetype: "Problem", hookLine: "Wait, out of sweets again?", visualAction: "Checking box", recommended: true }]));
+  await generateHooks({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brandTone: "Premium & Elegant",
+    language: "English",
+  });
+  assert.ok(lastAnthropicBody.system.includes("Premium & Elegant"), "Hooks system prompt must include premium brand tone");
+  const userContentHooks = lastAnthropicBody.messages?.[0]?.content || "";
+  assert.ok(userContentHooks.includes("BRAND TONE: Premium & Elegant"), "Hooks content must contain premium brand tone");
+
+  // 3. Plots
+  anthropicQueue.push(J([{ id: "plot_1", title: "Direct Solution", coreIdea: "Problem solved fast", hookBeat: "Need", conflictBeat: "Doubt", payoffBeat: "Relief", recommended: true }]));
+  await generatePlots({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brandTone: "Direct & Problem-Solving",
+    language: "English",
+  });
+  assert.ok(lastAnthropicBody.system.includes("Direct & Problem-Solving"), "Plots system prompt must include direct tone");
+  const userContentPlots = lastAnthropicBody.messages?.[0]?.content || "";
+  assert.ok(userContentPlots.includes("BRAND TONE: Direct & Problem-Solving"), "Plots content must contain direct tone");
+
+  // 4. Story World
+  anthropicQueue.push(J({
+    format: "UGC / Creator-style",
+    product: "Kanti Sweets Gift Box",
+    setting: "Sweet shop",
+    beats: [
+      { beat: "HOOK", timing: "0-3s", title: "Hook", action: "Opens box", dialogue: "Check this out!" },
+      { beat: "BUILD", timing: "3-8s", title: "Build", action: "Shows sweets", dialogue: "Look closely." },
+      { beat: "TURN", timing: "8-14s", title: "Turn", action: "Tastes sweet", dialogue: "Incredible purity." },
+      { beat: "PAYOFF", timing: "14-20s", title: "Payoff", action: "Smiles at camera", dialogue: "Order today." }
+    ]
+  }));
+  await generateStoryWorld({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brandTone: "Warm & Authentic",
+    language: "English",
+  });
+  assert.ok(lastAnthropicBody.system.includes("Warm & Authentic"), "Story world system prompt must include warm tone");
+  const userContentStory = lastAnthropicBody.messages?.[0]?.content || "";
+  assert.ok(userContentStory.includes("BRAND TONE: Warm & Authentic"), "Story world content must contain warm tone");
+
+  // 5. Simple Ad Packages
+  anthropicQueue.push(J({
+    packages: [
+      {
+        id: "pkg_1",
+        badge: "Highest Converting",
+        angle: "Problem & Relief",
+        title: "Purity First",
+        hookHeadline: "Tired of artificial sweets?",
+        narrativeSummary: "A story of authentic taste",
+        callToAction: "Visit Kanti Sweets today!",
+        setting: "Sweet shop counter",
+        characters: { lead: "Host", customer: "Customer" },
+        scenes: [
+          { sceneNumber: 1, beat: "Hook", timing: "0-3s", visual: "Host reveals sweets", dialogue: "Lead: Look at this." },
+          { sceneNumber: 2, beat: "Build", timing: "3-8s", visual: "Host plates sweets", dialogue: "Lead: Made with pure ghee." },
+          { sceneNumber: 3, beat: "Turn", timing: "8-14s", visual: "Customer tastes sweet", dialogue: "Customer: Delicious!" },
+          { sceneNumber: 4, beat: "Resolution", timing: "14-20s", visual: "Host packs box", dialogue: "Lead: Visit us today!" }
+        ]
+      },
+      {
+        id: "pkg_2",
+        badge: "Most Trusted",
+        angle: "Customer Story & Trust",
+        title: "Family Tradition",
+        hookHeadline: "Why do families trust us?",
+        narrativeSummary: "Family tradition",
+        callToAction: "Order today!",
+        setting: "Sweet shop counter",
+        characters: { lead: "Host", customer: "Customer" },
+        scenes: [
+          { sceneNumber: 1, beat: "Hook", timing: "0-3s", visual: "Host smiles", dialogue: "Lead: Welcome!" },
+          { sceneNumber: 2, beat: "Build", timing: "3-8s", visual: "Shows sweets", dialogue: "Lead: Tradition." },
+          { sceneNumber: 3, beat: "Turn", timing: "8-14s", visual: "Customer smiles", dialogue: "Customer: Best in town." },
+          { sceneNumber: 4, beat: "Resolution", timing: "14-20s", visual: "Happy customer", dialogue: "Lead: Thank you!" }
+        ]
+      },
+      {
+        id: "pkg_3",
+        badge: "Highest Urgency",
+        angle: "Limited-Time Special Offer",
+        title: "Festive Box",
+        hookHeadline: "Festive offer is here!",
+        narrativeSummary: "Special offer",
+        callToAction: "Grab yours now!",
+        setting: "Sweet shop counter",
+        characters: { lead: "Host", customer: "Customer" },
+        scenes: [
+          { sceneNumber: 1, beat: "Hook", timing: "0-3s", visual: "Host shows box", dialogue: "Lead: Special offer!" },
+          { sceneNumber: 2, beat: "Build", timing: "3-8s", visual: "Offers gift box", dialogue: "Lead: Limited boxes." },
+          { sceneNumber: 3, beat: "Turn", timing: "8-14s", visual: "Customer receives box", dialogue: "Customer: Great deal!" },
+          { sceneNumber: 4, beat: "Resolution", timing: "14-20s", visual: "Both wave", dialogue: "Lead: Order now!" }
+        ]
+      }
+    ]
+  }));
+  await generateSimpleAdPackages({
+    businessName: "Kanti Sweets",
+    businessType: "Sweet Shop",
+    brandTone: "Festive & Vibrant",
+    language: "English",
+  });
+  assert.ok(lastAnthropicBody.system.includes("Festive & Vibrant"), "Simple packages system prompt must include festive tone");
+  const userContentPackages = lastAnthropicBody.messages?.[0]?.content || "";
+  assert.ok(userContentPackages.includes("BRAND TONE: Festive & Vibrant"), "Simple packages content must contain festive tone");
+});
+
+test("30. Production Format: Selected format dictates script normalization, Quality Gate, and neural video compiler directives", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const { compileShotPrompt } = require("../engine/compiler");
+  const { runGate } = require("../engine/gate");
+
+  // 1. Script Normalization receives format directive and sets shotSpec.format
+  anthropicQueue.push(`@@HEADER@@
+Business: Practo
+Format: Product Demo
+Lens: 1, Everyday Relatability
+Hook: Script Hook
+Moment: Everyday
+@@CHARACTER1@@
+Dr. Sharma (Doctor / Consultant) — 40s, friendly demeanour
+@@CHARACTER2@@
+Ramesh (Patient) — 30s, working professional
+@@SETTING@@
+A brightly lit, modern tele-consultation room with medical desk and laptop.
+@@SCENE@@
+SCENE 1 – HOOK: Instant Consult
+Visual:
+Same setting: Ramesh taps the Practo app on phone from bed. Dr. Sharma appears clearly on screen.
+Animation Elements:
+• Camera: smooth motivated push-in
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Ramesh: "102 fever and I do not have to leave bed!"
+Sound Design:
+Ambience: quiet room tone.
+Editing Notes:
+Scene duration: ~3s
+@@SCENE@@
+SCENE 2 – BUILD: Doctor Advice
+Visual:
+Same setting: Dr. Sharma consults with Ramesh over video call. They look at each other as they speak.
+Animation Elements:
+• Camera: two-shot split layout
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Dr. Sharma: "Rest up, your prescription is sent."
+Sound Design:
+Ambience: gentle room tone.
+Editing Notes:
+Scene duration: ~4s
+@@SCENE@@
+SCENE 3 – TURN: Medicine Delivery
+Visual:
+Same setting: Ramesh receives delivery notification. They look at each other as they speak.
+Animation Elements:
+• Camera: close-up on verified prescription
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Ramesh: "Medicines arriving in 60 minutes."
+Sound Design:
+Ambience: chime tone.
+Editing Notes:
+Scene duration: ~4s
+@@SCENE@@
+SCENE 4 – RESOLUTION: Relief
+Visual:
+Same setting: Ramesh smiles with relief, resting comfortably.
+Animation Elements:
+• Camera: medium wide hold
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+Ramesh: "Practo saves the day."
+Sound Design:
+Ambience: warm chord.
+Editing Notes:
+Scene duration: ~4s
+@@RECORD@@
+{"format":"Product Demo","characters":"Dr. Sharma & Ramesh","setting":"Consultation room"}`);
+
+  const normResult = await normalizeUserScript({
+    rawScript: "102 fever. Consult doctor without leaving bed. Book online consultation with Practo.",
+    businessName: "Practo",
+    businessType: "Healthcare App",
+    language: "English",
+    creativeStyle: "Product Demo",
+  });
+
+  assert.strictEqual(normResult.status, "success");
+  assert.strictEqual(normResult.shotSpec.format, "Product Demo");
+  assert.ok(lastAnthropicBody.system.includes("FORMAT DIRECTIVE (Product Demo)"), "Normalization system prompt must include Product Demo directive");
+  assert.ok(lastAnthropicBody.system.includes("Physical demonstration is central"), "Must enforce physical demonstration rules");
+
+  // 2. Video Compiler: compileShotPrompt injects distinct staging for each format
+  const mockShot = {
+    framing: "Medium close-up",
+    primaryAction: "Host unboxes the new product.",
+    fullVisual: "Host unboxes the new product with tactile focus.",
+    cameraMovement: "smooth slow push-in",
+    dialogue: 'Host: "Check this out!"',
+  };
+  const mockStatic = {
+    setting: "Modern studio space",
+    characters: "Host | Guest",
+    businessType: "Tech",
+  };
+
+  const demoPrompt = compileShotPrompt(mockShot, mockStatic, { format: "Product Demo" });
+  assert.ok(demoPrompt.includes("PRODUCT DEMO STAGING: Physical product front-and-center"), "Demo format must inject product demo staging");
+
+  const storyPrompt = compileShotPrompt(mockShot, mockStatic, { format: "Storytelling" });
+  assert.ok(storyPrompt.includes("STRICT STORYTELLING CAM: Cinematic third-person perspective only"), "Storytelling format must inject storytelling camera directive");
+
+  const comedyPrompt = compileShotPrompt(mockShot, mockStatic, { format: "Situational Comedy" });
+  assert.ok(comedyPrompt.includes("COMEDIC TIMING & EXPRESSION"), "Comedy format must inject comedy timing directive");
+
+  const ugcPrompt = compileShotPrompt(mockShot, mockStatic, { format: "UGC / Creator-style" });
+  assert.ok(ugcPrompt.includes("UGC / CREATOR STAGING: Mobile-native vertical framing"), "UGC format must inject UGC staging directive");
+
+  // 3. Quality Gate accepts all 4 canonical formats and legacy aliases
+  const dummyScript = {
+    header: { business: "Practo", format: "Product Demo", lens: "1", hook: "H", moment: "M" },
+    character1: "Doctor Sharma — 40s, physician with white coat and stethoscope",
+    character2: "Patient Ramesh — 30s, everyday professional in casual t-shirt",
+    setting: "A clean, modern, well-lit medical clinic room with desk and examination bed.",
+    scenes: [
+      'SCENE 1 – HOOK: Opening\nVisual:\nSame setting: Doctor looks at patient.\nAnimation Elements:\n• Camera: eye-level medium\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDoctor: "Welcome."\nSound Design:\nQuiet room tone.\nEditing Notes:\n3s',
+      'SCENE 2 – BUILD: Check\nVisual:\nSame setting: Doctor checks vitals. Doctor and patient look at each other.\nAnimation Elements:\n• Camera: close-up on monitor\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPatient: "All good?"\nSound Design:\nQuiet room tone.\nEditing Notes:\n4s',
+      'SCENE 3 – TURN: Result\nVisual:\nSame setting: Doctor hands prescription. They look at each other.\nAnimation Elements:\n• Camera: two-shot profile\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nDoctor: "Fully recovered."\nSound Design:\nQuiet room tone.\nEditing Notes:\n4s',
+      'SCENE 4 – RESOLUTION: End\nVisual:\nSame setting: Both smile. They look at each other.\nAnimation Elements:\n• Camera: gentle pull back\n• Text overlay: none\n• UI element: none\n• Transition: cut\n• Motion graphics: none\nAudio / Dialogue / Voiceover:\nPatient: "Thank you!"\nSound Design:\nQuiet room tone.\nEditing Notes:\n4s',
+    ],
+    record: { hook_pattern: "H", tension: "T" },
+  };
+
+  const gateResult = runGate(dummyScript, { language: "English", businessName: "Practo" }, { approvedFormat: "Product Demo" });
+  assert.strictEqual(gateResult.length, 0, `Product Demo script must pass gate cleanly without errors: ${gateResult.join(", ")}`);
+});
+
+test("31. Voiceover (VO) Script Detection & Flow: handles solo subject, detects VO lines, bypasses 2-actor lip-sync", async () => {
+  const { detectScriptAudioMode, normalizeUserScript } = require("../engine/creative");
+  const { compileShotPrompt } = require("../engine/compiler");
+  const { runGate } = require("../engine/gate");
+
+  // 1. Audio mode detector recognizes VO-led scripts across diverse phrasing
+  const practoRawScript = `1 (0–3 sec) — HOOK
+TEXT + VO: "102 fever. And the doctor wants me to GET UP?!"
+2 (3–6 sec) — THE PROBLEM
+VO: "Get dressed. Book a cab. Travel to a clinic? No chance!"
+3 (6–9 sec) — THE REALISATION
+VO: "Wait. I can consult a doctor without leaving my bed!"
+4 (9–14 sec) — THE SOLUTION
+VO: "Book an online consultation and talk to a doctor right from home."
+5 (14–18 sec) — PAYOFF + CTA
+VO: "Too sick to step out? Consult a doctor in 2 minutes on Practo."`;
+
+  assert.strictEqual(detectScriptAudioMode(practoRawScript), "voiceover", "Must detect VO-led script from VO: and TEXT + VO: markers");
+  assert.strictEqual(detectScriptAudioMode('Voiceover: "Welcome to the future of banking."'), "voiceover");
+  assert.strictEqual(detectScriptAudioMode('Narrator: "In a world where..."'), "voiceover");
+  assert.strictEqual(detectScriptAudioMode('Rahul: "Hey, what are you doing?"\\nSneha: "Just checking this out."'), "dialogue");
+
+  // 2. Normalization with mock LLM response adhering to VO format
+  anthropicQueue.push(`@@HEADER@@
+Business: Practo
+Format: Storytelling
+Lens: 1, Everyday Relatability
+Hook: 102 fever
+Moment: Bedridden sick
+@@CHARACTER1@@
+Patient in Bed — 20s-30s, resting unwell in comfortable clothes
+@@CHARACTER2@@
+None — Solo Subject / Voiceover B-Roll
+@@SETTING@@
+A cozy, dimly lit bedroom with warm lighting and a bedside phone stand.
+@@SCENE@@
+SCENE 1 – HOOK: 102 Fever
+Visual:
+Same setting: Patient in bed checks thermometer with exhausted expression.
+Animation Elements:
+• Camera: intimate close-up
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+VO: "102 fever. And the doctor wants me to GET UP?!"
+Sound Design:
+Ambience: muted room tone.
+Editing Notes:
+Scene duration: ~3s
+@@SCENE@@
+SCENE 2 – BUILD: Clinic Hassle
+Visual:
+Same setting: Patient groans and buries face into pillow, overwhelmed by clinic travel.
+Animation Elements:
+• Camera: medium shot
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+VO: "Get dressed. Book a cab. Travel to a clinic? No chance!"
+Sound Design:
+Ambience: quiet room tone.
+Editing Notes:
+Scene duration: ~3s
+@@SCENE@@
+SCENE 3 – TURN: Bedside Doctor
+Visual:
+Same setting: Patient suddenly opens Practo app on phone with sudden relief.
+Animation Elements:
+• Camera: close-up on phone
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+VO: "Wait. I can consult a doctor without leaving my bed!"
+Sound Design:
+Ambience: subtle uplifting chime.
+Editing Notes:
+Scene duration: ~3s
+@@SCENE@@
+SCENE 4 – RESOLUTION: Consult in 2 Mins
+Visual:
+Same setting: Patient smiles warmly in bed, holding phone up showing consultation confirmed.
+Animation Elements:
+• Camera: gentle pull back
+• Text overlay: none
+• UI element: none
+• Transition: cut
+• Motion graphics: none
+Audio / Dialogue / Voiceover:
+VO: "Too sick to step out? Consult a doctor in 2 minutes on Practo."
+Sound Design:
+Ambience: warm acoustic resolution.
+Editing Notes:
+Scene duration: ~4s
+@@RECORD@@
+{"format":"Storytelling","characters":"Patient in Bed (Solo)","setting":"Cozy bedroom","audioDeliveryMode":"voiceover"}`);
+
+  const normResult = await normalizeUserScript({
+    rawScript: practoRawScript,
+    businessName: "Practo",
+    businessType: "Healthcare App",
+    language: "English",
+    creativeStyle: "Storytelling",
+  });
+
+  assert.strictEqual(normResult.status, "success");
+  assert.strictEqual(normResult.audioDeliveryMode, "voiceover", "audioDeliveryMode must be voiceover");
+  assert.ok(normResult.character2.includes("None") || normResult.character2.includes("Solo"), "Character 2 must be None / Solo Subject");
+  assert.ok(lastAnthropicBody.system.includes("VOICEOVER / SOLO SUBJECT MODE") || lastAnthropicBody.system.includes("VOICEOVER-LED"), "LLM system prompt must contain voiceover-led directive");
+
+  // 3. Quality Gate passes cleanly for VO script without hallucinating 2-actor requirement
+  const voScript = {
+    header: { business: "Practo", format: "Storytelling", lens: "1", hook: "102 fever", moment: "Bedridden sick" },
+    character1: normResult.character1,
+    character2: normResult.character2,
+    setting: normResult.setting,
+    scenes: normResult.scenes,
+    record: { hook_pattern: "102 fever", tension: "Too sick to travel" },
+    audioDeliveryMode: normResult.audioDeliveryMode,
+  };
+  const voGateErrors = runGate(voScript, { language: "English", businessName: "Practo" }, { allowVo: true, audioDeliveryMode: "voiceover" });
+  assert.strictEqual(voGateErrors.length, 0, `VO script must pass Quality Gate with zero errors: ${voGateErrors.join(", ")}`);
+
+  // 4. Video Prompt Compiler directs non-lip-sync off-screen narration
+  const voShot = {
+    framing: "Close-up",
+    primaryAction: "Patient checks thermometer and rubs forehead",
+    fullVisual: "Patient checks thermometer and rubs forehead in cozy dimly lit bedroom",
+    cameraMovement: "subtle slow push-in",
+    dialogue: 'VO: "102 fever. And the doctor wants me to GET UP?!"',
+  };
+  const voStatic = {
+    setting: "Cozy dimly lit bedroom",
+    characters: "Patient in Bed",
+    businessType: "Healthcare App",
+  };
+  const compiledVO = compileShotPrompt(voShot, voStatic, { format: "Storytelling", audioDeliveryMode: "voiceover" });
+  assert.ok(compiledVO.includes("AUDIO & NARRATION: Off-screen Voiceover narration"), "Must indicate off-screen Voiceover narration");
+  assert.ok(compiledVO.includes("The on-screen actor does NOT lip-sync or speak to camera"), "Actor must not lip-sync to VO lines");
+});
+
+test("32. Production Format & Language Intelligence: auto-detection, Conversational format, and Product Demo image reference", async () => {
+  const { detectScriptLanguage, detectScriptFormat } = require("../engine/creative");
+  const { compileShotPrompt } = require("../engine/compiler");
+
+  // 1. Language auto-detection
+  assert.strictEqual(detectScriptLanguage("102 fever. Consult doctor without leaving bed."), "English");
+  assert.strictEqual(detectScriptLanguage("नमस्ते, आज हमारे पास खास दिवाली ऑफर है।"), "Hindi");
+  assert.strictEqual(detectScriptLanguage("Ye phone online se sasta hai bhai, offer check karo!"), "Hinglish");
+  assert.strictEqual(detectScriptLanguage("हा चहा खूप छान आहे, नक्की ट्राय करा."), "Marathi");
+  assert.strictEqual(detectScriptLanguage("வணக்கம், எங்கள் சிறப்பு சலுகை இன்று கிடைக்கிறது."), "Tamil");
+
+  // 2. Format auto-detection
+  const demoScript = `Visual: Host unboxes the new SmartWatch and demonstrates the heart rate monitor on screen.
+Visual: Close-up on product screen showing crisp health metrics and battery percentage.`;
+  assert.strictEqual(detectScriptFormat(demoScript), "Product Demo", "Demonstration and unboxing must detect as Product Demo");
+
+  const conversationalScript = `Ramesh: "Bhaiya, is this sweet fresh?"
+Shopkeeper: "Subah 6 baje bani hai, ek piece chakh ke dekhiye!"`;
+  assert.strictEqual(detectScriptFormat(conversationalScript), "Conversational / Dialogue", "Two-character banter must detect as Conversational / Dialogue");
+
+  // 3. Compiler compiles Conversational and Product Demo with product image
+  const demoShot = {
+    framing: "Close-up",
+    primaryAction: "Host holds up product box",
+    fullVisual: "Host holds up product box showcasing shiny embossed logo",
+    cameraMovement: "smooth slow push-in",
+    dialogue: 'VO: "Available now across India."',
+  };
+  const demoStatic = {
+    setting: "Modern studio space",
+    characters: "Host",
+    businessType: "Consumer Electronics",
+  };
+  const compiledDemoWithImage = compileShotPrompt(demoShot, demoStatic, {
+    format: "Product Demo",
+    productPhoto: { name: "smartwatch-retail-box.png" },
+  });
+  assert.ok(compiledDemoWithImage.includes("PRODUCT DEMO STAGING: Physical product front-and-center"), "Must inject product demo staging");
+  assert.ok(compiledDemoWithImage.includes('PRODUCT VISUAL REFERENCE: Render physical product matching reference photo ("smartwatch-retail-box.png")'), "Must inject product reference image directive");
+
+  const compiledConversational = compileShotPrompt(demoShot, demoStatic, {
+    format: "Conversational / Dialogue",
+  });
+  assert.ok(compiledConversational.includes("CONVERSATIONAL DIALOGUE STAGING"), "Must inject conversational dialogue directive");
+});
+
+test("33. Upfront Duration & Dimension Control: 20s 5-scene Practo script preservation and aspect ratio compilation", async () => {
+  const { normalizeUserScript } = require("../engine/creative");
+  const { compileShotPrompt } = require("../engine/compiler");
+  const { runGate } = require("../engine/gate");
+
+  // 1. Practo 5-scene commercial pasted for 20s video
+  const practo5Scene = `1 (0–3 sec) — HOOK
+TEXT + VO: "102 fever. And the doctor wants me to GET UP?!"
+2 (3–6 sec) — THE PROBLEM
+VO: "Get dressed. Book a cab. Travel to a clinic? No chance!"
+3 (6–9 sec) — THE REALISATION
+VO: "Wait. I can consult a doctor without leaving my bed!"
+4 (9–14 sec) — THE SOLUTION
+VO: "Book an online consultation and talk to a doctor right from home."
+5 (14–18 sec) — PAYOFF + CTA
+VO: "Too sick to step out? Consult a doctor in 2 minutes on Practo."`;
+
+  const normResult = await normalizeUserScript({
+    rawScript: practo5Scene,
+    businessName: "Practo",
+    businessType: "Healthcare App",
+    targetDuration: "20s",
+    aspectRatio: "16:9",
+  });
+
+  assert.strictEqual(normResult.status, "success");
+  assert.strictEqual(normResult.totalScenes, 5, "20s commercial with 5 input scenes must preserve all 5 scenes");
+  assert.strictEqual(normResult.targetDuration, "20s");
+  assert.strictEqual(normResult.aspectRatio, "16:9");
+
+  // 2. Gate validation for 20s with 5 scenes
+  const gateErrors = runGate(
+    {
+      header: { business: "Practo", format: "Storytelling", lens: "1", hook: "102 fever", moment: "Bedridden" },
+      character1: normResult.character1,
+      character2: normResult.character2,
+      setting: normResult.setting,
+      scenes: normResult.scenes,
+      record: { hook_pattern: "102 fever", tension: "Too sick to travel" },
+      audioDeliveryMode: "voiceover",
+    },
+    { language: "English", businessName: "Practo", targetDuration: "20s" },
+    { allowVo: true, audioDeliveryMode: "voiceover", targetDuration: "20s", allowSceneCount: 5 }
+  );
+  assert.strictEqual(gateErrors.length, 0, `5-scene 20s script must pass gate without error: ${gateErrors.join(", ")}`);
+
+  // 3. Aspect Ratio directives compiled into prompt
+  const baseShot = {
+    framing: "Medium shot",
+    primaryAction: "Patient rests comfortably in bed",
+    fullVisual: "Same setting: Patient rests comfortably in bed, smiling at smartphone screen",
+    cameraMovement: "slow horizontal drift",
+    dialogue: 'VO: "Consult in 2 minutes on Practo."',
+  };
+  const baseStatic = {
+    setting: "Sunlit cozy modern bedroom",
+    characters: "Patient in Bed",
+    businessType: "Healthcare App",
+  };
+
+  const widescreenPrompt = compileShotPrompt(baseShot, baseStatic, { aspectRatio: "16:9" });
+  assert.ok(widescreenPrompt.includes("WIDESCREEN 16:9 COMPOSITION"), "Must specify 16:9 widescreen");
+
+  const squarePrompt = compileShotPrompt(baseShot, baseStatic, { aspectRatio: "1:1" });
+  assert.ok(squarePrompt.includes("SQUARE 1:1 COMPOSITION"), "Must specify 1:1 square");
+
+  const verticalPrompt = compileShotPrompt(baseShot, baseStatic, { aspectRatio: "9:16" });
+  assert.ok(verticalPrompt.includes("VERTICAL 9:16 COMPOSITION"), "Must specify 9:16 vertical");
+});
+
+test("Simple Studio: Upfront Dimension & Duration controls, script-first flow, and category safety", async () => {
+  // 1. generateSimpleAdPackages attaches duration and aspectRatio
+  const packages = await creative.generateSimpleAdPackages({
+    businessName: "Voxy AI",
+    businessType: "AI App",
+    brief: "AI companion that helps you practice conversational skills",
+    language: "English",
+    duration: "15s",
+    aspectRatio: "16:9",
+  });
+
+  assert.strictEqual(packages.length, 3, "Must generate exactly 3 packages");
+  for (const pkg of packages) {
+    assert.strictEqual(pkg.duration, "15s", "Package must retain selected duration");
+    assert.strictEqual(pkg.aspectRatio, "16:9", "Package must retain selected aspectRatio");
+    assert.ok(pkg.fullScriptText, "Package must have fullScriptText compiled");
+  }
+
+  // 2. SimpleBusinessStudio.jsx component contract verification
+  const studioFile = fs.readFileSync(path.join(__dirname, "../src/components/v2/SimpleBusinessStudio.jsx"), "utf8");
+
+  // Verify category ReferenceError fix
+  assert.ok(
+    studioFile.includes("const category = categoryProp || businessType || 'Local Business'"),
+    "SimpleBusinessStudio must define category in scope to prevent ReferenceError"
+  );
+  assert.ok(
+    studioFile.includes("<SimpleAdPackagesLoader"),
+    "SimpleBusinessStudio must render SimpleAdPackagesLoader"
+  );
+  assert.ok(
+    studioFile.includes("category={category}"),
+    "SimpleBusinessStudio must pass defined category to SimpleAdPackagesLoader"
+  );
+
+  // Verify Dimension & Duration controls exist
+  assert.ok(studioFile.includes("DIMENSION_OPTIONS"), "DIMENSION_OPTIONS constant must be defined");
+  assert.ok(studioFile.includes("DURATION_OPTIONS"), "DURATION_OPTIONS constant must be defined");
+  assert.ok(studioFile.includes("'9:16'"), "9:16 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'16:9'"), "16:9 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'1:1'"), "1:1 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'15s'"), "15s duration option must be available");
+  assert.ok(studioFile.includes("'30s'"), "30s duration option must be available");
+  assert.ok(studioFile.includes("'60s'"), "60s duration option must be available");
+
+  // Verify script-first CTA and copy
+  assert.ok(studioFile.includes("Generate 3 Ad Scripts ➔"), "Step 1 button must say Generate 3 Ad Scripts ➔");
+  assert.ok(studioFile.includes("Writing 3 Ad Scripts..."), "Step 1 loading state must say Writing 3 Ad Scripts...");
+  assert.ok(studioFile.includes("Choose Your Ad Script"), "Step 2 header must say Choose Your Ad Script");
+  assert.ok(studioFile.includes("Produce Video for Selected Script ➔"), "Step 2 button must say Produce Video for Selected Script ➔");
+  assert.ok(studioFile.includes("Choose Script"), "Step 2 progress bar label must say Choose Script");
+  assert.ok(studioFile.includes("Produce Video"), "Step 3 progress bar label must say Produce Video");
+
+  // Verify duration and aspectRatio are sent in POST and onProduceVideo
+  assert.ok(studioFile.includes("duration,"), "duration must be passed in simple-packages request");
+  assert.ok(studioFile.includes("aspectRatio,"), "aspectRatio must be passed in simple-packages request");
 });

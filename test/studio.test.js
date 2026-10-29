@@ -1667,6 +1667,16 @@ test('V2 Entry Point 2 (Script): ExistingScriptModal validates and fast-tracks d
   assert.ok(completedStages.includes('story'), 'Must mark stages up to story as completed');
 });
 
+test('V2 Script Import Modal: 2-step review modal renders editable World Continuity Lock & 4 production scenes', () => {
+  const scriptModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ExistingScriptModal.jsx'), 'utf8');
+  assert.ok(scriptModalSrc.includes('modalStep === 2'), 'Must support step 2 review screen');
+  assert.ok(scriptModalSrc.includes('World Continuity Lock'), 'Must display World Continuity Lock section');
+  assert.ok(scriptModalSrc.includes('AI Consistency Anchor'), 'Must label continuity anchor');
+  assert.ok(scriptModalSrc.includes('Production Shots (Compiled for Video Generation)'), 'Must display compiled production shots');
+  assert.ok(scriptModalSrc.includes('Back to Script Input'), 'Must provide navigation back to step 1');
+  assert.ok(scriptModalSrc.includes('compileStructuredScene'), 'Must recompile scenes into standard Annex-A format');
+});
+
 test('V2 Entry Point 3 (URL): UrlResearchModal handles URL extraction and pre-populates Stage 02 brief', () => {
   const urlModalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/UrlResearchModal.jsx'), 'utf8');
   assert.ok(urlModalSrc.includes('/api/research/url'), 'Must call /api/research/url endpoint');
@@ -2439,5 +2449,102 @@ test('Video Generation Completion: App.jsx avoids bare selectedDirectionIndex / 
   // Check that selectedDirectionIdx is properly assigned to the property
   assert.ok(appSrc.includes('selectedDirectionIndex: typeof selectedDirectionIdx === \'number\''), 'Must assign selectedDirectionIdx to selectedDirectionIndex property');
 });
+
+test('New Film Project & Restart Film: Global confirmation modal and Simple Studio reset integration', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const appShellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
+
+  // 1. AppShell supports both onStartNewFilm and onRestartFilm
+  assert.ok(appShellSrc.includes('onRestartFilm'), 'AppShell must support onRestartFilm prop');
+  assert.ok(appShellSrc.includes('onRestartFilm || onStartNewFilm'), 'Restart Film button must invoke onRestartFilm or onStartNewFilm');
+  assert.ok(appShellSrc.includes('onClick={onStartNewFilm}'), 'New Film Project CTA must invoke onStartNewFilm');
+
+  // 2. App.jsx wires onRestartFilm and onStartNewFilm to AppShell
+  assert.ok(appSrc.includes('onRestartFilm='), 'App.jsx must pass onRestartFilm to AppShell');
+  assert.ok(appSrc.includes('onStartNewFilm='), 'App.jsx must pass onStartNewFilm to AppShell');
+
+  // 3. New Film Confirmation modal is rendered outside conditional studioMode branch (global root)
+  const appShellCloseIndex = appSrc.indexOf('</AppShell>');
+  const newFilmModalIndex = appSrc.indexOf('{isNewFilmConfirmOpen && (');
+  assert.ok(appShellCloseIndex > 0, '</AppShell> must exist in App.jsx');
+  assert.ok(newFilmModalIndex > 0, '{isNewFilmConfirmOpen && ( must exist in App.jsx');
+  assert.ok(
+    newFilmModalIndex > appShellCloseIndex,
+    'New Film confirmation modal must be placed at the global root level outside </AppShell> so it renders in Simple Studio, Director Mode, and all views'
+  );
+
+  // 4. Toast notification is also global
+  const toastIndex = appSrc.indexOf('{toastMessage && (');
+  assert.ok(toastIndex > appShellCloseIndex, 'Toast notification must be placed globally outside </AppShell>');
+
+  // 5. SimpleBusinessStudio is equipped with a dynamic key referencing brandResetKey for full UI reset
+  assert.ok(appSrc.includes('key={`simple-studio-${brandResetKey}'), 'SimpleBusinessStudio must have dynamic key tied to brandResetKey');
+
+  // 6. hasActiveWork guard avoids redundant confirmation modal on blank projects
+  assert.ok(appSrc.includes('const hasActiveWork = Boolean('), 'handleStartNewProject must detect active work');
+});
+
+test('Director Mode: Video Dimension and Video Length unified controls & end-to-end integration', async () => {
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const creativeSrc = fs.readFileSync(path.join(__dirname, '../engine/creative.js'), 'utf8');
+
+  // 1. Screen03Settings UI Labels & Options
+  assert.ok(guidedStudioSrc.includes('2. Video Dimension'), 'Must render 2. Video Dimension label');
+  assert.ok(guidedStudioSrc.includes('3. Video Length'), 'Must render 3. Video Length label');
+  assert.ok(guidedStudioSrc.includes('9:16 Vertical'), 'Must offer 9:16 Vertical');
+  assert.ok(guidedStudioSrc.includes('16:9 Landscape'), 'Must offer 16:9 Landscape');
+  assert.ok(guidedStudioSrc.includes('1:1 Square'), 'Must offer 1:1 Square');
+  assert.ok(guidedStudioSrc.includes('15s Hook'), 'Must offer 15s Hook');
+  assert.ok(guidedStudioSrc.includes('30s Standard'), 'Must offer 30s Standard');
+  assert.ok(guidedStudioSrc.includes('60s Extended'), 'Must offer 60s Extended');
+  assert.ok(guidedStudioSrc.includes('Popular'), 'Must mark 30s Standard as popular/recommended');
+
+  // 2. StudioChoicesBar supports dimension
+  assert.ok(guidedStudioSrc.includes("if (dimension || platform) activeChoices.push({ type: 'dimension'"), 'StudioChoicesBar must include dimension');
+
+  // 3. Screen07Script metadata strip displays dimension
+  assert.ok(guidedStudioSrc.includes('<span>{dimensionLabel}</span>'), 'Screen07Script metadata pill must display dimensionLabel');
+
+  // 4. App.jsx wires onDimensionChange and passes to userContext
+  assert.ok(appSrc.includes('onDimensionChange='), 'App.jsx must pass onDimensionChange to Screen03Settings');
+  assert.ok(appSrc.includes("updateUserContext('aspectRatio', dimId)"), 'App.jsx must update aspectRatio on userContext');
+  assert.ok(appSrc.includes("updateUserContext('dimension', dimId)"), 'App.jsx must update dimension on userContext');
+
+  // 5. Backend creative.synthesizeMasterScript incorporates dimension and duration
+  assert.ok(creativeSrc.includes('- Video Dimension & Framing: ${ratioLabel}'), 'synthesizeMasterScript must inject Video Dimension into DNA');
+  assert.ok(creativeSrc.includes('- Target Film Duration: ${targetDur}'), 'synthesizeMasterScript must inject Target Film Duration into DNA');
+  assert.ok(creativeSrc.includes('VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}'), 'synthesizeMasterScript must inject aspect ratio into stage instructions');
+
+  // 6. Test synthesizeMasterScript output with 16:9 and 60s
+  const testForm = {
+    businessName: 'Apex Fitness',
+    businessType: 'Gym & Crossfit Studio',
+    town: 'Mumbai',
+    language: 'English',
+    aspectRatio: '16:9',
+    duration: '60s',
+  };
+  const testDNA = {
+    direction: { title: 'High Octane Energy', description: 'Show intense workouts' },
+    hook: { hookLine: 'Ready to level up?', visualAction: 'Close up of weight drop' },
+    plot: { title: 'The Transformation', coreIdea: 'From zero to fitness champion', conflictBeat: 'Struggling at first', payoffBeat: 'Crushing the goal' },
+    character1: 'Coach Vikram',
+    character2: 'New Member Rohan',
+    location: { name: 'Crossfit Arena', details: 'Industrial gym' },
+  };
+
+  const synthesized = await creativeEngine.synthesizeMasterScript({
+    form: testForm,
+    creativeDNA: testDNA,
+  });
+
+  assert.strictEqual(synthesized.aspectRatio, '16:9', 'synthesized script must preserve selected 16:9 aspectRatio');
+  assert.strictEqual(synthesized.dimension, '16:9', 'synthesized script must preserve selected 16:9 dimension');
+  assert.strictEqual(synthesized.duration, '60s', 'synthesized script must preserve selected 60s duration');
+  assert.strictEqual(synthesized.shotSpec.project.aspectRatio, '16:9', 'shotSpec must retain 16:9 aspectRatio');
+  assert.strictEqual(synthesized.shotSpec.project.duration, '60s', 'shotSpec must retain 60s duration');
+});
+
 
 

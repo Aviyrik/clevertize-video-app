@@ -43,7 +43,7 @@ test("Settings screen has the per-video logo field next to platform and product 
   assert.ok(settings.includes("handleFileUpload(file, 'videoLogo')"), "upload reads into videoLogo like the product photo");
   assert.ok(settings.includes("updateUserContext('videoLogo', null)"), "remove for this video");
   assert.ok(settings.includes("videoLogoOf(userContext)"), "prefilled from the business profile logo");
-  assert.ok(settings.indexOf("2. Platform") < settings.indexOf("Product Asset") && settings.indexOf("Product Asset") < settings.indexOf("Logo Image (Optional)"), "grouped with platform and product image");
+  assert.ok(settings.indexOf("2. Video Dimension") < settings.indexOf("Product Asset") && settings.indexOf("Product Asset") < settings.indexOf("Logo Image (Optional)"), "grouped with the dimension selector and product image");
 });
 
 test("every render and pipeline request sends the per-video logo, not userContext.logo", () => {

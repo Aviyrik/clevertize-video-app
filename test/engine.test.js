@@ -336,13 +336,14 @@ test("shot prompts describe the frame that will actually be rendered", () => {
   const shot = { framing: "Medium close-up (subject and hero product prominent in vertical frame)", primaryAction: "She smiles.", fullVisual: "She smiles.", cameraMovement: "push-in", dialogue: "None" };
   const world = { setting: "Shop", characters: "A | B" };
   const tall = compileShotPrompt(shot, world, {});
-  assert.ok(tall.includes("vertical frame). Subject/character fills primary vertical 9:16 viewing area"));
+  assert.ok(tall.includes("vertical frame). VERTICAL 9:16 COMPOSITION"));
+  assert.ok(tall.includes("Mobile-native vertical framing with authentic intimacy"), "9:16 UGC text unchanged");
   const wide = compileShotPrompt(shot, world, { aspectRatio: "16:9" });
-  assert.ok(wide.includes("horizontal frame). Subject/character fills primary horizontal 16:9 viewing area"));
-  assert.doesNotMatch(wide, /vertical|9:16/);
+  assert.ok(wide.includes("horizontal frame). WIDESCREEN 16:9 COMPOSITION"));
+  assert.doesNotMatch(wide, /vertical|9:16/i);
   const square = compileShotPrompt(shot, world, { aspectRatio: "1:1" });
-  assert.ok(square.includes("square frame). Subject/character fills primary square 1:1 viewing area"));
-  assert.doesNotMatch(square, /vertical|9:16/);
+  assert.ok(square.includes("square frame). SQUARE 1:1 COMPOSITION"));
+  assert.doesNotMatch(square, /vertical|9:16/i);
 });
 
 test("D: empty product with no fallback fails pre-flight validation immediately", () => {

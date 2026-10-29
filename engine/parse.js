@@ -95,6 +95,15 @@ function sceneForGeneration(scene, ctx = {}) {
     const perScene = (totalSec / 4).toFixed(1);
     lock.push(`PACING & DURATION: Total video target duration is ${ctx.duration} across 4 scenes (~${perScene}s per scene). Ensure fast, snappy pacing calibrated to ~${perScene} seconds.`);
   }
+  if (ctx.aspectRatio || ctx.dimension || ctx.platform) {
+    const ar = ctx.aspectRatio || ctx.dimension || (String(ctx.platform).includes("16:9") ? "16:9" : String(ctx.platform).includes("1:1") ? "1:1" : "9:16");
+    const framingDirective = ar === "16:9"
+      ? "WIDESCREEN 16:9 COMPOSITION: Cinematic landscape horizontal framing. Wide horizontal depth with comfortable two-shot or medium wide staging, ample room context, and natural lateral camera tracking."
+      : ar === "1:1"
+      ? "SQUARE 1:1 COMPOSITION: Balanced square composition with centered subject framing, equal headroom and side margins, optimized for social feed grids."
+      : "VERTICAL 9:16 COMPOSITION: Mobile-native vertical framing. Subject/character fills primary vertical 9:16 viewing area with clear head-and-chest or waist-up visibility.";
+    lock.push(framingDirective);
+  }
   if (ctx.language) {
     lock.push(`LANGUAGE & SPOKEN DELIVERY: Dialogue is in ${ctx.language}. Actors mouth, deliver, and express authentic spoken dialogue delivery matching ${ctx.language}.`);
   }

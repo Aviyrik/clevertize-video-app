@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { downloadVideoWithTicket } from '../utils/downloadVideo.js';
 import {
   Sparkles,
   Check,
@@ -171,6 +172,7 @@ export function StudioChoicesBar({
     style,
     language,
     duration,
+    dimension,
     platform,
     idea,
     opening,
@@ -181,7 +183,7 @@ export function StudioChoicesBar({
   if (style) activeChoices.push({ type: 'style', label: style, stage: 'settings' });
   if (language) activeChoices.push({ type: 'language', label: language, stage: 'settings' });
   if (duration) activeChoices.push({ type: 'duration', label: duration, stage: 'settings' });
-  if (platform) activeChoices.push({ type: 'platform', label: platform, stage: 'settings' });
+  if (dimension || platform) activeChoices.push({ type: 'dimension', label: dimension || platform, stage: 'settings' });
   if (idea) activeChoices.push({ type: 'idea', label: idea, prefix: 'Idea', stage: 'idea' });
   if (opening) activeChoices.push({ type: 'opening', label: opening, prefix: 'Opening', stage: 'opening' });
 
@@ -1342,6 +1344,7 @@ export function Screen03Settings({
   onLanguageChange,
   onStyleChange,
   onPlatformChange,
+  onDimensionChange,
   onDurationChange,
   onContinue,
   onBack,
@@ -1352,22 +1355,27 @@ export function Screen03Settings({
     'Kannada', 'Malayalam', 'Punjabi'
   ];
 
-  const PLATFORMS = [
-    { id: 'Instagram Reels / 9:16', label: 'Instagram' },
-    { id: 'YouTube Shorts / 9:16', label: 'YouTube' },
-    { id: 'Facebook Video / 9:16', label: 'Facebook' },
-    { id: 'WhatsApp Status / 9:16', label: 'WhatsApp' },
-    { id: 'Other / 9:16', label: 'Other' },
-    { id: 'YouTube Landscape / 16:9', label: 'YouTube 16:9' },
-    { id: 'LinkedIn Video / 16:9', label: 'LinkedIn 16:9' },
-    { id: 'Instagram Feed / 1:1', label: 'Instagram Feed 1:1' },
-    { id: 'Facebook Feed / 1:1', label: 'Facebook Feed 1:1' },
-    { id: 'LinkedIn Feed / 1:1', label: 'LinkedIn Feed 1:1' },
+  const DIMENSION_OPTIONS = [
+    { id: '9:16', label: '9:16 Vertical', desc: 'Reels / Shorts / TikTok', icon: '📱' },
+    { id: '16:9', label: '16:9 Landscape', desc: 'YouTube / TV / Desktop', icon: '🖥️' },
+    { id: '1:1', label: '1:1 Square', desc: 'Social Feed / Posts', icon: '⏹️' },
   ];
 
-  const DURATIONS = ['15s', '20s', '30s'];
+  const DURATION_OPTIONS = [
+    { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
+    { id: '30s', label: '30s Standard', desc: 'Commercial pacing', recommended: true },
+    { id: '60s', label: '60s Extended', desc: 'Full product story' },
+  ];
 
   const STYLES = [
+    {
+      id: 'Conversational / Dialogue',
+      label: 'Conversational',
+      icon: '💬',
+      tagline: 'Two people in dialogue.',
+      detail: 'Relatable back-and-forth chat, customer & merchant banter',
+      recommended: false,
+    },
     {
       id: 'UGC / Creator-style',
       label: 'UGC',
@@ -1375,14 +1383,6 @@ export function Screen03Settings({
       tagline: 'Feels like a real person made it.',
       detail: 'Direct-to-camera, creator rhythm & natural mobile energy',
       recommended: true,
-    },
-    {
-      id: 'Storytelling',
-      label: 'Story',
-      icon: '🎬',
-      tagline: 'A short story with people.',
-      detail: '2-character relatable dilemma & emotional payoff',
-      recommended: false,
     },
     {
       id: 'Product Demo',
@@ -1393,19 +1393,19 @@ export function Screen03Settings({
       recommended: false,
     },
     {
-      id: 'Situational Comedy',
-      label: 'Funny',
-      icon: '😄',
-      tagline: 'Setup, funny moment, payoff.',
-      detail: 'Witty relatable problem, playful banter & comic punchline',
+      id: 'Storytelling',
+      label: 'Story',
+      icon: '🎬',
+      tagline: 'A short story with people.',
+      detail: '2-character relatable dilemma & emotional payoff',
       recommended: false,
     },
   ];
 
   const currentLang = userContext.language || 'English';
-  const currentDuration = userContext.targetDuration || '20s';
+  const currentDuration = userContext.targetDuration || userContext.duration || '30s';
   const currentStyle = userContext.creativeStyle || 'UGC / Creator-style';
-  const currentPlatform = userContext.platform || 'Instagram Reels / 9:16';
+  const currentDimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -1415,7 +1415,7 @@ export function Screen03Settings({
           How should we make the video?
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Set your language, platform, duration, and the creative feeling for the film.
+          Set your language, video dimension, video length, and the creative feeling for the film.
         </p>
       </div>
 
@@ -1464,72 +1464,128 @@ export function Screen03Settings({
           </div>
         </div>
 
-        {/* 2. Platform & Duration */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-          {/* Platform */}
+        {/* 2. Video Dimension & 3. Video Length */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+          {/* Video Dimension */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-              2. Platform
-            </label>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {PLATFORMS.map((plat) => {
-                const isSelected = currentPlatform === plat.id;
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+                2. Video Dimension
+              </label>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                {currentDimension === '16:9' ? 'Landscape (YouTube)' : currentDimension === '1:1' ? 'Square (Feed)' : 'Vertical (Reels/Shorts)'}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {DIMENSION_OPTIONS.map((dim) => {
+                const isSelected = currentDimension === dim.id;
                 return (
                   <button
-                    key={plat.id}
+                    key={dim.id}
                     type="button"
                     onClick={() => {
-                      if (onPlatformChange) onPlatformChange(plat.label, plat.id);
-                      else updateUserContext('platform', plat.id);
+                      if (onDimensionChange) onDimensionChange(dim.id, dim.label);
+                      if (onPlatformChange) onPlatformChange(dim.label, dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
+                      if (updateUserContext) {
+                        updateUserContext('aspectRatio', dim.id);
+                        updateUserContext('dimension', dim.id);
+                        updateUserContext('platform', dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
+                      }
                     }}
                     style={{
-                      padding: '7px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      padding: '10px 6px',
                       borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: isSelected ? 700 : 500,
-                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    {plat.label}
+                    <span style={{ fontSize: 16 }}>{dim.icon}</span>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                      {dim.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                      {dim.desc}
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Duration */}
+          {/* Video Length / Duration */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-              3. Duration
-            </label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {DURATIONS.map((dur) => {
-                const isSelected = currentDuration === dur;
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+                3. Video Length
+              </label>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                Target run-time
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {DURATION_OPTIONS.map((dur) => {
+                const isSelected = currentDuration === dur.id;
                 return (
                   <button
-                    key={dur}
+                    key={dur.id}
                     type="button"
                     onClick={() => {
-                      if (onDurationChange) onDurationChange(dur);
-                      else updateUserContext('targetDuration', dur);
+                      if (onDurationChange) onDurationChange(dur.id);
+                      if (updateUserContext) {
+                        updateUserContext('targetDuration', dur.id);
+                        updateUserContext('duration', dur.id);
+                      }
                     }}
                     style={{
-                      padding: '7px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      padding: '10px 6px',
                       borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: isSelected ? 700 : 500,
-                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
                     }}
                   >
-                    {dur}
+                    {dur.recommended && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: -7,
+                          right: 6,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#FFFFFF',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        Popular
+                      </span>
+                    )}
+                    <span style={{ fontSize: 16 }}>⏱️</span>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                      {dur.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                      {dur.desc}
+                    </div>
                   </button>
                 );
               })}
@@ -3323,13 +3379,14 @@ export function Screen07Script({
   };
 
   const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || '').includes('Demo') ? 'Product Demo' : (userContext.creativeStyle || '').includes('Comedy') ? 'Funny' : 'Story';
-  const duration = userContext.targetDuration || '20s';
-  const platform = (userContext.platform || 'Instagram').split('/')[0].trim();
+  const duration = userContext.targetDuration || userContext.duration || '30s';
+  const dimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
+  const dimensionLabel = dimension === '16:9' ? '16:9 Landscape' : dimension === '1:1' ? '1:1 Square' : '9:16 Vertical';
   const lang = userContext.language || 'English';
 
   const handleCopyEntireScript = async () => {
     if (!scenes || !scenes.length) return;
-    const fullText = `COMMERCIAL SCRIPT: ${userContext.businessName || 'Business'}\nSTYLE: ${cleanStyle} | DURATION: ${duration} | LANGUAGE: ${lang}\n\n` +
+    const fullText = `COMMERCIAL SCRIPT: ${userContext.businessName || 'Business'}\nSTYLE: ${cleanStyle} | DURATION: ${duration} | DIMENSION: ${dimensionLabel} | LANGUAGE: ${lang}\n\n` +
       (setting ? `SETTING:\n${setting}\n\n` : '') +
       (character1 ? `CHARACTERS:\n${character1}\n${character2 || ''}\n\n` : '') +
       scenes.map((s, idx) => `=== SCENE ${idx + 1} ===\n${s}`).join('\n\n');
@@ -3596,7 +3653,7 @@ export function Screen07Script({
           }}>
             <span>{duration}</span>
             <span>·</span>
-            <span>{platform}</span>
+            <span>{dimensionLabel}</span>
             <span>·</span>
             <span>{cleanStyle}</span>
             <span>·</span>
@@ -4560,17 +4617,22 @@ export function Screen08Video({
               )}
             </button>
 
-            <a
-              href={videoUrl}
-              download={`${userContext.businessName || 'clevertize'}-video.mp4`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`);
+                } catch (err) {
+                  alert(err.message || 'Download failed');
+                }
+              }}
               style={{
                 padding: '10px 20px',
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-primary)',
                 color: '#ffffff',
-                textDecoration: 'none',
+                border: 'none',
+                cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'inline-flex',
@@ -4581,7 +4643,7 @@ export function Screen08Video({
             >
               <Download size={14} />
               <span>Download Video</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>

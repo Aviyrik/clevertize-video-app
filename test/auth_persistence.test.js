@@ -548,17 +548,19 @@ test('Phase 1 Data Integrity: Save Script Duplicate Request Prevention and Backe
   const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
   const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
 
-  // 1. App.jsx has isSavingProject in-flight guard
+  // 1. App.jsx has synchronous ref guard and isSavingProject in-flight guard
   assert.ok(
+    appSrc.includes('const isSavingProjectRef = useRef(false);') &&
     appSrc.includes('const [isSavingProject, setIsSavingProject] = useState(false);'),
-    'App.jsx must declare isSavingProject state'
+    'App.jsx must declare isSavingProjectRef and isSavingProject state'
   );
   assert.ok(
-    appSrc.includes('if (isSavingProject) return;'),
-    'handleSaveCurrentProject must exit early if save is already in-flight'
+    appSrc.includes('isSavingProjectRef.current') &&
+    appSrc.includes('return;'),
+    'handleSaveCurrentProject must exit early via synchronous ref guard if save is already in-flight'
   );
   assert.ok(
-    appSrc.includes('resolvedProjectId = activeProjectId ||') &&
+    appSrc.includes('currentSavingProjectIdRef.current') &&
     appSrc.includes('setActiveProjectId(resolvedProjectId)'),
     'handleSaveCurrentProject must establish stable project ID upfront before dispatching'
   );
@@ -608,4 +610,96 @@ test('Phase 1 Data Integrity: Save Script Duplicate Request Prevention and Backe
   assert.equal(listRes.body.projects.length, 1, 'Duplicate save requests with same ID must update record, not duplicate');
   assert.equal(listRes.body.projects[0].id, projectId);
   assert.equal(listRes.body.projects[0].title, 'Updated Save Ad Film');
+});
+
+test('Phase 1.1 Data Integrity: Cross-tenant project hijacking prevention & concurrent duplicate save prevention', async () => {
+  // Create User 1 and User 2
+  const user1 = await post('/api/auth/signup', {
+    email: 'user1-projects@example.com',
+    password: 'password123',
+    name: 'User 1',
+  });
+  assert.equal(user1.status, 200);
+
+  const user2 = await post('/api/auth/signup', {
+    email: 'user2-projects@example.com',
+    password: 'password123',
+    name: 'User 2',
+  });
+  assert.equal(user2.status, 200);
+
+  // User 1 creates a project
+  const u1ProjId = `proj_u1_${Date.now()}`;
+  const u1Save = await post('/api/projects', {
+    id: u1ProjId,
+    title: 'User 1 Campaign',
+    businessName: 'User 1 Business',
+    brief: 'Campaign 1 Brief',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user1.body.token);
+  assert.equal(u1Save.status, 200);
+
+  // User 2 attempts to overwrite or hijack User 1's project ID -> must be rejected with 403 Forbidden
+  const hijackAttempt = await post('/api/projects', {
+    id: u1ProjId,
+    title: 'Malicious Hijack',
+    businessName: 'Attacker Brand',
+    brief: 'Attempted overwrite',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user2.body.token);
+  assert.equal(hijackAttempt.status, 403);
+  assert.ok(/belongs to another user|forbidden/i.test(hijackAttempt.body.error));
+
+  // Verify User 1's project remains unmodified
+  const u1Get = await get('/api/projects', user1.body.token);
+  assert.equal(u1Get.body.projects.length, 1);
+  assert.equal(u1Get.body.projects[0].title, 'User 1 Campaign');
+
+  // 1. Concurrent retries of the same logical save using stable project ID / idempotency key
+  const stableId = `proj_stable_${Date.now()}`;
+  const saveA = await post('/api/projects', {
+    id: stableId,
+    title: 'Campaign Draft 1',
+    businessName: 'Fast Store',
+    brief: 'Diwali rush',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user1.body.token);
+  assert.equal(saveA.status, 200);
+
+  const saveARetry = await post('/api/projects', {
+    id: stableId,
+    title: 'Campaign Draft 1 - Updated',
+    businessName: 'Fast Store',
+    brief: 'Diwali rush - updated',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user1.body.token);
+  assert.equal(saveARetry.status, 200);
+
+  // 2. Two distinct projects created in quick succession (within 5 seconds) must NOT be merged
+  const distinctProj1 = await post('/api/projects', {
+    title: 'Fast Store Summer Offer',
+    businessName: 'Fast Store',
+    brief: 'Summer discount 20%',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user1.body.token);
+  assert.equal(distinctProj1.status, 200);
+
+  const distinctProj2 = await post('/api/projects', {
+    title: 'Fast Store Winter Offer',
+    businessName: 'Fast Store',
+    brief: 'Winter clearance 30%',
+    scenes: ['S1', 'S2', 'S3', 'S4'],
+  }, user1.body.token);
+  assert.equal(distinctProj2.status, 200);
+
+  // User 1 should have exactly 4 projects:
+  // 1. User 1 Campaign
+  // 2. Campaign Draft 1 - Updated (idempotent retry with stableId updated record, no duplicate)
+  // 3. Fast Store Summer Offer (distinct project preserved)
+  // 4. Fast Store Winter Offer (distinct project preserved)
+  const u1FinalList = await get('/api/projects', user1.body.token);
+  assert.equal(u1FinalList.body.projects.length, 4, 'Distinct projects in quick succession must not be merged');
+  assert.ok(u1FinalList.body.projects.some((p) => p.id === stableId && p.title === 'Campaign Draft 1 - Updated'));
+  assert.ok(u1FinalList.body.projects.some((p) => p.title === 'Fast Store Summer Offer'));
+  assert.ok(u1FinalList.body.projects.some((p) => p.title === 'Fast Store Winter Offer'));
 });

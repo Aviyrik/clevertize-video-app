@@ -24,6 +24,7 @@ test('WorkflowLoadingScreen: Exports all core and specialized workflow loaders',
     'SimpleVideoProductionLoader',
     'SceneRewriteLoader',
     'AuthSessionLoader',
+    'ScriptVerificationLoader',
   ];
 
   for (const loader of expectedLoaders) {
@@ -114,3 +115,14 @@ test('WorkflowLoadingScreen: App.jsx integrates AuthSessionLoader for initial se
   assert.ok(content.includes('AuthSessionLoader'), 'App.jsx must import AuthSessionLoader');
   assert.ok(content.includes('<AuthSessionLoader'), 'App.jsx must render AuthSessionLoader when isAuthChecking');
 });
+
+test('WorkflowLoadingScreen: ExistingScriptModal integrates ScriptVerificationLoader during script verification', async () => {
+  const modalPath = path.resolve(process.cwd(), 'src/components/v2/ExistingScriptModal.jsx');
+  assert.ok(fs.existsSync(modalPath), 'ExistingScriptModal.jsx must exist');
+
+  const content = fs.readFileSync(modalPath, 'utf8');
+
+  assert.ok(content.includes('ScriptVerificationLoader'), 'ExistingScriptModal must import ScriptVerificationLoader');
+  assert.ok(content.includes('<ScriptVerificationLoader'), 'ExistingScriptModal must render ScriptVerificationLoader when isValidating');
+});
+

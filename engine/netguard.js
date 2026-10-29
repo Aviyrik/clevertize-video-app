@@ -109,16 +109,23 @@ function requestOnce(url, { headers, deadline, maxBytes, truncate, lookup }) {
  * GET a user-supplied URL safely.
  * opts: { headers, timeoutMs (whole request incl. redirects), maxBytes, truncate (keep the first
  * maxBytes instead of failing), maxRedirects, lookup (DNS hook — defaults to guardedLookup) }
- * Resolves { status, ok, headers, body: Buffer, url } — throws (code EBLOCKED) for restricted targets.
+ * Resolves { status, ok, headers, body: Buffer, url } — throws (code EBLOCKED) for restricted targets;
+ * the error's `redirected` flag says whether it was a redirect hop (not the URL asked for) that was refused.
  */
 async function safeFetch(urlString, { headers = {}, timeoutMs = 6000, maxBytes = 5 * 1024 * 1024, truncate = false, maxRedirects = 5, lookup = guardedLookup } = {}) {
   const deadline = Date.now() + timeoutMs;
   let current = urlString;
   for (let hop = 0; hop <= maxRedirects; hop++) {
+    const mark = (err) => (err && err.code === "EBLOCKED" ? Object.assign(err, { url: current, redirected: hop > 0 }) : err);
     const problem = isDisallowedUrl(current);
-    if (problem) throw blockedError(problem);
+    if (problem) throw mark(blockedError(problem));
     const url = new URL(current);
-    const res = await requestOnce(url, { headers, deadline, maxBytes, truncate, lookup });
+    let res;
+    try {
+      res = await requestOnce(url, { headers, deadline, maxBytes, truncate, lookup });
+    } catch (err) {
+      throw mark(err);
+    }
     if (!res.redirect) return { ...res, url: url.href };
     current = new URL(res.redirect, url).href;
   }

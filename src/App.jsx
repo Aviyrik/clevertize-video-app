@@ -190,8 +190,8 @@ const BUSINESS_TYPE_PRESETS = [
   'Other',
 ];
 
-// Render aspect ratio follows the platform: "… / 16:9" renders landscape, "… / 1:1" square, everything else vertical
-const aspectRatioOf = (platform) => (/16:9/.test(platform || '') ? '16:9' : /1:1/.test(platform || '') ? '1:1' : '9:16');
+// Render aspect ratio: the Settings dimension choice, else read from the platform ("… / 16:9", "… / 1:1"), else vertical
+const aspectRatioOf = (ctx = {}) => ctx.aspectRatio || ctx.dimension || (/16:9/.test(ctx.platform || '') ? '16:9' : /1:1/.test(ctx.platform || '') ? '1:1' : '9:16');
 
 // Production Platform Options
 const PLATFORM_PRESETS = [
@@ -544,7 +544,10 @@ export default function App() {
     supportingCharacter: '',
     environment: '',
     websiteUrl: '',
-    duration: '15s',
+    duration: '30s',
+    targetDuration: '30s',
+    aspectRatio: '9:16',
+    dimension: '9:16',
     platform: 'Instagram Reels / 9:16',
     creativeStyle: 'UGC / Creator-style',
     language: 'English',
@@ -941,12 +944,25 @@ export default function App() {
     setting: st,
     language: lang,
     creativeStyle: stl,
+    targetDuration: dur,
+    aspectRatio: ratio,
+    platform: plt,
+    shotSpec: sp,
+    productPhoto: pPhoto,
   }) => {
     if (c1) setCharacter1(c1);
     if (c2) setCharacter2(c2);
     if (st) setSetting(st);
+    if (pPhoto) updateUserContext('productPhoto', pPhoto);
     if (lang) updateUserContext('language', lang);
-    if (stl) updateUserContext('creativeStyle', stl);
+    if (dur) updateUserContext('targetDuration', dur);
+    if (ratio) updateUserContext('aspectRatio', ratio);
+    if (plt) updateUserContext('platform', plt);
+    if (stl) {
+      updateUserContext('creativeStyle', stl);
+      setCreativeDNA((prev) => ({ ...prev, format: stl }));
+    }
+    if (sp) setShotSpec(sp);
 
     setScenes(importedScenes);
     setGeneratedScript(importedScript);
@@ -955,7 +971,7 @@ export default function App() {
     setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story']);
     setStudioStage('script');
     setActiveAppView('studio');
-    setToastMessage('Script validated and imported into Stage 07!');
+    setToastMessage(pPhoto ? 'Script & product image attached into Stage 07!' : 'Script validated and imported into Stage 07!');
     setTimeout(() => setToastMessage(''), 4000);
   };
 
@@ -993,6 +1009,8 @@ export default function App() {
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [isCurrentProjectSaved, setIsCurrentProjectSaved] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const isSavingProjectRef = useRef(false);
+  const currentSavingProjectIdRef = useRef(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
@@ -1309,6 +1327,8 @@ export default function App() {
     setShotSpec(null);
     setSessionId(null);
     setActiveProjectId(null);
+    currentSavingProjectIdRef.current = null;
+    isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(false);
 
     setDirectionsList([]);
@@ -1440,9 +1460,12 @@ export default function App() {
       localStorage.removeItem('clevertize_token');
       localStorage.removeItem('clevertize_user');
       localStorage.removeItem('clevertize_user_context');
+      localStorage.removeItem('clevertize_local_projects');
       if (currentUser?.id) {
         localStorage.removeItem(`clevertize_user_context_${currentUser.id}`);
+        localStorage.removeItem(`clevertize_local_projects_${currentUser.id}`);
       }
+      localStorage.removeItem('clevertize_brand_name');
     } catch {}
 
     setAuthToken(null);
@@ -1485,16 +1508,28 @@ export default function App() {
   };
 
   const handleSaveCurrentProject = async () => {
-    if (isSavingProject) return;
+    // 1. Synchronous in-flight guard: blocks rapid concurrent invocations before React state updates
+    if (isSavingProjectRef.current || isSavingProject) {
+      console.warn('[saveProject] Concurrent save blocked by synchronous guard');
+      return;
+    }
+    isSavingProjectRef.current = true;
+    setIsSavingProject(true);
+
     if (!currentUser || !authToken) {
+      isSavingProjectRef.current = false;
+      setIsSavingProject(false);
       setIsAuthModalOpen(true);
       setToastMessage('Please sign in or create an account to save your project.');
       setTimeout(() => setToastMessage(''), 4000);
       return;
     }
 
-    setIsSavingProject(true);
-    const resolvedProjectId = activeProjectId || `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    // 2. Stable project ID for this logical save operation
+    if (!currentSavingProjectIdRef.current) {
+      currentSavingProjectIdRef.current = activeProjectId || `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+    const resolvedProjectId = currentSavingProjectIdRef.current;
     setActiveProjectId(resolvedProjectId);
 
     try {
@@ -1517,6 +1552,7 @@ export default function App() {
         setting: setting || '',
         character1: character1 || '',
         character2: character2 || '',
+        shotSpec: shotSpec || null,
         stages: {
           directionsList: directionsList || [],
           selectedDirection: selectedDirection || null,
@@ -1526,25 +1562,29 @@ export default function App() {
           storyWorldData: storyWorldData || null,
           generatedScript: generatedScript || null,
           completedStages: completedStages || [],
+          shotSpec: shotSpec || null,
+        },
+        creativeDNA: {
+          ...(creativeDNA || {}),
+          shotSpec: shotSpec || null,
         },
         brandContext: extractBrandProfile(userContext),
       };
 
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (res.ok && (data.success || data.project)) {
-        setActiveProjectId(data.project.id);
+        const savedId = data.project.id || resolvedProjectId;
+        setActiveProjectId(savedId);
+        currentSavingProjectIdRef.current = savedId;
         setIsCurrentProjectSaved(true);
         setUserProjects((prev) => {
-          const idx = prev.findIndex((p) => p.id === data.project.id);
+          const idx = prev.findIndex((p) => p.id === savedId);
           let next;
           if (idx >= 0) {
             next = [...prev];
@@ -1571,6 +1611,7 @@ export default function App() {
       setToastMessage('Failed to save project. Check your connection.');
       setTimeout(() => setToastMessage(''), 4000);
     } finally {
+      isSavingProjectRef.current = false;
       setIsSavingProject(false);
     }
   };
@@ -1578,6 +1619,8 @@ export default function App() {
   const handleOpenProject = (proj) => {
     if (!proj) return;
     setActiveProjectId(proj.id);
+    currentSavingProjectIdRef.current = proj.id;
+    isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(true);
 
     if (proj.brandContext) {
@@ -1597,6 +1640,13 @@ export default function App() {
     if (proj.setting) setSetting(proj.setting);
     if (proj.character1) setCharacter1(proj.character1);
     if (proj.character2) setCharacter2(proj.character2);
+
+    const restoredShotSpec = proj.shotSpec || proj.stages?.shotSpec || proj.creativeDNA?.shotSpec || null;
+    if (restoredShotSpec && Array.isArray(restoredShotSpec.shots)) {
+      setShotSpec(restoredShotSpec);
+    } else {
+      setShotSpec(null);
+    }
 
     if (proj.stages) {
       if (proj.stages.directionsList) setDirectionsList(proj.stages.directionsList);
@@ -1998,17 +2048,21 @@ export default function App() {
       : userContext.businessType;
 
     // Enrich specialty with all user inputs so Claude receives the entire creative brief
-    const targetDur = userContext.duration || '15s';
-    const durNum = parseInt(targetDur, 10) || 15;
+    const targetDur = userContext.targetDuration || userContext.duration || '30s';
+    const durNum = parseInt(targetDur, 10) || 30;
     const perSceneSec = (durNum / 4).toFixed(1);
+    const targetRatio = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
+    const ratioLabel = targetRatio === '16:9' ? '16:9 Landscape' : targetRatio === '1:1' ? '1:1 Square' : '9:16 Vertical';
 
     const specialtyParts = [
       userContext.specialty?.trim(),
       userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
       userContext.targetAudience?.trim() ? `Target Audience: ${userContext.targetAudience.trim()}` : null,
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
-      `Platform: ${userContext.platform || 'Instagram Reels / 9:16'}`,
+      `Video Dimension: ${targetRatio} (${ratioLabel})`,
+      `Platform: ${userContext.platform || ratioLabel}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
+      userContext.brandTone?.trim() ? `Brand Tone/Voice: ${userContext.brandTone.trim()}` : null,
       `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
       userContext.offer?.trim() ? `Offer/USP: ${userContext.offer.trim()}` : null,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
@@ -2024,8 +2078,12 @@ export default function App() {
       targetAudience: userContext.targetAudience?.trim() || '',
       language: userContext.language || 'English',
       duration: targetDur,
-      platform: userContext.platform || 'Instagram Reels / 9:16',
+      targetDuration: targetDur,
+      aspectRatio: targetRatio,
+      dimension: targetRatio,
+      platform: userContext.platform || (targetRatio === '16:9' ? 'YouTube / 16:9' : targetRatio === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16'),
       creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+      brandTone: userContext.brandTone?.trim() || 'Warm & Authentic',
       area: userContext.area?.trim() || '',
       specialty: specialtyParts.join(' | '),
       offer: userContext.offer?.trim() || '',
@@ -2121,6 +2179,7 @@ export default function App() {
           brief: userContext.brief || '',
           targetAudience: userContext.targetAudience || '',
           language: activeLang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
           research: researchData,
           format: activeFormat,
           creativeStyle: activeFormat,
@@ -2221,6 +2280,7 @@ export default function App() {
           brief: userContext.brief || '',
           direction: activeDir,
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
           format: activeFormat,
           creativeStyle: activeFormat,
         }),
@@ -2268,6 +2328,7 @@ export default function App() {
           hook: selectedHook || { hookLine: customHook || '' },
           format: userContext.creativeStyle || 'Storytelling',
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
         }),
       });
       if (res.ok) {
@@ -2311,6 +2372,7 @@ export default function App() {
           plot: selectedPlot || { title: customPlot || 'The Timely Rescue' },
           format: activeFormat,
           language: lang,
+          brandTone: userContext.brandTone || 'Warm & Authentic',
         }),
       });
       if (res.ok) {
@@ -2486,6 +2548,19 @@ export default function App() {
         const updated = [...scenes];
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
+        if (shotSpec && Array.isArray(shotSpec.shots)) {
+          setShotSpec((prev) => {
+            if (!prev || !Array.isArray(prev.shots)) return prev;
+            return {
+              ...prev,
+              staticWorld: {
+                ...(prev.staticWorld || {}),
+                setting,
+                characters: [character1, character2].filter(Boolean).join(' | '),
+              },
+            };
+          });
+        }
         setIsSceneRewriteOpen(false);
       }
     } catch (err) {
@@ -2963,7 +3038,7 @@ export default function App() {
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
         shotSpec: pipeData.shotSpec || null,
-        aspectRatio: aspectRatioOf(userContext.platform),
+        aspectRatio: aspectRatioOf(userContext),
       };
 
       const runData = await safeApiCall(fetch('/api/run', {
@@ -3026,8 +3101,15 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
-        shotSpec: shotSpec || null,
-        aspectRatio: aspectRatioOf(userContext.platform),
+        shotSpec: shotSpec ? {
+          ...shotSpec,
+          staticWorld: {
+            ...(shotSpec.staticWorld || {}),
+            setting: effectiveSetting,
+            characters: [effectiveChar1, effectiveChar2].filter(Boolean).join(' | '),
+          },
+        } : null,
+        aspectRatio: aspectRatioOf(userContext),
       };
 
       const data = await safeApiCall(fetch('/api/run', {
@@ -3248,6 +3330,17 @@ export default function App() {
       handleExecuteNewProject(false);
       return;
     }
+    const hasActiveWork = Boolean(
+      (scenes && scenes.length > 0) ||
+      generatedScript ||
+      videoUrl ||
+      (userContext.brief && userContext.brief.trim().length > 0) ||
+      (studioStage !== 'brief' && studioStage !== 'entry' && completedStages && completedStages.length > 0)
+    );
+    if (!hasActiveWork) {
+      handleExecuteNewProject(false);
+      return;
+    }
     setIsNewFilmConfirmOpen(true);
   };
 
@@ -3288,6 +3381,10 @@ export default function App() {
       setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
 
       setSessionId(null);
+      setActiveProjectId(null);
+      currentSavingProjectIdRef.current = null;
+      isSavingProjectRef.current = false;
+      setIsCurrentProjectSaved(false);
       setDirectionData(null);
       setPlotData(null);
       setStoryData(null);
@@ -3334,7 +3431,7 @@ export default function App() {
 
       setCompletedStages([]);
       setStudioStage('brief');
-      setActiveAppView('hub');
+      setActiveAppView('studio');
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -3423,8 +3520,9 @@ export default function App() {
         character1: effectiveChar1,
         character2: effectiveChar2,
         setting: effectiveSetting,
-        duration: userContext.duration || '15s',
-        platform: userContext.platform || 'Instagram Reels / 9:16',
+        duration: overrideParams?.duration || userContext.duration || userContext.targetDuration || '15s',
+        platform: overrideParams?.platform || (overrideParams?.aspectRatio === '16:9' ? 'YouTube / 16:9' : overrideParams?.aspectRatio === '1:1' ? 'Feed / 1:1' : overrideParams?.dimension) || userContext.platform || 'Instagram Reels / 9:16',
+        aspectRatio: overrideParams?.aspectRatio || overrideParams?.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'),
         product: userContext.specialty || userContext.offer || userContext.brief || bType || 'featured product',
         productName: userContext.specialty || bType || 'featured product',
         businessType: bType,
@@ -3434,8 +3532,14 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
-        shotSpec: shotSpec || null,
-        aspectRatio: aspectRatioOf(userContext.platform),
+        shotSpec: shotSpec ? {
+          ...shotSpec,
+          staticWorld: {
+            ...(shotSpec.staticWorld || {}),
+            setting: effectiveSetting,
+            characters: [effectiveChar1, effectiveChar2].filter(Boolean).join(' | '),
+          },
+        } : null,
       };
 
       const data = await safeApiCall(fetch('/api/run', {
@@ -3497,6 +3601,14 @@ export default function App() {
       if (packageData.language) updateUserContext('language', packageData.language);
       if (packageData.creativeStyle) updateUserContext('creativeStyle', packageData.creativeStyle);
       if (packageData.productPhoto) updateUserContext('productPhoto', packageData.productPhoto);
+      if (packageData.duration) {
+        updateUserContext('duration', packageData.duration);
+        updateUserContext('targetDuration', packageData.duration);
+      }
+      if (packageData.aspectRatio || packageData.dimension || packageData.platform) {
+        const plat = packageData.platform || (packageData.aspectRatio === '16:9' ? 'YouTube / 16:9' : packageData.aspectRatio === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16');
+        updateUserContext('platform', plat);
+      }
 
       await handleRunVideoProduction({
         scenes: formattedScenes,
@@ -3505,6 +3617,10 @@ export default function App() {
         character2: packageChar2,
         brief: packageData.brief || userContext.brief,
         productPhoto: packageData.productPhoto || userContext.productPhoto,
+        duration: packageData.duration || userContext.duration || userContext.targetDuration || '30s',
+        platform: packageData.platform || (packageData.aspectRatio === '16:9' ? 'YouTube / 16:9' : packageData.aspectRatio === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16'),
+        aspectRatio: packageData.aspectRatio || packageData.dimension || '9:16',
+        dimension: packageData.aspectRatio || packageData.dimension || '9:16',
       });
     } catch (err) {
       console.error('[SimpleStudio] video run error:', err);
@@ -3781,6 +3897,9 @@ export default function App() {
             }
             handleStartNewProject(false);
           }}
+          onRestartFilm={() => {
+            handleStartNewProject(false);
+          }}
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
@@ -3945,15 +4064,22 @@ export default function App() {
             />
           ) : studioMode === 'simple' ? (
             <SimpleBusinessStudio
+              key={`simple-studio-${brandResetKey}-${activeProjectId || 'new'}`}
               businessName={userContext.businessName}
               businessType={userContext.businessType}
               town={userContext.town}
               initialBrief={userContext.brief}
-              initialLanguage={creativeDNA.language || 'English'}
-              initialStyle={creativeDNA.creativeStyle || 'UGC / Creator-style'}
+              initialLanguage={creativeDNA.language || userContext.language || 'English'}
+              initialStyle={creativeDNA.creativeStyle || userContext.creativeStyle || 'UGC / Creator-style'}
+              initialDuration={userContext.duration || userContext.targetDuration || '30s'}
+              initialAspectRatio={userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'}
+              brandTone={userContext.brandTone || 'Warm & Authentic'}
               brandLogo={userContext.brandLogo || userContext.logo}
               onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}
               onProduceVideo={handleSimpleProduceVideo}
+              onSaveProject={handleSaveCurrentProject}
+              isSavingProject={isSavingProject}
+              isProjectSaved={isCurrentProjectSaved}
               isProducingVideo={isRendering}
               producedVideoUrl={videoUrl}
               videoRunError={errorMessage}
@@ -4402,9 +4528,20 @@ export default function App() {
               setExplicitChoices((prev) => ({ ...prev, style: cleanLabel }));
               handleFormatChange(stId);
             }}
+            onDimensionChange={(dimId, dimLabel) => {
+              const label = dimLabel || (dimId === '16:9' ? '16:9 Landscape' : dimId === '1:1' ? '1:1 Square' : '9:16 Vertical');
+              setExplicitChoices((prev) => ({ ...prev, dimension: label, platform: label }));
+              updateUserContext('aspectRatio', dimId);
+              updateUserContext('dimension', dimId);
+              const platFallback = dimId === '16:9' ? 'YouTube / 16:9' : dimId === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16';
+              updateUserContext('platform', platFallback);
+            }}
             onPlatformChange={(platLabel, platId) => {
-              setExplicitChoices((prev) => ({ ...prev, platform: platLabel }));
+              setExplicitChoices((prev) => ({ ...prev, platform: platLabel, dimension: platLabel }));
               updateUserContext('platform', platId);
+              const ar = platId.includes('16:9') ? '16:9' : platId.includes('1:1') ? '1:1' : '9:16';
+              updateUserContext('aspectRatio', ar);
+              updateUserContext('dimension', ar);
             }}
             onDurationChange={(dur) => {
               setExplicitChoices((prev) => ({ ...prev, duration: dur }));
@@ -4645,170 +4782,170 @@ export default function App() {
           onApplyRewrite={handleApplySceneRewrite}
           isRewriting={isRewritingScene}
         />
-
-        {/* New Film Confirmation Modal */}
-        {isNewFilmConfirmOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              padding: 20,
-            }}
-            onClick={() => setIsNewFilmConfirmOpen(false)}
-          >
-            <div
-              style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 12,
-                maxWidth: 480,
-                width: '100%',
-                padding: 24,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      backgroundColor: 'var(--accent-subtle)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--accent-primary)',
-                    }}
-                  >
-                    <RotateCcw size={18} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Start a New Film?
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsNewFilmConfirmOpen(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
-                <p style={{ margin: '0 0 10px 0' }}>
-                  This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
-                </p>
-                {userContext.businessName ? (
-                  <div
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      fontSize: 12,
-                      color: 'var(--text-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                    <span>
-                      Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsNewFilmConfirmOpen(false);
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleExecuteNewProject(false);
-                  }}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    boxShadow: '0 2px 8px var(--accent-glow)',
-                  }}
-                >
-                  <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
-                  <span style={{ pointerEvents: 'none' }}>Start New Film</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Floating Toast Notification */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              zIndex: 9999,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--accent-primary)',
-              color: 'var(--text-primary)',
-              padding: '12px 20px',
-              borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
-            <span>{toastMessage}</span>
-          </div>
-        )}
         </main>
           </>
         )}
       </AppShell>
+
+      {/* New Film Confirmation Modal (Global across Simple Studio, Director Mode, and Views) */}
+      {isNewFilmConfirmOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setIsNewFilmConfirmOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 12,
+              maxWidth: 480,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: 'var(--accent-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent-primary)',
+                  }}
+                >
+                  <RotateCcw size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Start a New Film?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewFilmConfirmOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              <p style={{ margin: '0 0 10px 0' }}>
+                This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
+              </p>
+              {userContext.businessName ? (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: 12,
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                  <span>
+                    Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsNewFilmConfirmOpen(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleExecuteNewProject(false);
+                }}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 2px 8px var(--accent-glow)',
+                }}
+              >
+                <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
+                <span style={{ pointerEvents: 'none' }}>Start New Film</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification (Global across all views) */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            backgroundColor: 'var(--bg-elevated)',
+            border: '1px solid var(--accent-primary)',
+            color: 'var(--text-primary)',
+            padding: '12px 20px',
+            borderRadius: 8,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Existing Script Modal (V2 Entry Point) */}
       <ExistingScriptModal
@@ -4819,6 +4956,9 @@ export default function App() {
         businessType={userContext.businessType}
         language={userContext.language}
         creativeStyle={userContext.creativeStyle}
+        targetDuration={userContext.targetDuration || '20s'}
+        aspectRatio={userContext.aspectRatio || (userContext.platform?.includes('16:9') ? '16:9' : userContext.platform?.includes('1:1') ? '1:1' : '9:16')}
+        brandTone={userContext.brandTone || 'Warm & Authentic'}
       />
 
       {/* URL Research Modal (V2 Entry Point) */}

@@ -53,6 +53,8 @@ function formatMatches(hFormat, approved) {
   if ((h.includes("story") || h.includes("storytelling")) && (a.includes("story") || a.includes("storytelling"))) return true;
   if (h.includes("demo") && a.includes("demo")) return true;
   if (h.includes("comedy") && a.includes("comedy")) return true;
+  if ((h.includes("dialogue") || h.includes("conversational") || h.includes("drama")) && (a.includes("story") || a.includes("dialogue") || a.includes("conversational") || a.includes("drama"))) return true;
+  if (h.includes("problem") && (a.includes("ugc") || a.includes("problem") || a.includes("story"))) return true;
   return h.startsWith(a) || a.startsWith(h);
 }
 
@@ -60,21 +62,30 @@ function formatMatches(hFormat, approved) {
  * parsed: output of parseOutput; f: validated form; opts: { scriptMode, previous }
  * Returns an array of failure strings (empty = pass).
  */
-function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "" } = {}) {
+function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "", allowVo = false, audioDeliveryMode = "", targetDuration = "", allowSceneCount = null } = {}) {
   const fails = [];
   const h = parsed.header;
+  const isVoMode = Boolean(
+    allowVo ||
+    audioDeliveryMode === "voiceover" ||
+    (h.format && /voiceover|vo\b/i.test(h.format)) ||
+    (f.format && /voiceover|vo\b/i.test(f.format))
+  );
 
   // header
   for (const k of ["business", "format", "lens", "hook", "moment"]) {
     if (!h[k]) fails.push(`Header is missing "${k[0].toUpperCase() + k.slice(1)}:".`);
   }
   const format = (h.format || "").toLowerCase();
-  const isValidFormat = /^(ugc|storytelling|demo|product demo|comedy|situational comedy)\b/.test(format);
+  const isValidFormat = isVoMode || /^(ugc|storytelling|demo|product demo|comedy|situational comedy|conversational|dialogue|problem|voiceover|vo)\b/.test(format);
   if (h.format && !isValidFormat) fails.push(`Format must be UGC or Storytelling (VO-led is switched off); got "${h.format}".`);
   if (approvedFormat && h.format && !formatMatches(format, approvedFormat)) fails.push(`Format "${h.format}" differs from the owner-approved format "${approvedFormat}" (Checkpoint 3).`);
 
   // context block
   for (const [k, v] of [["CHARACTER1", parsed.character1], ["CHARACTER2", parsed.character2]]) {
+    if (k === "CHARACTER2" && isVoMode) {
+      continue;
+    }
     if (!v || /^none\b/i.test(v)) fails.push(`${k} is empty — the Context Block needs exactly 2 characters.`);
     else if (v.length < 40) fails.push(`${k} is too thin — give age, gender, skin tone, hair, clothing, accessories.`);
   }
@@ -92,7 +103,19 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
 
   // scenes
   const n = parsed.scenes.length;
-  if (n !== 4) fails.push(`Script has ${n} scenes; it must have exactly 4 (M6).`);
+  const durationSec = parseInt(targetDuration || f.targetDuration || f.duration || "15s", 10) || 15;
+  const hasDurationOverride = Boolean(targetDuration || f.targetDuration || allowSceneCount);
+
+  if (hasDurationOverride) {
+    const minScenes = durationSec >= 30 ? 4 : durationSec >= 20 ? 4 : 3;
+    const maxScenes = durationSec >= 30 ? 6 : durationSec >= 20 ? 5 : 4;
+    const isCountAllowed = allowSceneCount ? (n === allowSceneCount) : (n >= minScenes && n <= maxScenes);
+    if (!isCountAllowed) {
+      fails.push(`Script has ${n} scenes; for a ${durationSec}s video it must have between ${minScenes} and ${maxScenes} scenes (M6).`);
+    }
+  } else {
+    if (n !== 4) fails.push(`Script has ${n} scenes; it must have exactly 4 (M6).`);
+  }
 
   const allowText = `${f.offer || ""} ${f.specialty || ""} ${f.contact || ""}`.toLowerCase();
   const offerDigits = (f.offer || "").replace(/[^\d]/g, " ").split(/\s+/).filter(Boolean);
@@ -131,7 +154,7 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
     const otherTime = timesOf(visual).find((t) => settingTimes.length && !settingTimes.includes(t));
     if (otherTime) fails.push(`${S} Visual changes the time of day to "${otherTime}" — keep SETTING's ${settingTimes.join("/")} in every scene (M13b).`);
     if (STARE_OFF.test(visual)) fails.push(`${S} Visual has a character staring off / looking away — characters look at each other when they talk (M13d).`);
-    {
+    if (!isVoMode) {
       const d0 = dialogueOf(scene);
       const both = [parsed.character1, parsed.character2].every((c) => { const n = nameCore(c); return n && visual.toLowerCase().includes(n.split(" ")[0]); });
       if (d0.lines.length && both && !LOOK_AT.test(visual)) fails.push(`${S} has dialogue between the two characters but the Visual never says they look at each other (M13d).`);
@@ -150,8 +173,12 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
     for (const { speaker, text } of d.lines) {
       totalLines++;
       spokenAll.push(text);
-      if (/^vo$|voice\s*over|narrator/i.test(speaker)) fails.push(`${S} uses a VO/narrator — VO-led is switched off; dialogue must come from a character.`);
-      else if (!speakerMatches(speaker, parsed.character1) && !speakerMatches(speaker, parsed.character2)) {
+      const isVoSpeaker = /^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)$/i.test(speaker);
+      if (isVoSpeaker) {
+        if (!isVoMode) {
+          fails.push(`${S} uses a VO/narrator — VO-led is switched off; dialogue must come from a character.`);
+        }
+      } else if (!speakerMatches(speaker, parsed.character1) && !speakerMatches(speaker, parsed.character2)) {
         fails.push(`${S} speaker "${speaker}" is not one of the two Context Block characters.`);
       }
       perSpeaker[speaker] = (perSpeaker[speaker] || 0) + 1;
@@ -179,10 +206,18 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
 
   // story arc (M27): scene titles carry the beats in order
   const BEATS = ["HOOK", "BUILD", "TURN", "RESOLUTION"];
-  parsed.scenes.forEach((sc, i) => {
-    const title = (sc.split("\n")[0] || "");
-    if (BEATS[i] && !new RegExp(`\\b${BEATS[i]}\\b`, "i").test(title)) fails.push(`Scene ${i + 1} title must be "SCENE ${i + 1} – ${BEATS[i]}: …" — the 4 scenes follow HOOK → BUILD → TURN → RESOLUTION (M27).`);
-  });
+  const getSceneTitle = (sc) => ((sc || "").split("\n").find((l) => l.trim() && !/^ANNEX\s*A/i.test(l.trim())) || "").trim();
+  if (n === 4) {
+    parsed.scenes.forEach((sc, i) => {
+      const title = getSceneTitle(sc);
+      if (BEATS[i] && !new RegExp(`\\b${BEATS[i]}\\b`, "i").test(title)) fails.push(`Scene ${i + 1} title must be "SCENE ${i + 1} – ${BEATS[i]}: …" — the 4 scenes follow HOOK → BUILD → TURN → RESOLUTION (M27).`);
+    });
+  } else if (n > 0) {
+    const firstTitle = getSceneTitle(parsed.scenes[0]);
+    const lastTitle = getSceneTitle(parsed.scenes[n - 1]);
+    if (!/HOOK/i.test(firstTitle)) fails.push(`Scene 1 title must contain "HOOK" (M27).`);
+    if (!/RESOLUTION|PAYOFF|CTA/i.test(lastTitle)) fails.push(`Scene ${n} title must contain "RESOLUTION" or "PAYOFF" or "CTA" (M27).`);
+  }
   // ad-speak in dialogue (M26)
   const adSpeak = spokenAll.join(" ").match(AD_SPEAK);
   if (adSpeak) fails.push(`Dialogue uses ad-speak ("${adSpeak[0]}") — keep it punchy and natural, like a real person or creator (M26).`);
@@ -198,11 +233,13 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   // rotation
   const speakers = Object.keys(speakerScenes);
   if (format.startsWith("ugc")) {
-    const ownerScenes = speakers.filter((s) => speakerMatches(s, parsed.character1)).reduce((a, s) => a + speakerScenes[s], 0);
-    if (ownerScenes > 3) fails.push(`UGC: the owner speaks in ${ownerScenes} scenes; max 3 of the 4, the other is B-roll (Section 6).`);
+    if (!isVoMode) {
+      const ownerScenes = speakers.filter((s) => speakerMatches(s, parsed.character1)).reduce((a, s) => a + speakerScenes[s], 0);
+      if (ownerScenes > 3) fails.push(`UGC: the owner speaks in ${ownerScenes} scenes; max 3 of the 4, the other is B-roll (Section 6).`);
+    }
   } else if (format.includes("demo")) {
     // Product Demo: visual proof and product action leads. Single presenter or rotated dialogue both allowed.
-  } else if (totalLines >= 3 && speakers.length < 2) {
+  } else if (!isVoMode && totalLines >= 3 && speakers.length < 2) {
     fails.push("Storytelling: all dialogue comes from one character — rotate speakers (M10).");
   }
 

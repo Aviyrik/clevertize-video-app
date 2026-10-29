@@ -11,10 +11,11 @@ const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
-const { compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
+const { extractSceneParts, compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
 const db = require("./engine/db");
-const { safeFetch, isDisallowedUrl } = require("./engine/netguard");
+const netguard = require("./engine/netguard"); // called as netguard.safeFetch so tests can point it at a local server
+const { isDisallowedUrl } = netguard;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +72,9 @@ function resolveProduct(f) {
 
 function validateForm(b) {
   const s = (x) => (typeof x === "string" ? x.trim() : "");
+  const durationVal = s(b.targetDuration || b.duration) || "30s";
+  const aspectVal = s(b.aspectRatio || b.dimension) || (s(b.platform).includes("16:9") ? "16:9" : s(b.platform).includes("1:1") ? "1:1" : "9:16");
+  const platformVal = s(b.platform) || (aspectVal === "16:9" ? "YouTube / 16:9" : aspectVal === "1:1" ? "Feed / 1:1" : "Instagram Reels / 9:16");
   const f = {
     businessName: s(b.businessName),
     businessType: s(b.businessType),
@@ -82,9 +86,13 @@ function validateForm(b) {
     occasion: s(b.occasion),
     contact: s(b.contact),
     ownerName: s(b.ownerName),
-    duration: s(b.duration) || "15s",
-    platform: s(b.platform) || "Instagram Reels / 9:16",
+    duration: durationVal,
+    targetDuration: durationVal,
+    aspectRatio: aspectVal,
+    dimension: aspectVal,
+    platform: platformVal,
     creativeStyle: s(b.creativeStyle) || "UGC / Creator-style",
+    brandTone: s(b.brandTone) || "Warm & Authentic",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",
     product: s(b.product),
     productName: s(b.productName),
@@ -143,8 +151,10 @@ function getSession(id, userId) {
   const now = Date.now();
   for (const [k, v] of sessions) if (now - v.touched > SESSION_TTL_MS) sessions.delete(k);
   const s = sessions.get(id);
-  // another user's session id is treated exactly like an unknown one
-  if (!s || s.userId !== userId) throw Object.assign(new Error("This session has expired (or the server restarted). Please start again."), { status: 404 });
+  if (!s) throw Object.assign(new Error("This session has expired (or the server restarted). Please start again."), { status: 404 });
+  if (!userId || !s.userId || s.userId !== userId) {
+    throw Object.assign(new Error("Access denied. You do not own this session."), { status: 403 });
+  }
   s.touched = now;
   return s;
 }
@@ -691,7 +701,7 @@ app.post("/api/research/url", authRequired, async (req, res) => {
 
   try {
     // safeFetch re-checks the resolved IP and every redirect hop (SSRF), and caps the page size
-    const response = await safeFetch(targetUrl, {
+    const response = await netguard.safeFetch(targetUrl, {
       timeoutMs: 8000,
       maxBytes: 5 * 1024 * 1024,
       truncate: true,
@@ -710,6 +720,10 @@ app.post("/api/research/url", authRequired, async (req, res) => {
       fetchError = `HTTP ${response.status} from target server`;
     }
   } catch (err) {
+    // a restricted target (private/metadata address, directly or after a redirect) is refused outright
+    if (err.code === "EBLOCKED") {
+      return res.status(400).json({ error: err.redirected ? `Redirect destination rejected: ${err.message}` : err.message });
+    }
     fetchError = err.message || "Network request failed";
   }
 
@@ -740,7 +754,7 @@ app.post("/api/research/url", authRequired, async (req, res) => {
     if (productImageUrl) {
       try {
         // The image URL comes from the scraped page, so it gets the same SSRF checks as the page itself
-        const imgRes = await safeFetch(productImageUrl, {
+        const imgRes = await netguard.safeFetch(productImageUrl, {
           timeoutMs: 6000,
           maxBytes: 4.5 * 1024 * 1024,
           headers: { "User-Agent": SCRAPER_UA },
@@ -854,135 +868,29 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
 app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
-    const { rawScript, businessName, businessType, language, creativeStyle } = req.body || {};
+    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
       return res.status(400).json({ error: "Please enter or paste script text to validate." });
     }
 
-    const brand = String(businessName || "My Business").trim();
-    const bType = String(businessType || "Retail Business").trim();
-    const lang = String(language || "English").trim();
-    const style = String(creativeStyle || "UGC / Creator-style").trim();
+    // Inspect sliceLines for dialogue and visual separation during script normalization
+    const sliceLines = (lines, start, end) => lines.slice(start, end);
 
-    // 1. Parse or segment into 4 scenes
-    let parsed = parseOutput(rawScript);
-    const char1 = parsed.character1 || `${brand} Representative — confident, friendly, relatable presentation`;
-    const char2 = parsed.character2 || `Customer — relatable everyday buyer seeking authentic quality`;
-    const setting = parsed.setting || `Clean, inviting shop / studio space with warm natural lighting and clear product display`;
-    let sceneTexts = [];
-
-    if (parsed.scenes && parsed.scenes.length >= 4) {
-      sceneTexts = parsed.scenes.slice(0, 4);
-    } else {
-      // Split on common scene demarcators: "Scene 1", "SCENE 1", "ANNEX A", "\n\n\n", or 4 paragraph chunks
-      const chunks = rawScript
-        .split(/(?:ANNEX\s+A|SCENE\s+[1-4]|Scene\s+[1-4]|---|\n\s*\n\s*\n)/i)
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      if (chunks.length >= 4) {
-        sceneTexts = chunks.slice(0, 4).map((c, idx) => `ANNEX A\nSCENE ${idx + 1}\n${c}`);
-      } else {
-        // Divide script into 4 structured narrative beats
-        const lines = rawScript.split("\n").map((l) => l.trim()).filter(Boolean);
-        const perScene = Math.max(1, Math.ceil(lines.length / 4));
-        const beats = ["Scene 1 · Hook", "Scene 2 · Build", "Scene 3 · Turn", "Scene 4 · Resolution"];
-        sceneTexts = [0, 1, 2, 3].map((i) => {
-          const sliceLines = lines.slice(i * perScene, (i + 1) * perScene);
-          if (sliceLines.length === 0) {
-            sliceLines.push(`Scene ${i + 1} narrative and dialogue`);
-          }
-
-          const dialogueLines = [];
-          const visualLines = [];
-
-          for (const line of sliceLines) {
-            const visMatch = line.match(/^(?:Visual|Action):\s*(.+)$/i);
-            if (visMatch) {
-              visualLines.push(visMatch[1].trim());
-              continue;
-            }
-            const diaMatch = line.match(/^(?:Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Audio|Dialogue|Voiceover|VO):\s*(.+)$/i);
-            if (diaMatch) {
-              dialogueLines.push(diaMatch[1].trim());
-              continue;
-            }
-            const speakerMatch = line.match(/^([A-Za-z0-9\s._'-]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
-            const isQuoted = /^["'].+["']$/.test(line.trim());
-
-            if (speakerMatch || isQuoted) {
-              dialogueLines.push(line);
-            } else {
-              visualLines.push(line);
-            }
-          }
-
-          let visualContent = visualLines.join(' ');
-          let dialogueContent = dialogueLines.join('\n');
-
-          if (!dialogueContent && visualContent) {
-            dialogueContent = visualContent;
-            visualContent = `${brand} in ${setting}.`;
-          } else if (!visualContent) {
-            const beatVisuals = [
-              `${brand} representative introduces the hook with clear product focus in ${setting}.`,
-              `${brand} representative highlights the everyday problem and relatable customer struggle.`,
-              `Engaging demonstration of ${brand} solution and key breakthrough in ${setting}.`,
-              `Clear call to action highlighting ${brand} offer and next steps in ${setting}.`
-            ];
-            visualContent = beatVisuals[i] || `Balanced medium shot in steady room lighting.`;
-          }
-
-          return `ANNEX A\n${beats[i]}\nVisual:\n${visualContent}\nAnimation Elements:\nCamera: smooth motivated push-in.\nText overlay: none\nUI element: none\nTransition: cut\nMotion graphics: none\nAudio / Dialogue / Voiceover:\n${dialogueContent}\nSound Design:\nNatural ambient room tone.\nEditing Notes:\nScene duration: ~4s | Output: 1080p`;
-        });
-      }
-    }
-
-    // 3. Construct synthetic full script for gate check if needed
-    let fullScriptText = rawScript;
-    let gateParsed = parsed;
-    if (!parsed.header || !parsed.header.business || !parsed.character1 || !parsed.character2 || !parsed.setting) {
-      fullScriptText = `@@HEADER@@\nBusiness: ${brand}\nFormat: ${style}\nLens: 2, Everyday Moments\nHook: Relatable Hook\nMoment: Everyday\n\n@@CHARACTER1@@\n${char1}\n\n@@CHARACTER2@@\n${char2}\n\n@@SETTING@@\n${setting}\n\n` +
-        sceneTexts.map((s) => `@@SCENE@@\n${s}`).join("\n\n") +
-        `\n\n@@RECORD@@\n{"format":"${style}","characters":"${char1} & ${char2}","setting":"${setting}"}`;
-      gateParsed = parseOutput(fullScriptText);
-    }
-
-    // 4. Run Section 8 Quality Gate
-    const mockForm = {
-      businessName: brand,
-      businessType: bType,
-      language: lang,
-      creativeStyle: style,
-      scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
-      product: brand,
-    };
-
-    let fails = [];
-    try {
-      fails = runGate(gateParsed, mockForm, {
-        scriptMode: lang === "Hindi" ? "devanagari" : "devanagari",
-        approvedFormat: style,
-      }) || [];
-    } catch (gErr) {
-      console.warn("[runGate check warn]", gErr.message);
-      fails = [gErr.message];
-    }
-
-    const passedGate = Array.isArray(fails) && fails.length === 0;
-
-    return res.json({
-      status: "success",
-      passedGate,
-      gatePassed: passedGate,
-      failures: fails,
-      scenes: sceneTexts,
-      character1: char1,
-      character2: char2,
-      setting: setting,
-      fullScriptText,
-      totalScenes: sceneTexts.length,
+    const result = await creative.normalizeUserScript({
+      rawScript,
+      businessName,
+      businessType,
+      town,
+      language,
+      creativeStyle,
+      brief,
+      brandTone,
+      targetDuration: targetDuration || duration,
+      aspectRatio,
+      platform,
     });
+
+    return res.json(result);
   } catch (err) {
     console.error("[api/script/validate-and-import]", err.message);
     res.status(500).json({ error: err.message || "Failed to validate script." });
@@ -992,7 +900,7 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
 // 2) Creative Direction
 app.post("/api/creative/directions", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language } = req.body || {};
+    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language, brandTone } = req.body || {};
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -1002,6 +910,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       festival,
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1013,7 +922,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language, format, creativeStyle } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone } = req.body || {};
     const result = await creative.generateHooks({
       businessName,
       businessType,
@@ -1021,6 +930,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       direction,
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1032,7 +942,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
 // 4) Plot Generation
 app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, format, language } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language, brandTone } = req.body || {};
     const result = await creative.generatePlots({
       businessName,
       businessType,
@@ -1041,6 +951,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       hook,
       format: format || "Storytelling",
       language: language || "English",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1052,7 +963,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, format, language } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone } = req.body || {};
     const result = await creative.generateStoryWorld({
       businessName,
       businessType,
@@ -1063,6 +974,7 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       plot,
       format: format || "Storytelling",
       language: language || "English",
+      brandTone,
     });
     res.json(result);
   } catch (e) {
@@ -1093,7 +1005,7 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
     const rewritten = await creative.rewriteScene({
       sceneText,
@@ -1103,6 +1015,7 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       form,
       characters,
       setting,
+      brandTone: brandTone || form?.brandTone,
     });
     res.json({ scene: rewritten });
   } catch (e) {
@@ -1115,7 +1028,19 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
 // 8) Simple Business Studio — 3 Ready-Made Ad Packages
 app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, targetAudience, language, creativeStyle } = req.body || {};
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      targetAudience,
+      language,
+      creativeStyle,
+      brandTone,
+      duration,
+      aspectRatio,
+      dimension,
+    } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
     }
@@ -1130,6 +1055,9 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       targetAudience: targetAudience || "",
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
+      brandTone,
+      duration: duration || "30s",
+      aspectRatio: aspectRatio || dimension || "9:16",
     });
     res.json({ status: "success", packages });
   } catch (e) {
@@ -1147,6 +1075,9 @@ app.post("/api/run", authRequired, async (req, res) => {
       productPhoto,
       logo,
       duration,
+      aspectRatio,
+      dimension,
+      platform,
       shotSpec,
       product,
       productName,
@@ -1154,11 +1085,11 @@ app.post("/api/run", authRequired, async (req, res) => {
       brief,
       businessType,
       businessName,
-      aspectRatio,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
-    // 9:16 unless the owner picked a landscape or square platform; the flow itself is chosen server-side
-    const ratio = aspectRatio || shotSpec?.project?.aspectRatio || "9:16";
+    // 9:16 unless the owner picked 16:9 or 1:1; the Magnific flow itself is chosen server-side from this
+    const platformRatio = typeof platform === "string" ? (platform.includes("16:9") ? "16:9" : platform.includes("1:1") ? "1:1" : null) : null;
+    const ratio = aspectRatio || dimension || shotSpec?.project?.aspectRatio || platformRatio || "9:16";
     if (!magnific.ASPECT_RATIOS.includes(ratio)) throw Object.assign(new Error(`Unsupported aspect ratio "${ratio}" — use ${magnific.ASPECT_RATIOS.join(", ")}.`), { status: 400 });
     const img = productPhoto && productPhoto.data ? cleanImage(productPhoto, "Product photo") : null;
     const logoImg = logo && logo.data ? cleanImage(logo, "Logo") : null;
@@ -1183,20 +1114,44 @@ app.post("/api/run", authRequired, async (req, res) => {
     // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
     let processedScenes;
     if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
-      processedScenes = shotSpec.shots.map((sh) =>
-        compileShotPrompt(sh, shotSpec.staticWorld || { setting: resolvedSetting, characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "), businessType: businessType || shotSpec.project?.businessType }, {
+      // Synchronize staticWorld with latest continuity fields from request (continuity edits MUST take effect)
+      const effectiveStaticWorld = {
+        setting: resolvedSetting,
+        characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "),
+        businessType: businessType || shotSpec.project?.businessType || bCat,
+        style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
+      };
+
+      processedScenes = shotSpec.shots.map((sh, idx) => {
+        const currentSceneText = scenes[idx] || "";
+        const parts = extractSceneParts(currentSceneText);
+        // Synchronize shot with latest scene text so manual scene edits and AI rewrites are NEVER ignored
+        const updatedShot = {
+          ...sh,
+          primaryAction: parts.visual ? (parts.visual.split(".")[0] ? parts.visual.split(".")[0].trim() + "." : parts.visual) : sh.primaryAction,
+          fullVisual: parts.visual || sh.fullVisual,
+          cameraMovement: (parts.camera && parts.camera !== "smooth subtle push-in") ? parts.camera : (sh.cameraMovement || parts.camera),
+          dialogue: parts.dialogue !== "None" ? parts.dialogue : (sh.dialogue || "None"),
+        };
+
+        return compileShotPrompt(updatedShot, effectiveStaticWorld, {
           duration: duration || "15s",
           shotCount: scenes.length,
           aspectRatio: ratio,
-        })
-      );
+          platform: platform,
+          style: shotSpec.project?.style || req.body?.creativeStyle,
+          format: shotSpec.format,
+        });
+      });
     } else {
       // Robust fallback to continuous scene compilation
       processedScenes = scenes.map((sc) => sceneForGeneration(sc, {
         setting: resolvedSetting,
         character1: resolvedChar1,
         character2: resolvedChar2,
-        duration,
+        duration: duration || "15s",
+        aspectRatio: ratio,
+        platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
       }));
@@ -1213,6 +1168,8 @@ app.post("/api/run", authRequired, async (req, res) => {
       logoDataUrl: logoImg ? `data:${logoImg.mime};base64,${logoImg.data}` : null,
       aspectRatio: ratio,
     });
+    // Persist runId association with authenticated user immediately
+    await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });
     res.json({ runId, shotCount: processedScenes.length });
   } catch (e) {
     console.error("[run]", e.message);
@@ -1221,30 +1178,219 @@ app.post("/api/run", authRequired, async (req, res) => {
 });
 
 // ---- 3) poll a run ----
-const videoUrls = new Set(); // only URLs Magnific gave us can be downloaded through /api/download
+const videoUrls = new Set(); // legacy fallback cache
+const videoOwnership = new Map(); // videoUrl -> { userId, runId, createdAt }
+const downloadTickets = new Map(); // ticketId -> { userId, videoUrl, expiresAt, used }
+const DOWNLOAD_TICKET_TTL_MS = 60 * 1000; // 60 seconds
+
+function cleanExpiredTickets() {
+  const now = Date.now();
+  for (const [k, v] of downloadTickets) {
+    if (v.expiresAt <= now || v.used) {
+      downloadTickets.delete(k);
+    }
+  }
+}
+
+function isApprovedVideoHost(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const disallowed = isDisallowedUrl(urlString);
+    if (disallowed) return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "cdn.example.com" ||
+      host === "magnific.ai" ||
+      host.endsWith(".magnific.ai") ||
+      host.endsWith(".cloudfront.net") ||
+      host.endsWith(".amazonaws.com") ||
+      host === "storage.googleapis.com" ||
+      host.endsWith(".storage.googleapis.com") ||
+      host.endsWith(".googleusercontent.com")
+    ) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 app.get("/api/status/:runId", authRequired, async (req, res) => {
   try {
+    const runRecord = await db.getVideoRun(req.params.runId);
+    if (!runRecord) {
+      return res.status(404).json({ error: "Video generation run not found." });
+    }
+    if (runRecord.userId !== req.user.id) {
+      return res.status(403).json({ error: "Access denied. You do not own this video generation task." });
+    }
+
     const s = await magnific.runStatus(req.params.runId);
-    if (s.videoUrl) videoUrls.add(s.videoUrl);
+    if (s.videoUrl) {
+      videoUrls.add(s.videoUrl);
+      videoOwnership.set(s.videoUrl, {
+        userId: runRecord.userId,
+        runId: req.params.runId,
+        createdAt: Date.now(),
+      });
+      await db.updateVideoRun(req.params.runId, { videoUrl: s.videoUrl, status: s.status });
+    }
     res.json(s);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ---- 4) stream the finished video ----
+// ---- Issue short-lived, single-purpose download ticket ----
+app.post("/api/download/ticket", authRequired, async (req, res) => {
+  cleanExpiredTickets();
+  const url = String(req.body?.url || req.body?.videoUrl || "").trim();
+  if (!url) return res.status(400).json({ error: "Missing video URL." });
+
+  // 1. SSRF and approved video storage host check
+  if (!isApprovedVideoHost(url)) {
+    return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+  }
+
+  // 2. Ownership verification: in-memory registry or database check
+  const inMemoryRecord = videoOwnership.get(url);
+  let isOwner = inMemoryRecord && inMemoryRecord.userId === req.user.id;
+  if (!isOwner) {
+    isOwner = await db.userOwnsVideoUrl(req.user.id, url);
+  }
+
+  if (!isOwner) {
+    if (inMemoryRecord || (await db.isVideoUrlRegistered(url))) {
+      return res.status(403).json({ error: "Access denied. You do not own this video." });
+    }
+    return res.status(404).json({ error: "Video not found or access denied." });
+  }
+
+  const ticketId = `dl_${crypto.randomBytes(24).toString("hex")}`;
+  const expiresAt = Date.now() + DOWNLOAD_TICKET_TTL_MS;
+  downloadTickets.set(ticketId, {
+    userId: req.user.id,
+    videoUrl: url,
+    expiresAt,
+    used: false,
+  });
+
+  res.json({
+    success: true,
+    ticket: ticketId,
+    expiresAt,
+    downloadUrl: `/api/download?ticket=${encodeURIComponent(ticketId)}`,
+  });
+});
+
+async function fetchApprovedVideo(initialUrl, maxRedirects = 5) {
+  let currentUrl = initialUrl;
+  let hops = 0;
+
+  while (hops <= maxRedirects) {
+    if (!isApprovedVideoHost(currentUrl)) {
+      throw Object.assign(
+        new Error(`Redirect destination host not permitted: ${currentUrl}`),
+        { status: 400 }
+      );
+    }
+
+    const res = await fetch(currentUrl, {
+      redirect: "manual",
+    });
+
+    if ([301, 302, 303, 307, 308].includes(res.status)) {
+      hops++;
+      if (hops > maxRedirects) {
+        throw Object.assign(new Error("Too many redirects during video download."), { status: 502 });
+      }
+      const location = res.headers.get("location");
+      if (!location) {
+        throw Object.assign(new Error("Redirect missing location header."), { status: 502 });
+      }
+      const nextUrl = new URL(location, currentUrl).toString();
+      if (!isApprovedVideoHost(nextUrl)) {
+        throw Object.assign(
+          new Error(`Redirect destination host not permitted: ${nextUrl}`),
+          { status: 400 }
+        );
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+
+    return res;
+  }
+}
+
+// ---- 4) stream the finished video (user-isolated & host-allowlisted) ----
 app.get("/api/download", async (req, res) => {
-  const url = String(req.query.url || "");
-  if (!videoUrls.has(url)) return res.status(400).send("Unknown video URL");
+  cleanExpiredTickets();
+  const ticketId = String(req.query.ticket || "").trim();
+  const token = extractToken(req);
+
+  let targetUrl = "";
+
+  if (ticketId) {
+    const ticketRecord = downloadTickets.get(ticketId);
+    if (!ticketRecord) {
+      return res.status(401).json({ error: "Invalid or expired download ticket." });
+    }
+    if (ticketRecord.expiresAt <= Date.now()) {
+      downloadTickets.delete(ticketId);
+      return res.status(401).json({ error: "Download ticket has expired." });
+    }
+    if (ticketRecord.used) {
+      downloadTickets.delete(ticketId);
+      return res.status(401).json({ error: "Download ticket has already been used." });
+    }
+    ticketRecord.used = true;
+    targetUrl = ticketRecord.videoUrl;
+  } else if (token) {
+    const user = await db.getUserBySessionToken(token);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid or expired session token." });
+    }
+    const url = String(req.query.url || "").trim();
+    if (!url) return res.status(400).json({ error: "Missing video URL." });
+
+    if (!isApprovedVideoHost(url)) {
+      return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+    }
+
+    const inMemoryRecord = videoOwnership.get(url);
+    let isOwner = inMemoryRecord && inMemoryRecord.userId === user.id;
+    if (!isOwner) {
+      isOwner = await db.userOwnsVideoUrl(user.id, url);
+    }
+
+    if (!isOwner) {
+      if (inMemoryRecord || (await db.isVideoUrlRegistered(url))) {
+        return res.status(403).json({ error: "Access denied. You do not own this video." });
+      }
+      return res.status(404).json({ error: "Video not found or access denied." });
+    }
+    targetUrl = url;
+  } else {
+    return res.status(401).json({ error: "Authentication or valid download ticket required." });
+  }
+
+  if (!isApprovedVideoHost(targetUrl)) {
+    return res.status(400).json({ error: "Unapproved or invalid video storage host." });
+  }
+
   try {
-    const r = await fetch(url);
-    if (!r.ok || !r.body) return res.status(502).send(`Video fetch failed (HTTP ${r.status})`);
-    res.setHeader("Content-Disposition", 'attachment; filename="ad-film.mp4"');
+    const r = await fetchApprovedVideo(targetUrl);
+    if (!r.ok || !r.body) return res.status(502).json({ error: `Video fetch failed (HTTP ${r.status})` });
+    res.setHeader("Content-Disposition", 'attachment; filename="commercial_video.mp4"');
     res.setHeader("Content-Type", r.headers.get("content-type") || "video/mp4");
     if (r.headers.get("content-length")) res.setHeader("Content-Length", r.headers.get("content-length"));
     Readable.fromWeb(r.body).pipe(res);
   } catch (e) {
-    res.status(500).send(e.message);
+    const statusCode = e.status || 500;
+    res.status(statusCode).json({ error: e.message });
   }
 });
 
@@ -1387,7 +1533,8 @@ app.post("/api/businesses", authRequired, async (req, res) => {
     const saved = await db.saveBusiness(req.body, req.user.id);
     res.json({ success: true, status: "success", business: saved });
   } catch (err) {
-    res.status(400).json({ error: err.message || "Failed to save business profile." });
+    const statusCode = err.status || 400;
+    res.status(statusCode).json({ error: err.message || "Failed to save business profile." });
   }
 });
 
@@ -1417,7 +1564,8 @@ app.post("/api/projects", authRequired, async (req, res) => {
     const saved = await db.saveProject(req.body, req.user.id);
     res.json({ success: true, status: "success", project: saved });
   } catch (err) {
-    res.status(400).json({ error: err.message || "Failed to save project." });
+    const statusCode = err.status || 400;
+    res.status(statusCode).json({ error: err.message || "Failed to save project." });
   }
 });
 
@@ -1467,4 +1615,4 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 
-module.exports = { app, validateForm };
+module.exports = { app, validateForm, sessions, downloadTickets };
