@@ -1363,8 +1363,8 @@ export function Screen03Settings({
 
   const DURATION_OPTIONS = [
     { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
-    { id: '30s', label: '30s Standard', desc: 'Commercial pacing', recommended: true },
-    { id: '60s', label: '60s Extended', desc: 'Full product story' },
+    { id: '20s', label: '20s Standard', desc: 'Commercial pacing', recommended: true },
+    { id: '30s', label: '30s Extended', desc: 'Full product story' },
   ];
 
   const STYLES = [
@@ -1403,7 +1403,7 @@ export function Screen03Settings({
   ];
 
   const currentLang = userContext.language || 'English';
-  const currentDuration = userContext.targetDuration || userContext.duration || '30s';
+  const currentDuration = userContext.targetDuration || userContext.duration || '20s';
   const currentStyle = userContext.creativeStyle || 'UGC / Creator-style';
   const currentDimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
 

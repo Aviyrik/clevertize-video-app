@@ -544,8 +544,8 @@ export default function App() {
     supportingCharacter: '',
     environment: '',
     websiteUrl: '',
-    duration: '30s',
-    targetDuration: '30s',
+    duration: '20s',
+    targetDuration: '20s',
     aspectRatio: '9:16',
     dimension: '9:16',
     platform: 'Instagram Reels / 9:16',
@@ -4071,7 +4071,7 @@ export default function App() {
               initialBrief={userContext.brief}
               initialLanguage={creativeDNA.language || userContext.language || 'English'}
               initialStyle={creativeDNA.creativeStyle || userContext.creativeStyle || 'UGC / Creator-style'}
-              initialDuration={userContext.duration || userContext.targetDuration || '30s'}
+              initialDuration={userContext.duration || userContext.targetDuration || '20s'}
               initialAspectRatio={userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'}
               brandTone={userContext.brandTone || 'Warm & Authentic'}
               brandLogo={userContext.brandLogo || userContext.logo}

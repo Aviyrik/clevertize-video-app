@@ -2496,9 +2496,9 @@ test('Director Mode: Video Dimension and Video Length unified controls & end-to-
   assert.ok(guidedStudioSrc.includes('16:9 Landscape'), 'Must offer 16:9 Landscape');
   assert.ok(guidedStudioSrc.includes('1:1 Square'), 'Must offer 1:1 Square');
   assert.ok(guidedStudioSrc.includes('15s Hook'), 'Must offer 15s Hook');
-  assert.ok(guidedStudioSrc.includes('30s Standard'), 'Must offer 30s Standard');
-  assert.ok(guidedStudioSrc.includes('60s Extended'), 'Must offer 60s Extended');
-  assert.ok(guidedStudioSrc.includes('Popular'), 'Must mark 30s Standard as popular/recommended');
+  assert.ok(guidedStudioSrc.includes('20s Standard'), 'Must offer 20s Standard');
+  assert.ok(guidedStudioSrc.includes('30s Extended'), 'Must offer 30s Extended');
+  assert.ok(guidedStudioSrc.includes('Popular'), 'Must mark 20s Standard as popular/recommended');
 
   // 2. StudioChoicesBar supports dimension
   assert.ok(guidedStudioSrc.includes("if (dimension || platform) activeChoices.push({ type: 'dimension'"), 'StudioChoicesBar must include dimension');
@@ -2516,14 +2516,14 @@ test('Director Mode: Video Dimension and Video Length unified controls & end-to-
   assert.ok(creativeSrc.includes('- Target Film Duration: ${targetDur}'), 'synthesizeMasterScript must inject Target Film Duration into DNA');
   assert.ok(creativeSrc.includes('VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}'), 'synthesizeMasterScript must inject aspect ratio into stage instructions');
 
-  // 6. Test synthesizeMasterScript output with 16:9 and 60s
+  // 6. Test synthesizeMasterScript output with 16:9 and 20s
   const testForm = {
     businessName: 'Apex Fitness',
     businessType: 'Gym & Crossfit Studio',
     town: 'Mumbai',
     language: 'English',
     aspectRatio: '16:9',
-    duration: '60s',
+    duration: '20s',
   };
   const testDNA = {
     direction: { title: 'High Octane Energy', description: 'Show intense workouts' },
@@ -2541,9 +2541,9 @@ test('Director Mode: Video Dimension and Video Length unified controls & end-to-
 
   assert.strictEqual(synthesized.aspectRatio, '16:9', 'synthesized script must preserve selected 16:9 aspectRatio');
   assert.strictEqual(synthesized.dimension, '16:9', 'synthesized script must preserve selected 16:9 dimension');
-  assert.strictEqual(synthesized.duration, '60s', 'synthesized script must preserve selected 60s duration');
+  assert.strictEqual(synthesized.duration, '20s', 'synthesized script must preserve selected 20s duration');
   assert.strictEqual(synthesized.shotSpec.project.aspectRatio, '16:9', 'shotSpec must retain 16:9 aspectRatio');
-  assert.strictEqual(synthesized.shotSpec.project.duration, '60s', 'shotSpec must retain 60s duration');
+  assert.strictEqual(synthesized.shotSpec.project.duration, '20s', 'shotSpec must retain 20s duration');
 });
 
 

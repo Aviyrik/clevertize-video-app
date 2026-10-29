@@ -1574,8 +1574,8 @@ test("Simple Studio: Upfront Dimension & Duration controls, script-first flow, a
   assert.ok(studioFile.includes("'16:9'"), "16:9 aspect ratio option must be available");
   assert.ok(studioFile.includes("'1:1'"), "1:1 aspect ratio option must be available");
   assert.ok(studioFile.includes("'15s'"), "15s duration option must be available");
+  assert.ok(studioFile.includes("'20s'"), "20s duration option must be available");
   assert.ok(studioFile.includes("'30s'"), "30s duration option must be available");
-  assert.ok(studioFile.includes("'60s'"), "60s duration option must be available");
 
   // Verify script-first CTA and copy
   assert.ok(studioFile.includes("Generate 3 Ad Scripts ➔"), "Step 1 button must say Generate 3 Ad Scripts ➔");

@@ -57,8 +57,8 @@ const DIMENSION_OPTIONS = [
 
 const DURATION_OPTIONS = [
   { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
-  { id: '30s', label: '30s Standard', desc: 'Commercial pacing', recommended: true },
-  { id: '60s', label: '60s Extended', desc: 'Full product story' },
+  { id: '20s', label: '20s Standard', desc: 'Commercial pacing', recommended: true },
+  { id: '30s', label: '30s Extended', desc: 'Full product story' },
 ];
 
 // Dynamic category suggestions are loaded inside the component via getBriefSuggestions
@@ -71,7 +71,7 @@ export default function SimpleBusinessStudio({
   initialBrief = '',
   initialLanguage = 'English',
   initialStyle = 'UGC / Creator-style',
-  initialDuration = '30s',
+  initialDuration = '20s',
   initialAspectRatio = '9:16',
   brandTone = 'Warm & Authentic',
   brandLogo = null,
