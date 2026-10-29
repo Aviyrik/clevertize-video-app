@@ -434,14 +434,22 @@ export default function SimpleBusinessStudio({
       ======================================================== */}
       {step === 1 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 14,
-              padding: 24,
-            }}
-          >
+          {isLoadingPackages ? (
+            <SimpleAdPackagesLoader
+              businessName={businessName}
+              category={category}
+              statusText="Writing 3 Ad Scripts..."
+            />
+          ) : (
+            <>
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 14,
+                  padding: 24,
+                }}
+              >
             <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
               What would you like to promote?
             </h2>
@@ -870,31 +878,14 @@ export default function SimpleBusinessStudio({
                 transition: 'all 0.15s ease',
               }}
             >
-              {isLoadingPackages ? (
-                <>
-                  <RotateCcw size={15} className="spin" />
-                  <span>Writing 3 Ad Scripts...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={15} />
-                  <span>Generate 3 Ad Scripts ➔</span>
-                </>
-              )}
+              <Sparkles size={15} />
+              <span>Generate 3 Ad Scripts ➔</span>
             </button>
           </div>
-
-          {/* Detailed Ad Packages Generator Loading Experience */}
-          {isLoadingPackages && (
-            <div style={{ marginTop: 12 }}>
-              <SimpleAdPackagesLoader
-                businessName={businessName}
-                category={category}
-              />
-            </div>
-          )}
-        </div>
+        </>
       )}
+    </div>
+  )}
 
       {/* ========================================================
           STEP 2: CHOOSE YOUR AD SCRIPT
