@@ -1079,7 +1079,19 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
 // 8) Simple Business Studio — 3 Ready-Made Ad Packages
 app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, targetAudience, language, creativeStyle, brandTone } = req.body || {};
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      targetAudience,
+      language,
+      creativeStyle,
+      brandTone,
+      duration,
+      aspectRatio,
+      dimension,
+    } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
     }
@@ -1095,6 +1107,8 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
       brandTone,
+      duration: duration || "30s",
+      aspectRatio: aspectRatio || dimension || "9:16",
     });
     res.json({ status: "success", packages });
   } catch (e) {
@@ -1112,6 +1126,9 @@ app.post("/api/run", authRequired, async (req, res) => {
       productPhoto,
       logo,
       duration,
+      aspectRatio,
+      dimension,
+      platform,
       shotSpec,
       product,
       productName,
@@ -1167,6 +1184,8 @@ app.post("/api/run", authRequired, async (req, res) => {
         return compileShotPrompt(updatedShot, effectiveStaticWorld, {
           duration: duration || "15s",
           shotCount: scenes.length,
+          aspectRatio: aspectRatio || dimension || (platform && platform.includes("16:9") ? "16:9" : platform && platform.includes("1:1") ? "1:1" : "9:16"),
+          platform: platform,
           style: shotSpec.project?.style || req.body?.creativeStyle,
           format: shotSpec.format,
         });
@@ -1177,7 +1196,9 @@ app.post("/api/run", authRequired, async (req, res) => {
         setting: resolvedSetting,
         character1: resolvedChar1,
         character2: resolvedChar2,
-        duration,
+        duration: duration || "15s",
+        aspectRatio: aspectRatio || dimension || (platform && platform.includes("16:9") ? "16:9" : platform && platform.includes("1:1") ? "1:1" : "9:16"),
+        platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
       }));

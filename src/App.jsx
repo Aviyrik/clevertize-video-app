@@ -3490,8 +3490,9 @@ export default function App() {
         character1: effectiveChar1,
         character2: effectiveChar2,
         setting: effectiveSetting,
-        duration: userContext.duration || '15s',
-        platform: userContext.platform || 'Instagram Reels / 9:16',
+        duration: overrideParams?.duration || userContext.duration || userContext.targetDuration || '15s',
+        platform: overrideParams?.platform || (overrideParams?.aspectRatio === '16:9' ? 'YouTube / 16:9' : overrideParams?.aspectRatio === '1:1' ? 'Feed / 1:1' : overrideParams?.dimension) || userContext.platform || 'Instagram Reels / 9:16',
+        aspectRatio: overrideParams?.aspectRatio || overrideParams?.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'),
         product: userContext.specialty || userContext.offer || userContext.brief || bType || 'featured product',
         productName: userContext.specialty || bType || 'featured product',
         businessType: bType,
@@ -3569,6 +3570,14 @@ export default function App() {
       if (packageData.language) updateUserContext('language', packageData.language);
       if (packageData.creativeStyle) updateUserContext('creativeStyle', packageData.creativeStyle);
       if (packageData.productPhoto) updateUserContext('productPhoto', packageData.productPhoto);
+      if (packageData.duration) {
+        updateUserContext('duration', packageData.duration);
+        updateUserContext('targetDuration', packageData.duration);
+      }
+      if (packageData.aspectRatio || packageData.dimension || packageData.platform) {
+        const plat = packageData.platform || (packageData.aspectRatio === '16:9' ? 'YouTube / 16:9' : packageData.aspectRatio === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16');
+        updateUserContext('platform', plat);
+      }
 
       await handleRunVideoProduction({
         scenes: formattedScenes,
@@ -3577,6 +3586,10 @@ export default function App() {
         character2: packageChar2,
         brief: packageData.brief || userContext.brief,
         productPhoto: packageData.productPhoto || userContext.productPhoto,
+        duration: packageData.duration || userContext.duration || userContext.targetDuration || '30s',
+        platform: packageData.platform || (packageData.aspectRatio === '16:9' ? 'YouTube / 16:9' : packageData.aspectRatio === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16'),
+        aspectRatio: packageData.aspectRatio || packageData.dimension || '9:16',
+        dimension: packageData.aspectRatio || packageData.dimension || '9:16',
       });
     } catch (err) {
       console.error('[SimpleStudio] video run error:', err);
@@ -4019,8 +4032,10 @@ export default function App() {
               businessType={userContext.businessType}
               town={userContext.town}
               initialBrief={userContext.brief}
-              initialLanguage={creativeDNA.language || 'English'}
-              initialStyle={creativeDNA.creativeStyle || 'UGC / Creator-style'}
+              initialLanguage={creativeDNA.language || userContext.language || 'English'}
+              initialStyle={creativeDNA.creativeStyle || userContext.creativeStyle || 'UGC / Creator-style'}
+              initialDuration={userContext.duration || userContext.targetDuration || '30s'}
+              initialAspectRatio={userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'}
               brandTone={userContext.brandTone || 'Warm & Authentic'}
               brandLogo={userContext.brandLogo || userContext.logo}
               onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}

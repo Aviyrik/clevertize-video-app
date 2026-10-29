@@ -49,15 +49,30 @@ const AD_STYLES = [
   { id: 'Storytelling', label: 'Heartwarming Story', desc: 'Warm customer connection', icon: '🎬' },
 ];
 
+const DIMENSION_OPTIONS = [
+  { id: '9:16', label: '9:16 Vertical', desc: 'Reels / Shorts / TikTok', icon: '📱' },
+  { id: '16:9', label: '16:9 Landscape', desc: 'YouTube / TV / Desktop', icon: '🖥️' },
+  { id: '1:1', label: '1:1 Square', desc: 'Social Feed / Posts', icon: '⏹️' },
+];
+
+const DURATION_OPTIONS = [
+  { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
+  { id: '30s', label: '30s Standard', desc: 'Commercial pacing', recommended: true },
+  { id: '60s', label: '60s Extended', desc: 'Full product story' },
+];
+
 // Dynamic category suggestions are loaded inside the component via getBriefSuggestions
 
 export default function SimpleBusinessStudio({
   businessName = 'My Business',
   businessType = 'Local Business',
+  category: categoryProp,
   town = '',
   initialBrief = '',
   initialLanguage = 'English',
   initialStyle = 'UGC / Creator-style',
+  initialDuration = '30s',
+  initialAspectRatio = '9:16',
   brandTone = 'Warm & Authentic',
   brandLogo = null,
   onSwitchToDirectorMode,
@@ -70,9 +85,10 @@ export default function SimpleBusinessStudio({
   producedVideoUrl = null,
   videoRunError = null,
 }) {
+  const category = categoryProp || businessType || 'Local Business';
 
   // Dynamic Category & Brand-Specific Suggestions
-  const categoryContext = getBriefSuggestions(businessType, businessName, town);
+  const categoryContext = getBriefSuggestions(category, businessName, town);
   const quickIdeas = (categoryContext && Array.isArray(categoryContext.suggestions) && categoryContext.suggestions.length > 0)
     ? categoryContext.suggestions
     : [
@@ -85,7 +101,7 @@ export default function SimpleBusinessStudio({
 
   // 3 Steps:
   // 1: 'offer' (Input promotion details)
-  // 2: 'choose' (Pick from 3 generated complete ad packages)
+  // 2: 'choose' (Pick from 3 generated complete ad scripts)
   // 3: 'produce' (Video production, player, download)
   const [step, setStep] = useState(1);
 
@@ -93,6 +109,8 @@ export default function SimpleBusinessStudio({
   const [brief, setBrief] = useState(initialBrief || '');
   const [language, setLanguage] = useState(initialLanguage || 'English');
   const [creativeStyle, setCreativeStyle] = useState(initialStyle || 'UGC / Creator-style');
+  const [duration, setDuration] = useState(initialDuration || '30s');
+  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio || '9:16');
   const [productPhoto, setProductPhoto] = useState(null);
   const [charCount, setCharCount] = useState(brief.length);
 
@@ -148,18 +166,20 @@ export default function SimpleBusinessStudio({
         },
         body: JSON.stringify({
           businessName,
-          businessType,
+          businessType: category,
           town,
           brief: brief.trim(),
           language,
           creativeStyle,
           brandTone,
+          duration,
+          aspectRatio,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to generate ad packages.');
+        throw new Error(data.error || 'Failed to generate ad scripts.');
       }
 
       const data = await res.json();
@@ -168,11 +188,11 @@ export default function SimpleBusinessStudio({
         setSelectedPackageId(data.packages[0].id);
         setStep(2);
       } else {
-        throw new Error('No ad packages were generated. Please try again.');
+        throw new Error('No ad scripts were generated. Please try again.');
       }
     } catch (err) {
       console.error('[SimpleStudio] generation error:', err.message);
-      setLoadError(err.message || 'Error creating video ads. Please try again.');
+      setLoadError(err.message || 'Error creating ad scripts. Please try again.');
     } finally {
       setIsLoadingPackages(false);
     }
@@ -186,7 +206,7 @@ export default function SimpleBusinessStudio({
     if (onProduceVideo) {
       const derivedSetting = (
         selectedPackage.setting ||
-        `Modern, well-lit ${businessType || 'business'} environment at ${businessName || 'the store'}`
+        `Modern, well-lit ${category || 'business'} environment at ${businessName || 'the store'}`
       ).trim();
 
       const derivedChar1 = (
@@ -213,6 +233,10 @@ export default function SimpleBusinessStudio({
         brief,
         language,
         creativeStyle,
+        duration: selectedPackage.duration || duration,
+        aspectRatio: selectedPackage.aspectRatio || aspectRatio,
+        dimension: selectedPackage.aspectRatio || aspectRatio,
+        platform: (selectedPackage.aspectRatio || aspectRatio) === '16:9' ? 'YouTube / 16:9' : (selectedPackage.aspectRatio || aspectRatio) === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16',
       });
     }
   };
@@ -243,8 +267,8 @@ export default function SimpleBusinessStudio({
       >
         {[
           { num: '01', stepNum: 1, label: 'Your Offer' },
-          { num: '02', stepNum: 2, label: 'Pick Video Ad' },
-          { num: '03', stepNum: 3, label: 'Generate Video' },
+          { num: '02', stepNum: 2, label: 'Choose Script' },
+          { num: '03', stepNum: 3, label: 'Produce Video' },
         ].map((s, idx) => {
           const isCurrent = step === s.stepNum;
           const isCompleted = step > s.stepNum;
@@ -422,7 +446,7 @@ export default function SimpleBusinessStudio({
               What would you like to promote?
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Enter your deal, discount, or announcement. CleverCut will turn it into 3 ready-to-run video ad concepts.
+              Enter your deal, discount, or announcement. CleverCut will write 3 ready-to-produce commercial script concepts.
             </p>
 
             {/* Quick Inspiration Pills */}
@@ -596,6 +620,134 @@ export default function SimpleBusinessStudio({
               </div>
             </div>
 
+            {/* Video Dimension & Duration Selectors */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginTop: 18 }}>
+              {/* Video Dimension */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: 'var(--text-tertiary)',
+                    }}
+                  >
+                    Video Dimension
+                  </label>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                    {aspectRatio === '16:9' ? 'Landscape (YouTube)' : aspectRatio === '1:1' ? 'Square (Feed)' : 'Vertical (Reels/Shorts)'}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {DIMENSION_OPTIONS.map((dim) => {
+                    const isSelected = aspectRatio === dim.id;
+                    return (
+                      <button
+                        key={dim.id}
+                        type="button"
+                        onClick={() => setAspectRatio(dim.id)}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4,
+                          padding: '10px 6px',
+                          borderRadius: 8,
+                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span style={{ fontSize: 16 }}>{dim.icon}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                          {dim.label}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                          {dim.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Video Length / Duration */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: 'var(--text-tertiary)',
+                    }}
+                  >
+                    Video Length
+                  </label>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                    Target run-time
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {DURATION_OPTIONS.map((dur) => {
+                    const isSelected = duration === dur.id;
+                    return (
+                      <button
+                        key={dur.id}
+                        type="button"
+                        onClick={() => setDuration(dur.id)}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4,
+                          padding: '10px 6px',
+                          borderRadius: 8,
+                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease',
+                          position: 'relative',
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                          ⏱️ {dur.label}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                          {dur.desc}
+                        </div>
+                        {dur.recommended && (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              color: isSelected ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                              backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-surface)',
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                            }}
+                          >
+                            Popular
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* Optional Product Photo Upload */}
             <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -721,12 +873,12 @@ export default function SimpleBusinessStudio({
               {isLoadingPackages ? (
                 <>
                   <RotateCcw size={15} className="spin" />
-                  <span>Writing 3 Video Ads...</span>
+                  <span>Writing 3 Ad Scripts...</span>
                 </>
               ) : (
                 <>
                   <Sparkles size={15} />
-                  <span>Create 3 Video Ads ➔</span>
+                  <span>Generate 3 Ad Scripts ➔</span>
                 </>
               )}
             </button>
@@ -745,16 +897,16 @@ export default function SimpleBusinessStudio({
       )}
 
       {/* ========================================================
-          STEP 2: PICK YOUR AD (3 COMPLETE READY-TO-RUN ADS)
+          STEP 2: CHOOSE YOUR AD SCRIPT
       ======================================================== */}
       {step === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ textAlign: 'center', marginBottom: 6 }}>
             <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-              Choose Your Video Ad
+              Choose Your Ad Script
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Select the creative angle that best fits your campaign. Each ad is ready to film.
+              Select the script angle that best fits your campaign. Once chosen, CleverCut will film and produce the complete video ad.
             </p>
           </div>
 
@@ -797,6 +949,12 @@ export default function SimpleBusinessStudio({
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         {pkg.angle}
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        ⏱️ {pkg.duration || duration}
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        📐 {pkg.aspectRatio || aspectRatio}
                       </span>
                     </div>
 
@@ -941,7 +1099,7 @@ export default function SimpleBusinessStudio({
               }}
             >
               <Play size={15} fill="#FFFFFF" />
-              <span>Produce This Video Ad ➔</span>
+              <span>Produce Video for Selected Script ➔</span>
             </button>
           </div>
         </div>

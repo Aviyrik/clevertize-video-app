@@ -1404,7 +1404,7 @@ Scene duration: ~4s | Output: 1080p`;
  * Normalizes an Ad Package to guarantee setting, character1, character2,
  * hook, and fullScriptText are non-empty for downstream video generation.
  */
-function normalizeSimpleAdPackage(pkg, brand, bType) {
+function normalizeSimpleAdPackage(pkg, brand, bType, options = {}) {
   const char1 = (
     pkg.character1 ||
     pkg.characters?.lead ||
@@ -1425,6 +1425,8 @@ function normalizeSimpleAdPackage(pkg, brand, bType) {
 
   return {
     ...pkg,
+    duration: pkg.duration || options.duration || "30s",
+    aspectRatio: pkg.aspectRatio || options.aspectRatio || "9:16",
     character1: char1,
     character2: char2,
     characters: pkg.characters || { lead: char1, customer: char2 },
@@ -1438,7 +1440,7 @@ function normalizeSimpleAdPackage(pkg, brand, bType) {
 /**
  * Curated fallback ad packages for instant recovery when offline or LLM limit reached.
  */
-function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English" }) {
+function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English", duration = "30s", aspectRatio = "9:16" }) {
   const isEng = !language || /eng/i.test(language);
   const isHin = language && /hin/i.test(language);
   const isMar = language && /mar/i.test(language);
@@ -1647,7 +1649,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
   }
 
   if (isSweets) {
@@ -1847,7 +1849,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
   }
 
   // General fallback (refined to be universally appropriate across retail and local businesses)
@@ -2047,7 +2049,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
         },
       ],
     },
-  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType));
+  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
 }
 
 async function generateSimpleAdPackages({
@@ -2059,6 +2061,8 @@ async function generateSimpleAdPackages({
   language = "English",
   creativeStyle = "UGC / Creator-style",
   brandTone,
+  duration = "30s",
+  aspectRatio = "9:16",
 }) {
   const brand = String(businessName || "My Business").trim();
   const bType = String(businessType || "Retail").trim();
@@ -2067,6 +2071,9 @@ async function generateSimpleAdPackages({
   const audience = String(targetAudience || "Neighborhood customers").trim();
   const isEng = !language || /eng/i.test(language);
   const toneGuidance = getBrandToneGuidance(brandTone);
+  const durStr = String(duration || "30s").trim();
+  const arStr = String(aspectRatio || "9:16").trim();
+  const arDesc = arStr === "16:9" ? "16:9 Widescreen Landscape" : arStr === "1:1" ? "1:1 Square Feed" : "9:16 Vertical Mobile";
 
   let categoryGuidance = "";
   const catCheck = `${bType} ${offer}`.toLowerCase();
@@ -2127,6 +2134,8 @@ Ensure all 3 packages reflect this tone in actor performance, spoken dialogue ca
 CRITICAL SCRIPT CONSTRAINTS:
 - Language: ${language}. ${simpleLangInstruction}
 - CRITICAL: Never infer or substitute a regional language based on brand headquarters city or location. The explicit language setting (${language}) is the sole authority.
+- Total Target Duration: ${durStr}. Calibrate the 4 scenes to comfortably complete within ${durStr}.
+- Video Aspect Ratio / Composition: ${arStr} (${arDesc}). Optimize all visual staging for this orientation.
 - Exactly 4 scenes per package:
   Scene 1: Hook (0-3s, pattern interrupt)
   Scene 2: Build (3-8s, product/service demo in action)
@@ -2192,6 +2201,8 @@ OFFER / PROMOTION: ${offer}
 TARGET AUDIENCE: ${audience}
 LANGUAGE: ${language}
 STYLE: ${creativeStyle}
+DURATION: ${durStr}
+DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
 BRAND TONE: ${brandTone || "Warm & Authentic"}
 
 Create 3 distinct Ad Packages now:`;
@@ -2205,9 +2216,12 @@ Create 3 distinct Ad Packages now:`;
           {
             ...pkg,
             id: pkg.id || `pkg_${idx + 1}`,
+            duration: pkg.duration || durStr,
+            aspectRatio: pkg.aspectRatio || arStr,
           },
           brand,
-          bType
+          bType,
+          { duration: durStr, aspectRatio: arStr }
         )
       );
     }
@@ -2215,7 +2229,15 @@ Create 3 distinct Ad Packages now:`;
     console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);
   }
 
-  return getFallbackAdPackages({ businessName: brand, businessType: bType, town: city, brief: offer, language });
+  return getFallbackAdPackages({
+    businessName: brand,
+    businessType: bType,
+    town: city,
+    brief: offer,
+    language,
+    duration: durStr,
+    aspectRatio: arStr,
+  });
 }
 
 const VO_TERM_REGEX = /(?:^|\n)\s*(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/gi;

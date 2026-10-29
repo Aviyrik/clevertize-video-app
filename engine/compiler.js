@@ -94,7 +94,7 @@ function compileShotSpecification(parsedScript, form = {}) {
 
   return {
     project: {
-      aspectRatio: "9:16",
+      aspectRatio: aspectRatio || "9:16",
       duration,
       platform,
       language,

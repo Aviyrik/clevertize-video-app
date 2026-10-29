@@ -1531,3 +1531,61 @@ VO: "Too sick to step out? Consult a doctor in 2 minutes on Practo."`;
   const verticalPrompt = compileShotPrompt(baseShot, baseStatic, { aspectRatio: "9:16" });
   assert.ok(verticalPrompt.includes("VERTICAL 9:16 COMPOSITION"), "Must specify 9:16 vertical");
 });
+
+test("Simple Studio: Upfront Dimension & Duration controls, script-first flow, and category safety", async () => {
+  // 1. generateSimpleAdPackages attaches duration and aspectRatio
+  const packages = await creative.generateSimpleAdPackages({
+    businessName: "Voxy AI",
+    businessType: "AI App",
+    brief: "AI companion that helps you practice conversational skills",
+    language: "English",
+    duration: "15s",
+    aspectRatio: "16:9",
+  });
+
+  assert.strictEqual(packages.length, 3, "Must generate exactly 3 packages");
+  for (const pkg of packages) {
+    assert.strictEqual(pkg.duration, "15s", "Package must retain selected duration");
+    assert.strictEqual(pkg.aspectRatio, "16:9", "Package must retain selected aspectRatio");
+    assert.ok(pkg.fullScriptText, "Package must have fullScriptText compiled");
+  }
+
+  // 2. SimpleBusinessStudio.jsx component contract verification
+  const studioFile = fs.readFileSync(path.join(__dirname, "../src/components/v2/SimpleBusinessStudio.jsx"), "utf8");
+
+  // Verify category ReferenceError fix
+  assert.ok(
+    studioFile.includes("const category = categoryProp || businessType || 'Local Business'"),
+    "SimpleBusinessStudio must define category in scope to prevent ReferenceError"
+  );
+  assert.ok(
+    studioFile.includes("<SimpleAdPackagesLoader"),
+    "SimpleBusinessStudio must render SimpleAdPackagesLoader"
+  );
+  assert.ok(
+    studioFile.includes("category={category}"),
+    "SimpleBusinessStudio must pass defined category to SimpleAdPackagesLoader"
+  );
+
+  // Verify Dimension & Duration controls exist
+  assert.ok(studioFile.includes("DIMENSION_OPTIONS"), "DIMENSION_OPTIONS constant must be defined");
+  assert.ok(studioFile.includes("DURATION_OPTIONS"), "DURATION_OPTIONS constant must be defined");
+  assert.ok(studioFile.includes("'9:16'"), "9:16 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'16:9'"), "16:9 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'1:1'"), "1:1 aspect ratio option must be available");
+  assert.ok(studioFile.includes("'15s'"), "15s duration option must be available");
+  assert.ok(studioFile.includes("'30s'"), "30s duration option must be available");
+  assert.ok(studioFile.includes("'60s'"), "60s duration option must be available");
+
+  // Verify script-first CTA and copy
+  assert.ok(studioFile.includes("Generate 3 Ad Scripts ➔"), "Step 1 button must say Generate 3 Ad Scripts ➔");
+  assert.ok(studioFile.includes("Writing 3 Ad Scripts..."), "Step 1 loading state must say Writing 3 Ad Scripts...");
+  assert.ok(studioFile.includes("Choose Your Ad Script"), "Step 2 header must say Choose Your Ad Script");
+  assert.ok(studioFile.includes("Produce Video for Selected Script ➔"), "Step 2 button must say Produce Video for Selected Script ➔");
+  assert.ok(studioFile.includes("Choose Script"), "Step 2 progress bar label must say Choose Script");
+  assert.ok(studioFile.includes("Produce Video"), "Step 3 progress bar label must say Produce Video");
+
+  // Verify duration and aspectRatio are sent in POST and onProduceVideo
+  assert.ok(studioFile.includes("duration,"), "duration must be passed in simple-packages request");
+  assert.ok(studioFile.includes("aspectRatio,"), "aspectRatio must be passed in simple-packages request");
+});
