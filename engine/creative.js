@@ -1162,6 +1162,11 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
   // Compile detailed instructions carrying all creative decisions into Claude
   const brandTone = form?.brandTone || creativeDNA?.direction?.brandTone || "Warm & Authentic";
   const toneGuidance = getBrandToneGuidance(brandTone);
+  const targetDur = form?.targetDuration || form?.duration || "30s";
+  const durNum = parseInt(targetDur, 10) || 30;
+  const perSceneSec = (durNum / 4).toFixed(1);
+  const targetRatio = form?.aspectRatio || form?.dimension || (form?.platform && form.platform.includes("16:9") ? "16:9" : form?.platform && form.platform.includes("1:1") ? "1:1" : "9:16");
+  const ratioLabel = targetRatio === "16:9" ? "16:9 Widescreen Landscape (YouTube / Desktop / TV)" : targetRatio === "1:1" ? "1:1 Square (Social Feed)" : "9:16 Vertical (Reels / Shorts / TikTok)";
 
   const dnaInstructions = [
     `CREATIVE DNA & APPROVED USER DECISIONS (MANDATORY ENFORCEMENT):`,
@@ -1170,6 +1175,8 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     creativeDNA.plot ? `- Approved Plot: "${creativeDNA.plot.title}": ${creativeDNA.plot.coreIdea} (Conflict: ${creativeDNA.plot.conflictBeat} -> Payoff: ${creativeDNA.plot.payoffBeat})` : null,
     `- Approved Format: ${format}`,
     `- Approved Brand Tone: ${brandTone} (${toneGuidance})`,
+    `- Video Dimension & Framing: ${ratioLabel}`,
+    `- Target Film Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
     creativeDNA.location ? `- Approved Single Location: ${creativeDNA.location.name} (${creativeDNA.location.details || ""})` : null,
     creativeDNA.character1 ? `- Character 1: ${typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : creativeDNA.character1.name + " (" + (creativeDNA.character1.role || "") + ")"}` : null,
     creativeDNA.character2 ? `- Character 2: ${typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : creativeDNA.character2.name + " (" + (creativeDNA.character2.role || "") + ")"}` : null,
@@ -1186,6 +1193,8 @@ ${formatExecutionRules}
 Follow all Product Spine Section 8 rules:
 - Exactly 4 scenes titled SCENE 1 – HOOK / SCENE 2 – BUILD / SCENE 3 – TURN / SCENE 4 – RESOLUTION.
 - Scene 1 MUST open with the approved hook line and action.
+- TARGET DURATION & PACING: Total film duration is ${targetDur}. Ensure the 4 scenes pace smoothly within this runtime (~${perSceneSec}s per scene).
+- VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}. Frame all visual descriptions, camera setups, and blocking for this display ratio.
 - BRAND TONE DIRECTIVE: ${toneGuidance}. Ensure spoken cadence, actor demeanor, eye contact warmth, and visual staging embody this brand voice.
 - Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b).
 - Exactly 2 characters throughout with consistent look and wardrobe.
@@ -1276,6 +1285,11 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     character2: parsed.character2,
     setting: parsed.setting,
     scenes: parsed.scenes,
+    duration: targetDur,
+    targetDuration: targetDur,
+    aspectRatio: targetRatio,
+    dimension: targetRatio,
+    platform: form?.platform || ratioLabel,
     record: { ...parsed.record, business_name: form.businessName, business_type: form.businessType, town: form.town, date: todayIST(), format, scenes: parsed.scenes.length },
   };
 }

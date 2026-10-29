@@ -70,6 +70,9 @@ function resolveProduct(f) {
 
 function validateForm(b) {
   const s = (x) => (typeof x === "string" ? x.trim() : "");
+  const durationVal = s(b.targetDuration || b.duration) || "30s";
+  const aspectVal = s(b.aspectRatio || b.dimension) || (s(b.platform).includes("16:9") ? "16:9" : s(b.platform).includes("1:1") ? "1:1" : "9:16");
+  const platformVal = s(b.platform) || (aspectVal === "16:9" ? "YouTube / 16:9" : aspectVal === "1:1" ? "Feed / 1:1" : "Instagram Reels / 9:16");
   const f = {
     businessName: s(b.businessName),
     businessType: s(b.businessType),
@@ -81,8 +84,11 @@ function validateForm(b) {
     occasion: s(b.occasion),
     contact: s(b.contact),
     ownerName: s(b.ownerName),
-    duration: s(b.duration) || "15s",
-    platform: s(b.platform) || "Instagram Reels / 9:16",
+    duration: durationVal,
+    targetDuration: durationVal,
+    aspectRatio: aspectVal,
+    dimension: aspectVal,
+    platform: platformVal,
     creativeStyle: s(b.creativeStyle) || "UGC / Creator-style",
     brandTone: s(b.brandTone) || "Warm & Authentic",
     scriptMode: b.scriptMode === "roman" ? "roman" : "devanagari",

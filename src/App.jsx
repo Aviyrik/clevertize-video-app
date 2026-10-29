@@ -540,7 +540,10 @@ export default function App() {
     supportingCharacter: '',
     environment: '',
     websiteUrl: '',
-    duration: '15s',
+    duration: '30s',
+    targetDuration: '30s',
+    aspectRatio: '9:16',
+    dimension: '9:16',
     platform: 'Instagram Reels / 9:16',
     creativeStyle: 'UGC / Creator-style',
     language: 'English',
@@ -2040,16 +2043,19 @@ export default function App() {
       : userContext.businessType;
 
     // Enrich specialty with all user inputs so Claude receives the entire creative brief
-    const targetDur = userContext.duration || '15s';
-    const durNum = parseInt(targetDur, 10) || 15;
+    const targetDur = userContext.targetDuration || userContext.duration || '30s';
+    const durNum = parseInt(targetDur, 10) || 30;
     const perSceneSec = (durNum / 4).toFixed(1);
+    const targetRatio = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
+    const ratioLabel = targetRatio === '16:9' ? '16:9 Landscape' : targetRatio === '1:1' ? '1:1 Square' : '9:16 Vertical';
 
     const specialtyParts = [
       userContext.specialty?.trim(),
       userContext.brief?.trim() ? `Creative Brief/Idea: ${userContext.brief.trim()}` : null,
       userContext.targetAudience?.trim() ? `Target Audience: ${userContext.targetAudience.trim()}` : null,
       activeGoal.objective ? `Ad Focus: ${activeGoal.objective}` : null,
-      `Platform: ${userContext.platform || 'Instagram Reels / 9:16'}`,
+      `Video Dimension: ${targetRatio} (${ratioLabel})`,
+      `Platform: ${userContext.platform || ratioLabel}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
       userContext.brandTone?.trim() ? `Brand Tone/Voice: ${userContext.brandTone.trim()}` : null,
       `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
@@ -2067,7 +2073,10 @@ export default function App() {
       targetAudience: userContext.targetAudience?.trim() || '',
       language: userContext.language || 'English',
       duration: targetDur,
-      platform: userContext.platform || 'Instagram Reels / 9:16',
+      targetDuration: targetDur,
+      aspectRatio: targetRatio,
+      dimension: targetRatio,
+      platform: userContext.platform || (targetRatio === '16:9' ? 'YouTube / 16:9' : targetRatio === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16'),
       creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
       brandTone: userContext.brandTone?.trim() || 'Warm & Authentic',
       area: userContext.area?.trim() || '',
@@ -4506,9 +4515,20 @@ export default function App() {
               setExplicitChoices((prev) => ({ ...prev, style: cleanLabel }));
               handleFormatChange(stId);
             }}
+            onDimensionChange={(dimId, dimLabel) => {
+              const label = dimLabel || (dimId === '16:9' ? '16:9 Landscape' : dimId === '1:1' ? '1:1 Square' : '9:16 Vertical');
+              setExplicitChoices((prev) => ({ ...prev, dimension: label, platform: label }));
+              updateUserContext('aspectRatio', dimId);
+              updateUserContext('dimension', dimId);
+              const platFallback = dimId === '16:9' ? 'YouTube / 16:9' : dimId === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16';
+              updateUserContext('platform', platFallback);
+            }}
             onPlatformChange={(platLabel, platId) => {
-              setExplicitChoices((prev) => ({ ...prev, platform: platLabel }));
+              setExplicitChoices((prev) => ({ ...prev, platform: platLabel, dimension: platLabel }));
               updateUserContext('platform', platId);
+              const ar = platId.includes('16:9') ? '16:9' : platId.includes('1:1') ? '1:1' : '9:16';
+              updateUserContext('aspectRatio', ar);
+              updateUserContext('dimension', ar);
             }}
             onDurationChange={(dur) => {
               setExplicitChoices((prev) => ({ ...prev, duration: dur }));
