@@ -1927,6 +1927,10 @@ export function Screen03Settings({
                 )}
               </div>
             )}
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>💡</span>
+              <span>Adding a brand logo adds a +5s branded outro scene with your logo at the end of the commercial.</span>
+            </div>
           </div>
           );
         })()}

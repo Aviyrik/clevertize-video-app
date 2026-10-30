@@ -174,6 +174,7 @@ export default function SimpleBusinessStudio({
           brandTone,
           duration,
           aspectRatio,
+          hasLogo: Boolean(brandLogo),
         }),
       });
 
@@ -835,6 +836,13 @@ export default function SimpleBusinessStudio({
                     }}
                   />
                 </label>
+              )}
+
+              {brandLogo && (
+                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>💡</span>
+                  <span>Brand logo attached: will add a dedicated +5s branded outro scene with your logo at the end.</span>
+                </div>
               )}
             </div>
 

@@ -1162,9 +1162,9 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
   // Compile detailed instructions carrying all creative decisions into Claude
   const brandTone = form?.brandTone || creativeDNA?.direction?.brandTone || "Warm & Authentic";
   const toneGuidance = getBrandToneGuidance(brandTone);
-  const targetDur = form?.targetDuration || form?.duration || "30s";
-  const durNum = parseInt(targetDur, 10) || 30;
-  const perSceneSec = (durNum / 4).toFixed(1);
+  const targetDur = form?.targetDuration || form?.duration || "20s";
+  const hasLogo = Boolean(form?.hasLogo || form?.brandLogo || form?.videoLogo || form?.logo);
+  const plan = computeScenePlan({ duration: targetDur, hasLogo });
   const targetRatio = form?.aspectRatio || form?.dimension || (form?.platform && form.platform.includes("16:9") ? "16:9" : form?.platform && form.platform.includes("1:1") ? "1:1" : "9:16");
   const ratioLabel = targetRatio === "16:9" ? "16:9 Widescreen Landscape (YouTube / Desktop / TV)" : targetRatio === "1:1" ? "1:1 Square (Social Feed)" : "9:16 Vertical (Reels / Shorts / TikTok)";
 
@@ -1176,7 +1176,7 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     `- Approved Format: ${format}`,
     `- Approved Brand Tone: ${brandTone} (${toneGuidance})`,
     `- Video Dimension & Framing: ${ratioLabel}`,
-    `- Target Film Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
+    `- Target Film Duration: ${targetDur} (~5s per scene across ${plan.totalScenes} scenes)`,
     creativeDNA.location ? `- Approved Single Location: ${creativeDNA.location.name} (${creativeDNA.location.details || ""})` : null,
     creativeDNA.character1 ? `- Character 1: ${typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : creativeDNA.character1.name + " (" + (creativeDNA.character1.role || "") + ")"}` : null,
     creativeDNA.character2 ? `- Character 2: ${typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : creativeDNA.character2.name + " (" + (creativeDNA.character2.role || "") + ")"}` : null,
@@ -1185,29 +1185,38 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
   ].filter(Boolean).join("\n");
 
   const stageInst = `STAGE 4 PRODUCTION SCRIPT SYNTHESIS:
-Write the complete 4-scene broadcast script synthesizing the approved creative decisions below.
+Write the complete ${plan.totalScenes}-scene broadcast script synthesizing the approved creative decisions below.
 ${dnaInstructions}
 
 ${formatExecutionRules}
 
 Follow all Product Spine Section 8 rules:
-- Exactly 4 scenes titled SCENE 1 – HOOK / SCENE 2 – BUILD / SCENE 3 – TURN / SCENE 4 – RESOLUTION.
+- Exactly ${plan.totalScenes} scenes titled in sequence:
+${plan.beats.map((b, i) => `  SCENE ${i + 1} – ${b.beat}: [Short scene title]`).join("\n")}
 - Scene 1 MUST open with the approved hook line and action.
-- TARGET DURATION & PACING: Total film duration is ${targetDur}. Ensure the 4 scenes pace smoothly within this runtime (~${perSceneSec}s per scene).
+${plan.hasLogo ? `- Final Scene (${plan.totalScenes}) is a dedicated 5-second brand outro end-card presenting the brand logo with warm payoff and clear call-to-action.` : ""}
+- TARGET DURATION & PACING: Total film duration is ${plan.durationLabel} (${plan.totalSeconds}s runtime, calibrated to ~5s per scene across ${plan.totalScenes} scenes).
 - VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}. Frame all visual descriptions, camera setups, and blocking for this display ratio.
 - BRAND TONE DIRECTIVE: ${toneGuidance}. Ensure spoken cadence, actor demeanor, eye contact warmth, and visual staging embody this brand voice.
-- Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b).
+- Every scene Visual MUST start with "Same setting:" maintaining the exact same continuous room (Rule M13b), except for a dedicated brand outro end-card if applicable.
 - Exactly 2 characters throughout with consistent look and wardrobe.
 - Maximum 2 spoken dialogue lines per character per scene.
 - Dialogue language: ${form.language}. ${isEng ? "Spoken dialogue MUST be written in natural, fluent conversational English (NO Hindi, NO Devanagari script)." : /hindi|hinglish|marathi/i.test(form.language) ? "Spoken dialogue MUST be written fully in authentic Devanagari script (Rule M4)." : `Spoken dialogue MUST be written in authentic ${form.language} script.`}
-- CAMERA SETUP VARIETY (Rule M13c): Use at least 3 distinct camera setups across scenes with motivated camera motion, no two consecutive scenes identical.
+- CAMERA SETUP VARIETY (Rule M13c): Use distinct camera setups across scenes with motivated camera motion, no two consecutive scenes identical.
 - EYE-LINE RULE (Rule M13d): In EVERY scene where two characters talk or interact, the Visual description MUST explicitly state that they look at each other, face each other, or make eye contact (e.g. "Ramesh looks at Sunita as he speaks", "Sunita turns to face Ramesh"). Never omit eye contact when both characters are in the scene or speaking, and never have characters stare into distance or look away.
-${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration leads. Dialogue is concise and demonstrator-led; single presenter or dual interaction allowed without artificial conversational filler." : format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 of the 4 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
+${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration leads. Dialogue is concise and demonstrator-led; single presenter or dual interaction allowed without artificial conversational filler." : format.includes("UGC") ? "- UGC SPEAKER RULE (Section 6): The owner speaks in AT MOST 3 scenes (one scene is B-roll or dialogue from character 2 only)." : "- Rotate speakers so dialogue doesn't come exclusively from one character (Rule M10)."}
 - Return ONLY the standard @@HEADER@@, @@CHARACTER1@@, @@CHARACTER2@@, @@SETTING@@, @@SCENE@@, and @@RECORD@@ markers. In @@HEADER@@, set Format: ${format}.`;
 
   const base = buildUserContent(form, fest, [], todayIST(), stageInst);
   const festName = creativeDNA?.direction?.festival?.name || form.occasion || "";
-  const gateOpts = { scriptMode: form.scriptMode, previous: [], approvedFormat: format, festival: festName };
+  const gateOpts = {
+    scriptMode: form.scriptMode,
+    previous: [],
+    approvedFormat: format,
+    festival: festName,
+    allowSceneCount: [plan.totalScenes, plan.baseScenes, 4],
+    targetDuration: plan.durationLabel,
+  };
 
   let content = base, parsed, failures = [], attempts = 0;
   for (let i = 0; i <= 3; i++) {
@@ -1336,82 +1345,247 @@ Rewrite this scene now:`;
 }
 
 /**
- * Helper to compile 4 structured scenes into Annex-A script text for video generation.
+ * Computes standard scene planning breakdown according to video duration and logo settings:
+ * - 15s: 3 scenes (~5s/scene). If hasLogo: 4 scenes (20s final runtime with 5s logo outro).
+ * - 20s: 4 scenes (~5s/scene). If hasLogo: 5 scenes (25s final runtime with 5s logo outro).
+ * - 30s: 6 scenes (~5s/scene). If hasLogo: 7 scenes (35s final runtime with 5s logo outro).
  */
-function compileSimpleScriptText(pkg, businessName) {
-  const scenes = pkg.scenes || [];
-  const s1 = scenes[0] || {};
-  const s2 = scenes[1] || {};
-  const s3 = scenes[2] || {};
-  const s4 = scenes[3] || {};
+function computeScenePlan({ duration = "20s", hasLogo = false } = {}) {
+  const durStr = String(duration || "20s").toLowerCase().trim();
+  let baseScenes = 4;
+  let baseDurationSec = 20;
+  let baseDurationLabel = "20s";
 
-  return `ANNEX A
-SCENE 1 – HOOK
+  if (durStr.includes("15")) {
+    baseScenes = 3;
+    baseDurationSec = 15;
+    baseDurationLabel = "15s";
+  } else if (durStr.includes("30")) {
+    baseScenes = 6;
+    baseDurationSec = 30;
+    baseDurationLabel = "30s";
+  }
+
+  const logoOutro = Boolean(hasLogo);
+  const totalScenes = baseScenes + (logoOutro ? 1 : 0);
+  const totalSeconds = baseDurationSec + (logoOutro ? 5 : 0);
+  const durationLabel = `${totalSeconds}s`;
+
+  let baseBeats = [];
+  if (baseScenes === 3) {
+    baseBeats = [
+      { beat: "HOOK", name: "Hook", timing: "0-5s" },
+      { beat: "BUILD", name: "Build & Proof", timing: "5-10s" },
+      { beat: "RESOLUTION", name: "Payoff & Offer", timing: "10-15s" },
+    ];
+  } else if (baseScenes === 6) {
+    baseBeats = [
+      { beat: "HOOK", name: "Hook", timing: "0-5s" },
+      { beat: "PROBLEM", name: "Problem Deepen", timing: "5-10s" },
+      { beat: "BUILD", name: "Solution Reveal", timing: "10-15s" },
+      { beat: "DEMO", name: "Tactile Demo & Proof", timing: "15-20s" },
+      { beat: "TURN", name: "Customer Turn", timing: "20-25s" },
+      { beat: "RESOLUTION", name: "Payoff & Call to Action", timing: "25-30s" },
+    ];
+  } else {
+    // 4 scenes (20s)
+    baseBeats = [
+      { beat: "HOOK", name: "Hook", timing: "0-5s" },
+      { beat: "BUILD", name: "Build", timing: "5-10s" },
+      { beat: "TURN", name: "Turn", timing: "10-15s" },
+      { beat: "RESOLUTION", name: "Resolution", timing: "15-20s" },
+    ];
+  }
+
+  const beats = [...baseBeats];
+  if (logoOutro) {
+    beats.push({
+      beat: "OUTRO",
+      name: "Outro & Logo End-Card",
+      timing: `${baseDurationSec}-${totalSeconds}s`,
+    });
+  }
+
+  return {
+    baseDuration: baseDurationLabel,
+    baseDurationSec,
+    baseScenes,
+    hasLogo: logoOutro,
+    totalScenes,
+    totalSeconds,
+    durationLabel,
+    perSceneSec: 5,
+    beats,
+  };
+}
+
+/**
+ * Adapts an array of raw scenes to fit the computed scene plan (3, 4, or 6 base scenes, + logo outro if requested).
+ */
+function adaptPackageScenes(rawScenes = [], { duration = "20s", hasLogo = false, businessName = "My Business", callToAction = "" } = {}) {
+  const plan = computeScenePlan({ duration, hasLogo });
+  const scenes = Array.isArray(rawScenes) ? [...rawScenes] : [];
+  const baseCount = plan.baseScenes;
+
+  let adapted = [];
+  if (scenes.length === 0) {
+    for (let i = 0; i < baseCount; i++) {
+      adapted.push({
+        sceneNumber: i + 1,
+        beat: plan.beats[i]?.name || `Scene ${i + 1}`,
+        timing: `${i * 5}-${(i + 1) * 5}s`,
+        visual: i === 0
+          ? `Hero opening featuring ${businessName} with clear front-and-center framing.`
+          : `Same setting: Demonstrating the active quality and craftsmanship at ${businessName}.`,
+        dialogue: i === 0 ? "Check this out!" : (i === baseCount - 1 ? (callToAction || `Visit ${businessName} today!`) : "Look at the authentic attention to detail."),
+      });
+    }
+  } else if (baseCount === 3) {
+    // 15s base: take Scene 1 (Hook), Scene 2 (Build/Turn), and final scene (Resolution)
+    const s1 = scenes[0] || {};
+    const s2 = scenes.length >= 3 ? scenes[1] : (scenes[1] || {});
+    const s3 = scenes.length >= 3 ? scenes[scenes.length - 1] : (scenes[2] || scenes[1] || {});
+    adapted = [
+      { ...s1, sceneNumber: 1, beat: "Hook", timing: "0-5s" },
+      { ...s2, sceneNumber: 2, beat: "Build & Proof", timing: "5-10s" },
+      { ...s3, sceneNumber: 3, beat: "Resolution & Offer", timing: "10-15s" },
+    ];
+  } else if (baseCount === 6) {
+    // 30s base: expand to 6 scenes with calibrated ~5s beats
+    const s1 = scenes[0] || {};
+    const s2 = scenes[1] || {};
+    const s3 = scenes[2] || {};
+    const s4 = scenes[3] || scenes[scenes.length - 1] || {};
+
+    adapted = [
+      { ...s1, sceneNumber: 1, beat: "Hook", timing: "0-5s" },
+      {
+        sceneNumber: 2,
+        beat: "Problem Deepen",
+        timing: "5-10s",
+        visual: s2.visual ? `Same setting: ${s2.visual.replace(/^Same setting:\s*/i, "")}` : `Same setting: Customer shares the relatable dilemma at ${businessName}.`,
+        dialogue: s2.dialogue || "Finding reliable quality was always a challenge.",
+      },
+      {
+        sceneNumber: 3,
+        beat: "Solution Reveal",
+        timing: "10-15s",
+        visual: `Same setting: Introducing the curated solutions and authentic stock at ${businessName}.`,
+        dialogue: "Until we discovered this transparent selection.",
+      },
+      {
+        sceneNumber: 4,
+        beat: "Tactile Demo & Proof",
+        timing: "15-20s",
+        visual: s3.visual ? `Same setting: ${s3.visual.replace(/^Same setting:\s*/i, "")}` : `Same setting: Close-up hands-on inspection verifying craftsmanship and certified quality at ${businessName}.`,
+        dialogue: s3.dialogue || "Notice the meticulous finish and genuine care.",
+      },
+      {
+        sceneNumber: 5,
+        beat: "Customer Turn",
+        timing: "20-25s",
+        visual: `Same setting: Delight and shared relief as customer confirms complete confidence in ${businessName}.`,
+        dialogue: "This completely exceeds expectations!",
+      },
+      {
+        ...s4,
+        sceneNumber: 6,
+        beat: "Payoff & Call to Action",
+        timing: "25-30s",
+        dialogue: s4.dialogue || (callToAction || `Visit ${businessName} today!`),
+      },
+    ];
+  } else {
+    // 20s base: 4 scenes
+    const raw4 = scenes.slice(0, 4);
+    while (raw4.length < 4) {
+      const idx = raw4.length;
+      raw4.push({
+        sceneNumber: idx + 1,
+        beat: ["Hook", "Build", "Turn", "Resolution"][idx],
+        timing: `${idx * 5}-${(idx + 1) * 5}s`,
+        visual: idx === 0
+          ? `Hero opening featuring ${businessName} with clear front-and-center framing.`
+          : `Same setting: Demonstrating the active quality and craftsmanship at ${businessName}.`,
+        dialogue: idx === 0 ? "Check this out!" : (idx === 3 ? (callToAction || `Visit ${businessName} today!`) : "Look at the authentic attention to detail."),
+      });
+    }
+    adapted = raw4.map((sc, i) => ({
+      ...sc,
+      sceneNumber: i + 1,
+      beat: ["Hook", "Build", "Turn", "Resolution"][i],
+      timing: `${i * 5}-${(i + 1) * 5}s`,
+    }));
+  }
+
+  // If user chooses to add logo, append dedicated 5s brand outro scene
+  if (plan.hasLogo) {
+    const outroNum = plan.totalScenes;
+    adapted.push({
+      sceneNumber: outroNum,
+      beat: "Outro & Logo",
+      timing: `${plan.baseDurationSec}-${plan.totalSeconds}s`,
+      visual: `Centered brand outro presenting the official ${businessName} brand logo with clean aesthetic lighting, warm confident smile, and final payoff.`,
+      dialogue: callToAction || `Visit ${businessName} today!`,
+      isLogoOutro: true,
+    });
+  }
+
+  return adapted;
+}
+
+/**
+ * Helper to compile structured scenes into Annex-A script text for video generation.
+ * Supports 3, 4, 5, 6, or 7 scenes dynamically with standardized ~5s pacing.
+ */
+function compileSimpleScriptText(pkg, businessName, options = {}) {
+  const brand = businessName || pkg.businessName || "My Business";
+  const scenes = Array.isArray(pkg.scenes) && pkg.scenes.length > 0 ? pkg.scenes : [];
+  if (scenes.length === 0) return "";
+
+  const defaultBeats = ["HOOK", "BUILD", "TURN", "RESOLUTION", "PAYOFF", "OUTRO"];
+
+  return scenes.map((s, idx) => {
+    const sceneNum = idx + 1;
+    const isOutro = Boolean(s.isLogoOutro || (idx === scenes.length - 1 && (/outro|logo/i.test(s.beat || "") || /outro|logo/i.test(s.visual || ""))));
+    let beatName = s.beat
+      ? s.beat.replace(/^SCENE\s*\d+\s*[–-]\s*/i, "").toUpperCase().trim()
+      : (isOutro ? "OUTRO & LOGO" : (idx === scenes.length - 1 ? "RESOLUTION" : defaultBeats[idx] || `BEAT ${sceneNum}`));
+    if (isOutro && !/outro/i.test(beatName)) beatName = "OUTRO & LOGO";
+
+    let visual = s.visual || (idx === 0
+      ? `Hero opening featuring ${brand} with clear front-and-center framing.`
+      : isOutro
+      ? `Centered brand outro presenting the official ${brand} logo with clean aesthetic lighting, warm closing smile, and final payoff.`
+      : `Same setting: Demonstrating the active service and craftsmanship at ${brand}.`);
+
+    if (idx > 0 && !visual.toLowerCase().startsWith("same setting") && !isOutro) {
+      visual = `Same setting: ${visual}`;
+    }
+
+    const dialogue = s.dialogue || (idx === 0
+      ? (pkg.hookHeadline || "Check this out!")
+      : isOutro || idx === scenes.length - 1
+      ? (pkg.callToAction || `Visit ${brand} today!`)
+      : "Look at the authentic attention to detail.");
+
+    return `ANNEX A
+SCENE ${sceneNum} – ${beatName}
 Visual:
-${s1.visual || `Hero opening featuring ${businessName} with clear front-and-center framing.`}
+${visual}
 Animation Elements:
-Camera: steady medium push-in
+Camera: ${idx === 0 ? "steady medium push-in" : isOutro ? "gentle pull-out to hold" : "medium two-shot with subtle horizontal pan"}
 Text overlay: none
 UI element: none
 Transition: cut
 Motion graphics: none
 Audio / Dialogue / Voiceover:
-${s1.dialogue || `${pkg.hookHeadline || "Check this out!"}`}
+${dialogue}
 Sound Design:
-Crisp ambient room tone, tactile Foley.
+${isOutro ? "Upbeat melodic finish, clear resonant hold." : "Crisp ambient room tone, tactile Foley."}
 Editing Notes:
-Scene duration: ~3s | Output: 1080p
-
-ANNEX A
-SCENE 2 – BUILD
-Visual:
-Same setting: ${s2.visual || `Demonstrating the active service and craftsmanship at ${businessName}.`}
-Animation Elements:
-Camera: medium two-shot with subtle horizontal pan
-Text overlay: none
-UI element: none
-Transition: cut
-Motion graphics: none
-Audio / Dialogue / Voiceover:
-${s2.dialogue || "Look at the authentic attention to detail."}
-Sound Design:
-Subtle acoustic Foley, hands-on activity.
-Editing Notes:
-Scene duration: ~4s | Output: 1080p
-
-ANNEX A
-SCENE 3 – TURN
-Visual:
-Same setting: ${s3.visual || `Customer reaction and positive confirmation of quality at ${businessName}.`}
-Animation Elements:
-Camera: close medium shot focusing on genuine reaction
-Text overlay: none
-UI element: none
-Transition: cut
-Motion graphics: none
-Audio / Dialogue / Voiceover:
-${s3.dialogue || "This is exactly what I was hoping for."}
-Sound Design:
-Reassuring ambient warmth, positive chime.
-Editing Notes:
-Scene duration: ~4s | Output: 1080p
-
-ANNEX A
-SCENE 4 – RESOLUTION
-Visual:
-Same setting: ${s4.visual || `Delighted wrap-up with final brand presentation for ${businessName}.`}
-Animation Elements:
-Camera: gentle pull-out to hold
-Text overlay: none
-UI element: none
-Transition: cut
-Motion graphics: none
-Audio / Dialogue / Voiceover:
-${s4.dialogue || `${pkg.callToAction || `Visit ${businessName} today!`}`}
-Sound Design:
-Upbeat melodic finish, clear resonant hold.
-Editing Notes:
-Scene duration: ~4s | Output: 1080p`;
+Scene duration: ~5s | Output: 1080p`;
+  }).join("\n\n");
 }
 
 /**
@@ -1419,6 +1593,10 @@ Scene duration: ~4s | Output: 1080p`;
  * hook, and fullScriptText are non-empty for downstream video generation.
  */
 function normalizeSimpleAdPackage(pkg, brand, bType, options = {}) {
+  const hasLogo = Boolean(options.hasLogo || pkg.hasLogo);
+  const dur = options.duration || pkg.duration || "20s";
+  const plan = computeScenePlan({ duration: dur, hasLogo });
+
   const char1 = (
     pkg.character1 ||
     pkg.characters?.lead ||
@@ -1437,9 +1615,16 @@ function normalizeSimpleAdPackage(pkg, brand, bType, options = {}) {
     `Modern, well-lit ${bType || "store"} environment at ${brand || "the store"}`
   ).trim();
 
-  return {
+  const adaptedScenes = adaptPackageScenes(pkg.scenes || [], {
+    duration: dur,
+    hasLogo,
+    businessName: brand,
+    callToAction: pkg.callToAction,
+  });
+
+  const normalizedPkg = {
     ...pkg,
-    duration: pkg.duration || options.duration || "30s",
+    duration: dur,
     aspectRatio: pkg.aspectRatio || options.aspectRatio || "9:16",
     character1: char1,
     character2: char2,
@@ -1447,14 +1632,19 @@ function normalizeSimpleAdPackage(pkg, brand, bType, options = {}) {
     setting: pkgSetting,
     hook: pkg.hook || pkg.hookHeadline || "",
     hookHeadline: pkg.hookHeadline || pkg.hook || "",
-    fullScriptText: pkg.fullScriptText || compileSimpleScriptText(pkg, brand),
+    scenes: adaptedScenes,
+    totalScenes: adaptedScenes.length,
+    hasLogo,
   };
+
+  normalizedPkg.fullScriptText = compileSimpleScriptText(normalizedPkg, brand, options);
+  return normalizedPkg;
 }
 
 /**
  * Curated fallback ad packages for instant recovery when offline or LLM limit reached.
  */
-function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English", duration = "30s", aspectRatio = "9:16" }) {
+function getFallbackAdPackages({ businessName, businessType = "Local Business", town = "", brief = "", language = "English", duration = "20s", aspectRatio = "9:16", hasLogo = false }) {
   const isEng = !language || /eng/i.test(language);
   const isHin = language && /hin/i.test(language);
   const isMar = language && /mar/i.test(language);
@@ -1663,7 +1853,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio, hasLogo }));
   }
 
   if (isSweets) {
@@ -1863,7 +2053,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
           },
         ],
       },
-    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
+    ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio, hasLogo }));
   }
 
   // General fallback (refined to be universally appropriate across retail and local businesses)
@@ -2063,7 +2253,7 @@ function getFallbackAdPackages({ businessName, businessType = "Local Business", 
         },
       ],
     },
-  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio }));
+  ].map((pkg) => normalizeSimpleAdPackage(pkg, businessName, businessType, { duration, aspectRatio, hasLogo }));
 }
 
 async function generateSimpleAdPackages({
@@ -2075,8 +2265,9 @@ async function generateSimpleAdPackages({
   language = "English",
   creativeStyle = "UGC / Creator-style",
   brandTone,
-  duration = "30s",
+  duration = "20s",
   aspectRatio = "9:16",
+  hasLogo = false,
 }) {
   const brand = String(businessName || "My Business").trim();
   const bType = String(businessType || "Retail").trim();
@@ -2085,9 +2276,10 @@ async function generateSimpleAdPackages({
   const audience = String(targetAudience || "Neighborhood customers").trim();
   const isEng = !language || /eng/i.test(language);
   const toneGuidance = getBrandToneGuidance(brandTone);
-  const durStr = String(duration || "30s").trim();
+  const durStr = String(duration || "20s").trim();
   const arStr = String(aspectRatio || "9:16").trim();
   const arDesc = arStr === "16:9" ? "16:9 Widescreen Landscape" : arStr === "1:1" ? "1:1 Square Feed" : "9:16 Vertical Mobile";
+  const plan = computeScenePlan({ duration: durStr, hasLogo: Boolean(hasLogo) });
 
   let categoryGuidance = "";
   const catCheck = `${bType} ${offer}`.toLowerCase();
@@ -2148,13 +2340,10 @@ Ensure all 3 packages reflect this tone in actor performance, spoken dialogue ca
 CRITICAL SCRIPT CONSTRAINTS:
 - Language: ${language}. ${simpleLangInstruction}
 - CRITICAL: Never infer or substitute a regional language based on brand headquarters city or location. The explicit language setting (${language}) is the sole authority.
-- Total Target Duration: ${durStr}. Calibrate the 4 scenes to comfortably complete within ${durStr}.
+- Total Target Duration: ${plan.durationLabel} (${plan.totalSeconds}s total runtime, calibrated to ~5s per scene).
 - Video Aspect Ratio / Composition: ${arStr} (${arDesc}). Optimize all visual staging for this orientation.
-- Exactly 4 scenes per package:
-  Scene 1: Hook (0-3s, pattern interrupt)
-  Scene 2: Build (3-8s, product/service demo in action)
-  Scene 3: Turn (8-14s, proof / customer reaction)
-  Scene 4: Resolution (14-20s, clear CTA with store visit or order link)
+- Exactly ${plan.totalScenes} scenes per package (${plan.baseScenes} core story scenes${plan.hasLogo ? " + 1 dedicated 5-second brand outro scene with logo reveal" : ""}):
+${plan.beats.map((b, i) => `  Scene ${i + 1}: ${b.name} (${b.timing})`).join("\n")}
 - Single continuous setting per ad package.
 - Exactly 2 characters with natural interaction.
 
@@ -2168,40 +2357,19 @@ Output strictly valid JSON between @@JSON@@ and @@END@@ markers:
       "badge": "Highest Converting",
       "angle": "Problem & Relief",
       "title": "Short Punchy Title",
-      "hookHeadline": "Opening 3-second hook spoken line",
+      "hookHeadline": "Opening 5-second hook spoken line",
       "narrativeSummary": "1-sentence description of the ad story",
       "callToAction": "Clear final CTA line",
       "setting": "Setting description",
       "characters": { "lead": "Character 1", "customer": "Character 2" },
       "scenes": [
-        {
-          "sceneNumber": 1,
-          "beat": "Hook",
-          "timing": "0-3s",
+${plan.beats.map((b, i) => `        {
+          "sceneNumber": ${i + 1},
+          "beat": "${b.name}",
+          "timing": "${b.timing}",
           "visual": "Action description",
           "dialogue": "Lead: Spoken words"
-        },
-        {
-          "sceneNumber": 2,
-          "beat": "Build",
-          "timing": "3-8s",
-          "visual": "Action description",
-          "dialogue": "Lead: Spoken words"
-        },
-        {
-          "sceneNumber": 3,
-          "beat": "Turn",
-          "timing": "8-14s",
-          "visual": "Action description",
-          "dialogue": "Customer: Spoken words"
-        },
-        {
-          "sceneNumber": 4,
-          "beat": "Resolution",
-          "timing": "14-20s",
-          "visual": "Action description",
-          "dialogue": "Lead: Spoken words"
-        }
+        }`).join(",\n")}
       ]
     }
   ]
@@ -2216,6 +2384,7 @@ TARGET AUDIENCE: ${audience}
 LANGUAGE: ${language}
 STYLE: ${creativeStyle}
 DURATION: ${durStr}
+SCENES: ${plan.totalScenes} scenes (~5s each)
 DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
 BRAND TONE: ${brandTone || "Warm & Authentic"}
 
@@ -2235,7 +2404,7 @@ Create 3 distinct Ad Packages now:`;
           },
           brand,
           bType,
-          { duration: durStr, aspectRatio: arStr }
+          { duration: durStr, aspectRatio: arStr, hasLogo: Boolean(hasLogo) }
         )
       );
     }
@@ -2251,6 +2420,7 @@ Create 3 distinct Ad Packages now:`;
     language,
     duration: durStr,
     aspectRatio: arStr,
+    hasLogo: Boolean(hasLogo),
   });
 }
 
@@ -2755,6 +2925,11 @@ module.exports = {
   detectScriptFormat,
   validateHookLine,
   validateHooksList,
+  computeScenePlan,
+  adaptPackageScenes,
+  compileSimpleScriptText,
+  normalizeSimpleAdPackage,
+  getFallbackAdPackages,
   BRAND_TONE_GUIDANCE,
   getBrandToneGuidance,
 };

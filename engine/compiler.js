@@ -72,8 +72,8 @@ function compileShotSpecification(parsedScript, form = {}) {
   const shots = (parsedScript.scenes || []).map((sceneText, idx) => {
     const { visual, camera, dialogue } = extractSceneParts(sceneText);
     const shotNumber = idx + 1;
-    const beatNames = ["HOOK", "BUILD", "TURN", "RESOLUTION"];
-    const beat = beatNames[idx] || `SHOT ${shotNumber}`;
+    const titleMatch = (sceneText || "").match(/SCENE\s*\d+\s*[–-]\s*([^:\n]+)/i);
+    const beat = titleMatch ? titleMatch[1].trim() : (["HOOK", "BUILD", "TURN", "RESOLUTION", "PAYOFF", "OUTRO"][idx] || `SHOT ${shotNumber}`);
 
     // Framing decision tailored for 9:16 mobile feeds (Subject prominent, never tiny)
     const framing = FRAMING_HIERARCHY[beat] || "Medium close-up, subject occupying upper-center 9:16 frame";
@@ -150,11 +150,21 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     ? `PRODUCT VISUAL REFERENCE: Render physical product matching reference photo ("${productPhoto.name || 'product packaging'}"), with accurate brand packaging, colors, and label details.`
     : null;
 
+  const isLogoOutro = Boolean(
+    (options.hasLogo && shot.shotNumber === (options.shotCount || 0)) ||
+    /outro|logo/i.test(shot.beat || "") ||
+    /logo end-card|logo reveal/i.test(shot.fullVisual || "")
+  );
+  const logoEndcardDirective = isLogoOutro
+    ? "BRAND OUTRO & LOGO END-CARD: 5-second closing brand outro. Centered, prominent brand logo presentation with crisp brand mark visibility, confident smiling payoff, and concluding call-to-action."
+    : null;
+
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")
     `COMPOSITION & FRAMING: ${framing}. ${framingDirective} Hero product/service is clearly discernible. ${formatDirective}`,
 
     productVisualRef,
+    logoEndcardDirective,
 
     // 2. Static World (Environment, Lighting, Wardrobe consistency)
     `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}.${staticWorld.businessType ? ` Business domain: ${staticWorld.businessType}.` : ""} Same lighting, color palette, and atmosphere throughout.`,

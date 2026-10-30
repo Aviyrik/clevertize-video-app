@@ -883,14 +883,14 @@ export default function ExistingScriptModal({
                         ⏱️ Target Video Duration
                       </label>
                       <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
-                        {selectedDuration === '15s' ? '3–4 scenes (~4s per shot)' : selectedDuration === '30s' ? '5–6 scenes (~5s per shot)' : '4–5 scenes (~4s per shot)'}
+                        {selectedDuration === '15s' ? '3 scenes (~5s per shot)' : selectedDuration === '30s' ? '6 scenes (~5s per shot)' : '4 scenes (~5s per shot, Standard)'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {[
-                        { id: '15s', label: '15s', subtitle: '3–4 scenes' },
-                        { id: '20s', label: '20s', subtitle: '4–5 scenes (Standard)' },
-                        { id: '30s', label: '30s', subtitle: '5–6 scenes' },
+                        { id: '15s', label: '15s', subtitle: '3 scenes' },
+                        { id: '20s', label: '20s', subtitle: '4 scenes (Standard)' },
+                        { id: '30s', label: '30s', subtitle: '6 scenes' },
                       ].map((d) => {
                         const isSel = selectedDuration === d.id;
                         return (
@@ -983,14 +983,14 @@ export default function ExistingScriptModal({
                   }}
                 >
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Script Content ({selectedDuration === '15s' ? '3–4 Scenes' : selectedDuration === '30s' ? '5–6 Scenes' : '4–5 Scenes'})
+                    Script Content ({selectedDuration === '15s' ? '3 Scenes' : selectedDuration === '30s' ? '6 Scenes' : '4 Scenes'})
                   </label>
                   <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                     {selectedDuration === '15s'
-                      ? 'Target: 3–4 scenes (~4s per shot) for a 15s commercial'
+                      ? 'Target: 3 scenes (~5s per shot) for a 15s commercial (+1 outro if logo attached)'
                       : selectedDuration === '30s'
-                      ? 'Target: 5–6 scenes (~5s per shot) for a 30s commercial'
-                      : 'Target: 4–5 scenes (~4s per shot) for a 20s commercial'}
+                      ? 'Target: 6 scenes (~5s per shot) for a 30s commercial (+1 outro if logo attached)'
+                      : 'Target: 4 scenes (~5s per shot) for a 20s commercial (+1 outro if logo attached)'}
                   </span>
                 </div>
                 <textarea

@@ -107,11 +107,16 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   const hasDurationOverride = Boolean(targetDuration || f.targetDuration || allowSceneCount);
 
   if (hasDurationOverride) {
-    const minScenes = durationSec >= 30 ? 4 : durationSec >= 20 ? 4 : 3;
-    const maxScenes = durationSec >= 30 ? 6 : durationSec >= 20 ? 5 : 4;
-    const isCountAllowed = allowSceneCount ? (n === allowSceneCount) : (n >= minScenes && n <= maxScenes);
-    if (!isCountAllowed) {
-      fails.push(`Script has ${n} scenes; for a ${durationSec}s video it must have between ${minScenes} and ${maxScenes} scenes (M6).`);
+    let allowedCounts;
+    if (allowSceneCount) {
+      allowedCounts = Array.isArray(allowSceneCount) ? allowSceneCount : [allowSceneCount];
+    } else {
+      if (durationSec <= 15) allowedCounts = [3, 4];
+      else if (durationSec <= 20) allowedCounts = [4, 5];
+      else allowedCounts = [5, 6, 7];
+    }
+    if (!allowedCounts.includes(n)) {
+      fails.push(`Script has ${n} scenes; for a ${durationSec}s video it must have ${allowedCounts.join(" or ")} scenes (M6).`);
     }
   } else {
     if (n !== 4) fails.push(`Script has ${n} scenes; it must have exactly 4 (M6).`);
@@ -207,7 +212,8 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   // story arc (M27): scene titles carry the beats in order
   const BEATS = ["HOOK", "BUILD", "TURN", "RESOLUTION"];
   const getSceneTitle = (sc) => ((sc || "").split("\n").find((l) => l.trim() && !/^ANNEX\s*A/i.test(l.trim())) || "").trim();
-  if (n === 4) {
+  const isLogoOutro = /outro|logo/i.test(getSceneTitle(parsed.scenes[n - 1]));
+  if (n === 4 && !isLogoOutro && !hasDurationOverride) {
     parsed.scenes.forEach((sc, i) => {
       const title = getSceneTitle(sc);
       if (BEATS[i] && !new RegExp(`\\b${BEATS[i]}\\b`, "i").test(title)) fails.push(`Scene ${i + 1} title must be "SCENE ${i + 1} – ${BEATS[i]}: …" — the 4 scenes follow HOOK → BUILD → TURN → RESOLUTION (M27).`);
@@ -216,7 +222,7 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
     const firstTitle = getSceneTitle(parsed.scenes[0]);
     const lastTitle = getSceneTitle(parsed.scenes[n - 1]);
     if (!/HOOK/i.test(firstTitle)) fails.push(`Scene 1 title must contain "HOOK" (M27).`);
-    if (!/RESOLUTION|PAYOFF|CTA/i.test(lastTitle)) fails.push(`Scene ${n} title must contain "RESOLUTION" or "PAYOFF" or "CTA" (M27).`);
+    if (!/RESOLUTION|PAYOFF|CTA|OUTRO|LOGO/i.test(lastTitle)) fails.push(`Scene ${n} title must contain "RESOLUTION", "PAYOFF", "CTA", or "OUTRO" (M27).`);
   }
   // ad-speak in dialogue (M26)
   const adSpeak = spokenAll.join(" ").match(AD_SPEAK);

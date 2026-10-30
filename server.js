@@ -72,7 +72,7 @@ function resolveProduct(f) {
 
 function validateForm(b) {
   const s = (x) => (typeof x === "string" ? x.trim() : "");
-  const durationVal = s(b.targetDuration || b.duration) || "30s";
+  const durationVal = s(b.targetDuration || b.duration) || "20s";
   const aspectVal = s(b.aspectRatio || b.dimension) || (s(b.platform).includes("16:9") ? "16:9" : s(b.platform).includes("1:1") ? "1:1" : "9:16");
   const platformVal = s(b.platform) || (aspectVal === "16:9" ? "YouTube / 16:9" : aspectVal === "1:1" ? "Feed / 1:1" : "Instagram Reels / 9:16");
   const f = {
@@ -1040,6 +1040,9 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       duration,
       aspectRatio,
       dimension,
+      hasLogo,
+      brandLogo,
+      logoDataUrl,
     } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
@@ -1056,8 +1059,9 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
       brandTone,
-      duration: duration || "30s",
+      duration: duration || "20s",
       aspectRatio: aspectRatio || dimension || "9:16",
+      hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
     });
     res.json({ status: "success", packages });
   } catch (e) {
