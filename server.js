@@ -11,6 +11,7 @@ const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
+const videoStore = require("./engine/videoStore");
 const { extractSceneParts, compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
 const db = require("./engine/db");
@@ -1211,7 +1212,9 @@ function isApprovedVideoHost(urlString) {
       host.endsWith(".amazonaws.com") ||
       host === "storage.googleapis.com" ||
       host.endsWith(".storage.googleapis.com") ||
-      host.endsWith(".googleusercontent.com")
+      host.endsWith(".googleusercontent.com") ||
+      // permanent copies of finished videos (engine/videoStore.js)
+      (videoStore.isStoredUrl(urlString) && host === videoStore.storageHost())
     ) {
       return true;
     }
@@ -1219,6 +1222,25 @@ function isApprovedVideoHost(urlString) {
   } catch {
     return false;
   }
+}
+
+// Copy a finished video to permanent storage once per run. Concurrent polls share one upload, and a run
+// already archived (its record holds a stored URL) is never copied again, even after a restart.
+// If storage isn't configured or the copy fails, the Magnific URL is used as before.
+const archiving = new Map(); // runId -> Promise<string|null>
+function permanentVideoUrl(runId, runRecord, sourceUrl) {
+  if (videoStore.isStoredUrl(runRecord.videoUrl)) return Promise.resolve(runRecord.videoUrl);
+  if (!videoStore.isConfigured()) return Promise.resolve(null);
+  if (!archiving.has(runId)) {
+    const job = videoStore.archiveVideo({ sourceUrl, userId: runRecord.userId, runId })
+      .catch((e) => {
+        console.error(`[archive] run ${runId}: ${e.message} — keeping the Magnific URL`);
+        return null;
+      })
+      .finally(() => setTimeout(() => archiving.delete(runId), 60 * 1000).unref());
+    archiving.set(runId, job);
+  }
+  return archiving.get(runId);
 }
 
 app.get("/api/status/:runId", authRequired, async (req, res) => {
@@ -1233,13 +1255,19 @@ app.get("/api/status/:runId", authRequired, async (req, res) => {
 
     const s = await magnific.runStatus(req.params.runId);
     if (s.videoUrl) {
-      videoUrls.add(s.videoUrl);
-      videoOwnership.set(s.videoUrl, {
-        userId: runRecord.userId,
-        runId: req.params.runId,
-        createdAt: Date.now(),
-      });
-      await db.updateVideoRun(req.params.runId, { videoUrl: s.videoUrl, status: s.status });
+      // Magnific's URL expires — hand back (and let the app save) the permanent copy when there is one
+      const stored = await permanentVideoUrl(req.params.runId, runRecord, s.videoUrl);
+      const videoUrl = stored || s.videoUrl;
+      for (const url of new Set([s.videoUrl, videoUrl])) {
+        videoUrls.add(url);
+        videoOwnership.set(url, {
+          userId: runRecord.userId,
+          runId: req.params.runId,
+          createdAt: Date.now(),
+        });
+      }
+      await db.updateVideoRun(req.params.runId, { videoUrl, status: s.status });
+      return res.json({ ...s, videoUrl, sourceVideoUrl: s.videoUrl, archived: Boolean(stored) });
     }
     res.json(s);
   } catch (e) {
