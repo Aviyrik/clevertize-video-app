@@ -42,6 +42,12 @@ services:
         value: 8aQhIrUjeZ
       - key: FLOW_11_NOPRODUCT_NOLOGO
         value: iGcG3uKdQH
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_VIDEO_BUCKET
+        value: videos
       - key: FEEDBACK_FORM_ENDPOINT
         value: https://formsubmit.co/viki@clevertize.com
       - key: FEEDBACK_EMAIL_TO

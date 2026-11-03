@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
+import { isVideoLinkExpired } from '../../utils/videoLink.js';
 import {
   FileText,
   Clock,
@@ -283,6 +284,8 @@ export default function ScriptLibraryView({
           {filteredProjects.map((proj) => {
             const hasScenes = proj.scenes && proj.scenes.length >= 4;
             const hasVideo = Boolean(proj.videoUrl);
+            // projects saved before videos were copied to permanent storage may hold an expired Magnific link
+            const videoExpired = hasVideo && isVideoLinkExpired(proj.videoUrl);
             const isExpanded = Boolean(expandedScriptIds[proj.id]);
 
             // Match business logo
@@ -473,8 +476,8 @@ export default function ScriptLibraryView({
                           fontWeight: 800,
                           padding: '2px 8px',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10B981',
+                          backgroundColor: videoExpired ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                          color: videoExpired ? '#F59E0B' : '#10B981',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
@@ -482,7 +485,7 @@ export default function ScriptLibraryView({
                         }}
                       >
                         <Film size={11} />
-                        Video Ready
+                        {videoExpired ? 'Video Link Expired' : 'Video Ready'}
                       </span>
                     ) : hasScenes ? (
                       <span
@@ -585,11 +588,12 @@ export default function ScriptLibraryView({
                             Generated Commercial
                           </div>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                            Ready to download & share
+                            {videoExpired ? 'Link expired — open the project and generate the video again' : 'Ready to download & share'}
                           </div>
                         </div>
                       </div>
 
+                      {!videoExpired && (
                       <a
                         href="#"
                         download={`${(proj.title || 'commercial_video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`}
@@ -632,6 +636,7 @@ export default function ScriptLibraryView({
                         <Download size={13} />
                         <span>Download Video</span>
                       </a>
+                      )}
                     </div>
                   )}
 

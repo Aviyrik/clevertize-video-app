@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
+import { isVideoLinkExpired } from '../utils/videoLink.js';
 import {
   BrandResearchLoader,
   IdeaGenerationLoader,
@@ -4182,6 +4183,10 @@ export function Screen08Video({
   const [showScriptPreview, setShowScriptPreview] = useState(false);
   const [videoTipIdx, setVideoTipIdx] = useState(0);
   const [hasCopiedShare, setHasCopiedShare] = useState(false);
+  // Older projects may hold an expired Magnific link: show that plainly instead of a broken player
+  const [playbackFailed, setPlaybackFailed] = useState(false);
+  useEffect(() => { setPlaybackFailed(false); }, [videoUrl]);
+  const videoUnavailable = Boolean(videoUrl) && (playbackFailed || isVideoLinkExpired(videoUrl));
 
   const handleShareVideo = async () => {
     if (!videoUrl) return;
@@ -4557,13 +4562,24 @@ export function Screen08Video({
           display: 'flex',
           justifyContent: 'center'
         }}>
-          <video
-            src={videoUrl}
-            controls
-            autoPlay
-            loop
-            style={{ maxHeight: 480, width: '100%', objectFit: 'contain' }}
-          />
+          {videoUnavailable ? (
+            <div style={{ padding: '48px 24px', maxWidth: 420, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <AlertCircle size={28} style={{ color: 'var(--warning, #f59e0b)' }} />
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#ffffff' }}>This video's link has expired</div>
+              <div style={{ fontSize: 12, lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.7)' }}>
+                Videos made before permanent storage was added were kept on a temporary rendering link. Your script is still saved — generate the video again to get a copy that doesn't expire.
+              </div>
+            </div>
+          ) : (
+            <video
+              src={videoUrl}
+              controls
+              autoPlay
+              loop
+              onError={() => setPlaybackFailed(true)}
+              style={{ maxHeight: 480, width: '100%', objectFit: 'contain' }}
+            />
+          )}
         </div>
 
         {/* Actions */}
@@ -4593,6 +4609,7 @@ export function Screen08Video({
             <button
               type="button"
               onClick={handleShareVideo}
+              disabled={videoUnavailable}
               style={{
                 padding: '10px 18px',
                 borderRadius: 8,
@@ -4601,7 +4618,8 @@ export function Screen08Video({
                 color: 'var(--text-primary)',
                 fontSize: 13,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: videoUnavailable ? 'not-allowed' : 'pointer',
+                opacity: videoUnavailable ? 0.5 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
@@ -4630,13 +4648,15 @@ export function Screen08Video({
                   alert(err.message || 'Download failed');
                 }
               }}
+              disabled={videoUnavailable}
               style={{
                 padding: '10px 20px',
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-primary)',
                 color: '#ffffff',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: videoUnavailable ? 'not-allowed' : 'pointer',
+                opacity: videoUnavailable ? 0.5 : 1,
                 fontSize: 13,
                 fontWeight: 700,
                 display: 'inline-flex',

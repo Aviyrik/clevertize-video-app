@@ -7,6 +7,7 @@ import {
   isStaleResponse,
 } from './context/studioReducer.js';
 import { videoLogoPayload } from './utils/videoLogo.js';
+import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -1012,6 +1013,9 @@ export default function App() {
   const [isSavingProject, setIsSavingProject] = useState(false);
   const isSavingProjectRef = useRef(false);
   const currentSavingProjectIdRef = useRef(null);
+  // The project the current render is saved under — chosen when the render starts, so a new video never
+  // inherits (and overwrites) the previous video's project. videoUrl is filled in once it finishes.
+  const renderTargetRef = useRef({ id: null, videoUrl: null });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
@@ -1437,6 +1441,8 @@ export default function App() {
     setUserProjects([]);
     setUserBusinesses([]);
     setActiveProjectId(null);
+    currentSavingProjectIdRef.current = null;
+    renderTargetRef.current = { id: null, videoUrl: null };
     setIsCurrentProjectSaved(false);
     setUserContext(createEmptyUserContext());
     resetAllCreativeFilmState();
@@ -1475,6 +1481,8 @@ export default function App() {
     setUserProjects([]);
     setUserBusinesses([]);
     setActiveProjectId(null);
+    currentSavingProjectIdRef.current = null;
+    renderTargetRef.current = { id: null, videoUrl: null };
     setIsCurrentProjectSaved(false);
     setUserContext(createEmptyUserContext());
     resetAllCreativeFilmState();
@@ -1698,6 +1706,7 @@ export default function App() {
     });
     if (activeProjectId === projectId) {
       setActiveProjectId(null);
+      currentSavingProjectIdRef.current = null;
       setIsCurrentProjectSaved(false);
       setVideoUrl('');
     }
@@ -2586,14 +2595,15 @@ export default function App() {
   useEffect(() => {
     if (!videoUrl) return;
     setUserProjects((prev) => {
-      const alreadySaved = prev.some((p) => p.videoUrl === videoUrl || (activeProjectId && p.id === activeProjectId));
-      if (alreadySaved) return prev;
+      // Dedupe on the video itself; the old "or the active project id" clause blocked new videos
+      if (hasProjectForVideo(prev, videoUrl)) return prev;
 
       const resolvedTitle = userContext.businessName
         ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
         : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
 
-      const projectId = activeProjectId || `proj_${Date.now()}`;
+      // Never the active project id: that may be the previous video's project
+      const projectId = renderTargetRef.current.videoUrl === videoUrl ? renderTargetRef.current.id : newProjectId();
       const completedProject = {
         id: projectId,
         businessId: userContext.businessId || null,
@@ -3132,6 +3142,12 @@ export default function App() {
   // Poll /api/status/:runId
   const pollRenderStatus = async (runId) => {
     activeRunIdRef.current = runId;
+    // A new render gets a new project — unless the open project has no video yet, in which case this
+    // render is its first video. Kept in refs, not activeProjectId state: changing that mid-render
+    // would remount Simple Studio (it is keyed on activeProjectId).
+    const renderProjectId = projectIdForRender(activeProjectId, userProjects);
+    renderTargetRef.current = { id: renderProjectId, videoUrl: null };
+    currentSavingProjectIdRef.current = renderProjectId; // a manual save during the render updates the same project
     const maxAttempts = 160;
     for (let i = 1; i <= maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 15000));
@@ -3167,7 +3183,8 @@ export default function App() {
             ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
             : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
 
-          const projectId = activeProjectId || `proj_${Date.now()}`;
+          const projectId = renderProjectId;
+          renderTargetRef.current = { id: projectId, videoUrl: data.videoUrl };
           const completedProject = {
             id: projectId,
             businessId: userContext.businessId || null,
@@ -3200,7 +3217,9 @@ export default function App() {
             updatedAt: new Date().toISOString(),
           };
 
+          // From here on, edits and re-saves of this video update its own project
           setActiveProjectId(projectId);
+          currentSavingProjectIdRef.current = projectId;
           setIsCurrentProjectSaved(true);
 
           // Instantly add to My Projects in state & localStorage so the sidebar counter updates immediately
@@ -3844,8 +3863,9 @@ export default function App() {
   }
 
   // Instantaneous fallback guaranteeing that any generated video in current session appears in My Projects
-  const activeVideoProject = (videoUrl && !userProjects.some((p) => p.videoUrl === videoUrl)) ? [{
-    id: activeProjectId || 'current_active_video',
+  const activeVideoProject = (videoUrl && !hasProjectForVideo(userProjects, videoUrl)) ? [{
+    // the id this render is being saved under, else one derived from the video — never a shared literal
+    id: renderTargetRef.current.videoUrl === videoUrl ? renderTargetRef.current.id : projectIdForVideoUrl(videoUrl),
     businessId: userContext.businessId || null,
     title: userContext.businessName
       ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`

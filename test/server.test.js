@@ -30,7 +30,7 @@ const STORY = (format = "Storytelling") => J({
 });
 
 const realFetch = global.fetch;
-const calls = { anthropic: [], magnificRun: [] };
+const calls = { anthropic: [], magnificRun: [], storageUploads: [] };
 let queue = [];
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -64,6 +64,10 @@ global.fetch = async (url, opts = {}) => {
   if (u.includes("/flows/runs/run_fail")) return json({ status: "FAILED", error: "Generation render timeout" });
   if (u.includes("/flows/runs/")) return json({ status: "COMPLETED", result: { video: "https://cdn.example.com/out.mp4" } });
   if (u.includes("api.magnific.com/v1/ai/flows/")) return json({ inputs: flowSpec(u.split("/flows/")[1]) });
+  if (u.includes("/storage/v1/object/")) { // Supabase Storage upload (engine/videoStore.js)
+    calls.storageUploads.push({ url: u, headers: opts.headers, bytes: Buffer.from(opts.body) });
+    return json({ Key: u.split("/storage/v1/object/")[1] });
+  }
   return realFetch(url, opts);
 };
 
@@ -1007,5 +1011,73 @@ test("B-02: Project persistence preserves shotSpec across save and reopen, and c
   assert.ok(inputOf(sentInputs, "scenes")[0].includes("Warm Chai Point Cafe in Bengaluru"));
 });
 
+test("My Projects keeps every video across logout/login, and editing a project updates it in place", async () => {
+  await db.createUser({ email: "history@example.com", password: "password123", name: "History" });
+  let token = (await post("/api/auth/login", { email: "history@example.com", password: "password123" }, null)).body.token;
+  const list = async (t) => (await (await realFetch(base + "/api/projects", { headers: { authorization: `Bearer ${t}` } })).json()).projects;
 
+  // three videos, each under its own project id (what App.jsx now does)
+  const ids = ["proj_hist_1", "proj_hist_2", "proj_hist_3"];
+  for (const [i, id] of ids.entries()) {
+    const r = await post("/api/projects", { id, title: `Video ${i + 1}`, businessName: "History Co", status: "video_ready", videoUrl: `https://cdn.example.com/history-${i + 1}.mp4` }, token);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+  }
+  assert.deepEqual((await list(token)).map((p) => p.id).sort(), ids);
 
+  // log out and back in: all three are still there
+  assert.equal((await post("/api/auth/logout", {}, token)).status, 200);
+  token = (await post("/api/auth/login", { email: "history@example.com", password: "password123" }, null)).body.token;
+  assert.equal((await list(token)).length, 3);
+
+  // open project 2, edit and re-save under its own id: updated, not duplicated
+  await post("/api/projects", { id: "proj_hist_2", title: "Video 2 (edited)", businessName: "History Co", status: "video_ready", videoUrl: "https://cdn.example.com/history-2.mp4" }, token);
+  const after = await list(token);
+  assert.equal(after.length, 3);
+  assert.equal(after.find((p) => p.id === "proj_hist_2").title, "Video 2 (edited)");
+  assert.equal(after.find((p) => p.id === "proj_hist_1").videoUrl, "https://cdn.example.com/history-1.mp4", "other videos untouched");
+});
+
+test("a finished video is copied to permanent storage once, and the permanent link is what the app gets", async () => {
+  const netguard = require("../engine/netguard");
+  const me = await db.getUserBySessionToken(testToken);
+  await db.saveVideoRun("run_archive_1", me.id, { status: "PENDING" });
+  await db.saveVideoRun("run_archive_2", me.id, { status: "PENDING" });
+  const poll = async (runId) => (await realFetch(base + "/api/status/" + runId, { headers: { authorization: `Bearer ${testToken}` } })).json();
+
+  const realSafeFetch = netguard.safeFetch;
+  const downloaded = [];
+  netguard.safeFetch = async (url) => {
+    downloaded.push(url);
+    return { ok: true, status: 200, headers: { "content-type": "video/mp4" }, body: Buffer.from("fake mp4 bytes") };
+  };
+  process.env.SUPABASE_URL = "https://proj.supabase.test";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
+  try {
+    const first = await poll("run_archive_1");
+    assert.equal(first.archived, true);
+    assert.equal(first.sourceVideoUrl, "https://cdn.example.com/out.mp4");
+    assert.match(first.videoUrl, /^https:\/\/proj\.supabase\.test\/storage\/v1\/object\/public\/videos\/usr_[\w-]+\/run_archive_1-[0-9a-f]{16}\.mp4$/);
+    assert.deepEqual(downloaded, ["https://cdn.example.com/out.mp4"]);
+    const upload = calls.storageUploads.at(-1);
+    assert.equal(upload.headers.Authorization, "Bearer service-role-test-key");
+    assert.equal(upload.bytes.toString(), "fake mp4 bytes");
+
+    // polled again (or after a restart): the same permanent link, no second upload
+    const uploads = calls.storageUploads.length;
+    assert.equal((await poll("run_archive_1")).videoUrl, first.videoUrl);
+    assert.equal(calls.storageUploads.length, uploads);
+
+    // the owner can download the permanent copy
+    const ticket = await post("/api/download/ticket", { url: first.videoUrl });
+    assert.equal(ticket.status, 200, JSON.stringify(ticket.body));
+  } finally {
+    netguard.safeFetch = realSafeFetch;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+
+  // storage not configured: nothing is copied and the Magnific URL comes back, as before
+  const plain = await poll("run_archive_2");
+  assert.equal(plain.archived, false);
+  assert.equal(plain.videoUrl, "https://cdn.example.com/out.mp4");
+});
