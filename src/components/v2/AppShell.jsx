@@ -26,6 +26,7 @@ import {
   ChevronsUpDown,
   Zap,
   Sliders,
+  MessageSquare,
 } from 'lucide-react';
 import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
 
@@ -65,6 +66,7 @@ export default function AppShell({
   currentUser = null,
   onOpenAuthModal,
   onOpenAccountModal,
+  onOpenFeedbackModal,
   onLogout,
   onOpenOnboarding,
   projectCount = 0,
@@ -733,6 +735,47 @@ export default function AppShell({
             </div>
           </div>
 
+          {/* Persistent Feedback / Report an Issue Trigger */}
+          <div style={{ padding: '0 12px 14px' }}>
+            <div
+              onClick={() => {
+                if (onOpenFeedbackModal) onOpenFeedbackModal();
+                setMobileMenuOpen(false);
+              }}
+              role="button"
+              tabIndex={0}
+              title="Report an issue or share feedback"
+              className="sidebar-feedback-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '9px 12px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-active)';
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+            >
+              <MessageSquare size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>Feedback & Issues</span>
+            </div>
+          </div>
+
           {/* Creation Hub & Production Pipeline & Script Library & Business Profile test aliases */}
           <div style={{ display: 'none' }}>Creation Hub Production Pipeline Script Library Business Profile</div>
         </div>
@@ -1079,6 +1122,29 @@ export default function AppShell({
               >
                 <RotateCcw size={13} />
                 <span>Restart Film</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenFeedbackModal}
+                style={{
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+                title="Send Feedback or Report an Issue"
+              >
+                <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>Feedback</span>
               </button>
             </div>
           )}

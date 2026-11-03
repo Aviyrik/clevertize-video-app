@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js test/video_logo.test.js"
+    "test": "node --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js test/video_logo.test.js test/feedback.test.js"
   },
   "dependencies": {
     "@astryxdesign/cli": "^0.6.5",
@@ -17,6 +17,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.22.3",
     "lucide-react": "^1.52.0",
+    "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

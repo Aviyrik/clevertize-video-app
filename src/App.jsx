@@ -24,6 +24,7 @@ import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx
 import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
 import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
 import AccountModal from './components/v2/AccountModal.jsx';
+import FeedbackModal from './components/v2/FeedbackModal.jsx';
 import {
   Mic,
   MicOff,
@@ -1015,6 +1016,7 @@ export default function App() {
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   const getAuthHeaders = (extra = {}) => {
     const token = authToken || localStorage.getItem('clevertize_token');
@@ -3941,6 +3943,7 @@ export default function App() {
           currentUser={currentUser}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onOpenAccountModal={() => setIsAccountModalOpen(true)}
+          onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
           onLogout={handleLogout}
           onOpenOnboarding={() => {
             setEditingBusiness(null);
@@ -4998,8 +5001,24 @@ export default function App() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
+        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
         projectCount={displayProjects.length}
         businessCount={userBusinesses.length}
+      />
+
+      {/* Feedback & Issue Reporting Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        currentUser={currentUser}
+        activeBusiness={activeBusiness}
+        activeProject={userProjects.find((p) => p.id === activeProjectId) || null}
+        activeProjectId={activeProjectId}
+        studioMode={studioMode}
+        studioStage={studioStage}
+        activeView={activeView}
+        generationId={activeRunIdRef?.current || null}
+        getAuthHeaders={getAuthHeaders}
       />
     </StudioDispatchContext.Provider>
   </StudioStateContext.Provider>

@@ -16,6 +16,7 @@ const creative = require("./engine/creative");
 const db = require("./engine/db");
 const netguard = require("./engine/netguard"); // called as netguard.safeFetch so tests can point it at a local server
 const { isDisallowedUrl } = netguard;
+const feedback = require("./engine/feedback");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1593,6 +1594,48 @@ app.delete("/api/projects/:id", authRequired, async (req, res) => {
   }
 });
 
+// ---- Feedback & Issue Reporting Endpoint ----
+app.post("/api/feedback", authRequired, async (req, res) => {
+  try {
+    const limit = feedback.checkRateLimit(req.user?.id || req.ip);
+    if (!limit.allowed) {
+      return res.status(429).json({
+        error: `Too many feedback submissions. Please wait ${limit.retryAfterSeconds} seconds before trying again.`,
+      });
+    }
+
+    const validated = feedback.validateFeedbackPayload(req.body);
+
+    const result = await feedback.sendFeedbackEmail({
+      category: validated.category,
+      message: validated.message,
+      attachments: validated.attachments,
+      context: validated.context,
+      user: req.user,
+    });
+
+    res.json({
+      success: true,
+      message: "Thanks for helping us improve CleverCut! Your feedback has been sent to our team.",
+      messageId: result.messageId,
+    });
+  } catch (err) {
+    const safeError = feedback.sanitizeErrorMessage ? feedback.sanitizeErrorMessage(err.message) : err.message;
+    console.error("[feedback-error]", safeError);
+    const isClientError =
+      err.message.includes("Invalid feedback category") ||
+      err.message.includes("Message is required") ||
+      err.message.includes("Message exceeds") ||
+      err.message.includes("Attachment") ||
+      err.message.includes("Total combined size") ||
+      err.message.includes("Maximum of");
+    const status = isClientError ? 400 : 500;
+    res.status(status).json({
+      error: isClientError ? err.message : "Unable to send your feedback right now. Please try again.",
+    });
+  }
+});
+
 // Ensure API requests that fail to match any endpoint return JSON 404, NEVER HTML index.html
 app.all("/api/*", (req, res) => {
   res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
@@ -1619,4 +1662,4 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 
-module.exports = { app, validateForm, sessions, downloadTickets };
+module.exports = { app, validateForm, sessions, downloadTickets, feedback };

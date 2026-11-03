@@ -13,6 +13,7 @@ import {
   Camera,
   Upload,
   Check,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function AccountModal({
@@ -22,6 +23,7 @@ export default function AccountModal({
   onLogout,
   onDeleteAccount,
   onUpdateProfile,
+  onOpenFeedback,
   projectCount = 0,
   businessCount = 0,
 }) {
@@ -720,22 +722,59 @@ export default function AccountModal({
             <span>Sign Out</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleClose}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 8,
-              backgroundColor: 'var(--accent-primary)',
-              border: 'none',
-              color: '#FFFFFF',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Done
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {onOpenFeedback && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose();
+                  onOpenFeedback();
+                }}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-active)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                }}
+              >
+                <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
+                <span>Send Feedback</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleClose}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 8,
+                backgroundColor: 'var(--accent-primary)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>
