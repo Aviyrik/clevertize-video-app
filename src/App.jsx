@@ -5036,7 +5036,7 @@ export default function App() {
         activeProjectId={activeProjectId}
         studioMode={studioMode}
         studioStage={studioStage}
-        activeView={activeView}
+        activeView={activeAppView}
         generationId={activeRunIdRef?.current || null}
         getAuthHeaders={getAuthHeaders}
       />
