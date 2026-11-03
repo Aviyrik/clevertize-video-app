@@ -5031,7 +5031,7 @@ export default function App() {
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         currentUser={currentUser}
-        activeBusiness={activeBusiness}
+        activeBusiness={userContext}
         activeProject={userProjects.find((p) => p.id === activeProjectId) || null}
         activeProjectId={activeProjectId}
         studioMode={studioMode}
