@@ -109,19 +109,30 @@ async function ensurePgTables() {
 
       CREATE TABLE IF NOT EXISTS email_verification_tokens (
         id VARCHAR(255) PRIMARY KEY,
-        user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+        user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         token_hash VARCHAR(255) NOT NULL,
         expires_at TIMESTAMPTZ NOT NULL,
         used_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'email_verification_tokens' AND column_name = 'user_id' AND is_nullable = 'YES'
+        ) THEN
+          DELETE FROM email_verification_tokens WHERE user_id IS NULL;
+          ALTER TABLE email_verification_tokens ALTER COLUMN user_id SET NOT NULL;
+        END IF;
+      END $$;
+
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
       CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
       CREATE INDEX IF NOT EXISTS idx_evt_user_id ON email_verification_tokens(user_id);
-      CREATE INDEX IF NOT EXISTS idx_evt_token_hash ON email_verification_tokens(token_hash);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_evt_token_hash ON email_verification_tokens(token_hash);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_evt_user_pending ON email_verification_tokens(user_id) WHERE used_at IS NULL;
 
       CREATE TABLE IF NOT EXISTS video_runs (
@@ -1110,15 +1121,19 @@ function hashVerificationToken(token) {
   return crypto.createHash('sha256').update(token.trim()).digest('hex');
 }
 
-async function createEmailVerificationToken(userId, { expiresInHours = 24 } = {}) {
+async function createEmailVerificationToken(userId, options = {}) {
   if (!userId) throw new Error('userId is required');
   const user = await findUserById(userId);
   if (!user) throw new Error('User not found');
 
+  const expiresInMinutes = options.expiresInMinutes !== undefined
+    ? Number(options.expiresInMinutes)
+    : (options.expiresInHours !== undefined ? Number(options.expiresInHours) * 60 : 30);
+
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashVerificationToken(rawToken);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + expiresInHours * 60 * 60 * 1000);
+  const expiresAt = new Date(now.getTime() + expiresInMinutes * 60 * 1000);
   const id = `evt_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
   const pool = getPgPool();
@@ -1234,52 +1249,118 @@ async function getActiveVerificationTokenForUser(userId) {
   return { ...active[active.length - 1] };
 }
 
-async function markEmailAsVerified(userId, tokenHash = null) {
-  if (!userId) throw new Error('userId is required');
+async function markEmailAsVerified(arg1, arg2) {
+  let userId = null;
+  let tokenInput = null;
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    userId = arg1.userId || null;
+    tokenInput = arg1.tokenHash || arg1.rawToken || arg1.token || null;
+  } else if (arguments.length >= 2) {
+    userId = arg1 || null;
+    tokenInput = arg2;
+  } else if (typeof arg1 === 'string') {
+    tokenInput = arg1;
+  }
+
+  if (!tokenInput || typeof tokenInput !== 'string' || !tokenInput.trim()) {
+    throw new Error('Verification token is required');
+  }
+
+  const trimmedToken = tokenInput.trim();
+  const hashedCandidate = hashVerificationToken(trimmedToken);
   const now = new Date();
 
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
-    if (tokenHash) {
-      await pool.query(
-        'UPDATE email_verification_tokens SET used_at = NOW() WHERE token_hash = $1',
-        [tokenHash]
-      );
-    }
+
+    // Atomic consumption & verification CTE:
+    // Guarantees token existence, non-expired, unused, user match (if provided), and atomic consumption.
+    // In PostgreSQL, row locking prevents any race conditions or token reuse across concurrent requests.
     const res = await pool.query(
-      `UPDATE users
+      `WITH consumed_token AS (
+         UPDATE email_verification_tokens
+         SET used_at = NOW()
+         WHERE (token_hash = $1 OR token_hash = $2)
+           AND ($3::text IS NULL OR user_id = $3)
+           AND used_at IS NULL
+           AND expires_at > NOW()
+         RETURNING user_id, token_hash
+       )
+       UPDATE users u
        SET email_verified = TRUE, email_verified_at = NOW()
-       WHERE id = $1
-       RETURNING id, email, name, avatar, email_verified, email_verified_at, created_at`,
-      [userId]
+       FROM consumed_token ct
+       WHERE u.id = ct.user_id
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+      [trimmedToken, hashedCandidate, userId]
     );
-    if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return {
-      id: r.id,
-      email: r.email,
-      name: r.name,
-      avatar: r.avatar || null,
-      emailVerified: Boolean(r.email_verified),
-      emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
-      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
-    };
+
+    if (res.rows.length > 0) {
+      const r = res.rows[0];
+      return {
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        avatar: r.avatar || null,
+        emailVerified: Boolean(r.email_verified),
+        emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+        createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+      };
+    }
+
+    // CTE returned 0 rows -> diagnose specific failure reason
+    const check = await pool.query(
+      'SELECT id, user_id, token_hash, expires_at, used_at FROM email_verification_tokens WHERE token_hash = $1 OR token_hash = $2 LIMIT 1',
+      [trimmedToken, hashedCandidate]
+    );
+
+    if (!check.rows.length) {
+      throw new Error('Verification token not found');
+    }
+
+    const tok = check.rows[0];
+    if (userId && tok.user_id !== userId) {
+      throw new Error('Verification token does not match user');
+    }
+    if (tok.used_at) {
+      throw new Error('Verification token has already been used');
+    }
+    if (new Date(tok.expires_at) <= new Date()) {
+      throw new Error('Verification token has expired');
+    }
+
+    throw new Error('Verification token could not be consumed');
   }
 
-  // JSON fallback
-  if (tokenHash) {
-    const tokens = readJsonFile('email_verification_tokens.json', []);
-    const t = tokens.find((x) => x.tokenHash === tokenHash);
-    if (t) {
-      t.usedAt = now.toISOString();
-      writeJsonFile('email_verification_tokens.json', tokens);
-    }
+  // JSON fallback implementation
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const tok = tokens.find(
+    (x) => x.tokenHash === trimmedToken || (hashedCandidate && x.tokenHash === hashedCandidate)
+  );
+
+  if (!tok) {
+    throw new Error('Verification token not found');
   }
+  if (userId && tok.userId !== userId) {
+    throw new Error('Verification token does not match user');
+  }
+  if (tok.usedAt) {
+    throw new Error('Verification token has already been used');
+  }
+  if (new Date(tok.expiresAt) <= now) {
+    throw new Error('Verification token has expired');
+  }
+
+  // Atomically mark token as used and user as verified
+  tok.usedAt = now.toISOString();
+  writeJsonFile('email_verification_tokens.json', tokens);
 
   const users = readJsonFile('users.json', []);
-  const u = users.find((x) => x.id === userId);
-  if (!u) return null;
+  const u = users.find((x) => x.id === tok.userId);
+  if (!u) {
+    throw new Error('User not found');
+  }
 
   u.emailVerified = true;
   u.emailVerifiedAt = now.toISOString();

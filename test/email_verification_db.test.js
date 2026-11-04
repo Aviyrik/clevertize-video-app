@@ -60,20 +60,27 @@ test('Email Verification DB: Existing users without emailVerified are safely tre
   await db.deleteUser(user.id);
 });
 
-test('Email Verification DB: Token generation stores only token hash, never raw token', async () => {
+test('Email Verification DB: Token generation defaults to 30 minutes expiry and stores only token hash', async () => {
   const user = await db.createUser({
     email: `token-hash-${Date.now()}@example.com`,
     password: 'password123',
     name: 'Hash Tester',
   });
 
-  const tokenObj = await db.createEmailVerificationToken(user.id, { expiresInHours: 24 });
+  // Default options: must expire in 30 minutes
+  const tokenObj = await db.createEmailVerificationToken(user.id);
 
   assert.ok(tokenObj.id, 'Token record must have an ID');
   assert.strictEqual(tokenObj.userId, user.id);
   assert.ok(tokenObj.rawToken, 'Caller receives rawToken to send via email link');
   assert.ok(tokenObj.tokenHash, 'Token hash must be generated');
   assert.notStrictEqual(tokenObj.rawToken, tokenObj.tokenHash, 'tokenHash must be distinct from rawToken');
+
+  // Verify expiry is approximately 30 minutes from creation
+  const createdMs = new Date(tokenObj.createdAt).getTime();
+  const expiresMs = new Date(tokenObj.expiresAt).getTime();
+  const diffMinutes = Math.round((expiresMs - createdMs) / (60 * 1000));
+  assert.strictEqual(diffMinutes, 30, 'Default token expiry must be 30 minutes');
 
   // Verify hash matches sha256 of rawToken
   const expectedHash = db.hashVerificationToken(tokenObj.rawToken);
@@ -177,6 +184,114 @@ test('Email Verification DB: Cascading delete cleans up verification tokens when
   // Verification token should be cleaned up
   const tokenAfter = await db.getVerificationTokenByHash(tokenObj.tokenHash);
   assert.strictEqual(tokenAfter, null, 'Verification tokens must be removed when user is deleted');
+});
+
+test('Email Verification DB: markEmailAsVerified strictly validates existence, prior use, and expiration', async () => {
+  const user = await db.createUser({
+    email: `strict-verify-${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Strict Tester',
+  });
+
+  // 1. Missing token
+  await assert.rejects(
+    async () => db.markEmailAsVerified(user.id, null),
+    /Verification token is required/
+  );
+
+  // 2. Non-existent token
+  await assert.rejects(
+    async () => db.markEmailAsVerified(user.id, 'nonexistent_token_hash_1234567890'),
+    /Verification token not found/
+  );
+
+  // 3. User mismatch
+  const otherUser = await db.createUser({
+    email: `other-user-${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Other User',
+  });
+  const otherToken = await db.createEmailVerificationToken(otherUser.id);
+  await assert.rejects(
+    async () => db.markEmailAsVerified(user.id, otherToken.tokenHash),
+    /Verification token does not match user/
+  );
+
+  // 4. Successful verification consumes token atomically
+  const tokenObj = await db.createEmailVerificationToken(user.id);
+  const verified = await db.markEmailAsVerified(user.id, tokenObj.tokenHash);
+  assert.strictEqual(verified.emailVerified, true);
+  assert.ok(verified.emailVerifiedAt);
+
+  // 5. Subsequent use of already consumed token must fail
+  await assert.rejects(
+    async () => db.markEmailAsVerified(user.id, tokenObj.tokenHash),
+    /Verification token has already been used/
+  );
+
+  // 6. Expired token must be rejected
+  const expiredUser = await db.createUser({
+    email: `expired-user-${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Expired Tester',
+  });
+  const expiredToken = await db.createEmailVerificationToken(expiredUser.id, { expiresInMinutes: -5 });
+  await assert.rejects(
+    async () => db.markEmailAsVerified(expiredUser.id, expiredToken.tokenHash),
+    /Verification token has expired/
+  );
+
+  // 7. Concurrent requests must not allow token reuse (race condition safety)
+  const concurrentUser = await db.createUser({
+    email: `concurrent-user-${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Concurrent Tester',
+  });
+  const concurrentToken = await db.createEmailVerificationToken(concurrentUser.id);
+  const results = await Promise.allSettled([
+    db.markEmailAsVerified(concurrentUser.id, concurrentToken.tokenHash),
+    db.markEmailAsVerified(concurrentUser.id, concurrentToken.tokenHash),
+  ]);
+  const fulfilled = results.filter((r) => r.status === 'fulfilled');
+  const rejected = results.filter((r) => r.status === 'rejected');
+  assert.strictEqual(fulfilled.length, 1, 'Exactly one concurrent verification call must succeed');
+  assert.strictEqual(rejected.length, 1, 'Concurrent reuse attempt must be rejected');
+  assert.match(rejected[0].reason.message, /Verification token has already been used/);
+  await db.deleteUser(concurrentUser.id);
+
+  await db.deleteUser(user.id);
+  await db.deleteUser(otherUser.id);
+  await db.deleteUser(expiredUser.id);
+});
+
+test('Email Verification DB: Expired or superseded tokens do not block new token generation', async () => {
+  const user = await db.createUser({
+    email: `multi-token-${Date.now()}@example.com`,
+    password: 'password123',
+    name: 'Multi Token Tester',
+  });
+
+  // Create an expired token
+  const expiredTok = await db.createEmailVerificationToken(user.id, { expiresInMinutes: -10 });
+  assert.ok(new Date(expiredTok.expiresAt) < new Date(), 'First token is expired');
+
+  // Creating a new token when user has an expired token must succeed without unique constraint error
+  const freshTok1 = await db.createEmailVerificationToken(user.id);
+  assert.ok(freshTok1, 'New token generation succeeded despite expired token');
+
+  // Creating another new token (superseding freshTok1) must also succeed
+  const freshTok2 = await db.createEmailVerificationToken(user.id);
+  assert.ok(freshTok2, 'New token generation succeeded despite superseded token');
+
+  // The active token is freshTok2
+  const active = await db.getActiveVerificationTokenForUser(user.id);
+  assert.strictEqual(active.tokenHash, freshTok2.tokenHash);
+
+  // Verification using freshTok2 succeeds
+  const verified = await db.markEmailAsVerified(freshTok2.tokenHash);
+  assert.strictEqual(verified.emailVerified, true);
+
+  await db.deleteUser(user.id);
 });
 
 test('Email Verification DB: ensurePgTables migration is safe to run repeatedly (idempotent)', async () => {
