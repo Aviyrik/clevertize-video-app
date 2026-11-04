@@ -1249,6 +1249,37 @@ async function getActiveVerificationTokenForUser(userId) {
   return { ...active[active.length - 1] };
 }
 
+async function getLatestVerificationTokenForUser(userId) {
+  if (!userId) return null;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `SELECT id, user_id, token_hash, expires_at, used_at, created_at
+       FROM email_verification_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      tokenHash: r.token_hash,
+      expiresAt: r.expires_at instanceof Date ? r.expires_at.toISOString() : r.expires_at,
+      usedAt: r.used_at ? (r.used_at instanceof Date ? r.used_at.toISOString() : r.used_at) : null,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    };
+  }
+
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const userTokens = tokens.filter((x) => x.userId === userId);
+  if (!userTokens.length) return null;
+  return { ...userTokens[userTokens.length - 1] };
+}
+
 async function markEmailAsVerified(arg1, arg2) {
   let userId = null;
   let tokenInput = null;
@@ -1407,5 +1438,6 @@ module.exports = {
   createEmailVerificationToken,
   getVerificationTokenByHash,
   getActiveVerificationTokenForUser,
+  getLatestVerificationTokenForUser,
   markEmailAsVerified,
 };

@@ -15,10 +15,11 @@ import {
  * Handles verification link processing for `/verify-email?token=...`
  * Features states: loading, success, expired, invalid, and network error with retry.
  */
-export default function EmailVerificationScreen({ onReturnToLogin }) {
+export default function EmailVerificationScreen({ onReturnToLogin, onVerificationSuccess }) {
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'expired' | 'invalid' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState('');
+  const [authData, setAuthData] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
   // Keep token purely in memory in a ref; never write to localStorage or sessionStorage
@@ -71,7 +72,16 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
 
       if (res.ok && data.success) {
         setStatus('success');
-        setVerifiedEmail(data.email || '');
+        setVerifiedEmail(data.email || (data.user && data.user.email) || '');
+        if (data.token) {
+          setAuthData(data);
+          // Seamless transition directly into user workspace if handler provided
+          if (typeof onVerificationSuccess === 'function') {
+            setTimeout(() => {
+              onVerificationSuccess(data);
+            }, 1200);
+          }
+        }
       } else {
         const code = data.code || '';
         if (code === 'TOKEN_EXPIRED') {
@@ -90,6 +100,20 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
       setErrorMessage('A network error occurred. Please check your internet connection and try again.');
     } finally {
       setIsRetrying(false);
+    }
+  };
+
+  const handleManualContinue = () => {
+    if (authData && typeof onVerificationSuccess === 'function') {
+      onVerificationSuccess(authData);
+    } else if (typeof onReturnToLogin === 'function') {
+      onReturnToLogin('signin');
+    }
+  };
+
+  const handleNavigateToLogin = () => {
+    if (typeof onReturnToLogin === 'function') {
+      onReturnToLogin('signin');
     }
   };
 
@@ -216,10 +240,12 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
               ) : (
                 'Your CleverCut account is now fully active.'
               )}{' '}
-              You can now sign in to start creating commercial videos.
+              {authData?.token
+                ? 'Welcome to CleverCut! Opening your creative workspace...'
+                : 'You can now sign in to start creating commercial videos.'}
             </p>
             <button
-              onClick={onReturnToLogin}
+              onClick={handleManualContinue}
               style={{
                 width: '100%',
                 padding: '12px 20px',
@@ -238,7 +264,7 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
                 transition: 'opacity 0.2s',
               }}
             >
-              <span>Return to Login</span>
+              <span>{authData?.token ? 'Enter Workspace' : 'Go to Sign In'}</span>
               <ArrowRight size={16} />
             </button>
           </div>
@@ -266,10 +292,10 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
               Verification link expired
             </h2>
             <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
-              This verification link has expired. Please request a new one by signing up or logging into your account.
+              This verification link has expired. Verification links are valid for 30 minutes. Please sign in or request a new verification link.
             </p>
             <button
-              onClick={onReturnToLogin}
+              onClick={handleNavigateToLogin}
               style={{
                 width: '100%',
                 padding: '12px 20px',
@@ -282,7 +308,7 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
                 cursor: 'pointer',
               }}
             >
-              Return to Login
+              Go to Sign In
             </button>
           </div>
         )}
@@ -312,7 +338,7 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
               {errorMessage || 'This verification link is invalid or has already been used.'}
             </p>
             <button
-              onClick={onReturnToLogin}
+              onClick={handleNavigateToLogin}
               style={{
                 width: '100%',
                 padding: '12px 20px',
@@ -325,7 +351,7 @@ export default function EmailVerificationScreen({ onReturnToLogin }) {
                 cursor: 'pointer',
               }}
             >
-              Return to Login
+              Go to Sign In
             </button>
           </div>
         )}

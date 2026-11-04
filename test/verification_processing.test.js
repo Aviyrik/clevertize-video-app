@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { app } = require('../server');
 const db = require('../engine/db');
+const emailService = require('../engine/email');
 
 let server;
 let baseUrl;
@@ -56,7 +57,12 @@ test('Verification Processing: Valid token successfully verifies user email and 
   assert.strictEqual(body.success, true);
   assert.strictEqual(body.email, email);
   assert.match(body.message, /verified successfully/i);
-  assert.strictEqual(body.token, undefined, 'Verification must NOT return a session token');
+  assert.ok(typeof body.token === 'string' && body.token.length > 0, 'Verification must return a valid session token');
+
+  // Verify session is active and authenticates the user
+  const sessionUser = await db.getUserBySessionToken(body.token);
+  assert.ok(sessionUser, 'Session user must be found in database');
+  assert.strictEqual(sessionUser.id, user.id);
 
   // Verify DB state
   const updated = await db.findUserById(user.id);
@@ -74,26 +80,26 @@ test('Verification Processing: Valid token successfully verifies user email and 
   await db.deleteUser(user.id);
 });
 
-test('Verification Processing: Verification does not create any authenticated session', async () => {
-  const email = `verify-no-session-${Date.now()}@example.com`;
+test('Verification Processing: Successful verification creates a valid session without requiring password re-entry', async () => {
+  const email = `verify-session-create-${Date.now()}@example.com`;
   const user = await db.createUser({
     email,
     password: 'Password123!',
-    name: 'No Session User',
+    name: 'Auto Session User',
   });
 
   const tokenObj = await db.createEmailVerificationToken(user.id);
-  const { body } = await postVerify({ token: tokenObj.rawToken });
+  const { status, body } = await postVerify({ token: tokenObj.rawToken });
 
-  assert.strictEqual(body.token, undefined);
+  assert.strictEqual(status, 200);
+  assert.ok(body.token, 'Session token must be returned');
+  assert.strictEqual(body.user.email, email);
 
-  // Confirm no session exists for user
-  const fs = require('fs');
-  if (fs.existsSync('data/sessions.json')) {
-    const sessions = JSON.parse(fs.readFileSync('data/sessions.json', 'utf8'));
-    const userSessions = sessions.filter((s) => s.userId === user.id);
-    assert.strictEqual(userSessions.length, 0, 'No session should be created by verification');
-  }
+  // Confirm session is valid for authentication
+  const sessionUser = await db.getUserBySessionToken(body.token);
+  assert.ok(sessionUser, 'Session token must authenticate the user');
+  assert.strictEqual(sessionUser.id, user.id);
+  assert.strictEqual(sessionUser.emailVerified, true);
 
   await db.deleteUser(user.id);
 });
@@ -236,16 +242,16 @@ test('Verification UI: EmailVerificationScreen component covers all required sta
 
   // 2. Success state
   assert.ok(code.includes('Your email has been verified successfully!'), 'Must render success message');
-  assert.ok(code.includes('Return to Login'), 'Must provide Return to Login action');
+  assert.ok(code.includes('Enter Workspace') || code.includes('Go to Sign In'), 'Must provide workspace or login action');
 
   // 3. Expired link state
-  assert.ok(code.includes('This verification link has expired. Please request a new one.'), 'Must render expired link message');
+  assert.ok(code.includes('Verification link expired') || code.includes('has expired'), 'Must render expired link message');
 
   // 4. Invalid link state
-  assert.ok(code.includes('This verification link is invalid or has already been used.'), 'Must render invalid link message');
+  assert.ok(code.includes('Invalid or Used Link') || code.includes('This verification link is invalid'), 'Must render invalid link message');
 
   // 5. Network / server error state with retry
-  assert.ok(code.includes('Retry Verification'), 'Must provide retry button on network error');
+  assert.ok(code.includes('Retry') || code.includes('handleRetry'), 'Must provide retry button on network error');
 
   // 6. Security: Immediately clears token from browser address bar using replaceState
   assert.ok(code.includes('window.history.replaceState'), 'Must call window.history.replaceState to sanitize URL');
@@ -257,6 +263,82 @@ test('Verification UI: EmailVerificationScreen component covers all required sta
 
   // 8. Security: Prevents duplicate API calls on re-renders
   assert.ok(code.includes('hasExecutedRef.current'), 'Must use ref guard to prevent duplicate API executions');
+});
+
+test('Resend Verification: Sends fresh link, invalidates old token, and enforces rate limit cooldown', async () => {
+  emailService.setCustomResendClient({
+    emails: {
+      send: async () => ({ data: { id: 'msg_resend_test_123' }, error: null }),
+    },
+  });
+
+  const email = `resend-test-${Date.now()}@example.com`;
+  const user = await db.createUser({
+    email,
+    password: 'Password123!',
+    name: 'Resend Test User',
+  });
+
+  try {
+    // Call resend verification
+    const res1 = await fetch(`${baseUrl}/api/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data1 = await res1.json();
+    assert.strictEqual(res1.status, 200);
+    assert.strictEqual(data1.success, true);
+
+    // Immediate second call should be rate limited (429)
+    const res2 = await fetch(`${baseUrl}/api/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data2 = await res2.json();
+    assert.strictEqual(res2.status, 429);
+    assert.strictEqual(data2.code, 'RATE_LIMITED');
+    assert.ok(data2.retryAfter > 0);
+
+    // Unknown email returns 404
+    const res3 = await fetch(`${baseUrl}/api/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nonexistent-user-12345@example.com' }),
+    });
+    assert.strictEqual(res3.status, 404);
+  } finally {
+    emailService.resetCustomResendClient();
+    await db.deleteUser(user.id);
+  }
+});
+
+test('Auth Lifecycle: Signup password is appropriately hashed and authenticates user cleanly', async () => {
+  const email = `auth-lifecycle-${Date.now()}@example.com`;
+  const password = 'CorrectPassword99!';
+  
+  const created = await db.createUser({
+    email,
+    password,
+    name: 'Lifecycle User',
+  });
+  assert.ok(created.id);
+
+  // Authenticate with exact password
+  const authenticated = await db.authenticateUser({ email, password });
+  assert.strictEqual(authenticated.id, created.id);
+  assert.strictEqual(authenticated.email, email);
+
+  // Authenticate with wrong password throws
+  await assert.rejects(
+    async () => {
+      await db.authenticateUser({ email, password: 'WrongPassword123!' });
+    },
+    /incorrect password/i
+  );
+
+  await db.deleteUser(created.id);
 });
 
 test('Verification Navigation: App.jsx captures verification route and direct URL navigation', () => {

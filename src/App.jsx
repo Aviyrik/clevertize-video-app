@@ -987,9 +987,11 @@ export default function App() {
       new URLSearchParams(window.location.search).has('token')
     );
   });
+  const [authInitialMode, setAuthInitialMode] = useState('signup');
 
-  const handleReturnFromVerification = () => {
+  const handleReturnFromVerification = (targetMode = 'signin') => {
     setIsVerifyingEmail(false);
+    setAuthInitialMode(targetMode || 'signin');
     try {
       window.history.replaceState({}, document.title, '/');
     } catch {}
@@ -3851,7 +3853,14 @@ export default function App() {
   if (isVerifyingEmail) {
     return (
       <EmailVerificationScreen
-        onReturnToLogin={handleReturnFromVerification}
+        onReturnToLogin={(targetMode) => handleReturnFromVerification(targetMode || 'signin')}
+        onVerificationSuccess={(authData) => {
+          setIsVerifyingEmail(false);
+          try {
+            window.history.replaceState({}, document.title, '/');
+          } catch {}
+          handleAuthSuccess(authData);
+        }}
       />
     );
   }
@@ -3883,6 +3892,7 @@ export default function App() {
   if (!currentUser || !authToken) {
     return (
       <AuthScreen
+        initialMode={authInitialMode}
         onAuthSuccess={handleAuthSuccess}
       />
     );

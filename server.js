@@ -1529,11 +1529,20 @@ app.post("/api/auth/verify-email", async (req, res) => {
       });
     }
 
+    // Automatically create authenticated session upon successful email verification
+    const sessionToken = await db.createSession(verifiedUser.id);
+    const businesses = await db.getBusinessesForUser(verifiedUser.id);
+    const projects = await db.getProjectsForUser(verifiedUser.id);
+
     return res.json({
       success: true,
       code: "VERIFIED_SUCCESS",
       message: "Your email has been verified successfully!",
       email: verifiedUser.email,
+      user: verifiedUser,
+      token: sessionToken,
+      businesses,
+      projects,
     });
   } catch (err) {
     const message = err.message || "";
@@ -1563,6 +1572,88 @@ app.post("/api/auth/verify-email", async (req, res) => {
       success: false,
       code: "SERVER_ERROR",
       error: "Unable to verify email at this moment. Please try again.",
+    });
+  }
+});
+
+// ---- Resend Email Verification Endpoint ----
+app.post("/api/auth/resend-verification", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== "string" || !email.trim() || !email.includes("@")) {
+      return res.status(400).json({
+        success: false,
+        code: "EMAIL_REQUIRED",
+        error: "A valid email address is required.",
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await db.findUserByEmail(cleanEmail);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        code: "USER_NOT_FOUND",
+        error: "No account found with this email address.",
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        code: "ALREADY_VERIFIED",
+        message: "This email address is already verified. You can log in directly.",
+      });
+    }
+
+    // Rate limiting / Cooldown check (60-second cooldown based on most recent token)
+    const latestToken = await db.getLatestVerificationTokenForUser(user.id);
+    if (latestToken && latestToken.createdAt) {
+      const elapsedSec = (Date.now() - new Date(latestToken.createdAt).getTime()) / 1000;
+      if (elapsedSec < 60) {
+        const waitSec = Math.ceil(60 - elapsedSec);
+        return res.status(429).json({
+          success: false,
+          code: "RATE_LIMITED",
+          error: `Please wait ${waitSec} seconds before requesting another verification email.`,
+          retryAfter: waitSec,
+        });
+      }
+    }
+
+    // Generate fresh token (invalidates previous unused tokens for this user)
+    const tokenRecord = await db.createEmailVerificationToken(user.id);
+
+    // Build verification URL with configured or inferred base URL
+    const baseUrl = emailService.getAppBaseUrl(req);
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+
+    // Dispatch verification email via Resend
+    const emailResult = await emailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl,
+    });
+
+    if (!emailResult.success) {
+      return res.status(502).json({
+        success: false,
+        code: "DELIVERY_FAILED",
+        error: "Failed to send verification email. Please try again shortly.",
+        details: emailResult.error,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "A new verification link has been sent to your email address.",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
+      error: "Unable to resend verification email at this moment. Please try again.",
     });
   }
 });
