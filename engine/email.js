@@ -252,6 +252,28 @@ function renderTestEmailHtml(recipient) {
 </html>`;
 }
 
+function escapeHtml(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getAppBaseUrl(req) {
+  if (process.env.APP_BASE_URL && process.env.APP_BASE_URL.trim()) {
+    return process.env.APP_BASE_URL.trim().replace(/\/+$/, '');
+  }
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    return `${proto}://${host}`;
+  }
+  return 'http://localhost:3000';
+}
+
 /**
  * Plain-text fallback for test email
  */
@@ -273,13 +295,193 @@ function renderTestEmailText(recipient) {
   ].join('\n');
 }
 
+/**
+ * Renders professional CleverCut-branded HTML email for email verification
+ */
+function renderVerificationEmailHtml({ name, verifyUrl, expiresInMinutes = 30 }) {
+  const safeName = escapeHtml(name || 'there');
+  const safeUrl = escapeHtml(verifyUrl || '');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your CleverCut email address</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+      margin: 0;
+      padding: 32px 16px;
+    }
+    .wrapper {
+      max-width: 540px;
+      margin: 0 auto;
+      background: #111827;
+      border: 1px solid #1f293d;
+      border-radius: 12px;
+      padding: 36px 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 14px 0;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #9ca3af;
+      margin: 0 0 16px 0;
+    }
+    .btn-container {
+      margin: 28px 0;
+      text-align: center;
+    }
+    .btn {
+      display: inline-block;
+      background: #4f46e5;
+      color: #ffffff !important;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 13px 32px;
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+    .notice-box {
+      background: #0b0f19;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 24px 0;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .link-fallback {
+      font-size: 12px;
+      color: #6b7280;
+      word-break: break-all;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+    .link-fallback a {
+      color: #818cf8;
+      text-decoration: underline;
+    }
+    .footer {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 32px;
+      border-top: 1px solid #1f2937;
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="brand-title">🎬 CleverCut</div>
+    <div class="badge">Account Verification</div>
+    <h1>Verify your email address</h1>
+    <p>Hi ${safeName},</p>
+    <p>Thank you for joining CleverCut! To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
+    
+    <div class="btn-container">
+      <a href="${safeUrl}" class="btn" target="_blank" rel="noopener noreferrer">Verify Email</a>
+    </div>
+
+    <div class="notice-box">
+      ⏱️ <strong>This link expires in ${expiresInMinutes} minutes.</strong> Verification is required to activate and protect your account.
+    </div>
+
+    <p style="font-size: 13px; color: #9ca3af;">
+      If you did not create a CleverCut account, no further action is needed — you can safely ignore this email.
+    </p>
+
+    <div class="link-fallback">
+      Button not working? Copy and paste this link into your browser:<br>
+      <a href="${safeUrl}">${safeUrl}</a>
+    </div>
+
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} CleverCut Video Intelligence Platform. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Renders plain-text fallback for email verification
+ */
+function renderVerificationEmailText({ name, verifyUrl, expiresInMinutes = 30 }) {
+  return [
+    'CleverCut – Verify your email address',
+    '=====================================',
+    '',
+    `Hi ${name || 'there'},`,
+    '',
+    'Thank you for joining CleverCut! To complete your registration and activate your account, please verify your email address using the link below:',
+    '',
+    verifyUrl,
+    '',
+    `This verification link expires in ${expiresInMinutes} minutes. Verification is required to activate and protect your account.`,
+    '',
+    'If you did not create a CleverCut account, you can safely ignore this email.',
+    '',
+    `© ${new Date().getFullYear()} CleverCut Video Intelligence Platform. All rights reserved.`,
+  ].join('\n');
+}
+
+/**
+ * Sends a branded email verification message via Resend
+ */
+async function sendVerificationEmail({ to, name, verifyUrl }) {
+  const html = renderVerificationEmailHtml({ name, verifyUrl, expiresInMinutes: 30 });
+  const text = renderVerificationEmailText({ name, verifyUrl, expiresInMinutes: 30 });
+  return sendEmail({
+    to,
+    subject: 'Verify your CleverCut email address',
+    html,
+    text,
+  });
+}
+
 module.exports = {
   sendEmail,
+  sendVerificationEmail,
+  getAppBaseUrl,
   isValidEmail,
   getSenderAddress,
   sanitizeErrorMessage,
   renderTestEmailHtml,
   renderTestEmailText,
+  renderVerificationEmailHtml,
+  renderVerificationEmailText,
+  escapeHtml,
   setCustomResendClient,
   resetCustomResendClient,
   DEFAULT_SENDER,

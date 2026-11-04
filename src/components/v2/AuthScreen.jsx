@@ -93,6 +93,12 @@ export default function AuthScreen({
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
 
+      // Handle unverified signup response (requires email verification before session creation)
+      if (data.status === 'pending_verification') {
+        setNoticeMsg(data.message || 'Please check your inbox to verify your email address.');
+        return;
+      }
+
       // Handle "Remember me"
       try {
         if (rememberMe) {

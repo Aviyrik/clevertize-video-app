@@ -1443,27 +1443,65 @@ app.get("/api/config", (req, res) => {
 // ---- Authentication Endpoints (Phase C) ----
 
 app.post("/api/auth/signup", async (req, res) => {
+  let createdUser = null;
   try {
     const { email, password, name, businessName, businessType, town } = req.body || {};
+    
+    // 1. Create user record (defaults to email_verified = false)
     const user = await db.createUser({ email, password, name });
-    const token = await db.createSession(user.id);
+    createdUser = user;
 
-    let defaultBusiness = null;
+    // Optional default business
     if (businessName && String(businessName).trim()) {
-      defaultBusiness = await db.saveBusiness({
+      await db.saveBusiness({
         businessName,
         businessType: businessType || "Retail Store",
         town: town || "",
       }, user.id);
     }
 
+    // 2. Generate email verification token (30-minute expiry, hash stored in DB)
+    const tokenRecord = await db.createEmailVerificationToken(user.id);
+
+    // 3. Construct verification link with configured APP_BASE_URL
+    const baseUrl = emailService.getAppBaseUrl(req);
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+
+    // 4. Send verification email via Resend
+    const emailResult = await emailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl,
+    });
+
+    if (!emailResult.success) {
+      // Safe cleanup: delete the newly created unverified account and associated business/tokens
+      try {
+        await db.deleteUser(user.id);
+      } catch (cleanupErr) {
+        console.error("[signup-cleanup-error]", cleanupErr.message);
+      }
+      return res.status(502).json({
+        error: "We could not send your verification email. Please check your email address and try again.",
+        details: emailResult.error,
+      });
+    }
+
+    // 5. Successful response without session token
     res.json({
-      status: "success",
-      user,
-      token,
-      business: defaultBusiness,
+      success: true,
+      status: "pending_verification",
+      email: user.email,
+      message: "Please check your inbox to verify your email address.",
     });
   } catch (err) {
+    if (createdUser && createdUser.id) {
+      try {
+        await db.deleteUser(createdUser.id);
+      } catch (cleanupErr) {
+        console.error("[signup-cleanup-error]", cleanupErr.message);
+      }
+    }
     res.status(400).json({ error: err.message || "Failed to create account." });
   }
 });

@@ -9,15 +9,24 @@ process.env.ANTHROPIC_API_KEY = 'test';
 process.env.MAGNIFIC_API_KEY = 'test';
 
 const { app } = require('../server');
+const emailService = require('../engine/email');
 
 let base, server;
 test.before(() => new Promise((r) => {
+  emailService.setCustomResendClient({
+    emails: {
+      send: async () => ({ data: { id: 'mock_auth_msg_id' }, error: null }),
+    },
+  });
   server = app.listen(0, () => {
     base = `http://127.0.0.1:${server.address().port}`;
     r();
   });
 }));
-test.after(() => server.close());
+test.after(() => {
+  emailService.resetCustomResendClient();
+  server.close();
+});
 
 const post = async (url, body, token) => {
   const headers = { 'content-type': 'application/json' };
@@ -62,12 +71,18 @@ test('Auth: Signup, Login, and Session validation', async () => {
     town: 'Indore',
   });
   assert.equal(signupRes.status, 200);
-  assert.equal(signupRes.body.user.email, 'owner@kirana.com');
-  assert.ok(signupRes.body.token, 'Must return session token');
-  assert.ok(signupRes.body.business, 'Must create default business');
-  assert.equal(signupRes.body.business.businessName, 'Sharma Kirana Store');
+  assert.equal(signupRes.body.status, 'pending_verification');
+  assert.equal(signupRes.body.email, 'owner@kirana.com');
+  assert.strictEqual(signupRes.body.token, undefined, 'Signup must not return session token');
 
-  const token = signupRes.body.token;
+  // Obtain session token via login
+  const loginRes = await post('/api/auth/login', {
+    email: 'owner@kirana.com',
+    password: 'securepassword123',
+  });
+  assert.equal(loginRes.status, 200);
+  assert.ok(loginRes.body.token, 'Must return session token on login');
+  const token = loginRes.body.token;
 
   // 3. /api/auth/me returns current user
   const meRes = await get('/api/auth/me', token);
@@ -83,30 +98,34 @@ test('Auth: Signup, Login, and Session validation', async () => {
   assert.equal(badLogin.status, 401);
 
   // 5. Successful login
-  const loginRes = await post('/api/auth/login', {
+  const successLogin = await post('/api/auth/login', {
     email: 'owner@kirana.com',
     password: 'securepassword123',
   });
-  assert.equal(loginRes.status, 200);
-  assert.ok(loginRes.body.token);
+  assert.equal(successLogin.status, 200);
+  assert.ok(successLogin.body.token);
 });
 
 test('Persistence: Multi-tenant business and project isolation', async () => {
   // Create User 1
-  const u1 = (await post('/api/auth/signup', {
+  await post('/api/auth/signup', {
     email: 'user1@shop.com',
     password: 'password123',
     name: 'User One',
     businessName: 'User One Store',
-  })).body;
+  });
+  const u1Login = await post('/api/auth/login', { email: 'user1@shop.com', password: 'password123' });
+  const u1 = u1Login.body;
 
   // Create User 2
-  const u2 = (await post('/api/auth/signup', {
+  await post('/api/auth/signup', {
     email: 'user2@shop.com',
     password: 'password123',
     name: 'User Two',
     businessName: 'User Two Boutique',
-  })).body;
+  });
+  const u2Login = await post('/api/auth/login', { email: 'user2@shop.com', password: 'password123' });
+  const u2 = u2Login.body;
 
   // User 1 saves a project
   const saveProjRes = await post('/api/projects', {
@@ -163,7 +182,8 @@ test('Auth: Delete account cascades and revokes access', async () => {
     businessType: 'Retail',
   });
   assert.equal(signupRes.status, 200);
-  const token = signupRes.body.token;
+  const loginTokenRes = await post('/api/auth/login', { email: 'delete_me@brand.com', password: 'password123' });
+  const token = loginTokenRes.body.token;
 
   // 2. User creates a project
   const projRes = await post('/api/projects', {
@@ -380,7 +400,7 @@ test('Multi-tenant and New User Isolation: New user starts with 0 businesses, se
     town: 'Bangalore',
   });
   assert.equal(userARes.status, 200);
-  const tokenA = userARes.body.token;
+  const tokenA = (await post('/api/auth/login', { email: 'usera@brand.com', password: 'password123' })).body.token;
 
   // 2. Signup User B with NO business initially
   const userBRes = await post('/api/auth/signup', {
@@ -389,7 +409,7 @@ test('Multi-tenant and New User Isolation: New user starts with 0 businesses, se
     name: 'User B',
   });
   assert.equal(userBRes.status, 200);
-  const tokenB = userBRes.body.token;
+  const tokenB = (await post('/api/auth/login', { email: 'userb@brand.com', password: 'password123' })).body.token;
 
   // Verify User B has ZERO businesses in the database
   const bizBRes = await get('/api/businesses', tokenB);
@@ -444,7 +464,7 @@ test('Phase 1 Security: Protected API endpoints strictly require authentication 
     name: 'Security Test User',
   });
   assert.equal(userRes.status, 200);
-  const validToken = userRes.body.token;
+  const validToken = (await post('/api/auth/login', { email: 'phase1-security@brand.com', password: 'password123' })).body.token;
 
   // 2. Protected endpoints list
   const protectedPostEndpoints = [
@@ -582,7 +602,7 @@ test('Phase 1 Data Integrity: Save Script Duplicate Request Prevention and Backe
     name: 'Idempotent Tester',
   });
   assert.equal(userRes.status, 200);
-  const token = userRes.body.token;
+  const token = (await post('/api/auth/login', { email: 'idempotent-test@brand.com', password: 'password123' })).body.token;
 
   const projectId = `proj_test_${Date.now()}`;
   const save1 = await post('/api/projects', {
@@ -614,19 +634,19 @@ test('Phase 1 Data Integrity: Save Script Duplicate Request Prevention and Backe
 
 test('Phase 1.1 Data Integrity: Cross-tenant project hijacking prevention & concurrent duplicate save prevention', async () => {
   // Create User 1 and User 2
-  const user1 = await post('/api/auth/signup', {
+  await post('/api/auth/signup', {
     email: 'user1-projects@example.com',
     password: 'password123',
     name: 'User 1',
   });
-  assert.equal(user1.status, 200);
+  const user1 = await post('/api/auth/login', { email: 'user1-projects@example.com', password: 'password123' });
 
-  const user2 = await post('/api/auth/signup', {
+  await post('/api/auth/signup', {
     email: 'user2-projects@example.com',
     password: 'password123',
     name: 'User 2',
   });
-  assert.equal(user2.status, 200);
+  const user2 = await post('/api/auth/login', { email: 'user2-projects@example.com', password: 'password123' });
 
   // User 1 creates a project
   const u1ProjId = `proj_u1_${Date.now()}`;

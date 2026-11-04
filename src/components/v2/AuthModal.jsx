@@ -90,6 +90,12 @@ export default function AuthModal({
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
 
+      // Handle unverified signup response (requires email verification before session creation)
+      if (data.status === 'pending_verification') {
+        setNoticeMsg(data.message || 'Please check your inbox to verify your email address.');
+        return;
+      }
+
       try {
         if (rememberMe) {
           localStorage.setItem('clevertize_remember_email', email.trim());
