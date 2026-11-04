@@ -1506,6 +1506,67 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
+// ---- Email Verification Endpoint ----
+app.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== "string" || !token.trim()) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_REQUIRED",
+        error: "Verification token is required.",
+      });
+    }
+
+    const trimmedToken = token.trim();
+    const verifiedUser = await db.markEmailAsVerified(trimmedToken);
+
+    if (!verifiedUser) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_INVALID",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      code: "VERIFIED_SUCCESS",
+      message: "Your email has been verified successfully!",
+      email: verifiedUser.email,
+    });
+  } catch (err) {
+    const message = err.message || "";
+    if (message.includes("has expired")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_EXPIRED",
+        error: "This verification link has expired. Please request a new one.",
+      });
+    }
+    if (message.includes("already been used")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_ALREADY_USED",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+    if (message.includes("not found") || message.includes("not match") || message.includes("is required")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_INVALID",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
+      error: "Unable to verify email at this moment. Please try again.",
+    });
+  }
+});
+
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
