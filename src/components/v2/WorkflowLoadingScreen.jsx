@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Clock,
   Film,
+  Clapperboard,
 } from 'lucide-react';
 
 /**
@@ -800,30 +801,95 @@ export function SceneRewriteLoader({ sceneIndex = 1, compact = true, style = {} 
 }
 
 /**
- * 10. Auth & Session Boot Loader
+ * 10. Auth & Session Boot Loader (Simple Logo Loading Animation)
  */
 export function AuthSessionLoader({ style = {} }) {
   return (
-    <WorkflowLoadingScreen
-      icon={Sparkles}
-      badgeLabel="Clevertize Creative Studio"
-      title="Initializing Creative Studio…"
-      subtitle="Verifying secure session and loading your brand workspace."
-      stages={[
-        { title: 'Security & Credentials Verification', desc: 'Validating active session token' },
-        { title: 'Brand Workspace Loading', desc: 'Retrieving business profile, categories, and recent projects' },
-        { title: 'Creative Engine Readiness', desc: 'Connecting to AI generation pipeline' },
-      ]}
-      tips={[
-        'Clevertize Studio transforms your brand ideas into broadcast-ready video commercials in minutes.',
-        'High-Converting Frameworks: Built on battle-tested advertising psychology and retention curves.',
-      ]}
-      tipPrefix="Welcome"
-      estimatedDuration="~1–2s"
-      nextStep="Opening your dashboard and video projects"
-      compact={false}
-      style={style}
-    />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
+        userSelect: 'none',
+        ...style,
+      }}
+    >
+      <style>{`
+        @keyframes cleverPulseGlow {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 8px 32px -4px rgba(99, 102, 241, 0.45), 0 0 24px rgba(99, 102, 241, 0.25);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.7), 0 0 36px rgba(129, 140, 248, 0.5);
+          }
+        }
+        @keyframes cleverShimmerBar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
+        }
+      `}</style>
+
+      {/* CleverCut Squircle Brand Mark with Breathing Animation */}
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #312E81 100%)',
+          border: '1px solid rgba(199, 210, 254, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFFFF',
+          animation: 'cleverPulseGlow 2.4s ease-in-out infinite',
+        }}
+      >
+        <Clapperboard size={26} color="#FFFFFF" strokeWidth={2.2} />
+      </div>
+
+      {/* Brand Name & Sleek Progress Bar */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <span
+          style={{
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: '-0.025em',
+            color: '#FFFFFF',
+            textShadow: '0 2px 12px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          CleverCut
+        </span>
+
+        {/* Minimal indeterminate loading track */}
+        <div
+          style={{
+            width: 80,
+            height: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: 2,
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              width: '50%',
+              background: 'linear-gradient(90deg, transparent, #6366F1, transparent)',
+              borderRadius: 2,
+              animation: 'cleverShimmerBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+            }}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 

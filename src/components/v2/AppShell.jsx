@@ -735,47 +735,6 @@ export default function AppShell({
             </div>
           </div>
 
-          {/* Persistent Feedback / Report an Issue Trigger */}
-          <div style={{ padding: '0 12px 14px' }}>
-            <div
-              onClick={() => {
-                if (onOpenFeedbackModal) onOpenFeedbackModal();
-                setMobileMenuOpen(false);
-              }}
-              role="button"
-              tabIndex={0}
-              title="Report an issue or share feedback"
-              className="sidebar-feedback-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 12px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: 600,
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-active)';
-                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-elevated)';
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }}
-            >
-              <MessageSquare size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>Feedback & Issues</span>
-            </div>
-          </div>
-
           {/* Creation Hub & Production Pipeline & Script Library & Business Profile test aliases */}
           <div style={{ display: 'none' }}>Creation Hub Production Pipeline Script Library Business Profile</div>
         </div>
@@ -890,32 +849,37 @@ export default function AppShell({
               justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {isOnline ? (
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--success)',
-                    display: 'inline-block',
-                  }}
-                />
-              ) : (
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--error)',
-                    display: 'inline-block',
-                  }}
-                />
-              )}
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenFeedbackModal) onOpenFeedbackModal();
+                setMobileMenuOpen(false);
+              }}
+              title="Share feedback or report an issue"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+                color: 'var(--text-tertiary)',
+                fontSize: 11,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+              }}
+            >
+              <MessageSquare size={12} style={{ opacity: 0.8 }} />
+              <span>Feedback</span>
+            </button>
 
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
               v2.0-script-mvp
