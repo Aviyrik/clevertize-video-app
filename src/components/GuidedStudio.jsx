@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { downloadVideoWithTicket } from '../utils/downloadVideo.js';
+import { PostGenerationFeedbackPrompt } from './v2/VideoRatingControls.jsx';
 import {
   Sparkles,
   Check,
@@ -4178,6 +4179,8 @@ export function Screen08Video({
   videoUrl = null,
   onCreateAnother,
   errorMessage = '',
+  projectId = null,
+  userId = null,
 }) {
   const [showVideoDetails, setShowVideoDetails] = useState(false);
   const [showScriptPreview, setShowScriptPreview] = useState(false);
@@ -4669,6 +4672,16 @@ export function Screen08Video({
               <span>Download Video</span>
             </button>
           </div>
+
+          {/* Post-Generation Creative Rating Prompt (Subtle & Non-blocking) */}
+          {!videoUnavailable && (
+            <PostGenerationFeedbackPrompt
+              videoUrl={videoUrl}
+              projectId={projectId}
+              userId={userId}
+              brandId={userContext?.businessId}
+            />
+          )}
         </div>
       </div>
     );

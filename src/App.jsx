@@ -4106,6 +4106,8 @@ export default function App() {
               isProducingVideo={isRendering}
               producedVideoUrl={videoUrl}
               videoRunError={errorMessage}
+              projectId={activeProjectId}
+              userId={currentUser?.id}
               onEditBrand={() => {
                 setEditingBusiness(userContext);
                 setIsOnboardingModalOpen(true);
@@ -4791,6 +4793,8 @@ export default function App() {
             renderStatusText={renderStatusText}
             elapsedTime={elapsedTime}
             videoUrl={videoUrl}
+            projectId={activeProjectId}
+            userId={currentUser?.id}
             onCreateAnother={handleStartNewProject}
             errorMessage={errorMessage}
           />

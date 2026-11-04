@@ -1,5 +1,6 @@
 import { getBriefSuggestions } from '../../utils/categorySuggestions.js';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
+import { PostGenerationFeedbackPrompt } from './VideoRatingControls.jsx';
 import React, { useState, useEffect } from 'react';
 import {
   SimpleAdPackagesLoader,
@@ -84,6 +85,8 @@ export default function SimpleBusinessStudio({
   isProjectSaved = false,
   producedVideoUrl = null,
   videoRunError = null,
+  projectId = null,
+  userId = null,
 }) {
   const category = categoryProp || businessType || 'Local Business';
 
@@ -1227,6 +1230,13 @@ export default function SimpleBusinessStudio({
                     <span>{copiedScript ? 'Script Copied!' : 'Copy Script'}</span>
                   </button>
                 </div>
+
+                {/* Post-Generation Creative Rating Prompt (Subtle & Non-blocking) */}
+                <PostGenerationFeedbackPrompt
+                  videoUrl={producedVideoUrl}
+                  projectId={projectId}
+                  userId={userId}
+                />
               </div>
             ) : videoRunError ? (
               <div style={{ padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
