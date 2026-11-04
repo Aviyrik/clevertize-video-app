@@ -18,6 +18,7 @@ const db = require("./engine/db");
 const netguard = require("./engine/netguard"); // called as netguard.safeFetch so tests can point it at a local server
 const { isDisallowedUrl } = netguard;
 const feedback = require("./engine/feedback");
+const emailService = require("./engine/email");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1664,6 +1665,48 @@ app.post("/api/feedback", authRequired, async (req, res) => {
   }
 });
 
+// ---- Development-Only Test Email Endpoint ----
+app.post("/api/dev/test-email", authRequired, async (req, res) => {
+  // Available ONLY when NODE_ENV !== 'production'
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Endpoint not available in production environment." });
+  }
+
+  try {
+    const { to } = req.body || {};
+    if (!to || !emailService.isValidEmail(to)) {
+      return res.status(400).json({ error: "Valid recipient email address is required." });
+    }
+
+    const html = emailService.renderTestEmailHtml(to);
+    const text = emailService.renderTestEmailText(to);
+
+    const result = await emailService.sendEmail({
+      to,
+      subject: "CleverCut – Transactional Email Delivery Test",
+      html,
+      text,
+    });
+
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    return res.json({
+      success: true,
+      id: result.id,
+      message: "Test email dispatched successfully via Resend.",
+      recipient: to.trim(),
+    });
+  } catch (err) {
+    const safeError = emailService.sanitizeErrorMessage(err.message);
+    res.status(500).json({ success: false, error: safeError });
+  }
+});
+
 // Ensure API requests that fail to match any endpoint return JSON 404, NEVER HTML index.html
 app.all("/api/*", (req, res) => {
   res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
@@ -1690,4 +1733,4 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 
-module.exports = { app, validateForm, sessions, downloadTickets, feedback };
+module.exports = { app, validateForm, sessions, downloadTickets, feedback, emailService };
