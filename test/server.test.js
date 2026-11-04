@@ -1081,3 +1081,31 @@ test("a finished video is copied to permanent storage once, and the permanent li
   assert.equal(plain.archived, false);
   assert.equal(plain.videoUrl, "https://cdn.example.com/out.mp4");
 });
+
+test("drafts: an in-progress project keeps its stage and render run id, and a late draft save never removes a finished video", async () => {
+  const { buildDraftProject } = require("../src/utils/drafts.js");
+  await db.createUser({ email: "drafts@example.com", password: "password123", name: "Drafts" });
+  const token = (await post("/api/auth/login", { email: "drafts@example.com", password: "password123" }, null)).body.token;
+  const list = async () => (await (await realFetch(base + "/api/projects", { headers: { authorization: `Bearer ${token}` } })).json()).projects;
+
+  const draft = buildDraftProject({
+    id: "proj_draft_1", businessName: "Draft Co", studio: "simple",
+    simple: { step: 3, brief: "Monsoon sale", packages: [{ id: "pkg_1", scenes: ["a", "b", "c", "d"] }], selectedPackageId: "pkg_1" },
+    render: { runId: "run_draft_1", startedAt: "2026-11-04T10:00:00.000Z" },
+  });
+  assert.equal((await post("/api/projects", draft, token)).status, 200);
+  let saved = (await list()).find((p) => p.id === "proj_draft_1");
+  assert.equal(saved.status, "in_progress");
+  assert.equal(saved.currentStage, "video");
+  assert.equal(saved.creativeDNA.draft.render.runId, "run_draft_1", "the run id survives a logout, so the render can be picked up");
+  assert.equal(saved.creativeDNA.draft.simple.brief, "Monsoon sale");
+
+  // the render finishes: same id, now a finished video
+  await post("/api/projects", { id: "proj_draft_1", title: "Draft Co - Monsoon sale", status: "video_ready", videoUrl: "https://cdn.example.com/draft-1.mp4", scenes: ["a", "b", "c", "d"] }, token);
+  // an autosave that was already on its way lands afterwards
+  await post("/api/projects", draft, token);
+  saved = (await list()).filter((p) => p.id === "proj_draft_1");
+  assert.equal(saved.length, 1, "no duplicate project");
+  assert.equal(saved[0].videoUrl, "https://cdn.example.com/draft-1.mp4", "the finished video is kept");
+  assert.equal(saved[0].status, "video_ready");
+});

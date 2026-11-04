@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import { isVideoLinkExpired } from '../../utils/videoLink.js';
+import { isDraft, isRenderingDraft } from '../../utils/drafts.js';
 import {
   FileText,
   Clock,
@@ -284,6 +285,9 @@ export default function ScriptLibraryView({
           {filteredProjects.map((proj) => {
             const hasScenes = proj.scenes && proj.scenes.length >= 4;
             const hasVideo = Boolean(proj.videoUrl);
+            // an unfinished video saved as it was being made — opening it resumes where it was left
+            const inProgress = isDraft(proj);
+            const rendering = isRenderingDraft(proj);
             // projects saved before videos were copied to permanent storage may hold an expired Magnific link
             const videoExpired = hasVideo && isVideoLinkExpired(proj.videoUrl);
             const isExpanded = Boolean(expandedScriptIds[proj.id]);
@@ -486,6 +490,25 @@ export default function ScriptLibraryView({
                       >
                         <Film size={11} />
                         {videoExpired ? 'Video Link Expired' : 'Video Ready'}
+                      </span>
+                    ) : inProgress ? (
+                      <span
+                        title={rendering ? 'Your video was still rendering — open to pick it up' : 'Open to continue where you left off'}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                          color: '#F59E0B',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        <Clock size={11} />
+                        {rendering ? 'In progress · Rendering' : 'In progress'}
                       </span>
                     ) : hasScenes ? (
                       <span

@@ -2336,7 +2336,7 @@ test('My Projects Generated Video Consistency: displayProjects ensures video is 
   const libSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScriptLibraryView.jsx'), 'utf8');
 
   // 1. App.jsx must synthesize displayProjects including active video and pass displayProjects to ScriptLibraryView and AppShell
-  assert.ok(appSrc.includes('const displayProjects = [...activeVideoProject, ...userProjects];'), 'App.jsx must derive displayProjects');
+  assert.ok(appSrc.includes('const displayProjects = sortProjectsForLibrary([...activeVideoProject, ...userProjects]);'), 'App.jsx must derive displayProjects (drafts sorted first)');
   assert.ok(appSrc.includes('projects={displayProjects}'), 'ScriptLibraryView must receive displayProjects');
   assert.ok(appSrc.includes('projectCount={displayProjects.length}'), 'AppShell must receive displayProjects.length');
 
