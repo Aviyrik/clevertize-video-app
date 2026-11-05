@@ -22,9 +22,9 @@ export function ProjectRatingBar({
   generationId = null,
   style = {},
 }) {
-  if (!isProjectEligibleForRating(project)) {
-    return null;
-  }
+  // Checked after the hooks below (rules of hooks): a project that becomes eligible while this card is
+  // on screen — a draft turning into a finished video — must not change the number of hooks
+  const eligible = isProjectEligibleForRating(project);
 
   const projectId = project?.id || null;
   const videoUrl = project?.videoUrl || null;
@@ -55,6 +55,10 @@ export function ProjectRatingBar({
   }, [projectId, videoUrl]);
 
   const currentRating = ratingData?.rating || null;
+
+  if (!eligible) {
+    return null;
+  }
 
   const handleLike = (e) => {
     e?.stopPropagation();

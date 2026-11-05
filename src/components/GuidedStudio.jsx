@@ -3361,6 +3361,19 @@ export function Screen07Script({
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
+  // Apply a scene edit shortly after typing pauses (Save just closes the editor), so the draft autosave
+  // keeps a long edit even if the tab closes before Save is pressed
+  useEffect(() => {
+    if (editingSceneIdx === null || !setScenes) return;
+    const timer = setTimeout(() => {
+      if (scenes[editingSceneIdx] !== undefined && scenes[editingSceneIdx] !== editSceneText) {
+        const updated = [...scenes];
+        updated[editingSceneIdx] = editSceneText;
+        setScenes(updated);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [editSceneText, editingSceneIdx]);
   const [isCopiedFull, setIsCopiedFull] = useState(false);
   const [isEditingContinuity, setIsEditingContinuity] = useState(false);
   const [editSettingVal, setEditSettingVal] = useState(setting || '');

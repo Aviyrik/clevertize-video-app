@@ -875,8 +875,9 @@ async function saveProject(projectData, userId) {
         character2 = EXCLUDED.character2,
         setting = EXCLUDED.setting,
         quality_gate_passed = EXCLUDED.quality_gate_passed,
-        status = EXCLUDED.status,
-        video_url = EXCLUDED.video_url,
+        -- a save without a video (e.g. a late draft autosave) never takes a finished video away
+        status = CASE WHEN EXCLUDED.video_url IS NULL AND projects.video_url IS NOT NULL THEN projects.status ELSE EXCLUDED.status END,
+        video_url = COALESCE(EXCLUDED.video_url, projects.video_url),
         updated_at = EXCLUDED.updated_at
       WHERE projects.user_id = EXCLUDED.user_id
       RETURNING *`,
@@ -946,8 +947,9 @@ async function saveProject(projectData, userId) {
     character2: character2 || '',
     setting: setting || '',
     qualityGatePassed: Boolean(qualityGatePassed),
-    status: pStatus,
-    videoUrl: videoUrl || null,
+    // a save without a video (e.g. a late draft autosave) never takes a finished video away
+    status: !videoUrl && existingIndex >= 0 && projects[existingIndex].videoUrl ? projects[existingIndex].status : pStatus,
+    videoUrl: videoUrl || (existingIndex >= 0 ? projects[existingIndex].videoUrl : null) || null,
     createdAt: existingIndex >= 0 ? projects[existingIndex].createdAt : now,
     updatedAt: now,
   };

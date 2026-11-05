@@ -85,6 +85,8 @@ export default function SimpleBusinessStudio({
   isProjectSaved = false,
   producedVideoUrl = null,
   videoRunError = null,
+  initialDraft = null, // a saved draft's Simple Studio state, when resuming it from My Projects
+  onDraftChange, // (state, { flush }) => void — lets the app autosave this flow as a draft
   projectId = null,
   userId = null,
 }) {
@@ -106,21 +108,26 @@ export default function SimpleBusinessStudio({
   // 1: 'offer' (Input promotion details)
   // 2: 'choose' (Pick from 3 generated complete ad scripts)
   // 3: 'produce' (Video production, player, download)
-  const [step, setStep] = useState(1);
+  const draft = initialDraft || {};
+  const [step, setStep] = useState(draft.step || 1);
 
   // Step 1 Form state
-  const [brief, setBrief] = useState(initialBrief || '');
-  const [language, setLanguage] = useState(initialLanguage || 'English');
-  const [creativeStyle, setCreativeStyle] = useState(initialStyle || 'UGC / Creator-style');
-  const [duration, setDuration] = useState(initialDuration || '30s');
-  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio || '9:16');
-  const [productPhoto, setProductPhoto] = useState(null);
+  const [brief, setBrief] = useState(draft.brief ?? (initialBrief || ''));
+  const [language, setLanguage] = useState(draft.language || initialLanguage || 'English');
+  const [creativeStyle, setCreativeStyle] = useState(draft.creativeStyle || initialStyle || 'UGC / Creator-style');
+  const [duration, setDuration] = useState(draft.duration || initialDuration || '30s');
+  const [aspectRatio, setAspectRatio] = useState(draft.aspectRatio || initialAspectRatio || '9:16');
+  const [productPhoto, setProductPhoto] = useState(() => (
+    draft.productPhoto && draft.productPhoto.data
+      ? { ...draft.productPhoto, previewUrl: `data:${draft.productPhoto.mime || 'image/jpeg'};base64,${draft.productPhoto.data}` }
+      : null
+  ));
   const [charCount, setCharCount] = useState(brief.length);
 
   // Step 2 Packages state
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
-  const [packages, setPackages] = useState([]);
-  const [selectedPackageId, setSelectedPackageId] = useState(null);
+  const [packages, setPackages] = useState(Array.isArray(draft.packages) ? draft.packages : []);
+  const [selectedPackageId, setSelectedPackageId] = useState(draft.selectedPackageId ?? null);
   const [expandedPackageId, setExpandedPackageId] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -131,6 +138,12 @@ export default function SimpleBusinessStudio({
   useEffect(() => {
     setCharCount(brief.length);
   }, [brief]);
+
+  // Report this flow's state so the app can autosave it as a draft (it debounces; step changes save at once)
+  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId });
+  useEffect(() => {
+    if (onDraftChange) onDraftChange(draftState(), { flush: false });
+  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId]);
 
   const handleApplyTemplate = (tpl) => {
     setBrief(tpl);
@@ -158,6 +171,7 @@ export default function SimpleBusinessStudio({
 
     setLoadError('');
     setIsLoadingPackages(true);
+    if (onDraftChange) onDraftChange(draftState(), { flush: true }); // brief submitted: save it now
 
     try {
       const token = localStorage.getItem('clevertize_token');

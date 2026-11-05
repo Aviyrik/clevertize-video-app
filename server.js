@@ -1199,6 +1199,14 @@ function cleanExpiredTickets() {
   }
 }
 
+// Hosts a finished video may be downloaded from. Magnific delivers renders from Freepik's CDN,
+// pikaso.cdnpk.net (with an expiring token) — it was missing here, so every video not yet copied to
+// permanent storage failed with "Unapproved or invalid video storage host".
+// Permanent copies are only accepted inside our own Supabase Storage bucket (engine/videoStore.js).
+// VIDEO_HOSTS_EXTRA=host1,host2 adds exact hostnames without a code change.
+const APPROVED_VIDEO_HOSTS = ["cdn.example.com", "pikaso.cdnpk.net", "magnific.com", "magnific.ai", "storage.googleapis.com"];
+const APPROVED_VIDEO_HOST_SUFFIXES = [".magnific.com", ".magnific.ai", ".cloudfront.net", ".amazonaws.com", ".storage.googleapis.com", ".googleusercontent.com"];
+
 function isApprovedVideoHost(urlString) {
   try {
     const parsed = new URL(urlString);
@@ -1206,21 +1214,13 @@ function isApprovedVideoHost(urlString) {
     const disallowed = isDisallowedUrl(urlString);
     if (disallowed) return false;
     const host = parsed.hostname.toLowerCase();
-    if (
-      host === "cdn.example.com" ||
-      host === "magnific.ai" ||
-      host.endsWith(".magnific.ai") ||
-      host.endsWith(".cloudfront.net") ||
-      host.endsWith(".amazonaws.com") ||
-      host === "storage.googleapis.com" ||
-      host.endsWith(".storage.googleapis.com") ||
-      host.endsWith(".googleusercontent.com") ||
-      // permanent copies of finished videos (engine/videoStore.js)
+    const extra = String(process.env.VIDEO_HOSTS_EXTRA || "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+    return (
+      APPROVED_VIDEO_HOSTS.includes(host) ||
+      extra.includes(host) ||
+      APPROVED_VIDEO_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix)) ||
       (videoStore.isStoredUrl(urlString) && host === videoStore.storageHost())
-    ) {
-      return true;
-    }
-    return false;
+    );
   } catch {
     return false;
   }

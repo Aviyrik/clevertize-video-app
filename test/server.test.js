@@ -1081,3 +1081,78 @@ test("a finished video is copied to permanent storage once, and the permanent li
   assert.equal(plain.archived, false);
   assert.equal(plain.videoUrl, "https://cdn.example.com/out.mp4");
 });
+
+test("drafts: an in-progress project keeps its stage and render run id, and a late draft save never removes a finished video", async () => {
+  const { buildDraftProject } = require("../src/utils/drafts.js");
+  await db.createUser({ email: "drafts@example.com", password: "password123", name: "Drafts" });
+  const token = (await post("/api/auth/login", { email: "drafts@example.com", password: "password123" }, null)).body.token;
+  const list = async () => (await (await realFetch(base + "/api/projects", { headers: { authorization: `Bearer ${token}` } })).json()).projects;
+
+  const draft = buildDraftProject({
+    id: "proj_draft_1", businessName: "Draft Co", studio: "simple",
+    simple: { step: 3, brief: "Monsoon sale", packages: [{ id: "pkg_1", scenes: ["a", "b", "c", "d"] }], selectedPackageId: "pkg_1" },
+    render: { runId: "run_draft_1", startedAt: "2026-11-04T10:00:00.000Z" },
+  });
+  assert.equal((await post("/api/projects", draft, token)).status, 200);
+  let saved = (await list()).find((p) => p.id === "proj_draft_1");
+  assert.equal(saved.status, "in_progress");
+  assert.equal(saved.currentStage, "video");
+  assert.equal(saved.creativeDNA.draft.render.runId, "run_draft_1", "the run id survives a logout, so the render can be picked up");
+  assert.equal(saved.creativeDNA.draft.simple.brief, "Monsoon sale");
+
+  // the render finishes: same id, now a finished video
+  await post("/api/projects", { id: "proj_draft_1", title: "Draft Co - Monsoon sale", status: "video_ready", videoUrl: "https://cdn.example.com/draft-1.mp4", scenes: ["a", "b", "c", "d"] }, token);
+  // an autosave that was already on its way lands afterwards
+  await post("/api/projects", draft, token);
+  saved = (await list()).filter((p) => p.id === "proj_draft_1");
+  assert.equal(saved.length, 1, "no duplicate project");
+  assert.equal(saved[0].videoUrl, "https://cdn.example.com/draft-1.mp4", "the finished video is kept");
+  assert.equal(saved[0].status, "video_ready");
+});
+
+test("downloads: videos on Magnific\x27s real CDN get a ticket; unknown hosts and other users\x27 videos still don\x27t", async () => {
+  await db.createUser({ email: "dl-owner@example.com", password: "password123", name: "Owner" });
+  await db.createUser({ email: "dl-other@example.com", password: "password123", name: "Other" });
+  const owner = (await post("/api/auth/login", { email: "dl-owner@example.com", password: "password123" }, null)).body.token;
+  const other = (await post("/api/auth/login", { email: "dl-other@example.com", password: "password123" }, null)).body.token;
+
+  // the host every real render comes from (it was missing from the allowlist)
+  const magnificUrl = "https://pikaso.cdnpk.net/private/production/123/render.mp4?token=exp=4102444800~hmac=abc";
+  await post("/api/projects", { id: "proj_dl_1", title: "DL", status: "video_ready", videoUrl: magnificUrl }, owner);
+  const ok = await post("/api/download/ticket", { url: magnificUrl }, owner);
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.match(ok.body.downloadUrl, /^\/api\/download\?ticket=/);
+
+  // someone else\x27s video: refused
+  assert.equal((await post("/api/download/ticket", { url: magnificUrl }, other)).status, 403);
+
+  // a host nobody approved: still refused, even when it is saved on the user\x27s own project
+  const strangeUrl = "https://files.unknown-cdn.example/render.mp4";
+  await post("/api/projects", { id: "proj_dl_2", title: "DL2", status: "video_ready", videoUrl: strangeUrl }, owner);
+  const refused = await post("/api/download/ticket", { url: strangeUrl }, owner);
+  assert.equal(refused.status, 400);
+  assert.match(refused.body.error, /Unapproved or invalid video storage host/);
+
+  // ...unless it is added on purpose
+  process.env.VIDEO_HOSTS_EXTRA = "files.unknown-cdn.example";
+  try {
+    assert.equal((await post("/api/download/ticket", { url: strangeUrl }, owner)).status, 200);
+  } finally {
+    delete process.env.VIDEO_HOSTS_EXTRA;
+  }
+
+  // the storage host only counts inside our bucket
+  process.env.SUPABASE_URL = "https://proj.supabase.test";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "k";
+  try {
+    const stored = "https://proj.supabase.test/storage/v1/object/public/videos/usr_x/run_1-0123456789abcdef.mp4";
+    const outside = "https://proj.supabase.test/storage/v1/object/public/someone-elses-bucket/x.mp4";
+    await post("/api/projects", { id: "proj_dl_3", title: "DL3", status: "video_ready", videoUrl: stored }, owner);
+    await post("/api/projects", { id: "proj_dl_4", title: "DL4", status: "video_ready", videoUrl: outside }, owner);
+    assert.equal((await post("/api/download/ticket", { url: stored }, owner)).status, 200);
+    assert.equal((await post("/api/download/ticket", { url: outside }, owner)).status, 400);
+  } finally {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});

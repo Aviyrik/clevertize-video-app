@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+// keep test users out of data/ — that folder is the app's real local database
+process.env.DATA_DIR = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'clevercut-test-'));
 const db = require('../engine/db.js');
 
 test('Email Verification DB: New user creation defaults emailVerified to false', async () => {
