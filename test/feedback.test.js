@@ -6,6 +6,9 @@ const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
 
+// keep test users out of data/ — that folder is the app's real local database
+process.env.DATA_DIR = fs.mkdtempSync(path.join(require("os").tmpdir(), "clevercut-test-"));
+
 const {
   validateFeedbackPayload,
   formatFeedbackContent,

@@ -3,6 +3,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+// keep test users out of data/ — that folder is the app's real local database
+process.env.DATA_DIR = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'clevercut-test-'));
 const emailService = require('../engine/email');
 const { app } = require('../server');
 const db = require('../engine/db');
