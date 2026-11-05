@@ -75,6 +75,9 @@ export default function ScriptLibraryView({
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState(null);
   const [expandedScriptIds, setExpandedScriptIds] = useState({});
+  // the card whose video is playing inline, and videos that failed to load
+  const [playingVideoId, setPlayingVideoId] = useState(null);
+  const [unplayableIds, setUnplayableIds] = useState({});
 
   const toggleExpandScript = (e, id) => {
     e.stopPropagation();
@@ -291,6 +294,12 @@ export default function ScriptLibraryView({
             const rendering = isRenderingDraft(proj);
             // projects saved before videos were copied to permanent storage may hold an expired Magnific link
             const videoExpired = hasVideo && isVideoLinkExpired(proj.videoUrl);
+            const canPlay = hasVideo && !videoExpired && !unplayableIds[proj.id];
+            const isPlaying = canPlay && playingVideoId === proj.id;
+            const togglePlay = (e) => {
+              e.stopPropagation();
+              if (canPlay) setPlayingVideoId(isPlaying ? null : proj.id);
+            };
             const isExpanded = Boolean(expandedScriptIds[proj.id]);
 
             // Match business logo
@@ -578,7 +587,9 @@ export default function ScriptLibraryView({
 
                   {/* Video Section (if generated) with Download Button */}
                   {hasVideo && (
+                    <>
                     <div
+                      onClick={(e) => e.stopPropagation()} // the video area plays the video; it never opens the project
                       style={{
                         margin: '12px 0',
                         padding: '12px 14px',
@@ -591,7 +602,19 @@ export default function ScriptLibraryView({
                         gap: 12,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        role={canPlay ? 'button' : undefined}
+                        tabIndex={canPlay ? 0 : undefined}
+                        aria-label={canPlay ? (isPlaying ? `Hide video for ${proj.title || 'project'}` : `Play video for ${proj.title || 'project'}`) : undefined}
+                        onClick={togglePlay}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            togglePlay(e);
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: canPlay ? 'pointer' : 'default' }}
+                      >
                         <div
                           style={{
                             width: 32,
@@ -612,7 +635,11 @@ export default function ScriptLibraryView({
                             Generated Commercial
                           </div>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                            {videoExpired ? 'Link expired — open the project and generate the video again' : 'Ready to download & share'}
+                            {videoExpired
+                              ? 'Link expired — open the project and generate the video again'
+                              : unplayableIds[proj.id]
+                                ? 'This video can\x27t be played right now — its link may have expired'
+                                : isPlaying ? 'Playing — click to hide' : 'Click to play · ready to download & share'}
                           </div>
                         </div>
                       </div>
@@ -662,6 +689,23 @@ export default function ScriptLibraryView({
                       </a>
                       )}
                     </div>
+
+                    {isPlaying && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ margin: '-4px 0 12px', borderRadius: 8, overflow: 'hidden', backgroundColor: '#000000' }}>
+                        <video
+                          src={proj.videoUrl}
+                          controls
+                          autoPlay
+                          playsInline
+                          onError={() => {
+                            setUnplayableIds((prev) => ({ ...prev, [proj.id]: true }));
+                            setPlayingVideoId(null);
+                          }}
+                          style={{ width: '100%', maxHeight: 360, display: 'block', objectFit: 'contain' }}
+                        />
+                      </div>
+                    )}
+                    </>
                   )}
 
                   {/* Creative Video Rating (Like / Dislike) — only for completed projects */}
