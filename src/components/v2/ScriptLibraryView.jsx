@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import { isVideoLinkExpired } from '../../utils/videoLink.js';
 import { isDraft, isRenderingDraft } from '../../utils/drafts.js';
+import { ProjectRatingBar } from './VideoRatingControls.jsx';
 import {
   FileText,
   Clock,
@@ -661,6 +662,16 @@ export default function ScriptLibraryView({
                       </a>
                       )}
                     </div>
+                  )}
+
+                  {/* Creative Video Rating (Like / Dislike) — only for completed projects */}
+                  {hasVideo && !videoExpired && (
+                    <ProjectRatingBar
+                      project={proj}
+                      userId={currentUser?.id}
+                      brandId={proj.businessId}
+                      generationId={proj.runId}
+                    />
                   )}
 
                   {/* Brief / Objective Snippet */}

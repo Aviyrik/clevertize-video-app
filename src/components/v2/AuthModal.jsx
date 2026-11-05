@@ -7,6 +7,8 @@ import {
   AlertCircle,
   RefreshCw,
   Info,
+  Mail,
+  Clock,
 } from 'lucide-react';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
 import LegalDocumentModal from './LegalDocumentModal.jsx';
@@ -29,6 +31,55 @@ export default function AuthModal({
   const [googleNotice, setGoogleNotice] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalTab, setLegalTab] = useState('terms');
+
+  // Dedicated Verification-Pending Screen State
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState(''); // '' | 'sending' | 'sent' | 'error'
+  const [resendMessage, setResendMessage] = useState('');
+
+  // Resend cooldown timer (60s)
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const handleResendVerification = async () => {
+    if (!pendingVerificationEmail || resendCooldown > 0 || resendStatus === 'sending') return;
+    setResendStatus('sending');
+    setResendMessage('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerificationEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setResendStatus('sent');
+        setResendMessage(data.message || 'A new verification link has been sent to your email.');
+        setResendCooldown(60);
+      } else {
+        setResendStatus('error');
+        setResendMessage(data.error || data.message || 'Failed to resend verification email.');
+        if (data.retryAfter) {
+          setResendCooldown(Number(data.retryAfter) || 60);
+        }
+      }
+    } catch {
+      setResendStatus('error');
+      setResendMessage('Network error. Please check your connection and try again.');
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -90,6 +141,17 @@ export default function AuthModal({
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
 
+      // Handle unverified signup response (requires email verification before session creation)
+      // Handle unverified signup response (replaces registration form with verification-pending screen)
+      if (data.status === 'pending_verification') {
+        setNoticeMsg(data.message || "We've sent a verification link to your email address. Verify your email to continue.");
+        setPendingVerificationEmail(email.trim());
+        setResendCooldown(60);
+        setResendStatus('');
+        setResendMessage('');
+        return;
+      }
+
       try {
         if (rememberMe) {
           localStorage.setItem('clevertize_remember_email', email.trim());
@@ -124,6 +186,9 @@ export default function AuthModal({
     setErrorMsg('');
     setNoticeMsg('');
     setGoogleNotice(false);
+    setPendingVerificationEmail('');
+    setResendMessage('');
+    setResendStatus('');
   };
 
   const handleGoogleClick = () => {
@@ -239,6 +304,167 @@ export default function AuthModal({
           }}
         >
           <div style={{ width: '100%', maxWidth: 420, margin: '0 auto' }}>
+            {/* Dedicated Verification-Pending Screen */}
+            {pendingVerificationEmail ? (
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 14,
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.35) 100%)',
+                    border: '1px solid rgba(129, 140, 248, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px',
+                    boxShadow: '0 8px 24px -4px rgba(99, 102, 241, 0.4)',
+                  }}
+                >
+                  <Mail size={26} color="#818CF8" />
+                </div>
+
+                <h2
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    letterSpacing: '-0.025em',
+                    color: '#FFFFFF',
+                    margin: '0 0 8px',
+                  }}
+                >
+                  Check your inbox
+                </h2>
+
+                <p style={{ fontSize: 13, color: '#9CA3AF', margin: '0 0 16px', lineHeight: 1.45 }}>
+                  We've sent a verification link to your email address. Verify your email to continue.
+                </p>
+
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontWeight: 600,
+                    color: '#F5F7FA',
+                    fontSize: 13,
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  <Mail size={15} color="#818CF8" style={{ flexShrink: 0 }} />
+                  <span>{pendingVerificationEmail}</span>
+                </div>
+
+                {resendMessage && (
+                  <div
+                    style={{
+                      backgroundColor: resendStatus === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                      border: resendStatus === 'error' ? '1px solid rgba(239, 68, 68, 0.28)' : '1px solid rgba(16, 185, 129, 0.28)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      marginBottom: 14,
+                      color: resendStatus === 'error' ? '#F87171' : '#34D399',
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {resendMessage}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendCooldown > 0 || resendStatus === 'sending'}
+                  style={{
+                    width: '100%',
+                    padding: '11px 16px',
+                    background: resendCooldown > 0 ? 'rgba(255, 255, 255, 0.05)' : 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                    color: resendCooldown > 0 ? '#9CA3AF' : '#FFFFFF',
+                    border: resendCooldown > 0 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+                    borderRadius: 10,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: resendCooldown > 0 || resendStatus === 'sending' ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    marginBottom: 14,
+                    boxShadow: resendCooldown > 0 ? 'none' : '0 4px 14px rgba(79, 70, 229, 0.35)',
+                  }}
+                >
+                  {resendStatus === 'sending' ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+                      <span>Sending...</span>
+                    </>
+                  ) : resendCooldown > 0 ? (
+                    <>
+                      <Clock size={14} />
+                      <span>Resend email in {resendCooldown}s</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={14} />
+                      <span>Resend verification link</span>
+                    </>
+                  )}
+                </button>
+
+                <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  Verification links expire in 30 minutes. Check your Spam or Promotions folder if needed.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingVerificationEmail('');
+                      setResendMessage('');
+                      setResendStatus('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#9CA3AF',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Use a different email address
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingVerificationEmail('');
+                      setResendMessage('');
+                      setResendStatus('');
+                      switchMode('signin');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#818CF8',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Already verified? Log In
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
             <div style={{ marginBottom: 20 }}>
               <h2
                 style={{
@@ -418,6 +644,8 @@ export default function AuthModal({
                 </label>
                 <input
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@business.com"
@@ -462,6 +690,8 @@ export default function AuthModal({
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
@@ -583,6 +813,9 @@ export default function AuthModal({
                 </span>
               )}
             </div>
+
+              </>
+            )}
 
             {/* Terms and Privacy Policy Footnote */}
             <div

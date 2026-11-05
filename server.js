@@ -18,6 +18,7 @@ const db = require("./engine/db");
 const netguard = require("./engine/netguard"); // called as netguard.safeFetch so tests can point it at a local server
 const { isDisallowedUrl } = netguard;
 const feedback = require("./engine/feedback");
+const emailService = require("./engine/email");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1442,28 +1443,218 @@ app.get("/api/config", (req, res) => {
 // ---- Authentication Endpoints (Phase C) ----
 
 app.post("/api/auth/signup", async (req, res) => {
+  let createdUser = null;
   try {
     const { email, password, name, businessName, businessType, town } = req.body || {};
+    
+    // 1. Create user record (defaults to email_verified = false)
     const user = await db.createUser({ email, password, name });
-    const token = await db.createSession(user.id);
+    createdUser = user;
 
-    let defaultBusiness = null;
+    // Optional default business
     if (businessName && String(businessName).trim()) {
-      defaultBusiness = await db.saveBusiness({
+      await db.saveBusiness({
         businessName,
         businessType: businessType || "Retail Store",
         town: town || "",
       }, user.id);
     }
 
+    // 2. Generate email verification token (30-minute expiry, hash stored in DB)
+    const tokenRecord = await db.createEmailVerificationToken(user.id);
+
+    // 3. Construct verification link with configured APP_BASE_URL
+    const baseUrl = emailService.getAppBaseUrl(req);
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+
+    // 4. Send verification email via Resend
+    const emailResult = await emailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl,
+    });
+
+    if (!emailResult.success) {
+      // Safe cleanup: delete the newly created unverified account and associated business/tokens
+      try {
+        await db.deleteUser(user.id);
+      } catch (cleanupErr) {
+        console.error("[signup-cleanup-error]", cleanupErr.message);
+      }
+      return res.status(502).json({
+        error: "We could not send your verification email. Please check your email address and try again.",
+        details: emailResult.error,
+      });
+    }
+
+    // 5. Successful response without session token
     res.json({
-      status: "success",
-      user,
-      token,
-      business: defaultBusiness,
+      success: true,
+      status: "pending_verification",
+      email: user.email,
+      message: "Please check your inbox to verify your email address.",
     });
   } catch (err) {
+    if (createdUser && createdUser.id) {
+      try {
+        await db.deleteUser(createdUser.id);
+      } catch (cleanupErr) {
+        console.error("[signup-cleanup-error]", cleanupErr.message);
+      }
+    }
     res.status(400).json({ error: err.message || "Failed to create account." });
+  }
+});
+
+// ---- Email Verification Endpoint ----
+app.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== "string" || !token.trim()) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_REQUIRED",
+        error: "Verification token is required.",
+      });
+    }
+
+    const trimmedToken = token.trim();
+    const verifiedUser = await db.markEmailAsVerified(trimmedToken);
+
+    if (!verifiedUser) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_INVALID",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+
+    // Automatically create authenticated session upon successful email verification
+    const sessionToken = await db.createSession(verifiedUser.id);
+    const businesses = await db.getBusinessesForUser(verifiedUser.id);
+    const projects = await db.getProjectsForUser(verifiedUser.id);
+
+    return res.json({
+      success: true,
+      code: "VERIFIED_SUCCESS",
+      message: "Your email has been verified successfully!",
+      email: verifiedUser.email,
+      user: verifiedUser,
+      token: sessionToken,
+      businesses,
+      projects,
+    });
+  } catch (err) {
+    const message = err.message || "";
+    if (message.includes("has expired")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_EXPIRED",
+        error: "This verification link has expired. Please request a new one.",
+      });
+    }
+    if (message.includes("already been used")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_ALREADY_USED",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+    if (message.includes("not found") || message.includes("not match") || message.includes("is required")) {
+      return res.status(400).json({
+        success: false,
+        code: "TOKEN_INVALID",
+        error: "This verification link is invalid or has already been used.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
+      error: "Unable to verify email at this moment. Please try again.",
+    });
+  }
+});
+
+// ---- Resend Email Verification Endpoint ----
+app.post("/api/auth/resend-verification", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== "string" || !email.trim() || !email.includes("@")) {
+      return res.status(400).json({
+        success: false,
+        code: "EMAIL_REQUIRED",
+        error: "A valid email address is required.",
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await db.findUserByEmail(cleanEmail);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        code: "USER_NOT_FOUND",
+        error: "No account found with this email address.",
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        code: "ALREADY_VERIFIED",
+        message: "This email address is already verified. You can log in directly.",
+      });
+    }
+
+    // Rate limiting / Cooldown check (60-second cooldown based on most recent token)
+    const latestToken = await db.getLatestVerificationTokenForUser(user.id);
+    if (latestToken && latestToken.createdAt) {
+      const elapsedSec = (Date.now() - new Date(latestToken.createdAt).getTime()) / 1000;
+      if (elapsedSec < 60) {
+        const waitSec = Math.ceil(60 - elapsedSec);
+        return res.status(429).json({
+          success: false,
+          code: "RATE_LIMITED",
+          error: `Please wait ${waitSec} seconds before requesting another verification email.`,
+          retryAfter: waitSec,
+        });
+      }
+    }
+
+    // Generate fresh token (invalidates previous unused tokens for this user)
+    const tokenRecord = await db.createEmailVerificationToken(user.id);
+
+    // Build verification URL with configured or inferred base URL
+    const baseUrl = emailService.getAppBaseUrl(req);
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+
+    // Dispatch verification email via Resend
+    const emailResult = await emailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl,
+    });
+
+    if (!emailResult.success) {
+      return res.status(502).json({
+        success: false,
+        code: "DELIVERY_FAILED",
+        error: "Failed to send verification email. Please try again shortly.",
+        details: emailResult.error,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "A new verification link has been sent to your email address.",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      code: "SERVER_ERROR",
+      error: "Unable to resend verification email at this moment. Please try again.",
+    });
   }
 });
 
@@ -1664,6 +1855,48 @@ app.post("/api/feedback", authRequired, async (req, res) => {
   }
 });
 
+// ---- Development-Only Test Email Endpoint ----
+app.post("/api/dev/test-email", authRequired, async (req, res) => {
+  // Available ONLY when NODE_ENV !== 'production'
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Endpoint not available in production environment." });
+  }
+
+  try {
+    const { to } = req.body || {};
+    if (!to || !emailService.isValidEmail(to)) {
+      return res.status(400).json({ error: "Valid recipient email address is required." });
+    }
+
+    const html = emailService.renderTestEmailHtml(to);
+    const text = emailService.renderTestEmailText(to);
+
+    const result = await emailService.sendEmail({
+      to,
+      subject: "CleverCut – Transactional Email Delivery Test",
+      html,
+      text,
+    });
+
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    return res.json({
+      success: true,
+      id: result.id,
+      message: "Test email dispatched successfully via Resend.",
+      recipient: to.trim(),
+    });
+  } catch (err) {
+    const safeError = emailService.sanitizeErrorMessage(err.message);
+    res.status(500).json({ success: false, error: safeError });
+  }
+});
+
 // Ensure API requests that fail to match any endpoint return JSON 404, NEVER HTML index.html
 app.all("/api/*", (req, res) => {
   res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
@@ -1690,4 +1923,4 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 
-module.exports = { app, validateForm, sessions, downloadTickets, feedback };
+module.exports = { app, validateForm, sessions, downloadTickets, feedback, emailService };

@@ -1,5 +1,6 @@
 import { getBriefSuggestions } from '../../utils/categorySuggestions.js';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
+import { PostGenerationFeedbackPrompt } from './VideoRatingControls.jsx';
 import React, { useState, useEffect } from 'react';
 import {
   SimpleAdPackagesLoader,
@@ -86,6 +87,8 @@ export default function SimpleBusinessStudio({
   videoRunError = null,
   initialDraft = null, // a saved draft's Simple Studio state, when resuming it from My Projects
   onDraftChange, // (state, { flush }) => void — lets the app autosave this flow as a draft
+  projectId = null,
+  userId = null,
 }) {
   const category = categoryProp || businessType || 'Local Business';
 
@@ -1241,6 +1244,13 @@ export default function SimpleBusinessStudio({
                     <span>{copiedScript ? 'Script Copied!' : 'Copy Script'}</span>
                   </button>
                 </div>
+
+                {/* Post-Generation Creative Rating Prompt (Subtle & Non-blocking) */}
+                <PostGenerationFeedbackPrompt
+                  videoUrl={producedVideoUrl}
+                  projectId={projectId}
+                  userId={userId}
+                />
               </div>
             ) : videoRunError ? (
               <div style={{ padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>

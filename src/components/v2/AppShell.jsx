@@ -164,9 +164,10 @@ export default function AppShell({
                 backgroundColor: 'var(--accent-subtle)',
                 padding: '2px 6px',
                 borderRadius: 4,
+                letterSpacing: '0.04em',
               }}
             >
-              MVP
+              BETA
             </span>
           </div>
 

@@ -52,6 +52,10 @@ services:
         value: https://formsubmit.co/viki@clevertize.com
       - key: FEEDBACK_EMAIL_TO
         value: viki@clevertize.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: AUTH_EMAIL_FROM
+        value: onboarding@resend.dev
 
 databases:
   - name: clevertize-postgres

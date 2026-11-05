@@ -50,10 +50,15 @@ async function ensurePgTables() {
         avatar TEXT,
         password_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        email_verified_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+      UPDATE users SET email_verified = FALSE WHERE email_verified IS NULL;
 
       CREATE TABLE IF NOT EXISTS sessions (
         token VARCHAR(255) PRIMARY KEY,
@@ -102,10 +107,33 @@ async function ensurePgTables() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'email_verification_tokens' AND column_name = 'user_id' AND is_nullable = 'YES'
+        ) THEN
+          DELETE FROM email_verification_tokens WHERE user_id IS NULL;
+          ALTER TABLE email_verification_tokens ALTER COLUMN user_id SET NOT NULL;
+        END IF;
+      END $$;
+
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
       CREATE INDEX IF NOT EXISTS idx_businesses_user ON businesses(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+      CREATE INDEX IF NOT EXISTS idx_evt_user_id ON email_verification_tokens(user_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_evt_token_hash ON email_verification_tokens(token_hash);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_evt_user_pending ON email_verification_tokens(user_id) WHERE used_at IS NULL;
 
       CREATE TABLE IF NOT EXISTS video_runs (
         run_id VARCHAR(255) PRIMARY KEY,
@@ -123,15 +151,16 @@ async function ensurePgTables() {
       ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
       ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
       ALTER TABLE video_runs ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE email_verification_tokens ENABLE ROW LEVEL SECURITY;
 
       -- Revoke public PostgREST API access from anon/authenticated roles if running on Supabase
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs FROM anon;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens FROM anon;
         END IF;
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs FROM authenticated;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens FROM authenticated;
         END IF;
       END $$;
     `);
@@ -177,9 +206,23 @@ function readJsonFile(filename, defaultValue) {
 function writeJsonFile(filename, data) {
   const filePath = getFilePath(filename);
   ensureDataDir();
-  const tempPath = `${filePath}.tmp.${Date.now()}`;
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tempPath, filePath);
+  const content = JSON.stringify(data, null, 2);
+  const tempPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 6)}`;
+  try {
+    fs.writeFileSync(tempPath, content, 'utf8');
+    try {
+      fs.renameSync(tempPath, filePath);
+    } catch (renameErr) {
+      if (renameErr.code === 'EPERM' || renameErr.code === 'EBUSY') {
+        fs.writeFileSync(filePath, content, 'utf8');
+        try { fs.unlinkSync(tempPath); } catch {}
+      } else {
+        throw renameErr;
+      }
+    }
+  } catch {
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
 }
 
 // ----------------------------------------------------
@@ -260,7 +303,7 @@ async function findUserByEmail(email) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, created_at FROM users WHERE LOWER(email) = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE LOWER(email) = $1',
       [cleanEmail]
     );
     if (!res.rows.length) return null;
@@ -272,6 +315,8 @@ async function findUserByEmail(email) {
       avatar: r.avatar || null,
       passwordHash: r.password_hash,
       salt: r.salt,
+      emailVerified: Boolean(r.email_verified),
+      emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -282,6 +327,8 @@ async function findUserByEmail(email) {
   return {
     ...u,
     avatar: u.avatar || null,
+    emailVerified: Boolean(u.emailVerified),
+    emailVerifiedAt: u.emailVerifiedAt || null,
   };
 }
 
@@ -292,7 +339,7 @@ async function findUserById(userId) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE id = $1',
       [userId]
     );
     if (!res.rows.length) return null;
@@ -304,6 +351,8 @@ async function findUserById(userId) {
       avatar: r.avatar || null,
       passwordHash: r.password_hash,
       salt: r.salt,
+      emailVerified: Boolean(r.email_verified),
+      emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -314,6 +363,8 @@ async function findUserById(userId) {
   return {
     ...u,
     avatar: u.avatar || null,
+    emailVerified: Boolean(u.emailVerified),
+    emailVerifiedAt: u.emailVerifiedAt || null,
   };
 }
 
@@ -340,10 +391,10 @@ async function createUser({ email, password, name = '', avatar = null }) {
   if (pool) {
     await ensurePgTables();
     await pool.query(
-      'INSERT INTO users (id, email, name, avatar, password_hash, salt, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [id, cleanEmail, userName, avatar || null, hash, salt, createdAt]
+      'INSERT INTO users (id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      [id, cleanEmail, userName, avatar || null, hash, salt, false, null, createdAt]
     );
-    return { id, email: cleanEmail, name: userName, avatar: avatar || null, createdAt };
+    return { id, email: cleanEmail, name: userName, avatar: avatar || null, emailVerified: false, emailVerifiedAt: null, createdAt };
   }
 
   const user = {
@@ -353,6 +404,8 @@ async function createUser({ email, password, name = '', avatar = null }) {
     avatar: avatar || null,
     passwordHash: hash,
     salt,
+    emailVerified: false,
+    emailVerifiedAt: null,
     createdAt,
   };
 
@@ -365,6 +418,8 @@ async function createUser({ email, password, name = '', avatar = null }) {
     email: user.email,
     name: user.name,
     avatar: user.avatar || null,
+    emailVerified: false,
+    emailVerifiedAt: null,
     createdAt: user.createdAt,
   };
 }
@@ -386,6 +441,8 @@ async function authenticateUser({ email, password }) {
     email: user.email,
     name: user.name,
     avatar: user.avatar || null,
+    emailVerified: Boolean(user.emailVerified),
+    emailVerifiedAt: user.emailVerifiedAt || null,
     createdAt: user.createdAt,
   };
 }
@@ -413,6 +470,9 @@ async function deleteUser(userId) {
 
   const runs = readJsonFile('video_runs.json', []);
   writeJsonFile('video_runs.json', runs.filter((r) => r.userId !== userId));
+
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  writeJsonFile('email_verification_tokens.json', tokens.filter((t) => t.userId !== userId));
 
   const users = readJsonFile('users.json', []);
   const filteredUsers = users.filter((u) => u.id !== userId);
@@ -498,7 +558,7 @@ async function getUserBySessionToken(token) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.avatar, u.created_at
+      `SELECT u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -511,6 +571,8 @@ async function getUserBySessionToken(token) {
       email: r.email,
       name: r.name,
       avatar: r.avatar || null,
+      emailVerified: Boolean(r.email_verified),
+      emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -528,6 +590,8 @@ async function getUserBySessionToken(token) {
     email: user.email,
     name: user.name,
     avatar: user.avatar || null,
+    emailVerified: Boolean(user.emailVerified),
+    emailVerifiedAt: user.emailVerifiedAt || null,
     createdAt: user.createdAt,
   };
 }
@@ -1050,6 +1114,302 @@ async function isVideoUrlRegistered(videoUrl) {
   return runs.some((r) => r.videoUrl === videoUrl);
 }
 
+// ----------------------------------------------------
+// EMAIL VERIFICATION TOKEN & STATUS METHODS
+// ----------------------------------------------------
+
+function hashVerificationToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  return crypto.createHash('sha256').update(token.trim()).digest('hex');
+}
+
+async function createEmailVerificationToken(userId, options = {}) {
+  if (!userId) throw new Error('userId is required');
+  const user = await findUserById(userId);
+  if (!user) throw new Error('User not found');
+
+  const expiresInMinutes = options.expiresInMinutes !== undefined
+    ? Number(options.expiresInMinutes)
+    : (options.expiresInHours !== undefined ? Number(options.expiresInHours) * 60 : 30);
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashVerificationToken(rawToken);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expiresInMinutes * 60 * 1000);
+  const id = `evt_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    // Invalidate any existing unused token for this user to guarantee only one outstanding token
+    await pool.query(
+      'UPDATE email_verification_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL',
+      [userId]
+    );
+    await pool.query(
+      'INSERT INTO email_verification_tokens (id, user_id, token_hash, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)',
+      [id, userId, tokenHash, expiresAt.toISOString(), now.toISOString()]
+    );
+    return {
+      id,
+      userId,
+      rawToken,
+      tokenHash,
+      expiresAt: expiresAt.toISOString(),
+      createdAt: now.toISOString(),
+    };
+  }
+
+  // JSON fallback
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const nowDate = now.toISOString();
+  for (const t of tokens) {
+    if (t.userId === userId && !t.usedAt) {
+      t.usedAt = nowDate;
+    }
+  }
+  const tokenRecord = {
+    id,
+    userId,
+    tokenHash,
+    expiresAt: expiresAt.toISOString(),
+    usedAt: null,
+    createdAt: nowDate,
+  };
+  tokens.push(tokenRecord);
+  writeJsonFile('email_verification_tokens.json', tokens);
+
+  return {
+    id,
+    userId,
+    rawToken,
+    tokenHash,
+    expiresAt: expiresAt.toISOString(),
+    createdAt: nowDate,
+  };
+}
+
+async function getVerificationTokenByHash(tokenHash) {
+  if (!tokenHash) return null;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'SELECT id, user_id, token_hash, expires_at, used_at, created_at FROM email_verification_tokens WHERE token_hash = $1',
+      [tokenHash]
+    );
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      tokenHash: r.token_hash,
+      expiresAt: r.expires_at instanceof Date ? r.expires_at.toISOString() : r.expires_at,
+      usedAt: r.used_at ? (r.used_at instanceof Date ? r.used_at.toISOString() : r.used_at) : null,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    };
+  }
+
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const t = tokens.find((x) => x.tokenHash === tokenHash);
+  if (!t) return null;
+  return { ...t };
+}
+
+async function getActiveVerificationTokenForUser(userId) {
+  if (!userId) return null;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `SELECT id, user_id, token_hash, expires_at, used_at, created_at
+       FROM email_verification_tokens
+       WHERE user_id = $1 AND used_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      tokenHash: r.token_hash,
+      expiresAt: r.expires_at instanceof Date ? r.expires_at.toISOString() : r.expires_at,
+      usedAt: null,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    };
+  }
+
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const now = new Date().toISOString();
+  const active = tokens.filter(
+    (x) => x.userId === userId && !x.usedAt && x.expiresAt > now
+  );
+  if (!active.length) return null;
+  return { ...active[active.length - 1] };
+}
+
+async function getLatestVerificationTokenForUser(userId) {
+  if (!userId) return null;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `SELECT id, user_id, token_hash, expires_at, used_at, created_at
+       FROM email_verification_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      tokenHash: r.token_hash,
+      expiresAt: r.expires_at instanceof Date ? r.expires_at.toISOString() : r.expires_at,
+      usedAt: r.used_at ? (r.used_at instanceof Date ? r.used_at.toISOString() : r.used_at) : null,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    };
+  }
+
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const userTokens = tokens.filter((x) => x.userId === userId);
+  if (!userTokens.length) return null;
+  return { ...userTokens[userTokens.length - 1] };
+}
+
+async function markEmailAsVerified(arg1, arg2) {
+  let userId = null;
+  let tokenInput = null;
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    userId = arg1.userId || null;
+    tokenInput = arg1.tokenHash || arg1.rawToken || arg1.token || null;
+  } else if (arguments.length >= 2) {
+    userId = arg1 || null;
+    tokenInput = arg2;
+  } else if (typeof arg1 === 'string') {
+    tokenInput = arg1;
+  }
+
+  if (!tokenInput || typeof tokenInput !== 'string' || !tokenInput.trim()) {
+    throw new Error('Verification token is required');
+  }
+
+  const trimmedToken = tokenInput.trim();
+  const hashedCandidate = hashVerificationToken(trimmedToken);
+  const now = new Date();
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+
+    // Atomic consumption & verification CTE:
+    // Guarantees token existence, non-expired, unused, user match (if provided), and atomic consumption.
+    // In PostgreSQL, row locking prevents any race conditions or token reuse across concurrent requests.
+    const res = await pool.query(
+      `WITH consumed_token AS (
+         UPDATE email_verification_tokens
+         SET used_at = NOW()
+         WHERE (token_hash = $1 OR token_hash = $2)
+           AND ($3::text IS NULL OR user_id = $3)
+           AND used_at IS NULL
+           AND expires_at > NOW()
+         RETURNING user_id, token_hash
+       )
+       UPDATE users u
+       SET email_verified = TRUE, email_verified_at = NOW()
+       FROM consumed_token ct
+       WHERE u.id = ct.user_id
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+      [trimmedToken, hashedCandidate, userId]
+    );
+
+    if (res.rows.length > 0) {
+      const r = res.rows[0];
+      return {
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        avatar: r.avatar || null,
+        emailVerified: Boolean(r.email_verified),
+        emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+        createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+      };
+    }
+
+    // CTE returned 0 rows -> diagnose specific failure reason
+    const check = await pool.query(
+      'SELECT id, user_id, token_hash, expires_at, used_at FROM email_verification_tokens WHERE token_hash = $1 OR token_hash = $2 LIMIT 1',
+      [trimmedToken, hashedCandidate]
+    );
+
+    if (!check.rows.length) {
+      throw new Error('Verification token not found');
+    }
+
+    const tok = check.rows[0];
+    if (userId && tok.user_id !== userId) {
+      throw new Error('Verification token does not match user');
+    }
+    if (tok.used_at) {
+      throw new Error('Verification token has already been used');
+    }
+    if (new Date(tok.expires_at) <= new Date()) {
+      throw new Error('Verification token has expired');
+    }
+
+    throw new Error('Verification token could not be consumed');
+  }
+
+  // JSON fallback implementation
+  const tokens = readJsonFile('email_verification_tokens.json', []);
+  const tok = tokens.find(
+    (x) => x.tokenHash === trimmedToken || (hashedCandidate && x.tokenHash === hashedCandidate)
+  );
+
+  if (!tok) {
+    throw new Error('Verification token not found');
+  }
+  if (userId && tok.userId !== userId) {
+    throw new Error('Verification token does not match user');
+  }
+  if (tok.usedAt) {
+    throw new Error('Verification token has already been used');
+  }
+  if (new Date(tok.expiresAt) <= now) {
+    throw new Error('Verification token has expired');
+  }
+
+  // Atomically mark token as used and user as verified
+  tok.usedAt = now.toISOString();
+  writeJsonFile('email_verification_tokens.json', tokens);
+
+  const users = readJsonFile('users.json', []);
+  const u = users.find((x) => x.id === tok.userId);
+  if (!u) {
+    throw new Error('User not found');
+  }
+
+  u.emailVerified = true;
+  u.emailVerifiedAt = now.toISOString();
+  writeJsonFile('users.json', users);
+
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    avatar: u.avatar || null,
+    emailVerified: true,
+    emailVerifiedAt: u.emailVerifiedAt,
+    createdAt: u.createdAt,
+  };
+}
+
 module.exports = {
   isPostgresConfigured,
   ensurePgTables,
@@ -1076,4 +1436,10 @@ module.exports = {
   getVideoRun,
   userOwnsVideoRun,
   updateVideoRun,
+  hashVerificationToken,
+  createEmailVerificationToken,
+  getVerificationTokenByHash,
+  getActiveVerificationTokenForUser,
+  getLatestVerificationTokenForUser,
+  markEmailAsVerified,
 };

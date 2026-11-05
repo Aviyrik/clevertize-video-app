@@ -22,6 +22,7 @@ import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
 import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
 import AuthScreen from './components/v2/AuthScreen.jsx';
+import EmailVerificationScreen from './components/v2/EmailVerificationScreen.jsx';
 import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx';
 import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
 import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
@@ -978,6 +979,24 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
+
+  // Email Verification Route State (/verify-email?token=...)
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.location.pathname.startsWith('/verify-email') ||
+      new URLSearchParams(window.location.search).has('token')
+    );
+  });
+  const [authInitialMode, setAuthInitialMode] = useState('signup');
+
+  const handleReturnFromVerification = (targetMode = 'signin') => {
+    setIsVerifyingEmail(false);
+    setAuthInitialMode(targetMode || 'signin');
+    try {
+      window.history.replaceState({}, document.title, '/');
+    } catch {}
+  };
 
   // Clevertize V2 Authentication & Server Persistence State
   const [currentUser, setCurrentUser] = useState(null);
@@ -4071,6 +4090,22 @@ export default function App() {
     </div>
   );
 
+  // 0. Email verification URL handling (/verify-email?token=...)
+  if (isVerifyingEmail) {
+    return (
+      <EmailVerificationScreen
+        onReturnToLogin={(targetMode) => handleReturnFromVerification(targetMode || 'signin')}
+        onVerificationSuccess={(authData) => {
+          setIsVerifyingEmail(false);
+          try {
+            window.history.replaceState({}, document.title, '/');
+          } catch {}
+          handleAuthSuccess(authData);
+        }}
+      />
+    );
+  }
+
   // 1. Initial auth token verification loading screen
   if (isAuthChecking) {
     return (
@@ -4098,6 +4133,7 @@ export default function App() {
   if (!currentUser || !authToken) {
     return (
       <AuthScreen
+        initialMode={authInitialMode}
         onAuthSuccess={handleAuthSuccess}
       />
     );
@@ -4350,6 +4386,8 @@ export default function App() {
               isProducingVideo={isRendering}
               producedVideoUrl={videoUrl}
               videoRunError={errorMessage}
+              projectId={activeProjectId}
+              userId={currentUser?.id}
               onEditBrand={() => {
                 setEditingBusiness(userContext);
                 setIsOnboardingModalOpen(true);
@@ -5035,6 +5073,8 @@ export default function App() {
             renderStatusText={renderStatusText}
             elapsedTime={elapsedTime}
             videoUrl={videoUrl}
+            projectId={activeProjectId}
+            userId={currentUser?.id}
             onCreateAnother={handleStartNewProject}
             errorMessage={errorMessage}
           />
