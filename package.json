@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test-concurrency=1 --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js test/video_logo.test.js test/project_history.test.js test/feedback.test.js test/video_feedback.test.js test/email_verification_db.test.js test/email_delivery.test.js test/signup_verification.test.js test/verification_processing.test.js test/app_wiring.test.js test/drafts.test.js test/project_card.test.js",
+    "test": "node --test-concurrency=1 --test test/engine.test.js test/netguard.test.js test/server.test.js test/creative.test.js test/studio.test.js test/auth_persistence.test.js test/workflow_loading.test.js test/video_logo.test.js test/project_history.test.js test/feedback.test.js test/video_feedback.test.js test/email_verification_db.test.js test/email_delivery.test.js test/signup_verification.test.js test/verification_processing.test.js test/app_wiring.test.js test/drafts.test.js test/project_card.test.js test/business_switch.test.js",
     "preflight": "npm test && npm run build"
   },
   "dependencies": {

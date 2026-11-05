@@ -2352,7 +2352,7 @@ test('Video Render Polling: Stale/duplicate runs are cancelled and never post ti
   // 1. App.jsx tracks activeRunIdRef and activeVideoUrlRef
   assert.ok(appSrc.includes('const activeRunIdRef = useRef(null);'), 'Must track activeRunIdRef');
   assert.ok(appSrc.includes('activeRunIdRef.current = runId;'), 'pollRenderStatus must assign activeRunIdRef.current');
-  assert.ok(appSrc.includes('if (activeRunIdRef.current !== runId) {'), 'Polling loop must abort on stale runId');
+  assert.ok(appSrc.includes('if (isLive() && activeRunIdRef.current !== runId) {'), 'Polling loop must abort on stale runId');
 
   // 2. Timeout error is prevented if video is already ready
   assert.ok(appSrc.includes('if (activeVideoUrlRef.current || videoUrl) {'), 'Must suppress timeout error when video is present');
@@ -2481,7 +2481,8 @@ test('New Film Project & Restart Film: Global confirmation modal and Simple Stud
   assert.ok(appSrc.includes('key={`simple-studio-${brandResetKey}'), 'SimpleBusinessStudio must have dynamic key tied to brandResetKey');
 
   // 6. hasActiveWork guard avoids redundant confirmation modal on blank projects
-  assert.ok(appSrc.includes('const hasActiveWork = Boolean('), 'handleStartNewProject must detect active work');
+  assert.ok(appSrc.includes('const hasActiveFilmWork = () => {'), 'handleStartNewProject must detect active work');
+  assert.ok(appSrc.includes('if (bypassConfirm === true || !hasActiveFilmWork()) {'), 'handleStartNewProject must skip the modal on blank projects');
 });
 
 test('Director Mode: Video Dimension and Video Length unified controls & end-to-end integration', async () => {

@@ -9,6 +9,7 @@ import {
 import { videoLogoPayload } from './utils/videoLogo.js';
 import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
 import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject } from './utils/drafts.js';
+import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -878,6 +879,8 @@ export default function App() {
   const [renderStatusText, setRenderStatusText] = useState('Initializing video render pipeline…');
   const [shareStatus, setShareStatus] = useState('');
   const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
+  // A business the user picked while a film was in progress: the confirm modal asks before switching to it
+  const [pendingBusinessSwitch, setPendingBusinessSwitch] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
 
   // General UI errors & modals
@@ -901,6 +904,9 @@ export default function App() {
 
   const activeVideoUrlRef = useRef(videoUrl);
   const activeRunIdRef = useRef(null);
+  // Bumped whenever the studio starts over (new film, business switch). Work that began under an
+  // older session — a render, a script request — must not write into the new one.
+  const studioSessionRef = useRef(0);
   useEffect(() => {
     activeVideoUrlRef.current = videoUrl;
     if (videoUrl && errorMessage && errorMessage.includes('Render taking longer')) {
@@ -1682,8 +1688,16 @@ export default function App() {
     isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(true);
 
+    // The project's own business (its logo, id, profile) — not whichever business was active before
+    const projBusiness = findProjectBusiness(proj, userBusinesses);
+
     if (proj.brandContext) {
-      setUserContext((prev) => ({ ...prev, ...proj.brandContext }));
+      setUserContext((prev) => ({ ...prev, ...(projBusiness ? businessContextOf(projBusiness, prev) : {}), ...proj.brandContext }));
+    } else if (projBusiness) {
+      setUserContext((prev) => ({ ...prev, ...businessContextOf(projBusiness, prev) }));
+      if (proj.language) updateUserContext('language', proj.language);
+      if (proj.creativeStyle) updateUserContext('creativeStyle', proj.creativeStyle);
+      if (proj.brief) updateUserContext('brief', proj.brief);
     } else {
       if (proj.businessName) updateUserContext('businessName', proj.businessName);
       if (proj.businessType) updateUserContext('businessType', proj.businessType);
@@ -3057,6 +3071,7 @@ export default function App() {
     setFastStageIndex(0);
     startTimer();
     setCurrentStep('generating');
+    const session = studioSessionRef.current;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const payload = buildSessionPayload();
@@ -3125,8 +3140,9 @@ export default function App() {
       }), 'Failed to dispatch render job to Magnific.');
 
       // 3. Poll Magnific status
-      await pollRenderStatus(runData.runId);
+      await pollRenderStatus(runData.runId, { session });
     } catch (err) {
+      if (studioSessionRef.current !== session) return; // the studio moved on: don't show this error there
       stopTimer();
       setIsBusy(false);
       setCurrentStep('input');
@@ -3146,6 +3162,7 @@ export default function App() {
     setCurrentStep('render');
     setRenderStatusText('Saving script record and staging GPU render pipeline…');
     startTimer();
+    const session = studioSessionRef.current;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
@@ -3196,8 +3213,9 @@ export default function App() {
       }), 'Failed to dispatch render job to Magnific.');
 
       setRenderStatusText('Rendering neural video frames…');
-      await pollRenderStatus(data.runId);
+      await pollRenderStatus(data.runId, { session });
     } catch (err) {
+      if (studioSessionRef.current !== session) return;
       stopTimer();
       setIsRendering(false);
       setErrorMessage(err.message || 'Error occurred while initiating video render.');
@@ -3223,6 +3241,7 @@ export default function App() {
     if (videoUrl && !draftRenderRef.current) return null; // a finished video is a project, not a draft
     const base = {
       id: draftProjectId(),
+      businessId: userContext.businessId || null,
       businessName: userContext.businessName || '',
       businessType: userContext.businessType || '',
       town: userContext.town || '',
@@ -3387,23 +3406,30 @@ export default function App() {
   };
 
   // Poll /api/status/:runId
-  const pollRenderStatus = async (runId, { projectId = null, immediate = false } = {}) => {
-    activeRunIdRef.current = runId;
+  // `session` is the studio session the render was started in. If the user starts a new film or switches
+  // business while it runs, the render is detached: it keeps polling and still saves its video to its own
+  // project (with the business, brief and scenes it was started with), but no longer touches the studio.
+  const pollRenderStatus = async (runId, { projectId = null, immediate = false, session = studioSessionRef.current } = {}) => {
+    const isLive = () => studioSessionRef.current === session;
     // A new render gets a new project — unless the open project has no video yet (a draft, or a saved
     // script), in which case this render is its first video. A resumed render passes its draft's id.
     const renderProjectId = projectId || projectIdForRender(activeProjectId, userProjects);
-    renderTargetRef.current = { id: renderProjectId, videoUrl: null };
-    currentSavingProjectIdRef.current = renderProjectId; // a manual save during the render updates the same project
-    // Record the run in the draft at once: if the tab closes now, reopening the draft polls this run
-    const sameRun = draftRenderRef.current && draftRenderRef.current.runId === runId;
-    draftRenderRef.current = { runId, projectId: renderProjectId, startedAt: sameRun ? draftRenderRef.current.startedAt : new Date().toISOString() };
-    scheduleDraftSave(true);
+    if (isLive()) {
+      activeRunIdRef.current = runId;
+      renderTargetRef.current = { id: renderProjectId, videoUrl: null };
+      currentSavingProjectIdRef.current = renderProjectId; // a manual save during the render updates the same project
+      // Record the run in the draft at once: if the tab closes now, reopening the draft polls this run
+      const sameRun = draftRenderRef.current && draftRenderRef.current.runId === runId;
+      draftRenderRef.current = { runId, projectId: renderProjectId, startedAt: sameRun ? draftRenderRef.current.startedAt : new Date().toISOString() };
+      scheduleDraftSave(true);
+    }
     const maxAttempts = 160;
     for (let i = 1; i <= maxAttempts; i++) {
       // a resumed render may already be finished — check straight away
       if (!(immediate && i === 1)) await new Promise((r) => setTimeout(r, 15000));
-      // Abort immediately if a newer render job superseded this polling loop
-      if (activeRunIdRef.current !== runId) {
+      // Abort immediately if a newer render job in this same session superseded this polling loop.
+      // A detached render keeps going: nothing else will save its video.
+      if (isLive() && activeRunIdRef.current !== runId) {
         return;
       }
       try {
@@ -3415,19 +3441,22 @@ export default function App() {
         const data = await res.json().catch(() => null);
         if (!data || data.error) continue;
 
-        if (activeRunIdRef.current !== runId) {
+        if (isLive() && activeRunIdRef.current !== runId) {
           return;
         }
 
         if (data.videoUrl) {
-          stopTimer();
-          setErrorMessage('');
-          setVideoUrl(data.videoUrl);
-          activeVideoUrlRef.current = data.videoUrl;
-          setIsRendering(false);
-          setIsBusy(false);
-          setFastStageIndex(4);
-          setCurrentStep('render');
+          const live = isLive();
+          if (live) {
+            stopTimer();
+            setErrorMessage('');
+            setVideoUrl(data.videoUrl);
+            activeVideoUrlRef.current = data.videoUrl;
+            setIsRendering(false);
+            setIsBusy(false);
+            setFastStageIndex(4);
+            setCurrentStep('render');
+          }
 
           // Auto-save & sync video into My Projects library
           const resolvedTitle = userContext.businessName
@@ -3435,12 +3464,14 @@ export default function App() {
             : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
 
           const projectId = renderProjectId;
-          renderTargetRef.current = { id: projectId, videoUrl: data.videoUrl };
-          // The draft becomes a finished video (status video_ready, same id): stop autosaving it
-          clearTimeout(draftSaveTimerRef.current);
-          draftSaveTimerRef.current = null;
-          draftRenderRef.current = null;
-          draftIdRef.current = null;
+          if (live) {
+            renderTargetRef.current = { id: projectId, videoUrl: data.videoUrl };
+            // The draft becomes a finished video (status video_ready, same id): stop autosaving it
+            clearTimeout(draftSaveTimerRef.current);
+            draftSaveTimerRef.current = null;
+            draftRenderRef.current = null;
+            draftIdRef.current = null;
+          }
           const completedProject = {
             id: projectId,
             businessId: userContext.businessId || null,
@@ -3473,10 +3504,15 @@ export default function App() {
             updatedAt: new Date().toISOString(),
           };
 
-          // From here on, edits and re-saves of this video update its own project
-          setActiveProjectId(projectId);
-          currentSavingProjectIdRef.current = projectId;
-          setIsCurrentProjectSaved(true);
+          if (live) {
+            // From here on, edits and re-saves of this video update its own project
+            setActiveProjectId(projectId);
+            currentSavingProjectIdRef.current = projectId;
+            setIsCurrentProjectSaved(true);
+          } else {
+            setToastMessage(`Your ${completedProject.businessName || 'earlier'} video is ready — it's saved in My Projects.`);
+            setTimeout(() => setToastMessage(''), 5000);
+          }
 
           // Instantly add to My Projects in state & localStorage so the sidebar counter updates immediately
           setUserProjects((prev) => {
@@ -3521,7 +3557,7 @@ export default function App() {
                     }
                     return [savedData.project, ...prev];
                   });
-                  setActiveProjectId(savedData.project.id);
+                  if (isLive()) setActiveProjectId(savedData.project.id);
                 }
               })
               .catch((err) => console.error('Failed to auto-save completed video to user projects:', err));
@@ -3531,6 +3567,7 @@ export default function App() {
         }
 
         if (data.failed) {
+          if (!isLive()) return; // a detached render failed: its draft still lets the user retry from My Projects
           // If a video is already rendered and ready, never show failure from a stale/secondary run
           if (activeVideoUrlRef.current || videoUrl) {
             stopTimer();
@@ -3553,14 +3590,14 @@ export default function App() {
         const niceStatus = data.status && !/run|process|pending|queue|unknown/i.test(data.status)
           ? data.status
           : 'Synthesizing frames & audio in neural pipeline…';
-        setRenderStatusText(niceStatus);
+        if (isLive()) setRenderStatusText(niceStatus);
       } catch (pollErr) {
         // Keep waiting despite transient network drops
       }
     }
     // Polling attempts exhausted:
     // If run was superseded or video was already generated successfully, never show timeout error!
-    if (activeRunIdRef.current !== runId) {
+    if (!isLive() || activeRunIdRef.current !== runId) {
       return;
     }
     if (activeVideoUrlRef.current || videoUrl) {
@@ -3604,30 +3641,67 @@ export default function App() {
     }
   };
 
-  // Trigger New Film Flow: Open in-app confirmation modal (or execute if bypassed)
-  const handleStartNewProject = (bypassConfirm = false) => {
-    if (bypassConfirm === true) {
-      handleExecuteNewProject(false);
-      return;
-    }
-    const hasActiveWork = Boolean(
+  // Is there a film in progress that starting over would clear? (Guided or Simple Studio, or a running job)
+  const hasActiveFilmWork = () => {
+    const simple = simpleDraftRef.current;
+    return Boolean(
       (scenes && scenes.length > 0) ||
       generatedScript ||
       videoUrl ||
+      isRendering ||
+      isBusy ||
       (userContext.brief && userContext.brief.trim().length > 0) ||
+      (simple && (String(simple.brief || '').trim() || (simple.packages || []).length)) ||
       (studioStage !== 'brief' && studioStage !== 'entry' && completedStages && completedStages.length > 0)
     );
-    if (!hasActiveWork) {
+  };
+
+  // Trigger New Film Flow: Open in-app confirmation modal (or execute if bypassed)
+  const handleStartNewProject = (bypassConfirm = false) => {
+    setPendingBusinessSwitch(null);
+    if (bypassConfirm === true || !hasActiveFilmWork()) {
       handleExecuteNewProject(false);
       return;
     }
     setIsNewFilmConfirmOpen(true);
   };
 
-  const handleExecuteNewProject = (clearBrand = false) => {
+  // Switching business starts a new film for that business — after asking, if a film is in progress
+  const handleSelectBusiness = (biz) => {
+    if (!biz) return;
+    if (biz.id && biz.id === userContext.businessId) return; // already the active business
+    if (hasActiveFilmWork()) {
+      setPendingBusinessSwitch(biz);
+      setIsNewFilmConfirmOpen(true);
+      return;
+    }
+    handleExecuteNewProject(false, { business: biz });
+  };
+
+  const handleCancelNewFilm = () => {
+    setIsNewFilmConfirmOpen(false);
+    setPendingBusinessSwitch(null);
+  };
+
+  // Start a fresh film. With `business`, the fresh film is for that business (a business switch).
+  const handleExecuteNewProject = (clearBrand = false, { business = null } = {}) => {
     try {
       setIsNewFilmConfirmOpen(false);
+      setPendingBusinessSwitch(null);
       setBrandResetKey((prev) => prev + 1);
+
+      // Anything still running (a render, a script request) belongs to the film being left: detach it so it
+      // finishes into its own project instead of this new one. Save a pending draft edit first.
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+        draftSaveTimerRef.current = null;
+        persistDraft();
+      }
+      studioSessionRef.current += 1;
+      activeRunIdRef.current = null;
+      activeVideoUrlRef.current = '';
+      renderTargetRef.current = { id: null, videoUrl: null };
+      stopTimer();
 
       // Reset studio centralized state via atomic action
       studioDispatch({
@@ -3682,8 +3756,10 @@ export default function App() {
       setIsEditingBrandInline(false);
       setHasStaleWarning(false);
 
-      // Reset film-specific inputs while strictly preserving brand profile (or clearing if requested)
-      setUserContext((prev) => {
+      // Reset film-specific inputs while strictly preserving brand profile (or clearing if requested).
+      // A business switch loads the new business's profile in place of the current one.
+      setUserContext((current) => {
+        const prev = business ? { ...current, ...businessContextOf(business, current) } : current;
         const brand = clearBrand ? {} : (typeof extractBrandProfile === 'function' ? extractBrandProfile(prev) : {});
         const next = {
           ...prev,
@@ -3712,7 +3788,7 @@ export default function App() {
 
       setCompletedStages([]);
       setStudioStage('brief');
-      setActiveAppView('studio');
+      if (!business) setActiveAppView('studio'); // switching business keeps the user where they are
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -3721,7 +3797,9 @@ export default function App() {
         window.scrollTo(0, 0);
       }
 
-      setToastMessage('✨ Fresh film project started!');
+      setToastMessage(business
+        ? `Switched active business to ${business.name || business.businessName}`
+        : '✨ Fresh film project started!');
       setTimeout(() => setToastMessage(''), 3500);
     } catch (err) {
       console.error('[NewFilm] Error in handleExecuteNewProject:', err);
@@ -3771,6 +3849,7 @@ export default function App() {
     setRenderStep(0);
     setRenderStatusText('Preparing your video…');
     startTimer();
+    const session = studioSessionRef.current;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
@@ -3830,9 +3909,10 @@ export default function App() {
       }), 'Failed to dispatch render job.');
 
       setRenderStatusText('Creating scenes and putting everything together…');
-      await pollRenderStatus(data.runId);
-      markStageComplete('video');
+      await pollRenderStatus(data.runId, { session });
+      if (studioSessionRef.current === session) markStageComplete('video');
     } catch (err) {
+      if (studioSessionRef.current !== session) return;
       stopTimer();
       setIsRendering(false);
       setErrorMessage(err.message || 'Error occurred while initiating video render.');
@@ -4206,25 +4286,7 @@ export default function App() {
           brandLogo={userContext.brandLogo}
           activeBusiness={userContext}
           businesses={userBusinesses}
-          onSelectBusiness={(biz) => {
-            setUserContext((prev) => ({
-              ...prev,
-              businessId: biz.id,
-              businessName: biz.name || biz.businessName,
-              businessType: biz.category || biz.businessType,
-              town: biz.town || '',
-              area: biz.area || '',
-              websiteUrl: biz.websiteUrl || '',
-              targetAudience: biz.targetAudience || '',
-              brandTone: biz.brandTone || prev.brandTone,
-              brandLogo: biz.logo || biz.brandLogo || null,
-              logo: biz.logo || biz.brandLogo || null,
-              productPhoto: null,
-              videoLogo: undefined,
-            }));
-            setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
-            setTimeout(() => setToastMessage(''), 3000);
-          }}
+          onSelectBusiness={handleSelectBusiness}
           onAddNewBusiness={() => {
             setEditingBusiness(null);
             setIsOnboardingModalOpen(true);
@@ -4332,25 +4394,7 @@ export default function App() {
             <BusinessProfileView
               businesses={userBusinesses}
               activeBusiness={userContext}
-              onSelectBusiness={(biz) => {
-                setUserContext((prev) => ({
-                  ...prev,
-                  businessId: biz.id,
-                  businessName: biz.name || biz.businessName,
-                  businessType: biz.category || biz.businessType,
-                  town: biz.town || '',
-                  area: biz.area || '',
-                  websiteUrl: biz.websiteUrl || '',
-                  targetAudience: biz.targetAudience || '',
-                  brandTone: biz.brandTone || prev.brandTone,
-                  brandLogo: biz.logo || biz.brandLogo || null,
-                  logo: biz.logo || biz.brandLogo || null,
-              productPhoto: null,
-              videoLogo: undefined,
-            }));
-                setToastMessage(`Switched active business to ${biz.name || biz.businessName}`);
-                setTimeout(() => setToastMessage(''), 3000);
-              }}
+              onSelectBusiness={handleSelectBusiness}
               onEditBusiness={(biz) => {
                 setEditingBusiness(biz);
                 setIsOnboardingModalOpen(true);
@@ -5108,7 +5152,7 @@ export default function App() {
             zIndex: 1000,
             padding: 20,
           }}
-          onClick={() => setIsNewFilmConfirmOpen(false)}
+          onClick={handleCancelNewFilm}
         >
           <div
             style={{
@@ -5139,12 +5183,14 @@ export default function App() {
                   <RotateCcw size={18} />
                 </div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Start a New Film?
+                  {pendingBusinessSwitch
+                    ? `Switch to ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}?`
+                    : 'Start a New Film?'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setIsNewFilmConfirmOpen(false)}
+                onClick={handleCancelNewFilm}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
               >
                 <X size={18} />
@@ -5153,9 +5199,16 @@ export default function App() {
 
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               <p style={{ margin: '0 0 10px 0' }}>
-                This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.
+                {pendingBusinessSwitch
+                  ? `Switching business starts a fresh film for ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}. The brief, ideas, script and video you're working on now will be cleared from the studio.`
+                  : 'This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.'}
               </p>
-              {userContext.businessName ? (
+              {pendingBusinessSwitch && isRendering ? (
+                <p style={{ margin: '0 0 10px 0' }}>
+                  The video that's rendering keeps going and will be saved to {userContext.businessName ? <strong>{userContext.businessName}</strong> : 'its project'} in My Projects.
+                </p>
+              ) : null}
+              {userContext.businessName && !pendingBusinessSwitch ? (
                 <div
                   style={{
                     padding: '10px 12px',
@@ -5183,7 +5236,7 @@ export default function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setIsNewFilmConfirmOpen(false);
+                  handleCancelNewFilm();
                 }}
                 style={{
                   padding: '8px 16px',
@@ -5203,7 +5256,8 @@ export default function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleExecuteNewProject(false);
+                  if (pendingBusinessSwitch) handleExecuteNewProject(false, { business: pendingBusinessSwitch });
+                  else handleExecuteNewProject(false);
                 }}
                 style={{
                   padding: '8px 18px',
@@ -5221,7 +5275,7 @@ export default function App() {
                 }}
               >
                 <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
-                <span style={{ pointerEvents: 'none' }}>Start New Film</span>
+                <span style={{ pointerEvents: 'none' }}>{pendingBusinessSwitch ? 'Switch Business' : 'Start New Film'}</span>
               </button>
             </div>
           </div>
