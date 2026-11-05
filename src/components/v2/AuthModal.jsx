@@ -137,6 +137,15 @@ export default function AuthModal({
       });
 
       const data = await res.json();
+      // Right password, unverified email: show the verification-pending view (a link was just sent)
+      if (res.status === 403 && data.code === 'EMAIL_NOT_VERIFIED') {
+        setNoticeMsg(data.error || 'Please verify your email address to log in.');
+        setPendingVerificationEmail(data.email || email.trim());
+        setResendCooldown(data.verificationSent ? 60 : 0);
+        setResendStatus('');
+        setResendMessage('');
+        return;
+      }
       if (!res.ok || data.error) {
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
@@ -196,11 +205,25 @@ export default function AuthModal({
     setTimeout(() => setGoogleNotice(false), 4500);
   };
 
-  const handleForgotPassword = () => {
-    if (email && email.includes('@')) {
-      setNoticeMsg(`Password reset link sent to ${email.trim()}. Please check your inbox.`);
-    } else {
-      setNoticeMsg('Please enter your email address above to receive reset instructions.');
+  // Emails a single-use reset link; the answer is the same whether or not the account exists
+  const handleForgotPassword = async () => {
+    setErrorMsg('');
+    setNoticeMsg('');
+    if (!email || !email.includes('@')) {
+      setErrorMsg('Enter your email address above, then click "Forgot password?" again.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not send a reset link. Please try again.');
+      setNoticeMsg(data.message);
+    } catch (err) {
+      setErrorMsg(err.message || 'Could not send a reset link. Please try again.');
     }
   };
 

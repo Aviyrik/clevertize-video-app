@@ -1579,7 +1579,15 @@ app.post("/api/auth/verify-email", async (req, res) => {
 // ---- Resend Email Verification Endpoint ----
 app.post("/api/auth/resend-verification", async (req, res) => {
   try {
-    const { email } = req.body || {};
+    let { email } = req.body || {};
+    // An expired link can ask for a new one by its own token: the new link goes to that account's inbox,
+    // and the email address is never revealed to whoever holds the old link
+    const expiredToken = req.body && typeof req.body.token === "string" ? req.body.token.trim() : "";
+    if (!email && expiredToken) {
+      const tok = await db.getVerificationTokenByHash(db.hashVerificationToken(expiredToken));
+      const owner = tok && (await db.findUserById(tok.userId));
+      if (owner) email = owner.email;
+    }
     if (!email || typeof email !== "string" || !email.trim() || !email.includes("@")) {
       return res.status(400).json({
         success: false,
@@ -1658,10 +1666,102 @@ app.post("/api/auth/resend-verification", async (req, res) => {
   }
 });
 
+// ---- Password reset ----
+// 1) Request a link. Always the same answer, so it can't be used to find out who has an account.
+const FORGOT_PASSWORD_MESSAGE = "If an account exists for that email, we've sent a link to reset your password. It expires in 30 minutes.";
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({ success: false, code: "EMAIL_REQUIRED", error: "Please enter your email address." });
+  }
+  try {
+    const user = await db.findUserByEmail(email);
+    if (user) {
+      // one email a minute per account, so the endpoint can't be used to flood an inbox
+      const latest = await db.getLatestPasswordResetTokenForUser(user.id);
+      const recent = latest && latest.createdAt && Date.now() - new Date(latest.createdAt).getTime() < 60 * 1000;
+      if (!recent) {
+        const tokenRecord = await db.createPasswordResetToken(user.id);
+        const resetUrl = `${emailService.getAppBaseUrl(req)}/reset-password?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+        const result = await emailService.sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl });
+        if (!result.success) console.error("[forgot-password] email delivery failed:", result.error);
+      }
+    }
+  } catch (err) {
+    console.error("[forgot-password]", err.message);
+  }
+  res.json({ success: true, message: FORGOT_PASSWORD_MESSAGE });
+});
+
+// 2) The reset screen checks its link first, so an expired or used link says so before any typing
+app.post("/api/auth/reset-password/check", async (req, res) => {
+  const token = String((req.body && req.body.token) || "").trim();
+  const state = token ? await db.checkPasswordResetToken(token) : "invalid";
+  const codes = { valid: "TOKEN_VALID", expired: "TOKEN_EXPIRED", used: "TOKEN_ALREADY_USED", invalid: "TOKEN_INVALID" };
+  res.json({ valid: state === "valid", code: codes[state] });
+});
+
+// 3) Set the new password. The token is consumed (works once), every other session is signed out,
+//    and the user is signed in on this device — the link proved they own the inbox.
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const token = String((req.body && req.body.token) || "").trim();
+    const password = (req.body && req.body.password) || "";
+    const user = await db.resetPasswordWithToken(token, password);
+    const sessionToken = await db.createSession(user.id);
+    res.json({
+      success: true,
+      message: "Your password has been reset.",
+      user,
+      token: sessionToken,
+      businesses: await db.getBusinessesForUser(user.id),
+      projects: await db.getProjectsForUser(user.id),
+    });
+  } catch (err) {
+    const status = err.code ? 400 : 500;
+    res.status(status).json({ success: false, code: err.code || "SERVER_ERROR", error: err.code ? err.message : "Unable to reset your password right now. Please try again." });
+  }
+});
+
+// Login needs a verified email (including accounts made before verification existed) in production.
+// EMAIL_VERIFICATION_REQUIRED=true|false overrides; local development defaults to off, so a machine
+// without a Resend key can still log in to existing accounts.
+function isEmailVerificationRequired() {
+  const v = String(process.env.EMAIL_VERIFICATION_REQUIRED || "").trim().toLowerCase();
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return process.env.NODE_ENV === "production";
+}
+
+// Email a fresh verification link, unless one was sent in the last 60 seconds (same cooldown as resend)
+async function sendFreshVerificationLink(user, req) {
+  const latest = await db.getLatestVerificationTokenForUser(user.id);
+  if (latest && latest.createdAt && Date.now() - new Date(latest.createdAt).getTime() < 60 * 1000) return false;
+  const tokenRecord = await db.createEmailVerificationToken(user.id);
+  const verifyUrl = `${emailService.getAppBaseUrl(req)}/verify-email?token=${encodeURIComponent(tokenRecord.rawToken)}`;
+  const result = await emailService.sendVerificationEmail({ to: user.email, name: user.name, verifyUrl });
+  return Boolean(result.success);
+}
+
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const user = await db.authenticateUser({ email, password });
+    // Correct password but unverified email: no session yet — send a link and ask the user to verify
+    if (isEmailVerificationRequired() && !user.emailVerified) {
+      let verificationSent = false;
+      try {
+        verificationSent = await sendFreshVerificationLink(user, req);
+      } catch (e) {
+        console.error("[login] could not send verification link:", e.message);
+      }
+      return res.status(403).json({
+        code: "EMAIL_NOT_VERIFIED",
+        email: user.email,
+        verificationSent,
+        error: "Please verify your email address to log in. We've sent a verification link to your inbox.",
+      });
+    }
     const token = await db.createSession(user.id);
     const businesses = await db.getBusinessesForUser(user.id);
     const projects = await db.getProjectsForUser(user.id);
