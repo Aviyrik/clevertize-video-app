@@ -262,13 +262,16 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+// Base URL for links in emails (verification, password reset). Set APP_BASE_URL in production.
+// Without it, only the Host header is used: X-Forwarded-Host is sent by the client and could point a
+// emailed link at another site, leaking the token to whoever runs it ("reset poisoning").
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && process.env.APP_BASE_URL.trim()) {
     return process.env.APP_BASE_URL.trim().replace(/\/+$/, '');
   }
   if (req) {
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    const proto = req.headers['x-forwarded-proto'] === 'https' ? 'https' : (req.protocol || 'http');
+    const host = req.get('host') || 'localhost:3000';
     return `${proto}://${host}`;
   }
   return 'http://localhost:3000';
@@ -470,9 +473,70 @@ async function sendVerificationEmail({ to, name, verifyUrl }) {
   });
 }
 
+/**
+ * Password reset email: a single-use, 30-minute link. The password itself is never sent.
+ */
+function renderPasswordResetEmailHtml({ name, resetUrl, expiresInMinutes = 30 }) {
+  const safeName = escapeHtml(name || 'there');
+  const safeUrl = escapeHtml(resetUrl || '');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your CleverCut password</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #f3f4f6; margin: 0; padding: 32px 16px;">
+  <div style="max-width: 540px; margin: 0 auto; background: #111827; border: 1px solid #1f293d; border-radius: 12px; padding: 36px 32px;">
+    <div style="font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 24px;">CleverCut</div>
+    <p style="font-size: 15px; line-height: 1.6; color: #d1d5db;">Hi ${safeName},</p>
+    <p style="font-size: 15px; line-height: 1.6; color: #d1d5db;">We received a request to reset the password for your CleverCut account. Choose a new password using the button below:</p>
+    <p style="margin: 28px 0;">
+      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #6366f1; color: #ffffff; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px;">Reset Password</a>
+    </p>
+    <p style="font-size: 13px; line-height: 1.6; color: #9ca3af;">This link works once and expires in ${expiresInMinutes} minutes. Resetting your password signs you out on every device.</p>
+    <p style="font-size: 13px; line-height: 1.6; color: #9ca3af;">If you didn't ask to reset your password, you can ignore this email — your password won't change.</p>
+    <p style="font-size: 12px; line-height: 1.6; color: #6b7280; word-break: break-all;">If the button doesn't work, paste this link into your browser:<br><a href="${safeUrl}" style="color: #818cf8;">${safeUrl}</a></p>
+    <p style="font-size: 12px; color: #6b7280; margin-top: 28px;">&copy; ${new Date().getFullYear()} CleverCut Video Intelligence Platform. All rights reserved.</p>
+  </div>
+</body>
+</html>`;
+}
+
+function renderPasswordResetEmailText({ name, resetUrl, expiresInMinutes = 30 }) {
+  return [
+    'CleverCut – Reset your password',
+    '===============================',
+    '',
+    `Hi ${name || 'there'},`,
+    '',
+    'We received a request to reset the password for your CleverCut account. Choose a new password using this link:',
+    '',
+    resetUrl,
+    '',
+    `This link works once and expires in ${expiresInMinutes} minutes. Resetting your password signs you out on every device.`,
+    '',
+    "If you didn't ask to reset your password, you can ignore this email — your password won't change.",
+    '',
+    `© ${new Date().getFullYear()} CleverCut Video Intelligence Platform. All rights reserved.`,
+  ].join('\n');
+}
+
+async function sendPasswordResetEmail({ to, name, resetUrl }) {
+  return sendEmail({
+    to,
+    subject: 'Reset your CleverCut password',
+    html: renderPasswordResetEmailHtml({ name, resetUrl, expiresInMinutes: 30 }),
+    text: renderPasswordResetEmailText({ name, resetUrl, expiresInMinutes: 30 }),
+  });
+}
+
 module.exports = {
   sendEmail,
   sendVerificationEmail,
+  sendPasswordResetEmail,
+  renderPasswordResetEmailHtml,
+  renderPasswordResetEmailText,
   getAppBaseUrl,
   isValidEmail,
   getSenderAddress,

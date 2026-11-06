@@ -56,6 +56,11 @@ services:
         sync: false
       - key: AUTH_EMAIL_FROM
         value: onboarding@resend.dev
+      # base URL for links in verification and password-reset emails, e.g. https://clevercut.app
+      - key: APP_BASE_URL
+        sync: false
+      - key: EMAIL_VERIFICATION_REQUIRED
+        value: "true"
 
 databases:
   - name: clevertize-postgres

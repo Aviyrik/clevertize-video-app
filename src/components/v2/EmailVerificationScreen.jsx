@@ -23,6 +23,8 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
   const [isRetrying, setIsRetrying] = useState(false);
 
   // Keep token purely in memory in a ref; never write to localStorage or sessionStorage
+  const [newLinkStatus, setNewLinkStatus] = useState(''); // '' | 'sending' | 'sent' | 'error'
+  const [newLinkMessage, setNewLinkMessage] = useState('');
   const tokenRef = useRef(null);
   const hasExecutedRef = useRef(false);
 
@@ -108,6 +110,35 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
       onVerificationSuccess(authData);
     } else if (typeof onReturnToLogin === 'function') {
       onReturnToLogin('signin');
+    }
+  };
+
+  // Expired link: ask for a new one by this link's own token. The new link goes to the account's inbox,
+  // so this screen never needs (or shows) the email address.
+  const handleRequestNewLink = async () => {
+    if (!tokenRef.current || newLinkStatus === 'sending') return;
+    setNewLinkStatus('sending');
+    setNewLinkMessage('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenRef.current }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setNewLinkStatus('sent');
+        setNewLinkMessage(data.message || 'A new verification link has been sent to your email address.');
+      } else if (data.code === 'ALREADY_VERIFIED') {
+        setNewLinkStatus('sent');
+        setNewLinkMessage(data.message || 'This email address is already verified. You can log in directly.');
+      } else {
+        setNewLinkStatus('error');
+        setNewLinkMessage(data.error || data.message || 'Could not send a new link. Please sign in to request one.');
+      }
+    } catch {
+      setNewLinkStatus('error');
+      setNewLinkMessage('Could not send a new link. Please check your connection and try again.');
     }
   };
 
@@ -294,6 +325,20 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
             <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
               This verification link has expired. Verification links are valid for 30 minutes. Please sign in or request a new verification link.
             </p>
+            {newLinkMessage && (
+              <p style={{ fontSize: 13, color: newLinkStatus === 'error' ? '#F87171' : '#34D399', margin: '0 0 16px', lineHeight: 1.5 }}>
+                {newLinkMessage}
+              </p>
+            )}
+            {newLinkStatus !== 'sent' && (
+              <button
+                onClick={handleRequestNewLink}
+                disabled={newLinkStatus === 'sending'}
+                style={{ width: '100%', padding: '12px', marginBottom: 10, borderRadius: 8, border: 'none', backgroundColor: '#6366F1', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: newLinkStatus === 'sending' ? 'wait' : 'pointer', opacity: newLinkStatus === 'sending' ? 0.7 : 1 }}
+              >
+                {newLinkStatus === 'sending' ? 'Sending…' : 'Send me a new link'}
+              </button>
+            )}
             <button
               onClick={handleNavigateToLogin}
               style={{

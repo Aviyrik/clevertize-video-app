@@ -24,6 +24,7 @@ import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
 import AuthScreen from './components/v2/AuthScreen.jsx';
 import EmailVerificationScreen from './components/v2/EmailVerificationScreen.jsx';
+import ResetPasswordScreen from './components/v2/ResetPasswordScreen.jsx';
 import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx';
 import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
 import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
@@ -991,9 +992,13 @@ export default function App() {
     if (typeof window === 'undefined') return false;
     return (
       window.location.pathname.startsWith('/verify-email') ||
-      new URLSearchParams(window.location.search).has('token')
+      (new URLSearchParams(window.location.search).has('token') && !window.location.pathname.startsWith('/reset-password'))
     );
   });
+  // Password reset route (/reset-password?token=...), opened from the reset email
+  const [isResettingPassword, setIsResettingPassword] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname.startsWith('/reset-password')
+  );
   const [authInitialMode, setAuthInitialMode] = useState('signup');
 
   const handleReturnFromVerification = (targetMode = 'signin') => {
@@ -4169,6 +4174,25 @@ export default function App() {
       )}
     </div>
   );
+
+  // 0. Password reset link (/reset-password?token=...)
+  if (isResettingPassword) {
+    return (
+      <ResetPasswordScreen
+        onReturnToLogin={(targetMode) => {
+          setIsResettingPassword(false);
+          handleReturnFromVerification(targetMode || 'signin');
+        }}
+        onResetSuccess={(authData) => {
+          setIsResettingPassword(false);
+          try {
+            window.history.replaceState({}, document.title, '/');
+          } catch {}
+          handleAuthSuccess(authData);
+        }}
+      />
+    );
+  }
 
   // 0. Email verification URL handling (/verify-email?token=...)
   if (isVerifyingEmail) {

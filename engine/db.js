@@ -145,6 +145,18 @@ async function ensurePgTables() {
       );
       CREATE INDEX IF NOT EXISTS idx_video_runs_user ON video_runs(user_id);
 
+      -- Password reset: same scheme as email verification (only a SHA-256 of the token is stored)
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prt_user_id ON password_reset_tokens(user_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash);
+
       -- Enable Row Level Security (RLS) on all tables to secure Supabase Data API
       ALTER TABLE users ENABLE ROW LEVEL SECURITY;
       ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
@@ -152,15 +164,16 @@ async function ensurePgTables() {
       ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
       ALTER TABLE video_runs ENABLE ROW LEVEL SECURITY;
       ALTER TABLE email_verification_tokens ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
 
       -- Revoke public PostgREST API access from anon/authenticated roles if running on Supabase
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens FROM anon;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens, password_reset_tokens FROM anon;
         END IF;
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens FROM authenticated;
+          REVOKE ALL ON TABLE users, sessions, businesses, projects, video_runs, email_verification_tokens, password_reset_tokens FROM authenticated;
         END IF;
       END $$;
     `);
@@ -473,6 +486,8 @@ async function deleteUser(userId) {
 
   const tokens = readJsonFile('email_verification_tokens.json', []);
   writeJsonFile('email_verification_tokens.json', tokens.filter((t) => t.userId !== userId));
+  const resetTokens = readJsonFile('password_reset_tokens.json', []);
+  writeJsonFile('password_reset_tokens.json', resetTokens.filter((t) => t.userId !== userId));
 
   const users = readJsonFile('users.json', []);
   const filteredUsers = users.filter((u) => u.id !== userId);
@@ -1410,6 +1425,166 @@ async function markEmailAsVerified(arg1, arg2) {
   };
 }
 
+// ----------------------------------------------------
+// PASSWORD RESET TOKENS
+// Same scheme as email verification: a random token is emailed, only its SHA-256 is stored, it expires
+// (30 minutes by default), it works once, and issuing a new one invalidates any earlier unused one.
+// ----------------------------------------------------
+
+const MIN_PASSWORD_LENGTH = 6; // same rule as createUser
+
+function mapResetTokenRow(r) {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    tokenHash: r.token_hash,
+    expiresAt: r.expires_at instanceof Date ? r.expires_at.toISOString() : r.expires_at,
+    usedAt: r.used_at ? (r.used_at instanceof Date ? r.used_at.toISOString() : r.used_at) : null,
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+  };
+}
+
+async function createPasswordResetToken(userId, options = {}) {
+  if (!userId) throw new Error('userId is required');
+  const user = await findUserById(userId);
+  if (!user) throw new Error('User not found');
+
+  const expiresInMinutes = options.expiresInMinutes !== undefined ? Number(options.expiresInMinutes) : 30;
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashVerificationToken(rawToken);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expiresInMinutes * 60 * 1000);
+  const id = `prt_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL', [userId]);
+    await pool.query(
+      'INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)',
+      [id, userId, tokenHash, expiresAt.toISOString(), now.toISOString()]
+    );
+    return { id, userId, rawToken, expiresAt: expiresAt.toISOString(), createdAt: now.toISOString() };
+  }
+
+  const tokens = readJsonFile('password_reset_tokens.json', []);
+  const nowIso = now.toISOString();
+  for (const t of tokens) {
+    if (t.userId === userId && !t.usedAt) t.usedAt = nowIso;
+  }
+  tokens.push({ id, userId, tokenHash, expiresAt: expiresAt.toISOString(), usedAt: null, createdAt: nowIso });
+  writeJsonFile('password_reset_tokens.json', tokens);
+  return { id, userId, rawToken, expiresAt: expiresAt.toISOString(), createdAt: nowIso };
+}
+
+async function getLatestPasswordResetTokenForUser(userId) {
+  if (!userId) return null;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'SELECT id, user_id, token_hash, expires_at, used_at, created_at FROM password_reset_tokens WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [userId]
+    );
+    return res.rows.length ? mapResetTokenRow(res.rows[0]) : null;
+  }
+  const tokens = readJsonFile('password_reset_tokens.json', []).filter((t) => t.userId === userId);
+  return tokens.length ? { ...tokens[tokens.length - 1] } : null;
+}
+
+// Look a raw token up by its hash only (a stored hash is never accepted as a token)
+async function findPasswordResetToken(rawToken) {
+  const tokenHash = hashVerificationToken(String(rawToken || ''));
+  if (!tokenHash) return null;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'SELECT id, user_id, token_hash, expires_at, used_at, created_at FROM password_reset_tokens WHERE token_hash = $1',
+      [tokenHash]
+    );
+    return res.rows.length ? mapResetTokenRow(res.rows[0]) : null;
+  }
+  const t = readJsonFile('password_reset_tokens.json', []).find((x) => x.tokenHash === tokenHash);
+  return t ? { ...t } : null;
+}
+
+// 'valid' | 'expired' | 'used' | 'invalid', so the reset screen can show the right state up front
+async function checkPasswordResetToken(rawToken) {
+  const tok = await findPasswordResetToken(rawToken);
+  if (!tok) return 'invalid';
+  if (tok.usedAt) return 'used';
+  if (new Date(tok.expiresAt) <= new Date()) return 'expired';
+  return 'valid';
+}
+
+// Use a reset token: set the new password and consume the token atomically (it works exactly once),
+// mark the email verified (the link proves the user owns the inbox) and sign the user out everywhere.
+// Throws an Error whose .code is TOKEN_INVALID | TOKEN_EXPIRED | TOKEN_ALREADY_USED | WEAK_PASSWORD.
+async function resetPasswordWithToken(rawToken, newPassword) {
+  const fail = (code, message) => Object.assign(new Error(message), { code });
+  if (!newPassword || String(newPassword).length < MIN_PASSWORD_LENGTH) {
+    throw fail('WEAK_PASSWORD', `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+  }
+  const tokenHash = hashVerificationToken(String(rawToken || ''));
+  if (!tokenHash) throw fail('TOKEN_INVALID', 'This password reset link is invalid.');
+  const { hash, salt } = hashPassword(String(newPassword));
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      `WITH consumed_token AS (
+         UPDATE password_reset_tokens
+         SET used_at = NOW()
+         WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
+         RETURNING user_id
+       )
+       UPDATE users u
+       SET password_hash = $2, salt = $3, email_verified = TRUE, email_verified_at = COALESCE(u.email_verified_at, NOW())
+       FROM consumed_token ct
+       WHERE u.id = ct.user_id
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+      [tokenHash, hash, salt]
+    );
+    if (!res.rows.length) {
+      const state = await checkPasswordResetToken(rawToken);
+      if (state === 'expired') throw fail('TOKEN_EXPIRED', 'This password reset link has expired.');
+      if (state === 'used') throw fail('TOKEN_ALREADY_USED', 'This password reset link has already been used.');
+      throw fail('TOKEN_INVALID', 'This password reset link is invalid.');
+    }
+    const r = res.rows[0];
+    await pool.query('DELETE FROM sessions WHERE user_id = $1', [r.id]);
+    return {
+      id: r.id,
+      email: r.email,
+      name: r.name,
+      avatar: r.avatar || null,
+      emailVerified: Boolean(r.email_verified),
+      emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    };
+  }
+
+  // JSON fallback: read, check and write with no await in between, so one process can't double-use a token
+  const tokens = readJsonFile('password_reset_tokens.json', []);
+  const tok = tokens.find((x) => x.tokenHash === tokenHash);
+  if (!tok) throw fail('TOKEN_INVALID', 'This password reset link is invalid.');
+  if (tok.usedAt) throw fail('TOKEN_ALREADY_USED', 'This password reset link has already been used.');
+  if (new Date(tok.expiresAt) <= new Date()) throw fail('TOKEN_EXPIRED', 'This password reset link has expired.');
+  const users = readJsonFile('users.json', []);
+  const idx = users.findIndex((u) => u.id === tok.userId);
+  if (idx < 0) throw fail('TOKEN_INVALID', 'This password reset link is invalid.');
+  const nowIso = new Date().toISOString();
+  tok.usedAt = nowIso;
+  users[idx] = { ...users[idx], passwordHash: hash, salt, emailVerified: true, emailVerifiedAt: users[idx].emailVerifiedAt || nowIso };
+  writeJsonFile('password_reset_tokens.json', tokens);
+  writeJsonFile('users.json', users);
+  writeJsonFile('sessions.json', readJsonFile('sessions.json', []).filter((x) => x.userId !== tok.userId));
+  const u = users[idx];
+  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt };
+}
+
 module.exports = {
   isPostgresConfigured,
   ensurePgTables,
@@ -1442,4 +1617,8 @@ module.exports = {
   getActiveVerificationTokenForUser,
   getLatestVerificationTokenForUser,
   markEmailAsVerified,
+  createPasswordResetToken,
+  getLatestPasswordResetTokenForUser,
+  checkPasswordResetToken,
+  resetPasswordWithToken,
 };
