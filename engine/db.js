@@ -292,6 +292,7 @@ function mapProjectRow(row) {
     creativeDNA: typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {}),
     shotSpec: row.shot_spec || (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).shotSpec) || null,
     stages: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).stages) || null,
+    aiUnderstanding: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).aiUnderstanding) || null,
     scenes: typeof row.scenes === 'string' ? JSON.parse(row.scenes) : (row.scenes || []),
     character1: row.character1 || '',
     character2: row.character2 || '',
@@ -841,6 +842,7 @@ async function saveProject(projectData, userId) {
     videoUrl,
     shotSpec,
     stages,
+    aiUnderstanding,
   } = projectData || {};
 
   const now = new Date().toISOString();
@@ -852,6 +854,10 @@ async function saveProject(projectData, userId) {
   const cDNA = Object.assign({}, creativeDNA || {});
   if (shotSpec) cDNA.shotSpec = shotSpec;
   if (stages) cDNA.stages = stages;
+  const aiUnder = aiUnderstanding || (stages && stages.aiUnderstanding) || (creativeDNA && creativeDNA.aiUnderstanding) || null;
+  if (aiUnder) {
+    cDNA.aiUnderstanding = aiUnder;
+  }
   const scList = Array.isArray(scenes) ? scenes : [];
   const pStatus = status || (scList.length >= 4 ? 'script_ready' : 'in_progress');
 
@@ -957,6 +963,7 @@ async function saveProject(projectData, userId) {
     creativeDNA: cDNA,
     shotSpec: shotSpec || cDNA.shotSpec || (existingIndex >= 0 ? projects[existingIndex].shotSpec : null),
     stages: stages || cDNA.stages || (existingIndex >= 0 ? projects[existingIndex].stages : null),
+    aiUnderstanding: aiUnder || (existingIndex >= 0 ? projects[existingIndex].aiUnderstanding : null) || null,
     scenes: scList,
     character1: character1 || '',
     character2: character2 || '',

@@ -128,6 +128,7 @@ export default function SimpleBusinessStudio({
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
   const [packages, setPackages] = useState(Array.isArray(draft.packages) ? draft.packages : []);
   const [selectedPackageId, setSelectedPackageId] = useState(draft.selectedPackageId ?? null);
+  const [aiUnderstanding, setAiUnderstanding] = useState(draft.aiUnderstanding || null);
   const [expandedPackageId, setExpandedPackageId] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -140,10 +141,10 @@ export default function SimpleBusinessStudio({
   }, [brief]);
 
   // Report this flow's state so the app can autosave it as a draft (it debounces; step changes save at once)
-  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId });
+  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding });
   useEffect(() => {
     if (onDraftChange) onDraftChange(draftState(), { flush: false });
-  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId]);
+  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding]);
 
   const handleApplyTemplate = (tpl) => {
     setBrief(tpl);
@@ -192,6 +193,8 @@ export default function SimpleBusinessStudio({
           duration,
           aspectRatio,
           hasLogo: Boolean(brandLogo),
+          projectId,
+          aiUnderstanding,
         }),
       });
 
@@ -202,6 +205,9 @@ export default function SimpleBusinessStudio({
 
       const data = await res.json();
       if (Array.isArray(data.packages) && data.packages.length > 0) {
+        if (data.aiUnderstanding) {
+          setAiUnderstanding(data.aiUnderstanding);
+        }
         setPackages(data.packages);
         setSelectedPackageId(data.packages[0].id);
         setStep(2);

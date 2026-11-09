@@ -2456,7 +2456,7 @@ test('New Film Project & Restart Film: Global confirmation modal and Simple Stud
 
   // 1. AppShell supports both onStartNewFilm and onRestartFilm
   assert.ok(appShellSrc.includes('onRestartFilm'), 'AppShell must support onRestartFilm prop');
-  assert.ok(appShellSrc.includes('onRestartFilm || onStartNewFilm'), 'Restart Film button must invoke onRestartFilm or onStartNewFilm');
+  assert.ok(appShellSrc.includes('onClick={onRestartFilm}'), 'Restart Film button must invoke its dedicated restart handler');
   assert.ok(appShellSrc.includes('onClick={onStartNewFilm}'), 'New Film Project CTA must invoke onStartNewFilm');
 
   // 2. App.jsx wires onRestartFilm and onStartNewFilm to AppShell

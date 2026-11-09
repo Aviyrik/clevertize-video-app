@@ -79,7 +79,8 @@ export function StudioProgressHeader({
   completedStages = [],
   onNavigateStage,
 }) {
-  const currentIdx = STUDIO_STAGES.findIndex((s) => s.id === currentStage);
+  const effectiveStage = currentStage === 'understanding' ? 'brief' : currentStage;
+  const currentIdx = STUDIO_STAGES.findIndex((s) => s.id === effectiveStage);
 
   return (
     <div style={{
@@ -150,6 +151,36 @@ export function StudioProgressHeader({
               </span>
               <span>{st.label}</span>
             </button>
+
+            {st.id === 'brief' && (currentStage === 'understanding' || completedStages.includes('understanding')) && (
+              <>
+                <span style={{ color: 'var(--border-subtle)', fontSize: 12 }}>→</span>
+                <button
+                  type="button"
+                  disabled={currentStage === 'understanding'}
+                  onClick={() => onNavigateStage && onNavigateStage('understanding')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    cursor: currentStage !== 'understanding' ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontSize: 12,
+                    fontWeight: currentStage === 'understanding' ? 700 : 600,
+                    color: currentStage === 'understanding' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    backgroundColor: currentStage === 'understanding' ? 'var(--bg-active)' : 'transparent',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="AI Understanding"
+                >
+                  <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} />
+                  <span>Understanding</span>
+                </button>
+              </>
+            )}
 
             {idx < STUDIO_STAGES.length - 1 && (
               <span style={{ color: 'var(--border-subtle)', fontSize: 12 }}>→</span>

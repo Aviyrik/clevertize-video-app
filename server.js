@@ -19,6 +19,7 @@ const netguard = require("./engine/netguard"); // called as netguard.safeFetch s
 const { isDisallowedUrl } = netguard;
 const feedback = require("./engine/feedback");
 const emailService = require("./engine/email");
+const understandingSpine = require("./engine/understandingSpine");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -900,10 +901,159 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   }
 });
 
+// 1b) AI Understanding (Intermediate Brief Analysis & Polish)
+app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
+  try {
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      language,
+      brandTone,
+      occasion,
+      websiteUrl,
+      projectId,
+      userCorrections,
+      previousUnderstanding,
+    } = req.body || {};
+
+    if (!brief || !String(brief).trim()) {
+      return res.status(400).json({ error: "Creative brief is required to generate AI Understanding." });
+    }
+
+    const understanding = await understandingSpine.generateAiUnderstanding({
+      businessName,
+      businessType,
+      town,
+      brief: String(brief).trim(),
+      language: language || "English",
+      brandTone: brandTone || "Warm & Authentic",
+      occasion,
+      websiteUrl,
+      userCorrections,
+      previousUnderstanding,
+    });
+
+    if (projectId) {
+      try {
+        const existing = await db.getProjectById(projectId, req.user.id);
+        if (existing) {
+          await db.saveProject(
+            {
+              ...existing,
+              aiUnderstanding: understanding,
+            },
+            req.user.id
+          );
+        }
+      } catch (err) {
+        console.warn("[ai-understanding] project association warning:", err.message);
+      }
+    }
+
+    res.json({ ok: true, status: "success", understanding });
+  } catch (err) {
+    console.error("[api/creative/ai-understanding]", err.message);
+    res.status(500).json({ error: err.message || "Failed to generate AI Understanding." });
+  }
+});
+
+app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { understanding, approvalStatus } = req.body || {};
+
+    if (!understanding || typeof understanding !== "object") {
+      return res.status(400).json({ error: "Structured understanding object is required." });
+    }
+
+    const existing = await db.getProjectById(projectId, req.user.id);
+    if (!existing) {
+      return res.status(404).json({ error: "Project not found or not owned by user." });
+    }
+
+    const updated = {
+      ...understanding,
+      approval_status: approvalStatus === "approved" ? "approved" : understanding.approval_status || "pending",
+      approved_at: approvalStatus === "approved" ? new Date().toISOString() : understanding.approved_at || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const saved = await db.saveProject(
+      {
+        ...existing,
+        aiUnderstanding: updated,
+      },
+      req.user.id
+    );
+
+    res.json({ ok: true, status: "success", understanding: updated, project: saved });
+  } catch (err) {
+    console.error("[api/creative/ai-understanding/:projectId]", err.message);
+    res.status(500).json({ error: err.message || "Failed to update AI Understanding." });
+  }
+});
+
+app.get("/api/creative/ai-understanding/:projectId", authRequired, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const project = await db.getProjectById(projectId, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found or not owned by user." });
+    }
+    const understanding = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
+    res.json({ ok: true, status: "success", understanding });
+  } catch (err) {
+    console.error("[get/api/creative/ai-understanding/:projectId]", err.message);
+    res.status(500).json({ error: err.message || "Failed to retrieve AI Understanding." });
+  }
+});
+
 // 2) Creative Direction
 app.post("/api/creative/directions", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language, brandTone } = req.body || {};
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      research,
+      festival,
+      format,
+      creativeStyle,
+      language,
+      brandTone,
+      projectId,
+      aiUnderstanding: clientSuppliedUnderstanding,
+    } = req.body || {};
+
+    let verifiedUnderstanding = null;
+
+    // Point 3: Backend checks saved approval status and project ownership before allowing Creative Idea Generation
+    // Do NOT trust client-supplied aiUnderstanding as proof of approval
+    if (projectId) {
+      const project = await db.getProjectById(projectId, req.user.id);
+      if (!project) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+      const saved = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
+      if (saved && (saved.approval_status === "approved" || saved.approval_status === "auto_approved")) {
+        // Verify that the saved understanding is not outdated compared to the active brief
+        const currentBrief = brief || project.brief || "";
+        if (!understandingSpine.isUnderstandingOutdated(saved, currentBrief)) {
+          verifiedUnderstanding = saved;
+        } else {
+          console.warn("[directions] Project understanding is outdated compared to active brief");
+        }
+      }
+    }
+
+    // Point 2: Ensure mock understanding data can never be used in production
+    if (process.env.NODE_ENV === "production" && verifiedUnderstanding && verifiedUnderstanding.is_mock) {
+      return res.status(400).json({ error: "Mock understanding data cannot be used in production." });
+    }
+
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -914,6 +1064,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
+      aiUnderstanding: verifiedUnderstanding,
     });
     res.json(result);
   } catch (e) {
@@ -1046,6 +1197,8 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       hasLogo,
       brandLogo,
       logoDataUrl,
+      projectId,
+      aiUnderstanding: incomingUnderstanding,
     } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
@@ -1053,20 +1206,68 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     if (!brief || !brief.trim()) {
       return res.status(400).json({ error: "Brief is required." });
     }
+
+    // Simple Mode: AI Understanding executes internally on the backend
+    let internalUnderstanding = incomingUnderstanding || null;
+    if (!internalUnderstanding) {
+      try {
+        internalUnderstanding = await understandingSpine.generateAiUnderstanding({
+          businessName: businessName.trim(),
+          businessType: businessType || "Local Business",
+          town: town || "",
+          brief: brief.trim(),
+          language: language || "English",
+          brandTone: brandTone || "Warm & Authentic",
+        });
+        // Point 4: Use distinct internal status 'auto_approved' rather than explicit user approval 'approved'
+        internalUnderstanding.approval_status = "auto_approved";
+        internalUnderstanding.approved_at = new Date().toISOString();
+      } catch (err) {
+        if (process.env.NODE_ENV === "production") {
+          console.error("[simple-packages] AI understanding failed in production:", err.message);
+          return res.status(500).json({ error: `AI Understanding failed: ${err.message}` });
+        }
+        console.warn("[simple-packages] Silent AI understanding warning:", err.message);
+      }
+    } else {
+      internalUnderstanding.approval_status = "auto_approved";
+    }
+
+    // Point 2: Ensure mock understanding data can never silently be used in production
+    if (process.env.NODE_ENV === "production" && internalUnderstanding && internalUnderstanding.is_mock) {
+      return res.status(500).json({ error: "Mock understanding data cannot be used in production." });
+    }
+
+    // Save internally against the project if projectId provided
+    if (projectId && internalUnderstanding) {
+      try {
+        const existing = await db.getProjectById(projectId, req.user.id);
+        if (existing) {
+          await db.saveProject(
+            { ...existing, aiUnderstanding: internalUnderstanding },
+            req.user.id
+          );
+        }
+      } catch (err) {
+        console.warn("[simple-packages] project save warning:", err.message);
+      }
+    }
+
     const packages = await creative.generateSimpleAdPackages({
       businessName: businessName.trim(),
       businessType: businessType || "Local Business",
       town: town || "",
       brief: brief || "",
-      targetAudience: targetAudience || "",
+      targetAudience: targetAudience || (internalUnderstanding && internalUnderstanding.target_audience) || "",
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
       brandTone,
       duration: duration || "20s",
       aspectRatio: aspectRatio || dimension || "9:16",
       hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
+      aiUnderstanding: internalUnderstanding,
     });
-    res.json({ status: "success", packages });
+    res.json({ status: "success", packages, aiUnderstanding: internalUnderstanding });
   } catch (e) {
     console.error("[api/creative/simple-packages]", e.message);
     res.status(500).json({ error: e.message });

@@ -19,6 +19,7 @@ import {
 import AppShell from './components/v2/AppShell.jsx';
 import CreationEntryHub from './components/v2/CreationEntryHub.jsx';
 import SimpleBusinessStudio from './components/v2/SimpleBusinessStudio.jsx';
+import ScreenUnderstanding from './components/v2/ScreenUnderstanding.jsx';
 import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
 import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
@@ -880,6 +881,13 @@ export default function App() {
   const [renderStatusText, setRenderStatusText] = useState('Initializing video render pipeline…');
   const [shareStatus, setShareStatus] = useState('');
   const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
+  const [isSavingNewFilm, setIsSavingNewFilm] = useState(false);
+  const [newFilmSaveError, setNewFilmSaveError] = useState('');
+  const [newFilmAction, setNewFilmAction] = useState('new');
+  const [selectedCreationEntry, setSelectedCreationEntry] = useState(null);
+  const [aiUnderstanding, setAiUnderstanding] = useState(null);
+  const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
+  const [understandingError, setUnderstandingError] = useState('');
   // A business the user picked while a film was in progress: the confirm modal asks before switching to it
   const [pendingBusinessSwitch, setPendingBusinessSwitch] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -977,6 +985,7 @@ export default function App() {
 
     setScenes(importedScenes);
     setGeneratedScript(importedScript);
+    setSelectedCreationEntry('script');
 
     // Fast-track past stages 1-6 straight into Stage 7 (Script Studio)
     setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story']);
@@ -1051,8 +1060,8 @@ export default function App() {
   const draftIdRef = useRef(null); // this film's draft project id
   const draftRenderRef = useRef(null); // { runId, projectId, startedAt } while a render runs
   const draftSaveTimerRef = useRef(null);
-  const draftSaveInFlightRef = useRef(false);
   const draftSavePendingRef = useRef(false);
+  const draftSavePromiseRef = useRef(null);
   const suppressAutosaveUntilRef = useRef(0); // quiet period while a resumed draft's state is being restored
   const simpleDraftRef = useRef(null); // Simple Studio's latest reported state
   // Simple Studio reloads only when this changes (a project opened, a new film), not on activeProjectId
@@ -1266,6 +1275,7 @@ export default function App() {
     setCompletedStages((prev) => Array.from(new Set([...(prev || []), 'business'])));
     setStudioStage('brief');
     setActiveAppView('studio');
+    setSelectedCreationEntry('url');
     setTimeout(() => setToastMessage(''), 4500);
   };
 
@@ -1770,6 +1780,8 @@ export default function App() {
       setVideoUrl('');
       setStudioStage('script');
     }
+    const restoredUnderstanding = proj.aiUnderstanding || proj.stages?.aiUnderstanding || proj.creativeDNA?.aiUnderstanding || (draft && draft.guided && draft.guided.aiUnderstanding) || null;
+    setAiUnderstanding(restoredUnderstanding);
     setActiveAppView('studio');
     setToastMessage(resume ? `Resumed "${proj.title || 'your video'}" where you left off.` : `Loaded "${proj.title || 'Project'}" into Studio.`);
     setTimeout(() => setToastMessage(''), 3500);
@@ -2250,6 +2262,90 @@ export default function App() {
     setResearchDismissed(true);
   };
 
+  // 1b. AI Understanding / Polished Brief Generation & Approval
+  const handleGenerateAiUnderstanding = async (userCorrections = '') => {
+    setIsAnalyzingBrief(true);
+    setUnderstandingError('');
+    setStudioStage('understanding');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    try {
+      const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+      const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
+      const res = await fetch('/api/creative/ai-understanding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          businessName: userContext.businessName,
+          businessType: userContext.businessType,
+          town: userContext.town,
+          brief: cleanBrief.trim(),
+          language: userContext.language,
+          brandTone: userContext.brandTone,
+          occasion: userContext.occasion,
+          websiteUrl: userContext.websiteUrl,
+          projectId: activeProjectId,
+          userCorrections,
+          previousUnderstanding: aiUnderstanding,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.understanding) {
+        throw new Error(data?.error || 'Failed to analyze brief.');
+      }
+
+      setAiUnderstanding(data.understanding);
+      setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: data.understanding }));
+      scheduleDraftSave(true);
+    } catch (err) {
+      console.error('[AIUnderstanding] generation error:', err);
+      setUnderstandingError(err.message || 'Failed to analyze brief. You can try again or edit manually.');
+    } finally {
+      setIsAnalyzingBrief(false);
+    }
+  };
+
+  const handleApproveUnderstanding = async (approvedData) => {
+    try {
+      const updated = {
+        ...approvedData,
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+      };
+      setAiUnderstanding(updated);
+      setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
+
+      if (activeProjectId) {
+        const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
+        fetch(`/api/creative/ai-understanding/${encodeURIComponent(activeProjectId)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ understanding: updated, approvalStatus: 'approved' }),
+        }).catch((err) => console.warn('[AIUnderstanding] backend save warning:', err));
+      }
+
+      markStageComplete('understanding');
+      scheduleDraftSave(true);
+      setStudioStage('settings');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      console.error('[AIUnderstanding] approval error:', err);
+    }
+  };
+
+  const handleUpdateUnderstanding = (updated) => {
+    setAiUnderstanding(updated);
+    setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
+    scheduleDraftSave(false);
+  };
+
   // 2. Fetching Creative Direction Territories
   const loadCreativeDirections = async (force = false, overrideFormat = null, overrideLang = null) => {
     const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
@@ -2272,12 +2368,14 @@ export default function App() {
           businessType: bType,
           town: userContext.town || '',
           brief: userContext.brief || '',
-          targetAudience: userContext.targetAudience || '',
+          targetAudience: userContext.targetAudience || (aiUnderstanding?.target_audience) || '',
           language: activeLang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
           research: researchData,
           format: activeFormat,
           creativeStyle: activeFormat,
+          projectId: activeProjectId,
+          aiUnderstanding: aiUnderstanding && aiUnderstanding.approval_status === 'approved' ? aiUnderstanding : null,
         }),
       });
       if (res.ok) {
@@ -3241,8 +3339,8 @@ export default function App() {
 
   // Rebuilt every render, so a debounced save always sends the latest state. Null = nothing to save.
   const buildCurrentDraftRef = useRef(null);
-  buildCurrentDraftRef.current = () => {
-    if (!currentUser || !authToken || activeAppView !== 'studio') return null;
+  buildCurrentDraftRef.current = (allowOutsideStudio = false) => {
+    if (!currentUser || !authToken || (!allowOutsideStudio && activeAppView !== 'studio')) return null;
     if (videoUrl && !draftRenderRef.current) return null; // a finished video is a project, not a draft
     const base = {
       id: draftProjectId(),
@@ -3291,9 +3389,14 @@ export default function App() {
           generatedScript: generatedScript || null,
           completedStages: completedStages || [],
           shotSpec: shotSpec || null,
+          aiUnderstanding: aiUnderstanding || null,
         },
         explicitChoices,
-        appCreativeDNA: creativeDNA,
+        appCreativeDNA: {
+          ...creativeDNA,
+          aiUnderstanding: aiUnderstanding || null,
+        },
+        aiUnderstanding: aiUnderstanding || null,
         scenes: scenes || [],
         character1,
         character2,
@@ -3304,14 +3407,16 @@ export default function App() {
   };
 
   // Save the draft now. Saves never overlap: one arriving mid-save runs again once that save finishes.
-  const persistDraft = async () => {
-    const payload = buildCurrentDraftRef.current && buildCurrentDraftRef.current();
-    if (!payload) return;
-    if (draftSaveInFlightRef.current) {
+  const persistDraft = async (allowOutsideStudio = false) => {
+    if (draftSavePromiseRef.current) {
       draftSavePendingRef.current = true;
-      return;
+      const currentResult = await draftSavePromiseRef.current;
+      if (!draftSavePendingRef.current) return currentResult;
+      draftSavePendingRef.current = false;
+      return persistDraft(allowOutsideStudio);
     }
-    draftSaveInFlightRef.current = true;
+    const payload = buildCurrentDraftRef.current && buildCurrentDraftRef.current(allowOutsideStudio);
+    if (!payload) return !allowOutsideStudio || Boolean(videoUrl && !draftRenderRef.current);
     // This draft is the project being worked on: manual saves and the next render reuse its id
     setActiveProjectId(payload.id);
     currentSavingProjectIdRef.current = payload.id;
@@ -3322,19 +3427,23 @@ export default function App() {
       return idx >= 0 ? prev.map((p, i) => (i === idx ? { ...p, ...item } : p)) : [{ ...item, createdAt: item.updatedAt }, ...prev];
     };
     setUserProjects((prev) => upsert(prev, local));
-    try {
-      const res = await fetch('/api/projects', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data && data.project) setUserProjects((prev) => upsert(prev, data.project));
-    } catch (err) {
-      console.warn('[draft] autosave failed — will retry on the next change:', err.message);
-    } finally {
-      draftSaveInFlightRef.current = false;
-      if (draftSavePendingRef.current) {
-        draftSavePendingRef.current = false;
-        persistDraft();
+    const savePromise = (async () => {
+      let succeeded = false;
+      try {
+        const res = await fetch('/api/projects', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.project) throw new Error(data?.error || 'Project save failed. Please try again.');
+        setUserProjects((prev) => upsert(prev, data.project));
+        succeeded = true;
+      } catch (err) {
+        console.warn('[draft] autosave failed — will retry on the next change:', err.message);
+      } finally {
+        draftSavePromiseRef.current = null;
       }
-    }
+      return succeeded;
+    })();
+    draftSavePromiseRef.current = savePromise;
+    return savePromise;
   };
 
   // Debounced autosave for edits; flush=true saves at once (a stage was completed)
@@ -3664,6 +3773,8 @@ export default function App() {
   // Trigger New Film Flow: Open in-app confirmation modal (or execute if bypassed)
   const handleStartNewProject = (bypassConfirm = false) => {
     setPendingBusinessSwitch(null);
+    setNewFilmAction('new');
+    setNewFilmSaveError('');
     if (bypassConfirm === true || !hasActiveFilmWork()) {
       handleExecuteNewProject(false);
       return;
@@ -3676,6 +3787,7 @@ export default function App() {
     if (!biz) return;
     if (biz.id && biz.id === userContext.businessId) return; // already the active business
     if (hasActiveFilmWork()) {
+      setNewFilmAction('new');
       setPendingBusinessSwitch(biz);
       setIsNewFilmConfirmOpen(true);
       return;
@@ -3683,25 +3795,56 @@ export default function App() {
     handleExecuteNewProject(false, { business: biz });
   };
 
+  const handleRestartFilm = () => {
+    setPendingBusinessSwitch(null);
+    setNewFilmAction('restart');
+    setNewFilmSaveError('');
+    if (!hasActiveFilmWork()) {
+      handleExecuteNewProject(false, { destination: 'restart' });
+      return;
+    }
+    setIsNewFilmConfirmOpen(true);
+  };
+
   const handleCancelNewFilm = () => {
+    if (isSavingNewFilm) return;
     setIsNewFilmConfirmOpen(false);
     setPendingBusinessSwitch(null);
   };
 
+  const handleConfirmNewFilm = async () => {
+    if (isSavingNewFilm) return;
+    setIsSavingNewFilm(true);
+    setNewFilmSaveError('');
+    try {
+      const activeWork = hasActiveFilmWork();
+      const alreadyFinished = Boolean(videoUrl && !draftRenderRef.current);
+      if (activeWork && !alreadyFinished) {
+        if (draftSaveTimerRef.current) {
+          clearTimeout(draftSaveTimerRef.current);
+          draftSaveTimerRef.current = null;
+        }
+        const saved = await persistDraft(true);
+        if (!saved) throw new Error('Your project could not be saved. Please sign in and try again.');
+      }
+      if (pendingBusinessSwitch) handleExecuteNewProject(false, { business: pendingBusinessSwitch });
+      else handleExecuteNewProject(false, { destination: newFilmAction === 'restart' ? 'restart' : 'hub' });
+    } catch (err) {
+      setNewFilmSaveError(err?.message || 'Your project could not be saved. Please try again.');
+    } finally {
+      setIsSavingNewFilm(false);
+    }
+  };
+
   // Start a fresh film. With `business`, the fresh film is for that business (a business switch).
-  const handleExecuteNewProject = (clearBrand = false, { business = null } = {}) => {
+  const handleExecuteNewProject = (clearBrand = false, { business = null, destination = 'hub' } = {}) => {
     try {
       setIsNewFilmConfirmOpen(false);
       setPendingBusinessSwitch(null);
       setBrandResetKey((prev) => prev + 1);
 
       // Anything still running (a render, a script request) belongs to the film being left: detach it so it
-      // finishes into its own project instead of this new one. Save a pending draft edit first.
-      if (draftSaveTimerRef.current) {
-        clearTimeout(draftSaveTimerRef.current);
-        draftSaveTimerRef.current = null;
-        persistDraft();
-      }
+      // finishes into its own project instead of this new one.
       studioSessionRef.current += 1;
       activeRunIdRef.current = null;
       activeVideoUrlRef.current = '';
@@ -3738,6 +3881,9 @@ export default function App() {
       setAvoidList([]);
       setGeneratedScript(null);
       setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+      setAiUnderstanding(null);
+      setIsAnalyzingBrief(false);
+      setUnderstandingError('');
 
       setSessionId(null);
       setActiveProjectId(null);
@@ -3792,8 +3938,25 @@ export default function App() {
       });
 
       setCompletedStages([]);
-      setStudioStage('brief');
-      if (!business) setActiveAppView('studio'); // switching business keeps the user where they are
+      setIsScriptModalOpen(false);
+      setIsUrlModalOpen(false);
+      if (!business && destination === 'restart') {
+        setSelectedCreationEntry((entry) => entry || 'brief');
+        const restartEntry = selectedCreationEntry || 'brief';
+        if (restartEntry === 'brief') {
+          setStudioStage('brief');
+          setActiveAppView('studio');
+        } else {
+          setStudioStage('entry');
+          setActiveAppView('hub');
+          if (restartEntry === 'script') setIsScriptModalOpen(true);
+          if (restartEntry === 'url') setIsUrlModalOpen(true);
+        }
+      } else {
+        setSelectedCreationEntry(null);
+        setStudioStage('entry');
+        if (!business) setActiveAppView('hub'); // New Film Project always opens the three-option entry hub
+      }
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -4294,16 +4457,8 @@ export default function App() {
           currentStage={studioStage}
           completedStages={completedStages}
           onNavigateStage={handleNavigateStage}
-          onStartNewFilm={() => {
-            if (userBusinesses.length === 0 || !userContext.businessName) {
-              setIsOnboardingModalOpen(true);
-              return;
-            }
-            handleStartNewProject(false);
-          }}
-          onRestartFilm={() => {
-            handleStartNewProject(false);
-          }}
+          onStartNewFilm={() => handleStartNewProject(false)}
+          onRestartFilm={handleRestartFilm}
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
@@ -4358,6 +4513,7 @@ export default function App() {
           {(activeAppView === 'home' || activeAppView === 'hub' || (activeAppView === 'studio' && studioStage === 'entry')) ? (
             <CreationEntryHub
               onStartBrief={() => {
+                setSelectedCreationEntry('brief');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
@@ -4366,6 +4522,7 @@ export default function App() {
                 setStudioStage('brief');
               }}
               onOpenScriptModal={() => {
+                setSelectedCreationEntry('script');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
@@ -4373,6 +4530,7 @@ export default function App() {
                 setIsScriptModalOpen(true);
               }}
               onOpenUrlModal={() => {
+                setSelectedCreationEntry('url');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
@@ -4409,7 +4567,6 @@ export default function App() {
               onDeleteProject={handleDeleteProject}
               onNewProject={() => {
                 handleStartNewProject(false);
-                setActiveAppView('studio');
               }}
               onSignIn={() => setIsAuthModalOpen(true)}
               currentUser={currentUser}
@@ -4857,15 +5014,26 @@ export default function App() {
               setEditingBusiness(userContext);
               setIsOnboardingModalOpen(true);
             }}
-            onContinue={() => {
-              if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
+            onContinue={async () => {
+              const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+              if (!cleanBrief.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
                 return;
               }
               setValidationError('');
               markStageComplete('brief');
-              setStudioStage('settings');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+
+              const isOutdated = Boolean(
+                aiUnderstanding &&
+                String(aiUnderstanding.source_brief || '').trim() !== cleanBrief.trim()
+              );
+
+              if (!aiUnderstanding || isOutdated) {
+                await handleGenerateAiUnderstanding();
+              } else {
+                setStudioStage('understanding');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
             }}
             onBack={() => {
               setActiveAppView('home');
@@ -4884,6 +5052,30 @@ export default function App() {
             })()}
             researchData={researchData}
             isResearching={isResearching}
+          />
+        )}
+
+        {studioStage === 'understanding' && (
+          <ScreenUnderstanding
+            understanding={aiUnderstanding}
+            onUpdateUnderstanding={handleUpdateUnderstanding}
+            onApproveAndContinue={handleApproveUnderstanding}
+            onBackToBrief={() => {
+              setStudioStage('brief');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onRegenerate={handleGenerateAiUnderstanding}
+            isRegenerating={isAnalyzingBrief}
+            isSaving={isSavingProject}
+            originalBrief={userContext.brief || userContext.specialty || userContext.offer || ''}
+            businessName={userContext.businessName}
+            businessType={userContext.businessType}
+            town={userContext.town}
+            isOutdated={Boolean(
+              aiUnderstanding &&
+              String(aiUnderstanding.source_brief || '').trim() !== String(userContext.brief || userContext.specialty || userContext.offer || '').trim()
+            )}
+            error={understandingError}
           />
         )}
 
@@ -4933,7 +5125,7 @@ export default function App() {
               }
             }}
             onBack={() => {
-              setStudioStage('brief');
+              setStudioStage('understanding');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           />
@@ -5176,7 +5368,7 @@ export default function App() {
             zIndex: 1000,
             padding: 20,
           }}
-          onClick={handleCancelNewFilm}
+          onClick={() => { if (!isSavingNewFilm) handleCancelNewFilm(); }}
         >
           <div
             style={{
@@ -5209,12 +5401,13 @@ export default function App() {
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
                   {pendingBusinessSwitch
                     ? `Switch to ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}?`
-                    : 'Start a New Film?'}
+                    : newFilmAction === 'restart' ? 'Restart This Film?' : 'Start a New Film?'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={handleCancelNewFilm}
+                disabled={isSavingNewFilm}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
               >
                 <X size={18} />
@@ -5224,13 +5417,18 @@ export default function App() {
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               <p style={{ margin: '0 0 10px 0' }}>
                 {pendingBusinessSwitch
-                  ? `Switching business starts a fresh film for ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}. The brief, ideas, script and video you're working on now will be cleared from the studio.`
-                  : 'This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.'}
+                  ? `Your current project will be saved under My Projects, then a fresh film will start for ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}.`
+                  : newFilmAction === 'restart'
+                    ? 'Your progress will be saved under My Projects, then this film will restart from the starting point you chose.'
+                  : 'Your progress will be saved under My Projects, where you can return to it later. Then you’ll start a new film from the page with the three starting options.'}
               </p>
               {pendingBusinessSwitch && isRendering ? (
                 <p style={{ margin: '0 0 10px 0' }}>
                   The video that's rendering keeps going and will be saved to {userContext.businessName ? <strong>{userContext.businessName}</strong> : 'its project'} in My Projects.
                 </p>
+              ) : null}
+              {newFilmSaveError ? (
+                <p role="alert" style={{ margin: '12px 0 0', color: 'var(--status-error, #ef4444)' }}>{newFilmSaveError}</p>
               ) : null}
               {userContext.businessName && !pendingBusinessSwitch ? (
                 <div
@@ -5262,6 +5460,7 @@ export default function App() {
                   e.stopPropagation();
                   handleCancelNewFilm();
                 }}
+                disabled={isSavingNewFilm}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 6,
@@ -5270,7 +5469,7 @@ export default function App() {
                   color: 'var(--text-secondary)',
                   fontSize: 13,
                   fontWeight: 500,
-                  cursor: 'pointer',
+                  cursor: isSavingNewFilm ? 'wait' : 'pointer',
                 }}
               >
                 Cancel
@@ -5280,9 +5479,9 @@ export default function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (pendingBusinessSwitch) handleExecuteNewProject(false, { business: pendingBusinessSwitch });
-                  else handleExecuteNewProject(false);
+                  handleConfirmNewFilm();
                 }}
+                disabled={isSavingNewFilm}
                 style={{
                   padding: '8px 18px',
                   borderRadius: 6,
@@ -5291,7 +5490,7 @@ export default function App() {
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isSavingNewFilm ? 'wait' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -5299,7 +5498,7 @@ export default function App() {
                 }}
               >
                 <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
-                <span style={{ pointerEvents: 'none' }}>{pendingBusinessSwitch ? 'Switch Business' : 'Start New Film'}</span>
+                <span style={{ pointerEvents: 'none' }}>{isSavingNewFilm ? 'Saving…' : pendingBusinessSwitch ? 'Save & Switch Business' : newFilmAction === 'restart' ? 'Save & Restart Film' : 'Save & Start New Film'}</span>
               </button>
             </div>
           </div>

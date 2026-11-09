@@ -1068,7 +1068,7 @@ export default function AppShell({
 
               <button
                 type="button"
-                onClick={onRestartFilm || onStartNewFilm}
+                onClick={onRestartFilm}
                 style={{
                   backgroundColor: 'var(--bg-elevated)',
                   border: '1px solid var(--border-default)',
@@ -1083,7 +1083,7 @@ export default function AppShell({
                   gap: 6,
                   transition: 'all 0.15s ease',
                 }}
-                title="Restart from Stage 1 to make a new film"
+                title="Restart from the starting point you chose"
               >
                 <RotateCcw size={13} />
                 <span>Restart Film</span>

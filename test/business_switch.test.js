@@ -87,7 +87,20 @@ test("a switch resets the whole creative pipeline and project identity, like a n
     assert.ok(exec.includes(reset), `handleExecuteNewProject must run ${reset}`);
   }
   assert.ok(exec.includes("...businessContextOf(business, current)"), "the new business's profile replaces the old one");
-  assert.ok(exec.includes("persistDraft();"), "a pending draft edit is saved before the studio is cleared");
+  const confirm = fnBody("handleConfirmNewFilm");
+  assert.ok(confirm.includes("await persistDraft(true)"), "the confirmation waits for the active draft to save before clearing the studio");
+  assert.ok(confirm.indexOf("await persistDraft(true)") < confirm.indexOf("handleExecuteNewProject(false"), "the reset only runs after the save completes");
+});
+
+test("New Film opens the three-option hub while Restart Film reopens the selected entry", () => {
+  const exec = fnBody("handleExecuteNewProject");
+  assert.ok(exec.includes("setActiveAppView('hub')"), "a new film returns to the creation hub");
+  assert.ok(exec.includes("destination === 'restart'"), "restart uses a separate destination");
+  assert.ok(exec.includes("restartEntry === 'brief'"), "brief restarts at the brief stage");
+  assert.ok(exec.includes("restartEntry === 'script'"), "script import can be restarted");
+  assert.ok(exec.includes("restartEntry === 'url'"), "website scanning can be restarted");
+  const shell = fs.readFileSync(path.join(__dirname, "../src/components/v2/AppShell.jsx"), "utf8");
+  assert.ok(shell.includes("<span>Restart Film</span>"), "Restart Film remains available");
 });
 
 test("a render running at switch time is detached: it saves to its own project and leaves the new studio alone", () => {

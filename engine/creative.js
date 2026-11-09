@@ -109,7 +109,7 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding }) {
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
   const isComedy = /comedy|funny/i.test(cleanFormat);
@@ -187,9 +187,9 @@ BRIEF: ${brief || "Promote brand"}
 CHOSEN CREATIVE FORMAT: ${cleanFormat || "UGC / Creator-style"}
 CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${brandTone || "Warm & Authentic"}
-AUDIENCE INSIGHT: ${research?.audienceInsight || "Everyday buyers"}
-CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || "Relatable problem-first story"}
-UPCOMING OCCASION: ${festival?.name || "None"}`;
+AUDIENCE INSIGHT: ${research?.audienceInsight || aiUnderstanding?.target_audience || "Everyday buyers"}
+CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || aiUnderstanding?.creative_opportunity || "Relatable problem-first story"}
+UPCOMING OCCASION: ${festival?.name || aiUnderstanding?.occasion_context || "None"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 1500, thinking: false });
@@ -2268,12 +2268,13 @@ async function generateSimpleAdPackages({
   duration = "20s",
   aspectRatio = "9:16",
   hasLogo = false,
+  aiUnderstanding = null,
 }) {
   const brand = String(businessName || "My Business").trim();
   const bType = String(businessType || "Retail").trim();
   const city = String(town || "").trim();
   const offer = String(brief || `${bType} promotion`).trim();
-  const audience = String(targetAudience || "Neighborhood customers").trim();
+  const audience = String(targetAudience || (aiUnderstanding && aiUnderstanding.target_audience) || "Neighborhood customers").trim();
   const isEng = !language || /eng/i.test(language);
   const toneGuidance = getBrandToneGuidance(brandTone);
   const durStr = String(duration || "20s").trim();
@@ -2386,7 +2387,7 @@ STYLE: ${creativeStyle}
 DURATION: ${durStr}
 SCENES: ${plan.totalScenes} scenes (~5s each)
 DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
-BRAND TONE: ${brandTone || "Warm & Authentic"}
+BRAND TONE: ${brandTone || "Warm & Authentic"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}
 
 Create 3 distinct Ad Packages now:`;
 
