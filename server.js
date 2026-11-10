@@ -20,6 +20,8 @@ const { isDisallowedUrl } = netguard;
 const feedback = require("./engine/feedback");
 const emailService = require("./engine/email");
 const understandingSpine = require("./engine/understandingSpine");
+const guardrails = require("./engine/guardrails");
+const guardrailsSpine = require("./engine/guardrailsSpine");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -101,6 +103,7 @@ function validateForm(b) {
     product: s(b.product),
     productName: s(b.productName),
     brief: s(b.brief),
+    creativeGuardrails: b.creativeGuardrails ? guardrails.normalizeCreativeGuardrails(b.creativeGuardrails) : null,
   };
   const missing = [["businessName", "Business name"], ["businessType", "Business type"]]
     .filter(([k]) => !f[k]).map(([, l]) => l);
@@ -217,7 +220,7 @@ async function runJSONStage(s, stage, change) {
 
 async function runScript(s, change) {
   const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInstruction("script", s, change));
-  const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: s.story.out.format, festival: festivalOf(s) };
+  const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: s.story.out.format, festival: festivalOf(s), creativeGuardrails: s.form.creativeGuardrails || null };
   let content = base, parsed, failures = [], attempts = 0;
   for (let i = 0; i <= MAX_REPAIRS; i++) {
     attempts++;
@@ -326,6 +329,15 @@ async function optionalAuth(req, res, next) {
 app.post("/api/session", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
+    if (req.body?.projectId) {
+      const { guardrails: activeG } = await guardrails.resolveProjectGuardrails({
+        db,
+        projectId: req.body.projectId,
+        userId: req.user.id,
+        fallbackGuardrails: form.creativeGuardrails,
+      });
+      if (guardrails.hasActiveGuardrails(activeG)) form.creativeGuardrails = activeG;
+    }
     const s = openSession(form, await getFestivals(), req.user.id);
     const out = await produce(s, "direction");
     res.json({ sessionId: s.id, ...out });
@@ -337,6 +349,15 @@ app.post("/api/session", authRequired, async (req, res) => {
 app.post("/api/pipeline/generate", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
+    if (req.body?.projectId) {
+      const { guardrails: activeG } = await guardrails.resolveProjectGuardrails({
+        db,
+        projectId: req.body.projectId,
+        userId: req.user.id,
+        fallbackGuardrails: form.creativeGuardrails,
+      });
+      if (guardrails.hasActiveGuardrails(activeG)) form.creativeGuardrails = activeG;
+    }
     const s = openSession(form, await getFestivals(), req.user.id);
 
     // Pre-flight check: ensure required creative parameters and product context can be satisfied
@@ -355,7 +376,7 @@ app.post("/api/pipeline/generate", authRequired, async (req, res) => {
     console.log(`[pipeline:${s.id}] Fast single-pass creative intelligence & script generation...`);
     const stageInst = "Pick the best customer tension and viral hook pattern for this business, and write the complete 4-scene film following all Product Spine rules. Return ONLY the OUTPUT markers.";
     const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInst);
-    const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s) };
+    const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s), creativeGuardrails: form.creativeGuardrails || null };
     let content = base, parsed, failures = [], attempts = 0;
     for (let i = 0; i <= MAX_REPAIRS; i++) {
       attempts++;
@@ -872,10 +893,17 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
 app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
-    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform } = req.body || {};
+    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
       return res.status(400).json({ error: "Please enter or paste script text to validate." });
     }
+
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
 
     // Inspect sliceLines for dialogue and visual separation during script normalization
     const sliceLines = (lines, start, end) => lines.slice(start, end);
@@ -892,12 +920,70 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
       targetDuration: targetDuration || duration,
       aspectRatio,
       platform,
+      creativeGuardrails: activeGuardrails,
     });
 
     return res.json(result);
   } catch (err) {
     console.error("[api/script/validate-and-import]", err.message);
-    res.status(500).json({ error: err.message || "Failed to validate script." });
+    res.status(err.status || 500).json({ error: err.message || "Failed to validate script." });
+  }
+});
+
+// 1D) Creative Guardrails (Project Do's & Don'ts Source of Truth Endpoints)
+app.get("/api/projects/:id/guardrails", authRequired, async (req, res) => {
+  try {
+    const project = await db.getProjectById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found or not owned by authenticated user." });
+    }
+    const creativeGuardrails = guardrails.normalizeCreativeGuardrails(project.creativeGuardrails);
+    res.json({ ok: true, status: "success", creativeGuardrails });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || "Failed to retrieve Creative Guardrails." });
+  }
+});
+
+app.put("/api/projects/:id/guardrails", authRequired, async (req, res) => {
+  try {
+    const existing = await db.getProjectById(req.params.id, req.user.id);
+    if (!existing) {
+      return res.status(404).json({ error: "Project not found or not owned by authenticated user." });
+    }
+
+    const incoming = req.body?.creativeGuardrails !== undefined ? req.body.creativeGuardrails : req.body;
+    const normalized = guardrails.normalizeCreativeGuardrails(incoming, existing.creativeGuardrails);
+    let updatedUnderstanding = existing.aiUnderstanding || (existing.creativeDNA && existing.creativeDNA.aiUnderstanding) || null;
+
+    if (
+      updatedUnderstanding &&
+      understandingSpine.isUnderstandingOutdated(updatedUnderstanding, existing.brief || "", normalized)
+    ) {
+      updatedUnderstanding = {
+        ...updatedUnderstanding,
+        approval_status: "outdated",
+      };
+    }
+
+    const saved = await db.saveProject(
+      {
+        ...existing,
+        creativeGuardrails: normalized,
+        aiUnderstanding: updatedUnderstanding,
+      },
+      req.user.id
+    );
+
+    res.json({
+      ok: true,
+      status: "success",
+      creativeGuardrails: saved.creativeGuardrails,
+      aiUnderstanding: saved.aiUnderstanding,
+      project: saved,
+    });
+  } catch (err) {
+    console.error("[put/api/projects/:id/guardrails]", err.message);
+    res.status(err.status || 500).json({ error: err.message || "Failed to update Creative Guardrails." });
   }
 });
 
@@ -916,11 +1002,25 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       projectId,
       userCorrections,
       previousUnderstanding,
+      creativeGuardrails: bodyGuardrails,
     } = req.body || {};
 
     if (!brief || !String(brief).trim()) {
       return res.status(400).json({ error: "Creative brief is required to generate AI Understanding." });
     }
+
+    // Resolve and sync Creative Guardrails from DB project / request
+    let existingProject = null;
+    if (projectId) {
+      existingProject = await db.getProjectById(projectId, req.user.id);
+      if (!existingProject && (await db.projectExists(projectId))) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+    }
+
+    const activeGuardrails = bodyGuardrails !== undefined
+      ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
+      : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
 
     const understanding = await understandingSpine.generateAiUnderstanding({
       businessName,
@@ -933,29 +1033,30 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       websiteUrl,
       userCorrections,
       previousUnderstanding,
+      creativeGuardrails: activeGuardrails,
     });
 
-    if (projectId) {
+    if (projectId && existingProject) {
       try {
-        const existing = await db.getProjectById(projectId, req.user.id);
-        if (existing) {
-          await db.saveProject(
-            {
-              ...existing,
-              aiUnderstanding: understanding,
-            },
-            req.user.id
-          );
-        }
+        await db.saveProject(
+          {
+            ...existingProject,
+            creativeGuardrails: guardrails.hasActiveGuardrails(activeGuardrails) || bodyGuardrails !== undefined
+              ? activeGuardrails
+              : existingProject.creativeGuardrails,
+            aiUnderstanding: understanding,
+          },
+          req.user.id
+        );
       } catch (err) {
         console.warn("[ai-understanding] project association warning:", err.message);
       }
     }
 
-    res.json({ ok: true, status: "success", understanding });
+    res.json({ ok: true, status: "success", understanding, creativeGuardrails: activeGuardrails });
   } catch (err) {
     console.error("[api/creative/ai-understanding]", err.message);
-    res.status(500).json({ error: err.message || "Failed to generate AI Understanding." });
+    res.status(err.status || 500).json({ error: err.message || "Failed to generate AI Understanding." });
   }
 });
 
@@ -1026,9 +1127,11 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       brandTone,
       projectId,
       aiUnderstanding: clientSuppliedUnderstanding,
+      creativeGuardrails: bodyGuardrails,
     } = req.body || {};
 
     let verifiedUnderstanding = null;
+    let activeGuardrails = null;
 
     // Point 3: Backend checks saved approval status and project ownership before allowing Creative Idea Generation
     // Do NOT trust client-supplied aiUnderstanding as proof of approval
@@ -1037,16 +1140,31 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       if (!project) {
         return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
       }
+      activeGuardrails = guardrails.normalizeCreativeGuardrails(project.creativeGuardrails);
       const saved = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
-      if (saved && (saved.approval_status === "approved" || saved.approval_status === "auto_approved")) {
-        // Verify that the saved understanding is not outdated compared to the active brief
+      if (saved) {
         const currentBrief = brief || project.brief || "";
-        if (!understandingSpine.isUnderstandingOutdated(saved, currentBrief)) {
+        const isOutdated =
+          understandingSpine.isUnderstandingOutdated(saved, currentBrief) ||
+          understandingSpine.isUnderstandingOutdated(saved, currentBrief, activeGuardrails);
+        if (isOutdated || saved.approval_status === "outdated") {
+          console.warn("[directions] Project understanding is outdated compared to active brief/guardrails");
+          return res.status(409).json({
+            error: "AI Understanding is outdated because your brief or creative guardrails changed. Please review and re-approve before generating ideas.",
+            code: "UNDERSTANDING_OUTDATED",
+          });
+        }
+        if (saved.approval_status === "approved" || saved.approval_status === "auto_approved") {
           verifiedUnderstanding = saved;
         } else {
-          console.warn("[directions] Project understanding is outdated compared to active brief");
+          return res.status(409).json({
+            error: "AI Understanding must be approved before generating creative ideas.",
+            code: "UNDERSTANDING_NOT_APPROVED",
+          });
         }
       }
+    } else {
+      activeGuardrails = guardrails.normalizeCreativeGuardrails(bodyGuardrails);
     }
 
     // Point 2: Ensure mock understanding data can never be used in production
@@ -1065,18 +1183,25 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
       aiUnderstanding: verifiedUnderstanding,
+      creativeGuardrails: activeGuardrails,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/directions]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
     const result = await creative.generateHooks({
       businessName,
       businessType,
@@ -1085,18 +1210,25 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
+      creativeGuardrails: activeGuardrails,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/hooks]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 4) Plot Generation
 app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, format, language, brandTone } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
     const result = await creative.generatePlots({
       businessName,
       businessType,
@@ -1106,18 +1238,25 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       format: format || "Storytelling",
       language: language || "English",
       brandTone,
+      creativeGuardrails: activeGuardrails,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/plots]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
     const result = await creative.generateStoryWorld({
       businessName,
       businessType,
@@ -1129,25 +1268,56 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       format: format || "Storytelling",
       language: language || "English",
       brandTone,
+      creativeGuardrails: activeGuardrails,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/story]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 6) Master Script Synthesis & Quality Gate
 app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
   try {
-    const { form, creativeDNA, constraints, avoid } = req.body || {};
+    const { form, creativeDNA, constraints, avoid, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
     if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
     const validated = validateForm(form);
+    const { guardrails: activeGuardrails, project } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+      constraints,
+      avoid,
+    });
+
+    if (project && project.aiUnderstanding) {
+      const isOutdated = understandingSpine.isUnderstandingOutdated(
+        project.aiUnderstanding,
+        validated.brief || project.brief || "",
+        activeGuardrails
+      );
+      if (isOutdated || project.aiUnderstanding.approval_status === "outdated") {
+        return res.status(409).json({
+          error: "AI Understanding is outdated because your brief or creative guardrails changed. Please review and re-approve before generating script.",
+          code: "UNDERSTANDING_OUTDATED",
+        });
+      }
+      if (project.aiUnderstanding.approval_status !== "approved" && project.aiUnderstanding.approval_status !== "auto_approved") {
+        return res.status(409).json({
+          error: "AI Understanding must be approved before generating script.",
+          code: "UNDERSTANDING_NOT_APPROVED",
+        });
+      }
+    }
+
     const result = await creative.synthesizeMasterScript({
       form: validated,
       creativeDNA: creativeDNA || {},
       constraints: constraints || [],
       avoid: avoid || [],
+      creativeGuardrails: activeGuardrails,
     });
     res.json(result);
   } catch (e) {
@@ -1159,8 +1329,14 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
     const rewritten = await creative.rewriteScene({
       sceneText,
       sceneIndex: Number(sceneIndex) || 0,
@@ -1170,8 +1346,16 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       characters,
       setting,
       brandTone: brandTone || form?.brandTone,
+      creativeGuardrails: activeGuardrails,
     });
-    res.json({ scene: rewritten });
+    const guardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
+      ? guardrails.validateOutputAgainstGuardrails({
+          outputText: rewritten,
+          stage: "rewrite",
+          guardrails: activeGuardrails,
+        })
+      : null;
+    res.json({ scene: rewritten, guardrailReport });
   } catch (e) {
     console.error("[api/creative/rewrite-scene]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1199,6 +1383,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       logoDataUrl,
       projectId,
       aiUnderstanding: incomingUnderstanding,
+      creativeGuardrails: bodyGuardrails,
     } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
@@ -1207,9 +1392,26 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       return res.status(400).json({ error: "Brief is required." });
     }
 
-    // Simple Mode: AI Understanding executes internally on the backend
-    let internalUnderstanding = incomingUnderstanding || null;
-    if (!internalUnderstanding) {
+    // Load project with ownership check if projectId provided
+    let existingProject = null;
+    if (projectId) {
+      existingProject = await db.getProjectById(projectId, req.user.id);
+      if (!existingProject && (await db.projectExists(projectId))) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+    }
+
+    const activeGuardrails = bodyGuardrails !== undefined
+      ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
+      : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
+
+    // Simple Mode: AI Understanding executes internally on the backend and silently refreshes when brief or guardrails change
+    let internalUnderstanding = (existingProject && existingProject.aiUnderstanding) || incomingUnderstanding || null;
+    const understandingIsStale = internalUnderstanding
+      ? understandingSpine.isUnderstandingOutdated(internalUnderstanding, brief.trim(), activeGuardrails)
+      : true;
+
+    if (!internalUnderstanding || understandingIsStale) {
       try {
         internalUnderstanding = await understandingSpine.generateAiUnderstanding({
           businessName: businessName.trim(),
@@ -1218,6 +1420,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
           brief: brief.trim(),
           language: language || "English",
           brandTone: brandTone || "Warm & Authentic",
+          creativeGuardrails: activeGuardrails,
         });
         // Point 4: Use distinct internal status 'auto_approved' rather than explicit user approval 'approved'
         internalUnderstanding.approval_status = "auto_approved";
@@ -1239,15 +1442,17 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     }
 
     // Save internally against the project if projectId provided
-    if (projectId && internalUnderstanding) {
+    if (projectId && existingProject && (internalUnderstanding || bodyGuardrails !== undefined)) {
       try {
-        const existing = await db.getProjectById(projectId, req.user.id);
-        if (existing) {
-          await db.saveProject(
-            { ...existing, aiUnderstanding: internalUnderstanding },
-            req.user.id
-          );
-        }
+        await db.saveProject(
+          {
+            ...existingProject,
+            brief: brief.trim(),
+            creativeGuardrails: activeGuardrails,
+            aiUnderstanding: internalUnderstanding || existingProject.aiUnderstanding,
+          },
+          req.user.id
+        );
       } catch (err) {
         console.warn("[simple-packages] project save warning:", err.message);
       }
@@ -1266,11 +1471,12 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       aspectRatio: aspectRatio || dimension || "9:16",
       hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
       aiUnderstanding: internalUnderstanding,
+      creativeGuardrails: activeGuardrails,
     });
-    res.json({ status: "success", packages, aiUnderstanding: internalUnderstanding });
+    res.json({ status: "success", packages, aiUnderstanding: internalUnderstanding, creativeGuardrails: activeGuardrails });
   } catch (e) {
     console.error("[api/creative/simple-packages]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 app.post("/api/run", authRequired, async (req, res) => {
@@ -1293,8 +1499,37 @@ app.post("/api/run", authRequired, async (req, res) => {
       brief,
       businessType,
       businessName,
+      projectId,
+      creativeGuardrails: bodyGuardrails,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+
+    // Validate pre-prompt scenes against Creative Guardrails before invoking Magnific render
+    const preRenderGuardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
+      ? guardrails.validateOutputAgainstGuardrails({
+          outputText: scenes.join("\n"),
+          visualPromptText: scenes.join("\n"),
+          stage: "video_prompt",
+          guardrails: activeGuardrails,
+        })
+      : null;
+
+    if (preRenderGuardrailReport && preRenderGuardrailReport.hasCriticalViolation) {
+      return res.status(422).json({
+        error: `Critical Creative Guardrail violation prevented video rendering: ${preRenderGuardrailReport.automatedChecks.criticalViolations.map((v) => v.explanation).join(" | ")}`,
+        code: "GUARDRAIL_VIOLATION",
+        guardrailReport: preRenderGuardrailReport,
+        failures: preRenderGuardrailReport.automatedChecks.criticalViolations.map((v) => v.explanation),
+      });
+    }
+
     // 9:16 unless the owner picked 16:9 or 1:1; the Magnific flow itself is chosen server-side from this
     const platformRatio = typeof platform === "string" ? (platform.includes("16:9") ? "16:9" : platform.includes("1:1") ? "1:1" : null) : null;
     const ratio = aspectRatio || dimension || shotSpec?.project?.aspectRatio || platformRatio || "9:16";
@@ -1328,6 +1563,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "),
         businessType: businessType || shotSpec.project?.businessType || bCat,
         style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
+        creativeGuardrails: activeGuardrails,
       };
 
       processedScenes = shotSpec.shots.map((sh, idx) => {
@@ -1349,6 +1585,7 @@ app.post("/api/run", authRequired, async (req, res) => {
           platform: platform,
           style: shotSpec.project?.style || req.body?.creativeStyle,
           format: shotSpec.format,
+          creativeGuardrails: activeGuardrails,
         });
       });
     } else {
@@ -1362,6 +1599,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
+        creativeGuardrails: activeGuardrails,
       }));
     }
 
@@ -1378,7 +1616,7 @@ app.post("/api/run", authRequired, async (req, res) => {
     });
     // Persist runId association with authenticated user immediately
     await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });
-    res.json({ runId, shotCount: processedScenes.length });
+    res.json({ runId, shotCount: processedScenes.length, guardrailReport: preRenderGuardrailReport });
   } catch (e) {
     console.error("[run]", e.message);
     res.status(e.status || 500).json({ error: e.message });

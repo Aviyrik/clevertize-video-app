@@ -107,6 +107,12 @@ function sceneForGeneration(scene, ctx = {}) {
   if (ctx.language) {
     lock.push(`LANGUAGE & SPOKEN DELIVERY: Dialogue is in ${ctx.language}. Actors mouth, deliver, and express authentic spoken dialogue delivery matching ${ctx.language}.`);
   }
+  if (ctx.creativeGuardrails) {
+    const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
+    if (hasActiveGuardrails(ctx.creativeGuardrails)) {
+      lock.push(formatGuardrailsPromptBlock(ctx.creativeGuardrails));
+    }
+  }
   return `${lock.join("\n")}\n\n${body}`;
 }
 

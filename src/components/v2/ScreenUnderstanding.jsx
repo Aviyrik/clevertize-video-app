@@ -37,6 +37,7 @@ export default function ScreenUnderstanding({
   town = '',
   isOutdated = false,
   error = '',
+  userGuardrails = null,
 }) {
   const [editingSection, setEditingSection] = useState(null);
   const [draftData, setDraftData] = useState(understanding || {});
@@ -336,7 +337,7 @@ export default function ScreenUnderstanding({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertTriangle size={16} />
               <span>
-                Your original brief changed after approval. Please review the updated interpretation and re-approve.
+                Your original brief or creative instructions changed after approval. Please review the updated interpretation and re-approve.
               </span>
             </div>
             <button
@@ -446,6 +447,8 @@ export default function ScreenUnderstanding({
         {/* F. Creative Guardrails (Dos & Don'ts) */}
         <GuardrailsCard
           guardrails={draftData.creative_guardrails || { dos: [], donts: [] }}
+          userGuardrails={userGuardrails}
+          guardrailAnalysis={draftData.guardrail_analysis || null}
           isEditing={editingSection === 'creative_guardrails'}
           onStartEdit={() => setEditingSection('creative_guardrails')}
           onCancelEdit={() => setEditingSection(null)}
@@ -817,7 +820,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
 /**
  * Creative Guardrails Card with Dos & Don'ts
  */
-function GuardrailsCard({ guardrails, isEditing, onStartEdit, onCancelEdit, onSave }) {
+function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis = null, isEditing, onStartEdit, onCancelEdit, onSave }) {
   const [dosText, setDosText] = useState((guardrails.dos || []).join('\n'));
   const [dontsText, setDontsText] = useState((guardrails.donts || []).join('\n'));
 
@@ -831,6 +834,12 @@ function GuardrailsCard({ guardrails, isEditing, onStartEdit, onCancelEdit, onSa
     const donts = dontsText.split('\n').map((l) => l.trim()).filter(Boolean);
     onSave(dos, donts);
   };
+
+  const rawUserDos = Array.isArray(userGuardrails?.dos) ? userGuardrails.dos : [];
+  const rawUserDonts = Array.isArray(userGuardrails?.donts) ? userGuardrails.donts : [];
+  const hasUserInputs = rawUserDos.length > 0 || rawUserDonts.length > 0;
+  const conflicts = Array.isArray(guardrailAnalysis?.conflicts) ? guardrailAnalysis.conflicts : [];
+  const unsupportedClaims = Array.isArray(guardrailAnalysis?.unsupported_claims) ? guardrailAnalysis.unsupported_claims : [];
 
   return (
     <div
@@ -997,6 +1006,87 @@ function GuardrailsCard({ guardrails, isEditing, onStartEdit, onCancelEdit, onSa
               <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No specific restrictions specified</div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Original User Instructions & Spine Conflict / Unsupported Claims Callouts */}
+      {!isEditing && (hasUserInputs || conflicts.length > 0 || unsupportedClaims.length > 0) && (
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {hasUserInputs && (
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: 7,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 11,
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                Original Brief Instructions:
+              </span>
+              {rawUserDos.map((d) => (
+                <span key={d.id || d.text} style={{ padding: '2px 7px', borderRadius: 4, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                  Do: {d.text}
+                </span>
+              ))}
+              {rawUserDonts.map((d) => (
+                <span key={d.id || d.text} style={{ padding: '2px 7px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                  Avoid: {d.text}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {conflicts.map((c, idx) => (
+            <div
+              key={c.id || idx}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 7,
+                backgroundColor: 'rgba(239, 68, 68, 0.09)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                fontSize: 11,
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 6,
+              }}
+            >
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>
+                <strong>Conflicting Instructions:</strong> {c.description}
+                {c.resolution_hint ? ` ${c.resolution_hint}` : ''}
+              </span>
+            </div>
+          ))}
+
+          {unsupportedClaims.map((u, idx) => (
+            <div
+              key={u.id || idx}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 7,
+                backgroundColor: 'rgba(245, 158, 11, 0.09)',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+                fontSize: 11,
+                color: '#f59e0b',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 6,
+              }}
+            >
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>
+                <strong>Unverified Claim Flagged:</strong> &ldquo;{u.text}&rdquo; — {u.reason}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

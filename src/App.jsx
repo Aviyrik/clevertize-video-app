@@ -10,6 +10,7 @@ import { videoLogoPayload } from './utils/videoLogo.js';
 import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
 import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject } from './utils/drafts.js';
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
+import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -567,6 +568,7 @@ export default function App() {
     productPhoto: null,
     logo: null,
     brandFile: null,
+    creativeGuardrails: null,
   });
 
   // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
@@ -888,6 +890,7 @@ export default function App() {
   const [aiUnderstanding, setAiUnderstanding] = useState(null);
   const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
   const [understandingError, setUnderstandingError] = useState('');
+  const [scriptGuardrailReport, setScriptGuardrailReport] = useState(null);
   // A business the user picked while a film was in progress: the confirm modal asks before switching to it
   const [pendingBusinessSwitch, setPendingBusinessSwitch] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -1612,6 +1615,7 @@ export default function App() {
         status: videoUrl ? 'video_ready' : (scenes && scenes.length > 0 ? 'script_ready' : 'draft'),
         videoUrl: videoUrl || null,
         brief: userContext.brief || '',
+        creativeGuardrails: userContext.creativeGuardrails || null,
         scenes: scenes || [],
         setting: setting || '',
         character1: character1 || '',
@@ -1782,6 +1786,9 @@ export default function App() {
     }
     const restoredUnderstanding = proj.aiUnderstanding || proj.stages?.aiUnderstanding || proj.creativeDNA?.aiUnderstanding || (draft && draft.guided && draft.guided.aiUnderstanding) || null;
     setAiUnderstanding(restoredUnderstanding);
+    const restoredGuardrails = proj.creativeGuardrails || proj.creativeDNA?.creativeGuardrails || proj.stages?.creativeGuardrails || (draft && draft.guided && draft.guided.creativeGuardrails) || null;
+    updateUserContext('creativeGuardrails', restoredGuardrails);
+    setScriptGuardrailReport(null);
     setActiveAppView('studio');
     setToastMessage(resume ? `Resumed "${proj.title || 'your video'}" where you left off.` : `Loaded "${proj.title || 'Project'}" into Studio.`);
     setTimeout(() => setToastMessage(''), 3500);
@@ -2204,6 +2211,7 @@ export default function App() {
       shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
       logo: videoLogoPayload(userContext),
+      creativeGuardrails: userContext.creativeGuardrails || null,
     };
   };
 
@@ -2290,6 +2298,7 @@ export default function App() {
           projectId: activeProjectId,
           userCorrections,
           previousUnderstanding: aiUnderstanding,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
 
@@ -2298,6 +2307,9 @@ export default function App() {
         throw new Error(data?.error || 'Failed to analyze brief.');
       }
 
+      if (data.creativeGuardrails) {
+        updateUserContext('creativeGuardrails', data.creativeGuardrails);
+      }
       setAiUnderstanding(data.understanding);
       setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: data.understanding }));
       scheduleDraftSave(true);
@@ -2319,9 +2331,10 @@ export default function App() {
       setAiUnderstanding(updated);
       setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
 
-      if (activeProjectId) {
+      const targetProjId = activeProjectId || currentSavingProjectIdRef.current;
+      if (targetProjId) {
         const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
-        fetch(`/api/creative/ai-understanding/${encodeURIComponent(activeProjectId)}`, {
+        await fetch(`/api/creative/ai-understanding/${encodeURIComponent(targetProjId)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -2375,6 +2388,7 @@ export default function App() {
           format: activeFormat,
           creativeStyle: activeFormat,
           projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
           aiUnderstanding: aiUnderstanding && aiUnderstanding.approval_status === 'approved' ? aiUnderstanding : null,
         }),
       });
@@ -2476,6 +2490,8 @@ export default function App() {
           brandTone: userContext.brandTone || 'Warm & Authentic',
           format: activeFormat,
           creativeStyle: activeFormat,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
       if (res.ok) {
@@ -2522,6 +2538,8 @@ export default function App() {
           format: userContext.creativeStyle || 'Storytelling',
           language: lang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
       if (res.ok) {
@@ -2566,6 +2584,8 @@ export default function App() {
           format: activeFormat,
           language: lang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
       if (res.ok) {
@@ -2679,6 +2699,8 @@ export default function App() {
           creativeDNA: activeDNA,
           constraints: constraintsList,
           avoid: avoidList,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
       const data = await res.json();
@@ -2692,6 +2714,7 @@ export default function App() {
 
       setScriptPayloadData(data);
       setGeneratedScript(data);
+      setScriptGuardrailReport(data.guardrailReport || null);
       setCharacter1(data.character1 || '');
       setCharacter2(data.character2 || '');
       setSetting(data.setting || '');
@@ -2731,6 +2754,8 @@ export default function App() {
           form: buildSessionPayload(),
           characters: `${character1} | ${character2}`,
           setting,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         }),
       });
       const data = await res.json();
@@ -2741,6 +2766,9 @@ export default function App() {
         const updated = [...scenes];
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
+        if (data.guardrailReport !== undefined) {
+          setScriptGuardrailReport(data.guardrailReport);
+        }
         if (shotSpec && Array.isArray(shotSpec.shots)) {
           setShotSpec((prev) => {
             if (!prev || !Array.isArray(prev.shots)) return prev;
@@ -3232,6 +3260,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: pipeData.shotSpec || null,
         aspectRatio: aspectRatioOf(userContext),
       };
@@ -3298,6 +3328,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3378,6 +3410,7 @@ export default function App() {
           targetDuration: userContext.targetDuration,
           productPhoto: userContext.productPhoto,
           videoLogo: userContext.videoLogo,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         },
         stages: {
           directionsList: directionsList || [],
@@ -3390,13 +3423,16 @@ export default function App() {
           completedStages: completedStages || [],
           shotSpec: shotSpec || null,
           aiUnderstanding: aiUnderstanding || null,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         },
         explicitChoices,
         appCreativeDNA: {
           ...creativeDNA,
           aiUnderstanding: aiUnderstanding || null,
+          creativeGuardrails: userContext.creativeGuardrails || null,
         },
         aiUnderstanding: aiUnderstanding || null,
+        creativeGuardrails: userContext.creativeGuardrails || null,
         scenes: scenes || [],
         character1,
         character2,
@@ -3489,7 +3525,7 @@ export default function App() {
     const stageChanged = lastDraftStageRef.current !== studioStage;
     lastDraftStageRef.current = studioStage;
     scheduleDraftSave(stageChanged);
-  }, [studioMode, activeAppView, studioStage, completedStages, userContext.brief, directionsList, selectedDirection, hooksList, selectedHook, storyWorldData, generatedScript, scenes, character1, character2, setting, shotSpec]);
+  }, [studioMode, activeAppView, studioStage, completedStages, userContext.brief, userContext.creativeGuardrails, directionsList, selectedDirection, hooksList, selectedHook, storyWorldData, generatedScript, scenes, character1, character2, setting, shotSpec]);
 
   // Closing the tab: send a pending edit if it fits in a keepalive request (product photos usually don't)
   useEffect(() => {
@@ -3765,7 +3801,8 @@ export default function App() {
       isRendering ||
       isBusy ||
       (userContext.brief && userContext.brief.trim().length > 0) ||
-      (simple && (String(simple.brief || '').trim() || (simple.packages || []).length)) ||
+      ((userContext.creativeGuardrails?.dos?.length || 0) > 0 || (userContext.creativeGuardrails?.donts?.length || 0) > 0) ||
+      (simple && (String(simple.brief || '').trim() || (simple.packages || []).length || (simple.creativeGuardrails?.dos?.length || 0) > 0 || (simple.creativeGuardrails?.donts?.length || 0) > 0)) ||
       (studioStage !== 'brief' && studioStage !== 'entry' && completedStages && completedStages.length > 0)
     );
   };
@@ -3884,6 +3921,7 @@ export default function App() {
       setAiUnderstanding(null);
       setIsAnalyzingBrief(false);
       setUnderstandingError('');
+      setScriptGuardrailReport(null);
 
       setSessionId(null);
       setActiveProjectId(null);
@@ -3928,6 +3966,7 @@ export default function App() {
           duration: '15s',
           specialty: '',
           offer: '',
+          creativeGuardrails: null,
         };
         try {
           localStorage.setItem('clevertize_user_context', JSON.stringify(clearBrand ? {} : brand));
@@ -4060,6 +4099,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -5023,9 +5064,10 @@ export default function App() {
               setValidationError('');
               markStageComplete('brief');
 
-              const isOutdated = Boolean(
-                aiUnderstanding &&
-                String(aiUnderstanding.source_brief || '').trim() !== cleanBrief.trim()
+              const isOutdated = isUnderstandingOutdatedClient(
+                aiUnderstanding,
+                cleanBrief,
+                userContext.creativeGuardrails
               );
 
               if (!aiUnderstanding || isOutdated) {
@@ -5071,10 +5113,12 @@ export default function App() {
             businessName={userContext.businessName}
             businessType={userContext.businessType}
             town={userContext.town}
-            isOutdated={Boolean(
-              aiUnderstanding &&
-              String(aiUnderstanding.source_brief || '').trim() !== String(userContext.brief || userContext.specialty || userContext.offer || '').trim()
+            isOutdated={isUnderstandingOutdatedClient(
+              aiUnderstanding,
+              userContext.brief || userContext.specialty || userContext.offer || '',
+              userContext.creativeGuardrails
             )}
+            userGuardrails={userContext.creativeGuardrails}
             error={understandingError}
           />
         )}
@@ -5316,6 +5360,7 @@ export default function App() {
             isProjectSaved={isCurrentProjectSaved}
             isSavingProject={isSavingProject}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
+            guardrailReport={scriptGuardrailReport}
           />
         )}
 

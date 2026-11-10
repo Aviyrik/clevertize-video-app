@@ -6,6 +6,7 @@ import {
   SimpleAdPackagesLoader,
   SimpleVideoProductionLoader,
 } from './WorkflowLoadingScreen.jsx';
+import CreativeInstructionsSection from './CreativeInstructionsSection.jsx';
 import {
   Sparkles,
   Zap,
@@ -129,6 +130,7 @@ export default function SimpleBusinessStudio({
   const [packages, setPackages] = useState(Array.isArray(draft.packages) ? draft.packages : []);
   const [selectedPackageId, setSelectedPackageId] = useState(draft.selectedPackageId ?? null);
   const [aiUnderstanding, setAiUnderstanding] = useState(draft.aiUnderstanding || null);
+  const [creativeGuardrails, setCreativeGuardrails] = useState(draft.creativeGuardrails || null);
   const [expandedPackageId, setExpandedPackageId] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -141,10 +143,10 @@ export default function SimpleBusinessStudio({
   }, [brief]);
 
   // Report this flow's state so the app can autosave it as a draft (it debounces; step changes save at once)
-  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding });
+  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails });
   useEffect(() => {
     if (onDraftChange) onDraftChange(draftState(), { flush: false });
-  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding]);
+  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails]);
 
   const handleApplyTemplate = (tpl) => {
     setBrief(tpl);
@@ -195,6 +197,7 @@ export default function SimpleBusinessStudio({
           hasLogo: Boolean(brandLogo),
           projectId,
           aiUnderstanding,
+          creativeGuardrails,
         }),
       });
 
@@ -207,6 +210,9 @@ export default function SimpleBusinessStudio({
       if (Array.isArray(data.packages) && data.packages.length > 0) {
         if (data.aiUnderstanding) {
           setAiUnderstanding(data.aiUnderstanding);
+        }
+        if (data.creativeGuardrails) {
+          setCreativeGuardrails(data.creativeGuardrails);
         }
         setPackages(data.packages);
         setSelectedPackageId(data.packages[0].id);
@@ -260,6 +266,7 @@ export default function SimpleBusinessStudio({
         duration: selectedPackage.duration || duration,
         aspectRatio: selectedPackage.aspectRatio || aspectRatio,
         dimension: selectedPackage.aspectRatio || aspectRatio,
+        creativeGuardrails,
         platform: (selectedPackage.aspectRatio || aspectRatio) === '16:9' ? 'YouTube / 16:9' : (selectedPackage.aspectRatio || aspectRatio) === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16',
       });
     }
@@ -886,6 +893,12 @@ export default function SimpleBusinessStudio({
             )}
           </div>
 
+          {/* Creative Instructions (Optional · Collapsed by default) */}
+          <CreativeInstructionsSection
+            creativeGuardrails={creativeGuardrails}
+            onChange={setCreativeGuardrails}
+          />
+
           {/* Submit Action */}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -1017,6 +1030,24 @@ export default function SimpleBusinessStudio({
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.45 }}>
                     {pkg.narrativeSummary}
                   </p>
+
+                  {pkg.guardrailReport && (pkg.guardrailReport.hasCriticalViolation || (pkg.guardrailReport.visualReviewRequired?.length > 0)) && (
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        padding: '7px 10px',
+                        borderRadius: 7,
+                        fontSize: 11,
+                        backgroundColor: pkg.guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                        border: `1px solid ${pkg.guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.2)'}`,
+                        color: pkg.guardrailReport.hasCriticalViolation ? '#ef4444' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {pkg.guardrailReport.hasCriticalViolation
+                        ? `Guardrail alert: ${pkg.guardrailReport.automatedChecks.criticalViolations.map((v) => v.explanation).join(' | ')}`
+                        : `Visual instructions passed into generation (${pkg.guardrailReport.visualReviewRequired.length} item(s) need manual visual check after render).`}
+                    </div>
+                  )}
 
                   {/* Expand / Collapse 4 Scenes */}
                   <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
@@ -1351,6 +1382,7 @@ export default function SimpleBusinessStudio({
               onClick={() => {
                 setStep(1);
                 setBrief('');
+                setCreativeGuardrails(null);
               }}
               style={{
                 display: 'inline-flex',

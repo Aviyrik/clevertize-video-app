@@ -58,6 +58,7 @@ import {
   StoryGenerationLoader,
   ScriptGenerationLoader,
 } from './v2/WorkflowLoadingScreen.jsx';
+import CreativeInstructionsSection from './v2/CreativeInstructionsSection.jsx';
 
 /**
  * 6 STREAMLINED STAGES FOR GUIDED CREATIVE STUDIO
@@ -1115,6 +1116,12 @@ export function Screen02Brief({
           </div>
         </div>
       </div>
+
+      {/* Creative Instructions (Optional · Collapsed by default) */}
+      <CreativeInstructionsSection
+        creativeGuardrails={userContext.creativeGuardrails}
+        onChange={(next) => updateUserContext('creativeGuardrails', next)}
+      />
 
       {/* Product Image Upload (Optional) */}
       <div style={{
@@ -3389,6 +3396,7 @@ export function Screen07Script({
   isProjectSaved = false,
   isSavingProject = false,
   onOpenScriptModal,
+  guardrailReport = null,
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
@@ -3844,6 +3852,63 @@ export function Screen07Script({
             )}
           </div>
         )
+      )}
+
+      {/* Creative Guardrails Compliance Notice (automated text check + visual human review boundary) */}
+      {guardrailReport && (guardrailReport.hasCriticalViolation || (guardrailReport.automatedChecks?.warnings?.length > 0) || (guardrailReport.visualReviewRequired?.length > 0)) && (
+        <div
+          style={{
+            backgroundColor: guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.07)',
+            border: `1px solid ${guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.3)' : 'rgba(99, 102, 241, 0.25)'}`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            fontSize: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontWeight: 700, color: guardrailReport.hasCriticalViolation ? '#ef4444' : 'var(--text-primary)' }}>
+              {guardrailReport.hasCriticalViolation
+                ? 'Creative Guardrail Alert — Critical Instruction Issue'
+                : 'Creative Guardrails Checked (Text Verified · Visual Review Noted)'}
+            </span>
+            {guardrailReport.hasCriticalViolation && onTryAnotherVersion && (
+              <button
+                type="button"
+                onClick={onTryAnotherVersion}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Regenerate Compliant Script
+              </button>
+            )}
+          </div>
+          {(guardrailReport.automatedChecks?.criticalViolations || []).map((v, i) => (
+            <div key={`cv_${i}`} style={{ color: '#ef4444', fontSize: 11 }}>
+              • {v.explanation}
+            </div>
+          ))}
+          {(guardrailReport.automatedChecks?.warnings || []).slice(0, 3).map((w, i) => (
+            <div key={`w_${i}`} style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+              • Advisory: {w.explanation}
+            </div>
+          ))}
+          {guardrailReport.visualReviewRequired && guardrailReport.visualReviewRequired.length > 0 && (
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+              Visual Review Needed: {guardrailReport.visualReviewRequired.map((r) => r.text).join('; ')} (constraints injected into video prompts; verify rendered visuals manually).
+            </div>
+          )}
+        </div>
       )}
 
       {/* 4 Visual Scene Cards */}

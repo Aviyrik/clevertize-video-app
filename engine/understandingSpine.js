@@ -14,6 +14,12 @@
 
 const { callClaude } = require('./claude');
 const crypto = require('crypto');
+const {
+  normalizeCreativeGuardrails,
+  hashGuardrails,
+  hasActiveGuardrails,
+} = require('./guardrails');
+const guardrailsSpine = require('./guardrailsSpine');
 
 /**
  * Valid approval statuses distinguishing user approval vs system/auto approval.
@@ -54,14 +60,37 @@ function hashBrief(brief = '') {
 }
 
 /**
- * Check if an existing interpretation is outdated compared to the current brief.
+ * Check if an existing interpretation is outdated compared to the current brief
+ * and/or current Creative Guardrails version/content.
  */
-function isUnderstandingOutdated(understanding, currentBrief) {
+function isUnderstandingOutdated(understanding, currentBrief, currentGuardrails = null) {
   if (!understanding) return false;
+  if (understanding.approval_status === 'outdated') return true;
   const currentHash = hashBrief(currentBrief);
   const recordedHash = understanding.source_brief_hash;
-  if (!recordedHash) return false;
-  return recordedHash !== currentHash;
+  if (recordedHash && recordedHash !== currentHash) return true;
+
+  if (currentGuardrails !== null && currentGuardrails !== undefined) {
+    const norm = normalizeCreativeGuardrails(currentGuardrails);
+    const currentGHash = hashGuardrails(norm);
+    const hasCurrent = hasActiveGuardrails(norm);
+
+    // If guardrails existed or exist now, compare version and hash
+    if (typeof understanding.source_guardrails_version === 'number') {
+      if ((norm.version || 0) !== understanding.source_guardrails_version) {
+        return true;
+      }
+    } else if (hasCurrent) {
+      // Understanding was generated before guardrails were added
+      return true;
+    }
+
+    if (understanding.source_guardrails_hash && understanding.source_guardrails_hash !== currentGHash) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -84,6 +113,8 @@ function createEmptyUnderstanding(brief = '') {
     approval_status: 'pending',
     source_brief: String(brief || '').trim(),
     source_brief_hash: hashBrief(brief),
+    source_guardrails_version: 0,
+    source_guardrails_hash: hashGuardrails(null),
     version: 1,
     is_mock: false,
     generated_at: new Date().toISOString(),
@@ -101,10 +132,15 @@ function generateLabelledMockUnderstanding({
   town = '',
   brief = '',
   occasion = '',
+  creativeGuardrails = null,
+  guardrailAnalysis = null,
 }) {
   const brandLabel = (businessName || 'Your Business').trim();
   const locationLabel = town ? ` in ${town}` : '';
   const cleanBrief = (brief || '').trim();
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const userDos = normGuardrails.dos.map((d) => d.text);
+  const userDonts = normGuardrails.donts.map((d) => d.text);
 
   return {
     business_understanding: `${brandLabel} operates as a ${businessType.toLowerCase() || 'business'}${locationLabel}, focusing on delivering quality products and services to their local and digital customer base.`,
@@ -119,17 +155,22 @@ function generateLabelledMockUnderstanding({
       ? `Tied to ${occasion}, leveraging seasonal shopping energy and celebration context.`
       : `Standard promotional timing with immediate call-to-action relevance.`,
     creative_guardrails: {
-      dos: [
-        `Explicitly state ${brandLabel}'s name and core value proposition.`,
-        'Keep messaging crisp, energetic, and relatable.',
-        'Include a clear call-to-action inviting viewers to visit or inquire.',
-      ],
-      donts: [
-        'Avoid making unverified statistical or medical claims.',
-        'Do not overcomplicate the narrative or distract from the main offer.',
-        'Avoid vague pricing statements without context.',
-      ],
+      dos: userDos.length > 0
+        ? userDos
+        : [
+            `Explicitly state ${brandLabel}'s name and core value proposition.`,
+            'Keep messaging crisp, energetic, and relatable.',
+            'Include a clear call-to-action inviting viewers to visit or inquire.',
+          ],
+      donts: userDonts.length > 0
+        ? userDonts
+        : [
+            'Avoid making unverified statistical or medical claims.',
+            'Do not overcomplicate the narrative or distract from the main offer.',
+            'Avoid vague pricing statements without context.',
+          ],
     },
+    guardrail_analysis: guardrailAnalysis || null,
     creative_opportunity: `Leverage relatable everyday moments that resonate emotionally while showcasing the direct benefits of choosing ${brandLabel}.`,
     assumptions: [
       `Assumed ${brandLabel} serves standard retail/consumer needs in its category.`,
@@ -142,6 +183,8 @@ function generateLabelledMockUnderstanding({
     approval_status: 'pending',
     source_brief: cleanBrief,
     source_brief_hash: hashBrief(cleanBrief),
+    source_guardrails_version: normGuardrails.version || 0,
+    source_guardrails_hash: hashGuardrails(normGuardrails),
     version: 1,
     is_mock: true, // Clearly labelled mock data
     spine_provider: 'mock_understanding_fallback',
@@ -192,7 +235,18 @@ function buildTemporarySpineUserPrompt({
   cleanBrief,
   userCorrections,
   previousUnderstanding,
+  creativeGuardrails,
+  guardrailAnalysis,
 }) {
+  const norm = normalizeCreativeGuardrails(creativeGuardrails);
+  const hasG = hasActiveGuardrails(norm);
+  const gText = hasG
+    ? `\nUser-Defined Creative Guardrails (Must preserve intent cleanly):\nMust Follow (Do's): ${norm.dos.map((d) => `[${d.priority}] ${d.text}`).join(' | ') || 'None'}\nMust Avoid (Don'ts): ${norm.donts.map((d) => `[${d.priority}] ${d.text}`).join(' | ') || 'None'}`
+    : '';
+  const conflictText = guardrailAnalysis && Array.isArray(guardrailAnalysis.conflicts) && guardrailAnalysis.conflicts.length
+    ? `\nDetected Guardrail Conflicts: ${guardrailAnalysis.conflicts.map((c) => c.description).join(' | ')}`
+    : '';
+
   return `Analyze this brief and produce the structured understanding:
 
 Business Name: ${businessName || 'Not specified'}
@@ -205,7 +259,7 @@ Occasion Context: ${occasion || 'Standard'}
 Original Brief:
 """
 ${cleanBrief}
-"""
+"""${gText}${conflictText}
 ${userCorrections ? `User corrections / refinement notes for this regeneration:\n"""\n${userCorrections}\n"""` : ''}
 ${previousUnderstanding ? `Previous interpretation was:\n${JSON.stringify(previousUnderstanding, null, 2)}` : ''}
 
@@ -227,6 +281,7 @@ async function generateAiUnderstanding({
   websiteUrl = '',
   userCorrections = '',
   previousUnderstanding = null,
+  creativeGuardrails = null,
 }) {
   const cleanBrief = String(brief || '').trim();
   if (!cleanBrief) {
@@ -235,6 +290,20 @@ async function generateAiUnderstanding({
 
   const isProduction = process.env.NODE_ENV === 'production';
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+
+  // Interpret Creative Guardrails through Shubhiksha's modular Guardrails Spine adapter
+  let guardrailAnalysis = null;
+  if (hasActiveGuardrails(normGuardrails)) {
+    guardrailAnalysis = await guardrailsSpine.interpretGuardrails({
+      creativeGuardrails: normGuardrails,
+      businessName,
+      businessType,
+      town,
+      brief: cleanBrief,
+      language,
+    });
+  }
 
   // Point 2: Guard against mock fallback in production
   if (!apiKey) {
@@ -247,6 +316,8 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      creativeGuardrails: normGuardrails,
+      guardrailAnalysis,
     });
     if (userCorrections && previousUnderstanding) {
       mock.version = (previousUnderstanding.version || 1) + 1;
@@ -265,6 +336,8 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      creativeGuardrails: normGuardrails,
+      guardrailAnalysis,
     });
     return mock;
   }
@@ -281,6 +354,8 @@ async function generateAiUnderstanding({
     cleanBrief,
     userCorrections,
     previousUnderstanding,
+    creativeGuardrails: normGuardrails,
+    guardrailAnalysis,
   });
 
   try {
@@ -301,6 +376,12 @@ async function generateAiUnderstanding({
 
     const version = previousUnderstanding ? (previousUnderstanding.version || 1) + 1 : 1;
 
+    // Preserve any user-authored guardrails cleanly without losing them if model omitted one
+    const aiDos = Array.isArray(parsed.creative_guardrails?.dos) ? parsed.creative_guardrails.dos : [];
+    const aiDonts = Array.isArray(parsed.creative_guardrails?.donts) ? parsed.creative_guardrails.donts : [];
+    const mergedDos = [...normGuardrails.dos.map((d) => d.text), ...aiDos.filter((x) => !normGuardrails.dos.some((d) => d.text.toLowerCase() === String(x).toLowerCase()))];
+    const mergedDonts = [...normGuardrails.donts.map((d) => d.text), ...aiDonts.filter((x) => !normGuardrails.donts.some((d) => d.text.toLowerCase() === String(x).toLowerCase()))];
+
     return {
       business_understanding: String(parsed.business_understanding || '').trim(),
       campaign_objective: String(parsed.campaign_objective || '').trim(),
@@ -308,15 +389,18 @@ async function generateAiUnderstanding({
       core_communication: String(parsed.core_communication || '').trim(),
       occasion_context: String(parsed.occasion_context || '').trim(),
       creative_guardrails: {
-        dos: Array.isArray(parsed.creative_guardrails?.dos) ? parsed.creative_guardrails.dos : [],
-        donts: Array.isArray(parsed.creative_guardrails?.donts) ? parsed.creative_guardrails.donts : [],
+        dos: mergedDos,
+        donts: mergedDonts,
       },
+      guardrail_analysis: guardrailAnalysis || null,
       creative_opportunity: String(parsed.creative_opportunity || '').trim(),
       assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions : [],
       missing_information: Array.isArray(parsed.missing_information) ? parsed.missing_information : [],
       approval_status: 'pending',
       source_brief: cleanBrief,
       source_brief_hash: hashBrief(cleanBrief),
+      source_guardrails_version: normGuardrails.version || 0,
+      source_guardrails_hash: hashGuardrails(normGuardrails),
       version,
       is_mock: false,
       spine_provider: 'anthropic_claude',
@@ -338,6 +422,8 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      creativeGuardrails: normGuardrails,
+      guardrailAnalysis,
     });
     fallback.error_fallback = err.message;
     return fallback;

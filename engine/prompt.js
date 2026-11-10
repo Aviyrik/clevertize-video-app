@@ -86,6 +86,14 @@ function buildUserContent(f, fest, previous, today, stageText = STAGE_FALLBACK) 
     ? `PREVIOUS SCRIPTS for this business (oldest first; the LAST one is the previous script):\n${previous.map((r) => JSON.stringify(r)).join("\n")}`
     : "PREVIOUS SCRIPTS: none — this is the first script for this business.";
 
+  let guardrailsSection = "";
+  if (f.creativeGuardrails) {
+    const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
+    if (hasActiveGuardrails(f.creativeGuardrails)) {
+      guardrailsSection = `\n\n${formatGuardrailsPromptBlock(f.creativeGuardrails)}`;
+    }
+  }
+
   content.push({
     type: "text",
     text: `TODAY: ${today}
@@ -97,7 +105,7 @@ ${festivalText(fest)}
 
 ${hookLibraryText()}
 
-${prev}
+${prev}${guardrailsSection}
 
 ${stageText}`,
   });

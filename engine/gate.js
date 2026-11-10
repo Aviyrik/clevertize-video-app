@@ -2,6 +2,7 @@
 // Claude also self-checks (M18); this is the backstop that can't be talked out of.
 const { dialogueOf } = require("./parse");
 const { festiveDecorFor } = require("./festive");
+const { hasActiveGuardrails, validateOutputAgainstGuardrails } = require("./guardrails");
 
 const DEVANAGARI = /[ऀ-ॿ]/;
 const LATIN = /[A-Za-z]/;
@@ -62,7 +63,7 @@ function formatMatches(hFormat, approved) {
  * parsed: output of parseOutput; f: validated form; opts: { scriptMode, previous }
  * Returns an array of failure strings (empty = pass).
  */
-function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "", allowVo = false, audioDeliveryMode = "", targetDuration = "", allowSceneCount = null } = {}) {
+function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "", allowVo = false, audioDeliveryMode = "", targetDuration = "", allowSceneCount = null, creativeGuardrails = null } = {}) {
   const fails = [];
   const h = parsed.header;
   const isVoMode = Boolean(
@@ -122,8 +123,11 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
     if (n !== 4) fails.push(`Script has ${n} scenes; it must have exactly 4 (M6).`);
   }
 
-  const allowText = `${f.offer || ""} ${f.specialty || ""} ${f.contact || ""}`.toLowerCase();
-  const offerDigits = (f.offer || "").replace(/[^\d]/g, " ").split(/\s+/).filter(Boolean);
+  const guardrailAllowText = hasActiveGuardrails(creativeGuardrails)
+    ? (creativeGuardrails.dos || []).map((d) => d.text).join(" ").toLowerCase()
+    : "";
+  const allowText = `${f.offer || ""} ${f.specialty || ""} ${f.contact || ""} ${guardrailAllowText}`.toLowerCase();
+  const offerDigits = `${f.offer || ""} ${guardrailAllowText}`.replace(/[^\d]/g, " ").split(/\s+/).filter(Boolean);
   const scriptDialogue = ["hindi", "hinglish", "marathi"].includes(String(f.language).toLowerCase());
   // M4: only names the owner typed (business, owner, brand/product names in the form) may stay in Roman letters
   const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -272,6 +276,23 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
 
   // record
   if (!parsed.record) fails.push("The @@RECORD@@ JSON is missing or invalid.");
+
+  // Creative Guardrails (critical Do's / Don'ts enforcement)
+  if (hasActiveGuardrails(creativeGuardrails)) {
+    const checkCorpus = [parsed.setting || "", parsed.character1 || "", parsed.character2 || "", ...(parsed.scenes || [])].join("\n");
+    const report = validateOutputAgainstGuardrails({
+      outputText: checkCorpus,
+      stage: "script",
+      guardrails: creativeGuardrails,
+    });
+    if (report.hasCriticalViolation) {
+      for (const v of report.automatedChecks.criticalViolations) {
+        if (v.type !== "conflicting_guardrails") {
+          fails.push(`Creative Guardrail violation: ${v.explanation}`);
+        }
+      }
+    }
+  }
 
   return [...new Set(fails)];
 }

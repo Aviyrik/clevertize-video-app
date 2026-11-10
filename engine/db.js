@@ -5,6 +5,11 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const {
+  normalizeCreativeGuardrails,
+  hashGuardrails,
+  hasActiveGuardrails,
+} = require('./guardrails');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -103,9 +108,12 @@ async function ensurePgTables() {
         quality_gate_passed BOOLEAN DEFAULT FALSE,
         status TEXT,
         video_url TEXT,
+        creative_guardrails JSONB DEFAULT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS creative_guardrails JSONB DEFAULT NULL;
 
       CREATE TABLE IF NOT EXISTS email_verification_tokens (
         id VARCHAR(255) PRIMARY KEY,
@@ -276,6 +284,10 @@ function mapBusinessRow(row) {
 // Helper to map DB row to project object
 function mapProjectRow(row) {
   if (!row) return null;
+  const cDNA = typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {});
+  const rawGuardrails = row.creative_guardrails
+    ? (typeof row.creative_guardrails === 'string' ? JSON.parse(row.creative_guardrails) : row.creative_guardrails)
+    : (cDNA.creativeGuardrails || null);
   return {
     id: row.id,
     userId: row.user_id,
@@ -289,10 +301,11 @@ function mapProjectRow(row) {
     currentStage: row.current_stage,
     completedStages: typeof row.completed_stages === 'string' ? JSON.parse(row.completed_stages) : (row.completed_stages || []),
     explicitChoices: typeof row.explicit_choices === 'string' ? JSON.parse(row.explicit_choices) : (row.explicit_choices || {}),
-    creativeDNA: typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {}),
-    shotSpec: row.shot_spec || (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).shotSpec) || null,
-    stages: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).stages) || null,
-    aiUnderstanding: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).aiUnderstanding) || null,
+    creativeDNA: cDNA,
+    shotSpec: row.shot_spec || cDNA.shotSpec || null,
+    stages: cDNA.stages || null,
+    aiUnderstanding: cDNA.aiUnderstanding || null,
+    creativeGuardrails: rawGuardrails || null,
     scenes: typeof row.scenes === 'string' ? JSON.parse(row.scenes) : (row.scenes || []),
     character1: row.character1 || '',
     character2: row.character2 || '',
@@ -818,6 +831,39 @@ async function getProjectById(projectId, userId) {
   return projects.find((p) => p.id === projectId && p.userId === userId) || null;
 }
 
+async function projectExists(projectId) {
+  if (!projectId) return false;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query('SELECT 1 FROM projects WHERE id = $1 LIMIT 1', [projectId]);
+    return res.rows.length > 0;
+  }
+  const projects = readJsonFile('projects.json', []);
+  return projects.some((p) => p.id === projectId || (p.idempotencyKey && p.idempotencyKey === projectId));
+}
+
+function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails) {
+  if (!aiUnder || typeof aiUnder !== 'object') return aiUnder;
+  if (aiUnder.approval_status !== 'approved') return aiUnder;
+  const gVersion = normalizedGuardrails ? Number(normalizedGuardrails.version || 0) : 0;
+  const gHash = normalizedGuardrails ? hashGuardrails(normalizedGuardrails) : null;
+  const recordedVer = typeof aiUnder.source_guardrails_version === 'number' ? aiUnder.source_guardrails_version : null;
+
+  const versionMismatch = recordedVer !== null
+    ? gVersion !== recordedVer
+    : hasActiveGuardrails(normalizedGuardrails);
+  const hashMismatch = Boolean(aiUnder.source_guardrails_hash && gHash && aiUnder.source_guardrails_hash !== gHash);
+
+  if (versionMismatch || hashMismatch) {
+    return {
+      ...aiUnder,
+      approval_status: 'outdated',
+    };
+  }
+  return aiUnder;
+}
+
 async function saveProject(projectData, userId) {
   if (!userId) throw new Error('Authentication required to save project.');
   const {
@@ -843,6 +889,7 @@ async function saveProject(projectData, userId) {
     shotSpec,
     stages,
     aiUnderstanding,
+    creativeGuardrails: incomingGuardrails,
   } = projectData || {};
 
   const now = new Date().toISOString();
@@ -854,30 +901,61 @@ async function saveProject(projectData, userId) {
   const cDNA = Object.assign({}, creativeDNA || {});
   if (shotSpec) cDNA.shotSpec = shotSpec;
   if (stages) cDNA.stages = stages;
-  const aiUnder = aiUnderstanding || (stages && stages.aiUnderstanding) || (creativeDNA && creativeDNA.aiUnderstanding) || null;
-  if (aiUnder) {
-    cDNA.aiUnderstanding = aiUnder;
-  }
+  let aiUnder = aiUnderstanding || (stages && stages.aiUnderstanding) || (creativeDNA && creativeDNA.aiUnderstanding) || null;
+  const hasExplicitGuardrails = Boolean(
+    projectData && (
+      Object.prototype.hasOwnProperty.call(projectData, 'creativeGuardrails') ||
+      (cDNA && Object.prototype.hasOwnProperty.call(cDNA, 'creativeGuardrails')) ||
+      (stages && Object.prototype.hasOwnProperty.call(stages, 'creativeGuardrails'))
+    )
+  );
+  const rawIncomingGuardrails = incomingGuardrails !== undefined
+    ? incomingGuardrails
+    : (stages && stages.creativeGuardrails !== undefined
+      ? stages.creativeGuardrails
+      : (cDNA && cDNA.creativeGuardrails !== undefined ? cDNA.creativeGuardrails : undefined));
+
   const scList = Array.isArray(scenes) ? scenes : [];
   const pStatus = status || (scList.length >= 4 ? 'script_ready' : 'in_progress');
 
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
+    let existingPgGuardrails = null;
+    let existingPgUnderstanding = null;
     if (targetId) {
-      const ownerCheck = await pool.query('SELECT user_id FROM projects WHERE id = $1', [targetId]);
-      if (ownerCheck.rows.length && ownerCheck.rows[0].user_id !== userId) {
-        throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+      const ownerCheck = await pool.query('SELECT user_id, creative_guardrails, creative_dna FROM projects WHERE id = $1', [targetId]);
+      if (ownerCheck.rows.length) {
+        if (ownerCheck.rows[0].user_id !== userId) {
+          throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+        }
+        const rowDNA = typeof ownerCheck.rows[0].creative_dna === 'string'
+          ? JSON.parse(ownerCheck.rows[0].creative_dna)
+          : (ownerCheck.rows[0].creative_dna || {});
+        existingPgGuardrails = ownerCheck.rows[0].creative_guardrails || rowDNA.creativeGuardrails || null;
+        existingPgUnderstanding = rowDNA.aiUnderstanding || null;
       }
     }
+    const resolvedGuardrails = hasExplicitGuardrails
+      ? normalizeCreativeGuardrails(rawIncomingGuardrails, existingPgGuardrails)
+      : (existingPgGuardrails ? normalizeCreativeGuardrails(existingPgGuardrails) : null);
+
+    if (resolvedGuardrails) {
+      cDNA.creativeGuardrails = resolvedGuardrails;
+    }
+    aiUnder = invalidateStaleUnderstanding(aiUnder || existingPgUnderstanding, resolvedGuardrails);
+    if (aiUnder) {
+      cDNA.aiUnderstanding = aiUnder;
+    }
+
     const res = await pool.query(
       `INSERT INTO projects (
         id, user_id, business_id, title, business_name, business_type, town, brief,
         entry_point, current_stage, completed_stages, explicit_choices, creative_dna,
         scenes, character1, character2, setting, quality_gate_passed, status, video_url,
-        created_at, updated_at
+        creative_guardrails, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $21
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $22
       )
       ON CONFLICT (id) DO UPDATE SET
         business_id = EXCLUDED.business_id,
@@ -899,6 +977,7 @@ async function saveProject(projectData, userId) {
         -- a save without a video (e.g. a late draft autosave) never takes a finished video away
         status = CASE WHEN EXCLUDED.video_url IS NULL AND projects.video_url IS NOT NULL THEN projects.status ELSE EXCLUDED.status END,
         video_url = COALESCE(EXCLUDED.video_url, projects.video_url),
+        creative_guardrails = COALESCE(EXCLUDED.creative_guardrails, projects.creative_guardrails),
         updated_at = EXCLUDED.updated_at
       WHERE projects.user_id = EXCLUDED.user_id
       RETURNING *`,
@@ -923,6 +1002,7 @@ async function saveProject(projectData, userId) {
         Boolean(qualityGatePassed),
         pStatus,
         videoUrl || null,
+        resolvedGuardrails ? JSON.stringify(resolvedGuardrails) : null,
         now,
       ]
     );
@@ -946,6 +1026,20 @@ async function saveProject(projectData, userId) {
     }
   }
 
+  const existingRecord = existingIndex >= 0 ? projects[existingIndex] : null;
+  const existingFileGuardrails = existingRecord ? (existingRecord.creativeGuardrails || existingRecord.creativeDNA?.creativeGuardrails || null) : null;
+  const resolvedGuardrails = hasExplicitGuardrails
+    ? normalizeCreativeGuardrails(rawIncomingGuardrails, existingFileGuardrails)
+    : (existingFileGuardrails ? normalizeCreativeGuardrails(existingFileGuardrails) : null);
+
+  if (resolvedGuardrails) {
+    cDNA.creativeGuardrails = resolvedGuardrails;
+  }
+  aiUnder = invalidateStaleUnderstanding(aiUnder || (existingRecord && existingRecord.aiUnderstanding) || null, resolvedGuardrails);
+  if (aiUnder) {
+    cDNA.aiUnderstanding = aiUnder;
+  }
+
   const record = {
     id: existingIndex >= 0 ? projects[existingIndex].id : projectId,
     idempotencyKey: (projectData && projectData.idempotencyKey) || (existingIndex >= 0 ? projects[existingIndex].idempotencyKey : undefined),
@@ -963,7 +1057,8 @@ async function saveProject(projectData, userId) {
     creativeDNA: cDNA,
     shotSpec: shotSpec || cDNA.shotSpec || (existingIndex >= 0 ? projects[existingIndex].shotSpec : null),
     stages: stages || cDNA.stages || (existingIndex >= 0 ? projects[existingIndex].stages : null),
-    aiUnderstanding: aiUnder || (existingIndex >= 0 ? projects[existingIndex].aiUnderstanding : null) || null,
+    aiUnderstanding: aiUnder || null,
+    creativeGuardrails: resolvedGuardrails || null,
     scenes: scList,
     character1: character1 || '',
     character2: character2 || '',
@@ -1609,6 +1704,7 @@ module.exports = {
   saveBusiness,
   getProjectsForUser,
   getProjectById,
+  projectExists,
   saveProject,
   deleteProject,
   updateUserProfile,

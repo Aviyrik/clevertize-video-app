@@ -9,6 +9,13 @@ const { runGate } = require("./gate");
 const { compileShotSpecification } = require("./compiler");
 const { getFestivals, todayIST } = require("./festivals");
 const HOOKS = require("./hooks.json");
+const {
+  normalizeCreativeGuardrails,
+  mergeGuardrailsWithLegacy,
+  hasActiveGuardrails,
+  formatGuardrailsPromptBlock,
+  validateOutputAgainstGuardrails,
+} = require("./guardrails");
 
 const BRAND_TONE_GUIDANCE = {
   warm: "BRAND TONE: Warm & Authentic. Establish welcoming neighborhood trust, heartfelt and unhurried human connection, warm natural eye contact, and sincere conversational dialogue.",
@@ -109,7 +116,12 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding, creativeGuardrails = null }) {
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n${formatGuardrailsPromptBlock(normGuardrails, gAnalysis)}`
+    : "";
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
   const isComedy = /comedy|funny/i.test(cleanFormat);
@@ -189,12 +201,24 @@ CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${brandTone || "Warm & Authentic"}
 AUDIENCE INSIGHT: ${research?.audienceInsight || aiUnderstanding?.target_audience || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || aiUnderstanding?.creative_opportunity || "Relatable problem-first story"}
-UPCOMING OCCASION: ${festival?.name || aiUnderstanding?.occasion_context || "None"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}`;
+UPCOMING OCCASION: ${festival?.name || aiUnderstanding?.occasion_context || "None"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}`;
 
   try {
-    const raw = await callClaude({ system, content, maxTokens: 1500, thinking: false });
-    const list = parseJSONBlock(raw);
-    if (Array.isArray(list) && list.length) return list;
+    let raw = await callClaude({ system, content, maxTokens: 1500, thinking: false });
+    let list = parseJSONBlock(raw);
+    if (Array.isArray(list) && list.length) {
+      if (hasActiveGuardrails(normGuardrails)) {
+        const corpus = list.map((d) => `${d.title || ''} ${d.description || ''} ${d.angle || ''}`).join('\n');
+        const rep = validateOutputAgainstGuardrails({ outputText: corpus, stage: 'directions', guardrails: normGuardrails, interpretedGuardrails: gAnalysis });
+        if (rep.hasCriticalViolation) {
+          const repairMsg = `${content}\n\nGUARDRAIL CORRECTION: Previous directions violated critical rules: ${rep.automatedChecks.criticalViolations.map((v) => v.explanation).join(' | ')}. Regenerate compliant territories.`;
+          raw = await callClaude({ system, content: repairMsg, maxTokens: 1500, thinking: false });
+          const repairedList = parseJSONBlock(raw);
+          if (Array.isArray(repairedList) && repairedList.length) list = repairedList;
+        }
+      }
+      return list;
+    }
   } catch (e) {
     console.warn("[directions] fallback:", e.message);
   }
@@ -441,7 +465,11 @@ function validateHooksList(hooks, language = "English") {
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
 async function generateHooks(params = {}) {
-  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone } = params;
+  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone, creativeGuardrails = null } = params;
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
+    : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const rawLang = params.language;
@@ -567,7 +595,7 @@ CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
 CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${activeTone || "Warm & Authentic"}
-LOCATION: ${direction?.town || "Pan-India / Universal"}`;
+LOCATION: ${direction?.town || "Pan-India / Universal"}${guardrailBlock}`;
 
   const MAX_RETRIES = 2;
   let lastFailureReason = "";
@@ -604,11 +632,19 @@ Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்)
         }
 
         const val = validateHooksList(list, language);
-        if (val.valid) {
+        let guardFail = "";
+        if (hasActiveGuardrails(normGuardrails)) {
+          const hCorpus = list.map((h) => `${h.hookLine || ''} ${h.visualAction || ''}`).join('\n');
+          const hReport = validateOutputAgainstGuardrails({ outputText: hCorpus, stage: 'hooks', guardrails: normGuardrails });
+          if (hReport.hasCriticalViolation) {
+            guardFail = hReport.automatedChecks.criticalViolations.map((v) => v.explanation).join('; ');
+          }
+        }
+        if (val.valid && !guardFail) {
           return list;
         }
-        lastFailureReason = val.error;
-        console.warn(`[hooks] attempt ${attempt + 1} validation failure for language "${language}": ${val.error}`);
+        lastFailureReason = guardFail || val.error;
+        console.warn(`[hooks] attempt ${attempt + 1} validation failure (${language}): ${lastFailureReason}`);
       } else {
         lastFailureReason = "Unparseable or empty hooks list";
       }
@@ -771,7 +807,11 @@ Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்)
 /**
  * 4. PLOT LINES (3-5 Structured Narrative Arcs)
  */
-async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone }) {
+async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone, creativeGuardrails = null }) {
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
+    : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
@@ -828,13 +868,26 @@ BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || "Relatable Tension"}
 CHOSEN HOOK: ${hook?.hookLine || ""} (${hook?.visualAction || ""})
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${guardrailBlock}`;
 
   try {
-    const raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
+    let raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
     let list = parseJSONBlock(raw);
     if (list && Array.isArray(list.plots)) list = list.plots;
-    if (Array.isArray(list) && list.length) return list;
+    if (Array.isArray(list) && list.length) {
+      if (hasActiveGuardrails(normGuardrails)) {
+        const pCorpus = list.map((p) => `${p.title || ''} ${p.coreIdea || ''} ${p.hookBeat || ''} ${p.conflictBeat || ''} ${p.payoffBeat || ''}`).join('\n');
+        const pReport = validateOutputAgainstGuardrails({ outputText: pCorpus, stage: 'plots', guardrails: normGuardrails });
+        if (pReport.hasCriticalViolation) {
+          const repairContent = `${content}\n\nGUARDRAIL CORRECTION: Previous plots violated critical rules: ${pReport.automatedChecks.criticalViolations.map((v) => v.explanation).join(' | ')}. Regenerate compliant plots.`;
+          raw = await callClaude({ system, content: repairContent, maxTokens: 2000, thinking: false });
+          let repairedList = parseJSONBlock(raw);
+          if (repairedList && Array.isArray(repairedList.plots)) repairedList = repairedList.plots;
+          if (Array.isArray(repairedList) && repairedList.length) list = repairedList;
+        }
+      }
+      return list;
+    }
   } catch (e) {
     console.warn("[plots] fallback:", e.message);
   }
@@ -873,7 +926,11 @@ BRAND TONE: ${activeTone || "Warm & Authentic"}`;
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone }) {
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone, creativeGuardrails = null }) {
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
+    : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
@@ -983,7 +1040,7 @@ HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
 FORMAT: ${cleanFormat}
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${guardrailBlock}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -996,7 +1053,7 @@ BRAND TONE: ${activeTone || "Warm & Authentic"}`;
       const prodStr = parsed.product || brief || `${businessName} Special`;
       const beats = Array.isArray(parsed.beats) ? parsed.beats : [];
 
-      return {
+      const storyObj = {
         format: cleanFormat || parsed.format || "Storytelling",
         formatReason: parsed.formatReason || "Selected format provides natural audience engagement.",
         product: prodStr,
@@ -1010,6 +1067,11 @@ BRAND TONE: ${activeTone || "Warm & Authentic"}`;
         },
         beats,
       };
+      if (hasActiveGuardrails(normGuardrails)) {
+        const storyCorpus = `${settingStr}\n${beats.map((b) => `${b.title || ''} ${b.action || ''} ${b.dialogue || ''}`).join('\n')}`;
+        storyObj.guardrailReport = validateOutputAgainstGuardrails({ outputText: storyCorpus, stage: 'story', guardrails: normGuardrails });
+      }
+      return storyObj;
     }
   } catch (e) {
     console.warn("[storyWorld] fallback:", e.message);
@@ -1130,7 +1192,8 @@ function sanitizeParsedScript(parsed, form, format, creativeDNA, festName) {
  * Takes all approved decisions, constraints, DNA, and synthesizes the canonical Production Script.
  * Runs Section 8 Quality Gate + auto-repair loop.
  */
-async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], options = {} }) {
+async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], creativeGuardrails = null, options = {} }) {
+  const effectiveGuardrails = mergeGuardrailsWithLegacy(creativeGuardrails, constraints, avoid);
   const fest = await getFestivals();
   const system = buildSystem(form.scriptMode);
   const rawFormat = creativeDNA?.format || creativeDNA?.story?.format || form.creativeStyle || "Storytelling";
@@ -1180,8 +1243,10 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
     creativeDNA.location ? `- Approved Single Location: ${creativeDNA.location.name} (${creativeDNA.location.details || ""})` : null,
     creativeDNA.character1 ? `- Character 1: ${typeof creativeDNA.character1 === "string" ? creativeDNA.character1 : creativeDNA.character1.name + " (" + (creativeDNA.character1.role || "") + ")"}` : null,
     creativeDNA.character2 ? `- Character 2: ${typeof creativeDNA.character2 === "string" ? creativeDNA.character2 : creativeDNA.character2.name + " (" + (creativeDNA.character2.role || "") + ")"}` : null,
-    constraints.length ? `- MANDATORY INCLUSIONS (User constraints):\n${constraints.map((c) => `  * ${c}`).join("\n")}` : null,
-    avoid.length ? `- MANDATORY EXCLUSIONS (Things to avoid):\n${avoid.map((a) => `  * ${a}`).join("\n")}` : null,
+    hasActiveGuardrails(effectiveGuardrails)
+      ? formatGuardrailsPromptBlock(effectiveGuardrails)
+      : (constraints.length ? `- MANDATORY INCLUSIONS (User constraints):\n${constraints.map((c) => `  * ${c}`).join("\n")}` : null),
+    !hasActiveGuardrails(effectiveGuardrails) && avoid.length ? `- MANDATORY EXCLUSIONS (Things to avoid):\n${avoid.map((a) => `  * ${a}`).join("\n")}` : null,
   ].filter(Boolean).join("\n");
 
   const stageInst = `STAGE 4 PRODUCTION SCRIPT SYNTHESIS:
@@ -1216,6 +1281,7 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     festival: festName,
     allowSceneCount: [plan.totalScenes, plan.baseScenes, 4],
     targetDuration: plan.durationLabel,
+    creativeGuardrails: hasActiveGuardrails(effectiveGuardrails) ? effectiveGuardrails : null,
   };
 
   let content = base, parsed, failures = [], attempts = 0;
@@ -1284,11 +1350,22 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     shotSpec.format = format;
   }
 
+  let guardrailReport = null;
+  if (hasActiveGuardrails(effectiveGuardrails)) {
+    const checkCorpus = [parsed.setting || "", parsed.character1 || "", parsed.character2 || "", ...(parsed.scenes || [])].join("\n");
+    guardrailReport = validateOutputAgainstGuardrails({
+      outputText: checkCorpus,
+      stage: "script",
+      guardrails: effectiveGuardrails,
+    });
+  }
+
   return {
     script: parsed.raw,
     parsed,
     attempts,
     shotSpec,
+    guardrailReport,
     header: parsed.header,
     character1: parsed.character1,
     character2: parsed.character2,
@@ -1307,10 +1384,15 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
  * 7. SCENE-LEVEL AI REWRITER
  * Rewrites a single scene according to user instruction while preserving continuity.
  */
-async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone }) {
+async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, creativeGuardrails = null }) {
   const isEng = !form?.language || /eng/i.test(form?.language);
   const activeTone = brandTone || form?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n\n${formatGuardrailsPromptBlock(normGuardrails)}`
+    : "";
+
   const system = `You are a precision scene script editor for a 4-scene commercial ad film.
 Your task is to rewrite ONLY this specific scene based on the user's creative note (e.g. "make it funnier", "make dialogue shorter", "use Hinglish", "feature product earlier").
 
@@ -1321,7 +1403,7 @@ Rules:
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
 - Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : /hindi|hinglish|marathi/i.test(form?.language) ? "Devanagari script if Hindi/Hinglish/Marathi" : `authentic ${form?.language} script`}).
-- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.`;
+- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.${guardrailBlock}`;
 
   const content = `ORIGINAL SCENE:
 ${sceneText}
@@ -1332,9 +1414,21 @@ ${instruction}
 Rewrite this scene now:`;
 
   try {
-    const text = await callClaude({ system, content, maxTokens: 1200, thinking: false });
-    const clean = text.replace(/```[a-z]*\n?/gi, "").trim();
+    let text = await callClaude({ system, content, maxTokens: 1200, thinking: false });
+    let clean = text.replace(/```[a-z]*\n?/gi, "").trim();
     if (clean.includes("Visual:") && clean.includes("Audio")) {
+      if (hasActiveGuardrails(normGuardrails)) {
+        const rep = validateOutputAgainstGuardrails({ outputText: clean, stage: "rewrite", guardrails: normGuardrails });
+        const hasProhibited = rep.automatedChecks.criticalViolations.some((v) => v.type === "prohibited_content_detected");
+        if (hasProhibited) {
+          const retryContent = `${content}\n\nCRITICAL CORRECTION: Previous rewrite violated Must Avoid rule: ${rep.automatedChecks.criticalViolations.map((v) => v.explanation).join(" | ")}. Rewrite strictly avoiding that content.`;
+          text = await callClaude({ system, content: retryContent, maxTokens: 1200, thinking: false });
+          const retried = text.replace(/```[a-z]*\n?/gi, "").trim();
+          if (retried.includes("Visual:") && retried.includes("Audio")) {
+            clean = retried;
+          }
+        }
+      }
       return clean;
     }
   } catch (e) {
@@ -2269,7 +2363,35 @@ async function generateSimpleAdPackages({
   aspectRatio = "9:16",
   hasLogo = false,
   aiUnderstanding = null,
+  creativeGuardrails = null,
 }) {
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
+  const guardrailBlock = hasActiveGuardrails(normGuardrails)
+    ? `\n${formatGuardrailsPromptBlock(normGuardrails, gAnalysis)}`
+    : "";
+  const attachSimpleGuardrailReport = (pkgs) => {
+    if (!hasActiveGuardrails(normGuardrails)) return pkgs;
+    return pkgs.map((pkg) => {
+      const pkgText = [
+        pkg.title,
+        pkg.hookHeadline,
+        pkg.narrativeSummary,
+        pkg.callToAction,
+        pkg.setting,
+        ...(pkg.scenes || []).map((s) => `${s.visual || ""} ${s.dialogue || ""}`),
+      ].filter(Boolean).join("\n");
+      return {
+        ...pkg,
+        guardrailReport: validateOutputAgainstGuardrails({
+          outputText: pkgText,
+          stage: "simple_packages",
+          guardrails: normGuardrails,
+          interpretedGuardrails: gAnalysis,
+        }),
+      };
+    });
+  };
   const brand = String(businessName || "My Business").trim();
   const bType = String(businessType || "Retail").trim();
   const city = String(town || "").trim();
@@ -2387,15 +2509,15 @@ STYLE: ${creativeStyle}
 DURATION: ${durStr}
 SCENES: ${plan.totalScenes} scenes (~5s each)
 DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
-BRAND TONE: ${brandTone || "Warm & Authentic"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}
+BRAND TONE: ${brandTone || "Warm & Authentic"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}
 
 Create 3 distinct Ad Packages now:`;
 
   try {
-    const raw = await callClaude({ system, content, maxTokens: 4000, thinking: false });
-    const parsed = parseJSONBlock(raw);
+    let raw = await callClaude({ system, content, maxTokens: 4000, thinking: false });
+    let parsed = parseJSONBlock(raw);
     if (parsed && Array.isArray(parsed.packages) && parsed.packages.length === 3) {
-      return parsed.packages.map((pkg, idx) =>
+      let normalized = attachSimpleGuardrailReport(parsed.packages.map((pkg, idx) =>
         normalizeSimpleAdPackage(
           {
             ...pkg,
@@ -2407,13 +2529,40 @@ Create 3 distinct Ad Packages now:`;
           bType,
           { duration: durStr, aspectRatio: arStr, hasLogo: Boolean(hasLogo) }
         )
-      );
+      ));
+      const anyCritical = normalized.some((p) => p.guardrailReport?.hasCriticalViolation);
+      if (anyCritical && hasActiveGuardrails(normGuardrails)) {
+        const issueSummary = normalized
+          .flatMap((p) => p.guardrailReport?.automatedChecks?.criticalViolations || [])
+          .map((v) => v.explanation)
+          .slice(0, 4)
+          .join(" | ");
+        const retryContent = `${content}\n\nGUARDRAIL CORRECTION: Previous packages had critical violations: ${issueSummary}. Fix and regenerate all 3 packages strictly satisfying every Do and avoiding every Don't.`;
+        raw = await callClaude({ system, content: retryContent, maxTokens: 4000, thinking: false });
+        const retryParsed = parseJSONBlock(raw);
+        if (retryParsed && Array.isArray(retryParsed.packages) && retryParsed.packages.length === 3) {
+          normalized = attachSimpleGuardrailReport(retryParsed.packages.map((pkg, idx) =>
+            normalizeSimpleAdPackage(
+              {
+                ...pkg,
+                id: pkg.id || `pkg_${idx + 1}`,
+                duration: pkg.duration || durStr,
+                aspectRatio: pkg.aspectRatio || arStr,
+              },
+              brand,
+              bType,
+              { duration: durStr, aspectRatio: arStr, hasLogo: Boolean(hasLogo) }
+            )
+          ));
+        }
+      }
+      return normalized;
     }
   } catch (e) {
     console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);
   }
 
-  return getFallbackAdPackages({
+  return attachSimpleGuardrailReport(getFallbackAdPackages({
     businessName: brand,
     businessType: bType,
     town: city,
@@ -2422,7 +2571,7 @@ Create 3 distinct Ad Packages now:`;
     duration: durStr,
     aspectRatio: arStr,
     hasLogo: Boolean(hasLogo),
-  });
+  }));
 }
 
 const VO_TERM_REGEX = /(?:^|\n)\s*(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/gi;
@@ -2497,7 +2646,8 @@ function detectScriptAudioMode(scriptText) {
  * Preserves user's creative intent, brand claims, language, dialogue, and CTA.
  * Avoids redundant AI calls if the script is already formatted and valid.
  */
-async function normalizeUserScript({ rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform }) {
+async function normalizeUserScript({ rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform, creativeGuardrails = null }) {
+  const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
     throw new Error("Script content is required.");
   }
@@ -2555,6 +2705,7 @@ async function normalizeUserScript({ rawScript, businessName, businessType, town
       audioDeliveryMode: audioMode,
       targetDuration: durationStr,
       allowSceneCount: parsed.scenes.length,
+      creativeGuardrails: hasActiveGuardrails(normGuardrails) ? normGuardrails : null,
     };
     let failures = [];
     try {
@@ -2566,6 +2717,9 @@ async function normalizeUserScript({ rawScript, businessName, businessType, town
     if (failures.length === 0) {
       const shotSpec = compileShotSpecification(sanitized, form);
       if (shotSpec) shotSpec.format = style;
+      const guardrailReport = hasActiveGuardrails(normGuardrails)
+        ? validateOutputAgainstGuardrails({ outputText: sanitized.scenes.join("\n"), stage: "script", guardrails: normGuardrails })
+        : null;
       return {
         status: "success",
         passedGate: true,
@@ -2581,6 +2735,7 @@ async function normalizeUserScript({ rawScript, businessName, businessType, town
         targetDuration: durationStr,
         aspectRatio: ratioStr,
         shotSpec,
+        guardrailReport,
         fullScriptText: rawScript,
         totalScenes: sanitized.scenes.length,
         isAlreadyNormalized: true,
@@ -2746,6 +2901,10 @@ Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format
     const shotSpec = compileShotSpecification(adaptedParsed, form);
     if (shotSpec) shotSpec.format = style;
 
+    const guardrailReport = hasActiveGuardrails(normGuardrails)
+      ? validateOutputAgainstGuardrails({ outputText: (adaptedParsed.scenes || []).join("\n"), stage: "script", guardrails: normGuardrails })
+      : null;
+
     return {
       status: "success",
       passedGate: fails.length === 0,
@@ -2763,6 +2922,7 @@ Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format
       targetDuration: durationStr,
       aspectRatio: ratioStr,
       shotSpec,
+      guardrailReport,
       fullScriptText: raw,
       totalScenes: adaptedParsed.scenes ? adaptedParsed.scenes.length : 0,
       isAlreadyNormalized: false,
