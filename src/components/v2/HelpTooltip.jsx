@@ -98,7 +98,7 @@ export default function HelpTooltip({
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '50%',
-          color: isOpen ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+          color: isOpen ? 'var(--cc-emphasis)' : 'var(--text-tertiary)',
           cursor: 'pointer',
           transition: 'color 0.15s ease',
         }}
@@ -118,7 +118,7 @@ export default function HelpTooltip({
             maxWidth: 'min(260px, calc(100vw - 32px))',
             padding: '10px 12px',
             borderRadius: 10,
-            backgroundColor: '#171A24',
+            backgroundColor: '#21211E',
             border: '1px solid var(--border-strong)',
             boxShadow: '0 10px 28px rgba(0, 0, 0, 0.45)',
             textAlign: 'left',
@@ -131,7 +131,7 @@ export default function HelpTooltip({
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: title ? 4 : 0 }}>
             {title && (
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                 {title}
               </div>
             )}
@@ -152,7 +152,7 @@ export default function HelpTooltip({
               <X size={12} />
             </button>
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
             {body}
           </div>
         </div>

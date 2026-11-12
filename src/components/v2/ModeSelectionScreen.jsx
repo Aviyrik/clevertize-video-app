@@ -52,7 +52,7 @@ export default function ModeSelectionScreen({
     >
       {/* Header */}
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Choose Your Workflow
         </h1>
         <p style={{ margin: '0 auto', maxWidth: 520, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -82,11 +82,10 @@ export default function ModeSelectionScreen({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
             <span
               style={{
-                fontSize: 10,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: 'var(--accent-primary)',
+                fontSize: 11.5,
+                fontWeight: 600,
+                letterSpacing: '0.005em',
+                color: 'var(--cc-emphasis)',
                 flexShrink: 0,
               }}
             >
@@ -113,7 +112,7 @@ export default function ModeSelectionScreen({
                 border: '1px solid var(--border-default)',
                 borderRadius: 6,
                 padding: '4px 10px',
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
                 color: 'var(--text-secondary)',
                 cursor: 'pointer',
@@ -145,7 +144,7 @@ export default function ModeSelectionScreen({
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: simpleCardRecommended
-              ? '2px solid var(--accent-primary)'
+              ? '2px solid var(--cc-selected-line)'
               : '1px solid var(--border-default)',
             borderRadius: 14,
             padding: '22px 22px 20px',
@@ -154,7 +153,7 @@ export default function ModeSelectionScreen({
             justifyContent: 'space-between',
             gap: 18,
             boxShadow: simpleCardRecommended
-              ? '0 8px 28px rgba(99, 102, 241, 0.16)'
+              ? '0 8px 28px rgba(0, 0, 0, 0.16)'
               : '0 4px 18px rgba(0, 0, 0, 0.2)',
             position: 'relative',
           }}
@@ -166,8 +165,8 @@ export default function ModeSelectionScreen({
                   width: 40,
                   height: 40,
                   borderRadius: 10,
-                  backgroundColor: 'rgba(99, 102, 241, 0.14)',
-                  color: 'var(--accent-primary)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                  color: 'var(--cc-emphasis)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -180,8 +179,8 @@ export default function ModeSelectionScreen({
                 {preferredMode === 'simple' && (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: 12,
                       backgroundColor: 'var(--bg-elevated)',
@@ -195,14 +194,13 @@ export default function ModeSelectionScreen({
                 {simpleCardRecommended && (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      letterSpacing: '0.005em',
                       padding: '3px 9px',
                       borderRadius: 12,
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#FFFFFF',
+                      backgroundColor: 'rgba(244, 244, 236, 0.08)',
+                      color: 'var(--cc-text-1)',
                     }}
                   >
                     Recommended
@@ -212,7 +210,7 @@ export default function ModeSelectionScreen({
             </div>
 
             <div>
-              <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>
+              <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Simple Mode
               </h2>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -231,7 +229,7 @@ export default function ModeSelectionScreen({
                 padding: '10px 12px',
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                 3 Steps
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -239,7 +237,7 @@ export default function ModeSelectionScreen({
                   <React.Fragment key={step}>
                     <span
                       style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '3px 8px',
                         borderRadius: 6,
@@ -251,7 +249,7 @@ export default function ModeSelectionScreen({
                       {step}
                     </span>
                     {i < simpleSteps.length - 1 && (
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>→</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>→</span>
                     )}
                   </React.Fragment>
                 ))}
@@ -270,7 +268,7 @@ export default function ModeSelectionScreen({
                     'Generates 3 ready-to-produce script options',
                   ]).map((pt) => (
                 <li key={pt} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                  <Check size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                  <Check size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                   <span>{pt}</span>
                 </li>
               ))}
@@ -285,11 +283,11 @@ export default function ModeSelectionScreen({
               width: '100%',
               padding: '12px 16px',
               borderRadius: 10,
-              backgroundColor: simpleCardRecommended ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+              backgroundColor: simpleCardRecommended ? 'var(--cc-action)' : 'var(--bg-elevated)',
               border: simpleCardRecommended ? 'none' : '1px solid var(--border-default)',
-              color: simpleCardRecommended ? '#FFFFFF' : 'var(--text-primary)',
+              color: simpleCardRecommended ? 'var(--cc-on-action)' : 'var(--text-primary)',
               fontSize: 13.5,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -309,7 +307,7 @@ export default function ModeSelectionScreen({
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: directorCardRecommended
-              ? '2px solid #eab308'
+              ? '2px solid var(--cc-selected-line)'
               : '1px solid var(--border-default)',
             borderRadius: 14,
             padding: '22px 22px 20px',
@@ -318,7 +316,7 @@ export default function ModeSelectionScreen({
             justifyContent: 'space-between',
             gap: 18,
             boxShadow: directorCardRecommended
-              ? '0 8px 28px rgba(234, 179, 8, 0.14)'
+              ? '0 8px 28px rgba(0, 0, 0, 0.14)'
               : '0 4px 18px rgba(0, 0, 0, 0.2)',
             position: 'relative',
           }}
@@ -330,8 +328,8 @@ export default function ModeSelectionScreen({
                   width: 40,
                   height: 40,
                   borderRadius: 10,
-                  backgroundColor: 'rgba(234, 179, 8, 0.14)',
-                  color: '#eab308',
+                  backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                  color: 'var(--cc-emphasis)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -344,8 +342,8 @@ export default function ModeSelectionScreen({
                 {preferredMode === 'advanced' && (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: 12,
                       backgroundColor: 'var(--bg-elevated)',
@@ -359,14 +357,13 @@ export default function ModeSelectionScreen({
                 {directorCardRecommended ? (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      letterSpacing: '0.005em',
                       padding: '3px 9px',
                       borderRadius: 12,
-                      backgroundColor: '#eab308',
-                      color: '#0B0C0F',
+                      backgroundColor: 'rgba(244, 244, 236, 0.08)',
+                      color: 'var(--cc-text-1)',
                     }}
                   >
                     Best for Scripts
@@ -374,15 +371,14 @@ export default function ModeSelectionScreen({
                 ) : (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      letterSpacing: '0.005em',
                       padding: '3px 9px',
                       borderRadius: 12,
-                      backgroundColor: 'rgba(234, 179, 8, 0.14)',
-                      border: '1px solid rgba(234, 179, 8, 0.3)',
-                      color: '#eab308',
+                      backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                      border: '1px solid rgba(244, 244, 236, 0.27)',
+                      color: 'var(--cc-emphasis)',
                     }}
                   >
                     Full Creative Control
@@ -392,7 +388,7 @@ export default function ModeSelectionScreen({
             </div>
 
             <div>
-              <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>
+              <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Director Mode
               </h2>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -411,7 +407,7 @@ export default function ModeSelectionScreen({
                 padding: '10px 12px',
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                 {isScriptEntry ? 'Scene Editor' : '7 Stages'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
@@ -419,7 +415,7 @@ export default function ModeSelectionScreen({
                   <React.Fragment key={step}>
                     <span
                       style={{
-                        fontSize: 10.5,
+                        fontSize: 11.5,
                         fontWeight: 600,
                         padding: '3px 7px',
                         borderRadius: 6,
@@ -431,7 +427,7 @@ export default function ModeSelectionScreen({
                       {step}
                     </span>
                     {i < directorSteps.length - 1 && (
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>→</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>→</span>
                     )}
                   </React.Fragment>
                 ))}
@@ -450,7 +446,7 @@ export default function ModeSelectionScreen({
                     'Edit every opening hook and scene script',
                   ]).map((pt) => (
                 <li key={pt} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                  <Check size={14} style={{ color: '#eab308', flexShrink: 0 }} />
+                  <Check size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                   <span>{pt}</span>
                 </li>
               ))}
@@ -465,11 +461,11 @@ export default function ModeSelectionScreen({
               width: '100%',
               padding: '12px 16px',
               borderRadius: 10,
-              backgroundColor: directorCardRecommended ? '#eab308' : 'var(--bg-elevated)',
-              border: directorCardRecommended ? 'none' : '1px solid rgba(234, 179, 8, 0.45)',
-              color: directorCardRecommended ? '#0B0C0F' : '#FDE047',
+              backgroundColor: directorCardRecommended ? 'var(--cc-action)' : 'var(--bg-elevated)',
+              border: directorCardRecommended ? 'none' : '1px solid rgba(244, 244, 236, 0.405)',
+              color: directorCardRecommended ? 'var(--cc-on-action)' : 'var(--cc-text-1)',
               fontSize: 13.5,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',

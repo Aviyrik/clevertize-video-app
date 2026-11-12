@@ -26,8 +26,8 @@ export default function ContextualTipBanner({
         flexWrap: 'wrap',
         padding: '10px 14px',
         borderRadius: 10,
-        backgroundColor: 'rgba(99, 102, 241, 0.08)',
-        border: '1px solid rgba(99, 102, 241, 0.24)',
+        backgroundColor: 'rgba(244, 244, 236, 0.04)',
+        border: '1px solid rgba(244, 244, 236, 0.216)',
         textAlign: 'left',
       }}
     >
@@ -37,8 +37,8 @@ export default function ContextualTipBanner({
             width: 24,
             height: 24,
             borderRadius: 6,
-            backgroundColor: 'rgba(99, 102, 241, 0.16)',
-            color: 'var(--accent-primary)',
+            backgroundColor: 'rgba(244, 244, 236, 0.08)',
+            color: 'var(--cc-emphasis)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -50,12 +50,12 @@ export default function ContextualTipBanner({
         </div>
         <div style={{ fontSize: 12, lineHeight: 1.45 }}>
           {title && (
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: body ? 1 : 0 }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: body ? 1 : 0 }}>
               {title}
             </div>
           )}
           {body && (
-            <div style={{ color: 'var(--text-secondary)', fontSize: 11.5 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
               {body}
             </div>
           )}
@@ -73,11 +73,11 @@ export default function ContextualTipBanner({
               gap: 5,
               padding: '5px 10px',
               borderRadius: 6,
-              backgroundColor: 'rgba(99, 102, 241, 0.16)',
-              border: '1px solid rgba(99, 102, 241, 0.35)',
-              color: 'var(--accent-primary)',
-              fontSize: 11,
-              fontWeight: 700,
+              backgroundColor: 'rgba(244, 244, 236, 0.08)',
+              border: '1px solid rgba(244, 244, 236, 0.315)',
+              color: 'var(--cc-emphasis)',
+              fontSize: 12,
+              fontWeight: 600,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}

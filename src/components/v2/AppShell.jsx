@@ -32,13 +32,16 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
+import BrandMark from './BrandMark.jsx';
 
+// Must mirror STUDIO_STAGES in GuidedStudio.jsx (the Director stage rail) so the
+// breadcrumb names the stage the user is actually on.
 const STUDIO_STAGES = [
   { id: 'brief', num: '01', label: 'Brief' },
   { id: 'settings', num: '02', label: 'Settings' },
-  { id: 'idea', num: '03', label: 'Idea' },
-  { id: 'opening', num: '04', label: 'Opening' },
-  { id: 'story', num: '05', label: 'Story' },
+  { id: 'understanding', num: '03', label: 'Understanding' },
+  { id: 'idea', num: '04', label: 'Ideas' },
+  { id: 'opening', num: '05', label: 'Opening' },
   { id: 'script', num: '06', label: 'Script' },
   { id: 'video', num: '07', label: 'Video' },
 ];
@@ -122,8 +125,7 @@ export default function AppShell({
           position: 'sticky',
           top: 0,
           flexShrink: 0,
-          backgroundColor: 'rgba(16, 18, 24, 0.95)',
-          backdropFilter: 'blur(20px)',
+          backgroundColor: 'var(--cc-surface)',
           borderRight: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
@@ -144,23 +146,9 @@ export default function AppShell({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 8,
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 10px var(--accent-glow)',
-                }}
-              >
-                <Clapperboard size={18} />
-              </div>
+              <BrandMark size={30} />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                <div style={{ fontFamily: 'var(--cc-font-display)', fontSize: 16, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>
                   CleverCut
                 </div>
               </div>
@@ -168,16 +156,16 @@ export default function AppShell({
 
             <span
               style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--accent-primary)',
-                backgroundColor: 'var(--accent-subtle)',
-                padding: '2px 6px',
-                borderRadius: 4,
-                letterSpacing: '0.04em',
+                fontSize: 11.5,
+                fontWeight: 500,
+                color: 'var(--text-tertiary)',
+                backgroundColor: 'transparent',
+                boxShadow: 'inset 0 0 0 1px var(--border-default)',
+                padding: '2px 8px',
+                borderRadius: 6,
               }}
             >
-              BETA
+              Beta
             </span>
           </div>
 
@@ -186,22 +174,11 @@ export default function AppShell({
             <button
               type="button"
               onClick={onStartNewFilm}
+              className="cc-btn cc-btn--secondary"
               style={{
                 width: '100%',
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 14px',
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#FFFFFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                boxShadow: '0 2px 12px var(--accent-glow)',
-                transition: 'all 0.15s ease',
+                justifyContent: 'flex-start',
+                paddingLeft: 14,
               }}
             >
               <Plus size={16} />
@@ -223,8 +200,8 @@ export default function AppShell({
                       else if (onOpenOnboarding) onOpenOnboarding();
                     }}
                     style={{
-                      backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                      border: '1.5px dashed var(--accent-primary)',
+                      backgroundColor: 'rgba(244, 244, 236, 0.03)',
+                      border: '1px dashed var(--border-strong)',
                       borderRadius: 10,
                       padding: '10px 12px',
                       display: 'flex',
@@ -234,10 +211,10 @@ export default function AppShell({
                       transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                      e.currentTarget.style.backgroundColor = 'rgba(244, 244, 236, 0.075)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
+                      e.currentTarget.style.backgroundColor = 'rgba(244, 244, 236, 0.04)';
                     }}
                   >
                     <div
@@ -245,8 +222,8 @@ export default function AppShell({
                         width: 32,
                         height: 32,
                         borderRadius: 8,
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#FFFFFF',
+                        backgroundColor: 'var(--cc-hover)',
+                        color: 'var(--cc-text-1)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -259,7 +236,7 @@ export default function AppShell({
                       <div
                         style={{
                           fontSize: 13,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -270,7 +247,7 @@ export default function AppShell({
                       </div>
                       <div
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           color: 'var(--text-secondary)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -307,7 +284,7 @@ export default function AppShell({
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                    e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -325,7 +302,7 @@ export default function AppShell({
                           objectFit: 'cover',
                           flexShrink: 0,
                           border: '1px solid var(--border-subtle)',
-                          backgroundColor: '#151821',
+                          backgroundColor: '#21211E',
                         }}
                       />
                     ) : (
@@ -340,7 +317,7 @@ export default function AppShell({
                           justifyContent: 'center',
                           color: '#FFFFFF',
                           fontSize: 12,
-                          fontWeight: 800,
+                          fontWeight: 600,
                           flexShrink: 0,
                         }}
                       >
@@ -351,7 +328,7 @@ export default function AppShell({
                       <div
                         style={{
                           fontSize: 13,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -362,7 +339,7 @@ export default function AppShell({
                       </div>
                       <div
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -433,10 +410,9 @@ export default function AppShell({
                     >
                       <div
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          letterSpacing: '0.005em',
                           color: 'var(--text-tertiary)',
                           padding: '4px 14px 6px',
                         }}
@@ -493,8 +469,8 @@ export default function AppShell({
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       color: '#FFFFFF',
-                                      fontSize: 10,
-                                      fontWeight: 800,
+                                      fontSize: 11.5,
+                                      fontWeight: 600,
                                       flexShrink: 0,
                                     }}
                                   >
@@ -505,7 +481,7 @@ export default function AppShell({
                                   <div
                                     style={{
                                       fontSize: 12,
-                                      fontWeight: isCurrent ? 700 : 500,
+                                      fontWeight: isCurrent ? 600 : 500,
                                       color: 'var(--text-primary)',
                                       whiteSpace: 'nowrap',
                                       overflow: 'hidden',
@@ -516,7 +492,7 @@ export default function AppShell({
                                   </div>
                                   <div
                                     style={{
-                                      fontSize: 10,
+                                      fontSize: 11.5,
                                       color: 'var(--text-tertiary)',
                                       whiteSpace: 'nowrap',
                                       overflow: 'hidden',
@@ -529,7 +505,7 @@ export default function AppShell({
                               </div>
 
                               {isCurrent && (
-                                <Check size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                <Check size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                               )}
                             </div>
                           );
@@ -552,7 +528,7 @@ export default function AppShell({
                             padding: '7px 14px',
                             fontSize: 12,
                             fontWeight: 600,
-                            color: 'var(--accent-primary)',
+                            color: 'var(--cc-emphasis)',
                             cursor: 'pointer',
                           }}
                           onMouseEnter={(e) => {
@@ -604,11 +580,10 @@ export default function AppShell({
           <div style={{ padding: '0 12px 16px' }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 600,
                 color: 'var(--text-tertiary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.005em',
                 padding: '4px 10px 8px',
               }}
             >
@@ -643,23 +618,21 @@ export default function AppShell({
                 color: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: 13,
-                fontWeight: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 700 : 500,
+                fontWeight: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 600 : 500,
                 marginBottom: 3,
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Film size={16} style={{ color: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--accent-primary)' : 'inherit' }} />
+                <Film size={16} style={{ color: (activeView === 'studio' || activeView === 'home' || activeView === 'hub') ? 'var(--cc-emphasis)' : 'inherit' }} />
                 <span>Creative Studio</span>
               </div>
               <span
                 style={{
-                  fontSize: 10,
-                  backgroundColor: 'var(--bg-elevated)',
-                  padding: '2px 7px',
-                  borderRadius: 10,
+                  fontSize: 12,
+                  padding: '2px 4px',
                   color: 'var(--text-tertiary)',
-                  fontWeight: 600,
+                  fontWeight: 500,
                 }}
               >
                 {studioMode === 'simple' ? '3 Steps' : '7 Stages'}
@@ -683,27 +656,27 @@ export default function AppShell({
                 color: (activeView === 'projects' || activeView === 'library') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: 13,
-                fontWeight: (activeView === 'projects' || activeView === 'library') ? 700 : 500,
+                fontWeight: (activeView === 'projects' || activeView === 'library') ? 600 : 500,
                 marginBottom: 3,
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Clapperboard size={16} style={{ color: (activeView === 'projects' || activeView === 'library') ? 'var(--accent-primary)' : 'inherit' }} />
+                <Clapperboard size={16} style={{ color: (activeView === 'projects' || activeView === 'library') ? 'var(--cc-emphasis)' : 'inherit' }} />
                 <span>My Projects</span>
               </div>
               <span
-                title="Video Commercials & Script Library"
+                title={`${projectCount} ${projectCount === 1 ? 'project' : 'projects'}`}
                 style={{
-                  fontSize: 10,
-                  backgroundColor: projectCount > 0 ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-elevated)',
-                  padding: '2px 7px',
-                  borderRadius: 10,
-                  color: projectCount > 0 ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                  fontWeight: projectCount > 0 ? 700 : 500,
+                  fontSize: 12,
+                  fontFamily: 'var(--cc-font-mono)',
+                  fontVariantNumeric: 'tabular-nums',
+                  padding: '2px 4px',
+                  color: 'var(--text-tertiary)',
+                  fontWeight: 500,
                 }}
               >
-                {projectCount > 0 ? `${projectCount} Videos` : '0 Videos'}
+                {projectCount}
               </span>
             </div>
 
@@ -723,26 +696,24 @@ export default function AppShell({
                 color: (activeView === 'businesses' || activeView === 'business') ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontSize: 13,
-                fontWeight: (activeView === 'businesses' || activeView === 'business') ? 700 : 500,
+                fontWeight: (activeView === 'businesses' || activeView === 'business') ? 600 : 500,
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Building2 size={16} style={{ color: (activeView === 'businesses' || activeView === 'business') ? 'var(--accent-primary)' : 'inherit' }} />
+                <Building2 size={16} style={{ color: (activeView === 'businesses' || activeView === 'business') ? 'var(--cc-emphasis)' : 'inherit' }} />
                 <span>My Businesses</span>
               </div>
               <span
-                title="Business Profile & Context"
+                title={`${businesses.length} ${businesses.length === 1 ? 'business profile' : 'business profiles'}`}
                 style={{
-                  fontSize: 10,
-                  backgroundColor: 'var(--bg-elevated)',
-                  padding: '2px 7px',
-                  borderRadius: 10,
+                  fontSize: 12,
+                  padding: '2px 4px',
                   color: 'var(--text-tertiary)',
-                  fontWeight: 600,
+                  fontWeight: 500,
                 }}
               >
-                {businesses.length > 0 ? `${businesses.length}` : '0 Profiles'}
+                {businesses.length}
               </span>
             </div>
           </div>
@@ -759,11 +730,10 @@ export default function AppShell({
           >
             <div
               style={{
-                fontSize: 10.5,
-                fontWeight: 700,
+                fontSize: 11.5,
+                fontWeight: 600,
                 color: 'var(--text-tertiary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.005em',
               }}
             >
               Creation Mode
@@ -796,10 +766,10 @@ export default function AppShell({
                   gap: 5,
                   padding: '7px 8px',
                   borderRadius: 6,
-                  fontSize: 11.5,
-                  fontWeight: studioMode === 'simple' ? 700 : 500,
-                  backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
-                  color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: studioMode === 'simple' ? 600 : 500,
+                  backgroundColor: studioMode === 'simple' ? 'var(--cc-active)' : 'transparent',
+                  color: studioMode === 'simple' ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                   border: 'none',
                   cursor: studioMode === 'simple' ? 'default' : 'pointer',
                 }}
@@ -824,10 +794,10 @@ export default function AppShell({
                   gap: 5,
                   padding: '7px 8px',
                   borderRadius: 6,
-                  fontSize: 11.5,
-                  fontWeight: studioMode !== 'simple' ? 700 : 500,
-                  backgroundColor: studioMode !== 'simple' ? '#eab308' : 'transparent',
-                  color: studioMode !== 'simple' ? '#0B0C0F' : 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: studioMode !== 'simple' ? 600 : 500,
+                  backgroundColor: studioMode !== 'simple' ? 'var(--cc-active)' : 'transparent',
+                  color: studioMode !== 'simple' ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                   border: 'none',
                   cursor: studioMode !== 'simple' ? 'default' : 'pointer',
                 }}
@@ -846,7 +816,7 @@ export default function AppShell({
         <div
           style={{
             borderTop: '1px solid var(--border-subtle)',
-            backgroundColor: 'rgba(11, 12, 16, 0.5)',
+            backgroundColor: 'rgba(18, 18, 17, 0.5)',
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -894,12 +864,12 @@ export default function AppShell({
                         height: 32,
                         borderRadius: '50%',
                         backgroundColor: 'var(--accent-subtle)',
-                        color: 'var(--accent-primary)',
+                        color: 'var(--cc-emphasis)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 13,
-                        fontWeight: 800,
+                        fontWeight: 600,
                         flexShrink: 0,
                       }}
                     >
@@ -907,10 +877,10 @@ export default function AppShell({
                     </div>
                   )}
                   <div style={{ overflow: 'hidden', flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {currentUser.name || currentUser.email}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {currentUser.email}
                     </div>
                   </div>
@@ -938,7 +908,7 @@ export default function AppShell({
                   gap: 6,
                 }}
               >
-                <LogIn size={13} style={{ color: 'var(--accent-primary)' }} />
+                <LogIn size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>Sign In / Register</span>
               </button>
             )}
@@ -970,7 +940,7 @@ export default function AppShell({
                   padding: 0,
                   margin: 0,
                   color: 'var(--text-tertiary)',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'color 0.15s ease',
@@ -1000,16 +970,18 @@ export default function AppShell({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
-                    backgroundColor: 'rgba(99, 102, 241, 0.14)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    borderRadius: 10,
-                    padding: '2px 7px',
-                    color: 'var(--accent-primary)',
-                    fontSize: 10.5,
-                    fontWeight: 700,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: 999,
+                    padding: 0,
+                    color: 'var(--text-secondary)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
                     cursor: 'pointer',
                   }}
                 >
+                  <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--cc-action)' }} />
                   <span>Resume {pausedTourStep + 1}/{totalTourSteps}</span>
                 </button>
               )}
@@ -1033,13 +1005,13 @@ export default function AppShell({
                     padding: 0,
                     margin: 0,
                     color: 'var(--text-tertiary)',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 500,
                     cursor: 'pointer',
                     transition: 'color 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--accent-primary)';
+                    e.currentTarget.style.color = 'var(--cc-emphasis)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -1051,7 +1023,7 @@ export default function AppShell({
               )}
             </div>
 
-            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: 'var(--cc-font-mono)', opacity: 0.7 }}>
               v2.0
             </span>
           </div>
@@ -1062,25 +1034,24 @@ export default function AppShell({
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         {/* Top Header Bar */}
         <header
-          className="app-header-bar"
+          className="app-header-bar cc-glass"
           style={{
-            minHeight: 60,
+            minHeight: 52,
             flexShrink: 0,
-            borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'rgba(16, 18, 24, 0.75)',
-            backdropFilter: 'blur(12px)',
+            margin: '12px 16px 0',
+            borderRadius: 999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 8,
-            padding: '8px 20px',
+            padding: '6px 8px 6px 18px',
             position: 'sticky',
-            top: 0,
+            top: 12,
             zIndex: 90,
           }}
         >
-          <div className="app-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0, flex: '1 1 auto' }}>
+          <div className="app-header-left" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', minWidth: 0, flex: '1 1 0', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             <button
               type="button"
               className="mobile-menu-btn"
@@ -1101,7 +1072,7 @@ export default function AppShell({
               {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
 
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-tertiary)' }}>
               {(activeView === 'projects' || activeView === 'library')
                 ? 'My Projects'
                 : (activeView === 'businesses' || activeView === 'business')
@@ -1110,8 +1081,8 @@ export default function AppShell({
                 ? 'Creation Hub'
                 : 'Creative Studio'}
             </span>
-            <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <ChevronRight size={14} style={{ color: 'var(--text-tertiary)', opacity: 0.7 }} />
+            <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>
               {(activeView === 'projects' || activeView === 'library')
                 ? 'Video Commercials & Projects'
                 : (activeView === 'businesses' || activeView === 'business')
@@ -1130,14 +1101,11 @@ export default function AppShell({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  marginLeft: 10,
-                  padding: '3px 10px',
-                  borderRadius: 14,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.14)' : 'rgba(234, 179, 8, 0.14)',
-                  color: studioMode === 'simple' ? 'var(--accent-primary)' : '#eab308',
-                  border: '1px solid ' + (studioMode === 'simple' ? 'rgba(99, 102, 241, 0.3)' : 'rgba(234, 179, 8, 0.35)'),
+                  marginLeft: 6,
+                  padding: '3px 0',
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  color: 'var(--text-tertiary)',
                   cursor: 'default',
                   userSelect: 'none',
                 }}
@@ -1157,30 +1125,18 @@ export default function AppShell({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 5,
-                  padding: '3px 9px',
-                  borderRadius: 12,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  backgroundColor:
-                    draftStatus.state === 'error'
-                      ? 'rgba(239, 68, 68, 0.12)'
-                      : draftStatus.state === 'saved'
-                        ? 'rgba(16, 185, 129, 0.12)'
-                        : 'var(--bg-elevated)',
-                  color:
-                    draftStatus.state === 'error'
-                      ? '#EF4444'
-                      : draftStatus.state === 'saved'
-                        ? 'var(--success)'
-                        : 'var(--text-secondary)',
-                  border:
-                    '1px solid ' +
-                    (draftStatus.state === 'error'
-                      ? 'rgba(239, 68, 68, 0.35)'
-                      : draftStatus.state === 'saved'
-                        ? 'rgba(16, 185, 129, 0.3)'
-                        : 'var(--border-subtle)'),
+                  gap: 6,
+                  padding: draftStatus.state === 'error' ? '3px 9px' : '3px 2px',
+                  borderRadius: 999,
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  maxWidth: 340,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: draftStatus.state === 'error' ? 'rgba(255, 122, 107, 0.12)' : 'transparent',
+                  color: draftStatus.state === 'error' ? 'var(--cc-danger)' : 'var(--text-tertiary)',
+                  border: draftStatus.state === 'error' ? '1px solid rgba(255, 122, 107, 0.35)' : '1px solid transparent',
                 }}
               >
                 {draftStatus.state === 'saving' ? (
@@ -1205,11 +1161,11 @@ export default function AppShell({
                           marginLeft: 4,
                           padding: '1px 6px',
                           borderRadius: 6,
-                          border: '1px solid rgba(239, 68, 68, 0.45)',
-                          backgroundColor: 'rgba(239, 68, 68, 0.14)',
-                          color: '#FCA5A5',
-                          fontSize: 10.5,
-                          fontWeight: 700,
+                          border: '1px solid rgba(255, 122, 107, 0.45)',
+                          backgroundColor: 'rgba(255, 122, 107, 0.14)',
+                          color: '#FFA79C',
+                          fontSize: 11.5,
+                          fontWeight: 600,
                           cursor: 'pointer',
                         }}
                       >
@@ -1219,8 +1175,8 @@ export default function AppShell({
                   </>
                 ) : (
                   <>
-                    <Check size={11} aria-hidden="true" />
-                    <span>
+                    <Check size={12} aria-hidden="true" style={{ color: 'var(--success)' }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                       {draftStatus.detail ? `Draft saved · ${draftStatus.detail}` : 'Draft saved'}
                     </span>
                   </>
@@ -1231,7 +1187,7 @@ export default function AppShell({
             {hasStaleWarning && (
               <span
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   backgroundColor: 'var(--warning-subtle)',
                   color: 'var(--warning)',
                   border: '1px solid var(--warning)',
@@ -1268,22 +1224,22 @@ export default function AppShell({
                     gap: 5,
                     padding: '5px 10px',
                     borderRadius: 16,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.16)' : 'rgba(234, 179, 8, 0.16)',
-                    color: studioMode === 'simple' ? 'var(--accent-primary)' : '#eab308',
-                    border: '1px solid ' + (studioMode === 'simple' ? 'rgba(99, 102, 241, 0.35)' : 'rgba(234, 179, 8, 0.4)'),
+                    fontSize: 12,
+                    fontWeight: 600,
+                    backgroundColor: studioMode === 'simple' ? 'rgba(244, 244, 236, 0.08)' : 'rgba(244, 244, 236, 0.08)',
+                    color: studioMode === 'simple' ? 'var(--cc-emphasis)' : 'var(--cc-emphasis)',
+                    border: '1px solid ' + (studioMode === 'simple' ? 'rgba(244, 244, 236, 0.315)' : 'rgba(244, 244, 236, 0.36)'),
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                   }}
                 >
                   {studioMode === 'simple' ? <Zap size={11} /> : <Sliders size={11} />}
                   <span>{studioMode === 'simple' ? 'Simple' : 'Director'}</span>
-                  <span style={{ opacity: 0.65, fontSize: 10 }}>⇄</span>
+                  <span style={{ opacity: 0.65, fontSize: 11.5 }}>⇄</span>
                 </button>
               </div>
 
-              <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 {/* Box 2 Mode Switcher Toggle Pill (Fixed on Navbar Top Right) */}
                 <div
                   data-tour="mode-switcher"
@@ -1291,9 +1247,9 @@ export default function AppShell({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 8,
+                    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 999,
                     padding: 3,
                     gap: 2,
                   }}
@@ -1310,16 +1266,16 @@ export default function AppShell({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 5,
-                      padding: '5px 11px',
-                      borderRadius: 6,
-                      fontSize: 11,
-                      fontWeight: studioMode === 'simple' ? 700 : 500,
-                      backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
-                      color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                      gap: 6,
+                      padding: '6px 13px',
+                      borderRadius: 999,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      backgroundColor: studioMode === 'simple' ? 'var(--cc-active)' : 'transparent',
+                      color: studioMode === 'simple' ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                       border: 'none',
                       cursor: studioMode === 'simple' ? 'default' : 'pointer',
-                      boxShadow: studioMode === 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                      boxShadow: studioMode === 'simple' ? 'inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)' : 'none',
                       transition: 'all 0.15s ease',
                     }}
                   >
@@ -1339,16 +1295,16 @@ export default function AppShell({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 5,
-                      padding: '5px 11px',
-                      borderRadius: 6,
-                      fontSize: 11,
-                      fontWeight: studioMode !== 'simple' ? 700 : 500,
-                      backgroundColor: studioMode !== 'simple' ? 'var(--accent-primary)' : 'transparent',
-                      color: studioMode !== 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                      gap: 6,
+                      padding: '6px 13px',
+                      borderRadius: 999,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      backgroundColor: studioMode !== 'simple' ? 'var(--cc-active)' : 'transparent',
+                      color: studioMode !== 'simple' ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                       border: 'none',
                       cursor: studioMode !== 'simple' ? 'default' : 'pointer',
-                      boxShadow: studioMode !== 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                      boxShadow: studioMode !== 'simple' ? 'inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)' : 'none',
                       transition: 'all 0.15s ease',
                     }}
                   >
@@ -1362,13 +1318,14 @@ export default function AppShell({
                     <button
                       type="button"
                       onClick={onRestartFilm}
+                      className="cc-ghost-hover"
                       style={{
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: 6,
-                        padding: '6px 12px',
-                        fontSize: 12,
-                        fontWeight: 600,
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: 999,
+                        padding: '7px 12px',
+                        fontSize: 13,
+                        fontWeight: 500,
                         color: 'var(--text-secondary)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -1385,13 +1342,14 @@ export default function AppShell({
                     <button
                       type="button"
                       onClick={onOpenFeedbackModal}
+                      className="cc-ghost-hover"
                       style={{
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: 6,
-                        padding: '6px 12px',
-                        fontSize: 12,
-                        fontWeight: 600,
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: 999,
+                        padding: '7px 12px',
+                        fontSize: 13,
+                        fontWeight: 500,
                         color: 'var(--text-secondary)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -1401,7 +1359,7 @@ export default function AppShell({
                       }}
                       title="Send Feedback or Report an Issue"
                     >
-                      <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
+                      <MessageSquare size={14} />
                       <span>Feedback</span>
                     </button>
                   </>
@@ -1415,8 +1373,10 @@ export default function AppShell({
         <main
           style={{
             flex: 1,
-            background: 'radial-gradient(circle at 50% 0%, #151824 0%, #0B0C10 70%)',
-            minHeight: 'calc(100vh - 60px)',
+            backgroundColor: 'var(--cc-bg)',
+            backgroundImage: 'var(--cc-keylight)',
+            backgroundRepeat: 'no-repeat',
+            minHeight: 'calc(100vh - 64px)',
           }}
         >
           {children}

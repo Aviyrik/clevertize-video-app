@@ -48,6 +48,12 @@ import {
   Copy,
   Bookmark,
   Users,
+  Gift,
+  Smartphone,
+  Truck,
+  MessageCircle,
+  Zap,
+  House,
 } from 'lucide-react';
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
@@ -127,9 +133,9 @@ export function StudioProgressHeader({
                 alignItems: 'center',
                 gap: 5,
                 fontSize: 12,
-                fontWeight: isCurrent ? 700 : isCompleted ? 600 : 500,
+                fontWeight: isCurrent ? 600 : isCompleted ? 600 : 500,
                 color: isCurrent
-                  ? 'var(--accent-primary)'
+                  ? 'var(--cc-emphasis)'
                   : isCompleted
                   ? 'var(--text-primary)'
                   : 'var(--text-tertiary)',
@@ -143,9 +149,9 @@ export function StudioProgressHeader({
                 height: 18,
                 borderRadius: '50%',
                 backgroundColor: isCurrent
-                  ? 'var(--accent-primary)'
+                  ? 'var(--cc-action)'
                   : isCompleted
-                  ? 'rgba(34, 197, 94, 0.15)'
+                  ? 'rgba(95, 212, 174, 0.15)'
                   : 'var(--bg-elevated)',
                 color: isCurrent
                   ? '#ffffff'
@@ -155,8 +161,8 @@ export function StudioProgressHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 10,
-                fontWeight: 800,
+                fontSize: 11.5,
+                fontWeight: 600,
               }}>
                 {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : st.num}
               </span>
@@ -220,7 +226,7 @@ export function StudioChoicesBar({
       flexWrap: 'wrap',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
           Choices:
         </span>
 
@@ -249,14 +255,14 @@ export function StudioChoicesBar({
               </strong>
             </button>
             {idx < visibleChoices.length - 1 && (
-              <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>·</span>
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>·</span>
             )}
           </React.Fragment>
         ))}
       </div>
 
       {hasStaleWarning && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#eab308' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--cc-emphasis)' }}>
           <AlertCircle size={13} />
           <span>Update script to apply changes</span>
           <button
@@ -264,12 +270,12 @@ export function StudioChoicesBar({
             onClick={onApplyUpdate}
             style={{
               padding: '3px 9px',
-              borderRadius: 5,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
+              color: 'var(--cc-on-action)',
               border: 'none',
-              fontSize: 11,
-              fontWeight: 700,
+              fontSize: 12,
+              fontWeight: 600,
               cursor: 'pointer'
             }}
           >
@@ -322,7 +328,7 @@ export function Screen01Business({
       {/* Title & One Short Explanation */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
             {userContext.businessName?.trim() ? `Brand Profile: ${userContext.businessName}` : 'Tell us about your business'}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
@@ -344,9 +350,9 @@ export function Screen01Business({
               borderRadius: 8,
               fontSize: 12,
               fontWeight: 600,
-              backgroundColor: 'rgba(59, 130, 246, 0.12)',
-              border: '1px solid rgba(59, 130, 246, 0.35)',
-              color: '#60A5FA',
+              backgroundColor: 'rgba(244, 244, 236, 0.06)',
+              border: '1px solid rgba(244, 244, 236, 0.315)',
+              color: 'var(--cc-text-2)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -379,10 +385,10 @@ export function Screen01Business({
               />
             )}
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
                 Current Brand
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Using {userContext.businessName}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -429,7 +435,7 @@ export function Screen01Business({
 
           {/* Business Name */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
               Business Name <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
@@ -460,7 +466,7 @@ export function Screen01Business({
 
           {/* Category */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
               Category
             </label>
             <select
@@ -484,8 +490,8 @@ export function Screen01Business({
 
           {/* City / Location */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-              City / Location <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              City / Location <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
             </label>
             <input
               type="text"
@@ -506,8 +512,8 @@ export function Screen01Business({
 
           {/* Website */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-              Website / Social Link <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Website / Social Link <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
             </label>
             <input
               type="url"
@@ -529,12 +535,12 @@ export function Screen01Business({
           {/* Brand Logo (Optional) */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                <Building2 size={13} style={{ color: 'var(--accent-primary)' }} />
-                <span>Brand Logo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <Building2 size={13} style={{ color: 'var(--cc-emphasis)' }} />
+                <span>Brand Logo <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></span>
               </label>
               {userContext.logo && (
-                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <CheckCircle2 size={12} />
                   Attached
                 </span>
@@ -565,7 +571,7 @@ export function Screen01Business({
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {userContext.logo.name || 'Brand logo'}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
                       {userContext.productPhoto?.fromWebsite ? '✓ Attached from website' : 'Attached for video production'}
                     </div>
                   </div>
@@ -578,7 +584,7 @@ export function Screen01Business({
                     backgroundColor: 'transparent',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-secondary)',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'inline-flex',
@@ -606,7 +612,7 @@ export function Screen01Business({
                       backgroundColor: 'transparent',
                       border: 'none',
                       color: 'var(--error)',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -628,7 +634,7 @@ export function Screen01Business({
                 borderRadius: 8,
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px dashed var(--border-default)',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -659,17 +665,17 @@ export function Screen01Business({
           onClick={handleNext}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <span>Continue</span>
@@ -721,11 +727,11 @@ export function Screen02Brief({
   };
 
   const SUGGESTION_CHIPS = [
-    { label: '🎁 Offer', starter: 'Announce a special limited-time festive discount: ' },
-    { label: '📦 Product', starter: 'Showcase our signature handcrafted collection: ' },
-    { label: '💡 New idea', starter: 'Share a helpful insider secret about choosing quality: ' },
-    { label: '😩 Customer problem', starter: 'Show how to avoid the frustration of poor fittings: ' },
-    { label: '📣 Announcement', starter: 'Announce guaranteed same-day delivery for urgent orders: ' },
+    { label: 'Offer', starter: 'Announce a special limited-time festive discount: ' },
+    { label: 'Product', starter: 'Showcase our signature handcrafted collection: ' },
+    { label: 'New idea', starter: 'Share a helpful insider secret about choosing quality: ' },
+    { label: 'Customer problem', starter: 'Show how to avoid the frustration of poor fittings: ' },
+    { label: 'Announcement', starter: 'Announce guaranteed same-day delivery for urgent orders: ' },
   ];
 
   const handleApplySuggestion = (starter) => {
@@ -768,8 +774,8 @@ export function Screen02Brief({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
+                backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -780,16 +786,16 @@ export function Screen02Brief({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
                   Creating Video For
                 </span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {userContext.businessName}
                 </span>
                 {userContext.businessType && (
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       backgroundColor: 'var(--bg-elevated)',
                       border: '1px solid var(--border-subtle)',
                       padding: '2px 8px',
@@ -811,13 +817,13 @@ export function Screen02Brief({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
               style={{
-                fontSize: 11,
-                color: 'var(--accent-primary)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                fontSize: 12,
+                color: 'var(--cc-emphasis)',
+                backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                border: '1px solid rgba(244, 244, 236, 0.225)',
                 padding: '4px 10px',
                 borderRadius: 6,
-                fontWeight: 700,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
@@ -834,7 +840,7 @@ export function Screen02Brief({
       {/* Title & Short Explanation with Contextual Actions */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>Your Video Brief</span>
             <HelpTooltip
               title={HELP_TOOLTIPS.brief_input.title}
@@ -861,9 +867,9 @@ export function Screen02Brief({
                   borderRadius: 8,
                   fontSize: 12,
                   fontWeight: 600,
-                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  color: '#34D399',
+                  backgroundColor: 'rgba(95, 212, 174, 0.12)',
+                  border: '1px solid rgba(95, 212, 174, 0.35)',
+                  color: 'var(--cc-success)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
@@ -885,9 +891,9 @@ export function Screen02Brief({
                   borderRadius: 8,
                   fontSize: 12,
                   fontWeight: 600,
-                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid rgba(59, 130, 246, 0.35)',
-                  color: '#60A5FA',
+                  backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                  border: '1px solid rgba(244, 244, 236, 0.315)',
+                  color: 'var(--cc-text-2)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
@@ -954,10 +960,10 @@ export function Screen02Brief({
               gap: 5,
               padding: '5px 10px',
               borderRadius: 20,
-              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-surface)',
+              backgroundColor: isRecording ? 'rgba(255, 122, 107, 0.15)' : 'var(--bg-surface)',
               border: isRecording ? '1px solid var(--error)' : '1px solid var(--border-default)',
               color: isRecording ? 'var(--error)' : 'var(--text-secondary)',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -968,7 +974,7 @@ export function Screen02Brief({
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)' }}>
           <span>Be direct and natural — the AI shapes this into visual scenes.</span>
           <span>{charCount} characters</span>
         </div>
@@ -987,16 +993,16 @@ export function Screen02Brief({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: 600,
               color: 'var(--text-secondary)',
               cursor: 'pointer',
             }}
           >
             {optExpanded.inspiration ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronRight size={13} aria-hidden="true" />}
-            <Lightbulb size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+            <Lightbulb size={12} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
             <span>Need inspiration? Sample starters &amp; category ideas</span>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>(Optional)</span>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>(Optional)</span>
           </button>
 
           {optExpanded.inspiration && (
@@ -1010,7 +1016,7 @@ export function Screen02Brief({
                     style={{
                       padding: '6px 12px',
                       borderRadius: 20,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       backgroundColor: 'var(--bg-elevated)',
                       border: '1px solid var(--border-subtle)',
@@ -1027,7 +1033,7 @@ export function Screen02Brief({
               {/* Dynamic Category Suggestions if available */}
               {Array.isArray(briefSuggestions) && briefSuggestions.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
                     Ideas for your business category:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1051,7 +1057,7 @@ export function Screen02Brief({
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        💡 {sug}
+                        <Lightbulb size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{sug}
                       </button>
                     ))}
                   </div>
@@ -1064,7 +1070,7 @@ export function Screen02Brief({
 
       {/* Optional Details Grouping (Collapsed by default) */}
       <div data-testid="brief-optional-details" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
           Optional Details
         </span>
 
@@ -1128,11 +1134,11 @@ export function Screen02Brief({
           flexDirection: 'column',
           gap: 6
         }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={11} style={{ color: 'var(--accent-primary)' }} />
+          <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Sparkles size={11} style={{ color: 'var(--cc-emphasis)' }} />
             <span>Market Context (Background)</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
             {researchData.audienceInsight && (
               <div><strong>Audience:</strong> {researchData.audienceInsight}</div>
             )}
@@ -1150,9 +1156,9 @@ export function Screen02Brief({
           style={{
             padding: '10px 14px',
             borderRadius: 8,
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            color: 'var(--error, #ef4444)',
+            backgroundColor: 'rgba(255, 122, 107, 0.1)',
+            border: '1px solid rgba(255, 122, 107, 0.35)',
+            color: 'var(--error, var(--cc-danger))',
             fontSize: 12,
             fontWeight: 600,
             display: 'flex',
@@ -1166,15 +1172,16 @@ export function Screen02Brief({
       )}
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -1188,17 +1195,17 @@ export function Screen02Brief({
           onClick={handleNext}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <span>Continue</span>
@@ -1259,7 +1266,7 @@ export function Screen03Settings({
 
   return (
     <div data-testid="director-settings-screen" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+      <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
         Video Settings
       </h1>
 
@@ -1278,7 +1285,7 @@ export function Screen03Settings({
           <div>
             <label
               htmlFor="director-ad-language"
-              style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}
+              style={{ display: 'block', fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 7 }}
             >
               Language
             </label>
@@ -1315,7 +1322,7 @@ export function Screen03Settings({
           </div>
 
           <div>
-            <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+            <span style={{ display: 'block', fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
               Video Length
             </span>
             <div
@@ -1353,9 +1360,9 @@ export function Screen03Settings({
                       border: 'none',
                       borderRadius: 6,
                       fontSize: 12.5,
-                      fontWeight: isSelected ? 700 : 500,
-                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
-                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                      fontWeight: isSelected ? 600 : 500,
+                      backgroundColor: isSelected ? 'var(--cc-active)' : 'transparent',
+                      color: isSelected ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1368,10 +1375,10 @@ export function Screen03Settings({
                     {dur.popular && (
                       <span
                         style={{
-                          fontSize: 9.5,
-                          fontWeight: 700,
+                          fontSize: 11,
+                          fontWeight: 600,
                           opacity: isSelected ? 0.9 : 0.75,
-                          color: isSelected ? '#ffffff' : 'var(--accent-primary)',
+                          color: isSelected ? '#ffffff' : 'var(--cc-emphasis)',
                         }}
                       >
                         Popular
@@ -1386,7 +1393,7 @@ export function Screen03Settings({
 
         {/* 2. Video Dimension (3 compact options with aspect-ratio icon + label only) */}
         <div>
-          <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+          <span style={{ display: 'block', fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
             Video Dimension
           </span>
           <div
@@ -1424,11 +1431,11 @@ export function Screen03Settings({
                     padding: '10px 12px',
                     borderRadius: 8,
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                    border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                    boxShadow: isSelected ? '0 0 0 1px var(--cc-selected-line)' : 'none',
+                    color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                     fontSize: 12.5,
-                    fontWeight: isSelected ? 700 : 500,
+                    fontWeight: isSelected ? 600 : 500,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
@@ -1440,8 +1447,8 @@ export function Screen03Settings({
                         width: dim.frameWidth,
                         height: dim.frameHeight,
                         borderRadius: 2,
-                        border: isSelected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
-                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
+                        border: isSelected ? '1.5px solid var(--cc-selected-line)' : '1.5px solid var(--text-tertiary)',
+                        backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.09)' : 'transparent',
                         flexShrink: 0,
                       }}
                     />
@@ -1456,7 +1463,7 @@ export function Screen03Settings({
 
         {/* 4. Creative Style (4 compact tiles, style names only) */}
         <div>
-          <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+          <span style={{ display: 'block', fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
             Creative Style
           </span>
 
@@ -1487,8 +1494,8 @@ export function Screen03Settings({
                   }}
                   style={{
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                    border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                    boxShadow: isSelected ? '0 0 0 1px var(--cc-selected-line)' : 'none',
                     borderRadius: 8,
                     padding: '10px 12px',
                     cursor: 'pointer',
@@ -1496,9 +1503,9 @@ export function Screen03Settings({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 6,
-                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                    color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                     fontSize: 12.5,
-                    fontWeight: isSelected ? 700 : 500,
+                    fontWeight: isSelected ? 600 : 500,
                     textAlign: 'left',
                     transition: 'all 0.15s ease',
                   }}
@@ -1513,7 +1520,7 @@ export function Screen03Settings({
 
         {/* 5. Compact Two-Column Optional Assets: Product Photo & Logo Image */}
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 10 }}>
             Optional Assets
           </div>
 
@@ -1550,7 +1557,7 @@ export function Screen03Settings({
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         Replace
                         <input
                           type="file"
@@ -1566,7 +1573,7 @@ export function Screen03Settings({
                         type="button"
                         onClick={() => updateUserContext('productPhoto', null)}
                         aria-label="Remove product photo"
-                        style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                        style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                       >
                         Remove
                       </button>
@@ -1618,7 +1625,7 @@ export function Screen03Settings({
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <Building2 size={12} aria-hidden="true" />
                     <span>Logo Image</span>
-                    <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>· +5s outro</span>
+                    <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>· +5s outro</span>
                   </span>
 
                   {logo ? (
@@ -1643,7 +1650,7 @@ export function Screen03Settings({
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           Replace
                           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
                         </label>
@@ -1651,7 +1658,7 @@ export function Screen03Settings({
                           type="button"
                           onClick={() => updateUserContext('videoLogo', null)}
                           aria-label="Remove logo image"
-                          style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                          style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                         >
                           Remove
                         </button>
@@ -1677,7 +1684,7 @@ export function Screen03Settings({
                         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
                       </label>
                       {profileUnusable && (
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                           Profile logo unsupported — upload PNG, JPG or WebP.
                         </span>
                       )}
@@ -1685,7 +1692,7 @@ export function Screen03Settings({
                         <button
                           type="button"
                           onClick={() => updateUserContext('videoLogo', undefined)}
-                          style={{ padding: 0, background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
+                          style={{ padding: 0, background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                         >
                           Use my business profile logo
                         </button>
@@ -1700,15 +1707,16 @@ export function Screen03Settings({
       </div>
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -1722,17 +1730,17 @@ export function Screen03Settings({
           onClick={onContinue}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <span>Continue</span>
@@ -1773,7 +1781,7 @@ export function Screen04Idea({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Title & Short Explanation */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>Choose a Creative Idea</span>
           <HelpTooltip
             title={HELP_TOOLTIPS.idea_selection.title}
@@ -1799,7 +1807,7 @@ export function Screen04Idea({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
             {directionsList.map((dir, idx) => {
               const isSelected = selectedDirection?.id === dir.id;
-              const icons = ['🎁', '📱', '🚚', '💡', '✨'];
+              const icons = [Gift, Smartphone, Truck, Lightbulb, Sparkles];
               const icon = icons[idx % icons.length];
 
               return (
@@ -1808,7 +1816,7 @@ export function Screen04Idea({
                   onClick={() => handleSelectIdea(dir)}
                   style={{
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                    border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                     borderRadius: 10,
                     padding: 16,
                     cursor: 'pointer',
@@ -1819,22 +1827,22 @@ export function Screen04Idea({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <span style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'var(--cc-hover)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{React.createElement(icon, { size: 16, 'aria-hidden': true })}</span>
                     {dir.recommended && (
                       <span style={{
-                        fontSize: 9,
-                        fontWeight: 800,
+                        fontSize: 11,
+                        fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        color: 'var(--accent-primary)',
+                        backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                        color: 'var(--cc-emphasis)',
                         letterSpacing: '0.04em'
                       }}>
                         RECOMMENDED
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {dir.title}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -1874,8 +1882,8 @@ export function Screen04Idea({
                       width: 38,
                       height: 38,
                       borderRadius: 10,
-                      backgroundColor: 'rgba(139, 92, 246, 0.12)',
-                      color: 'var(--accent-primary)',
+                      backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                      color: 'var(--cc-emphasis)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1885,7 +1893,7 @@ export function Screen04Idea({
                     <Lightbulb size={18} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                       Have your own creative idea?
                     </span>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
@@ -1896,10 +1904,10 @@ export function Screen04Idea({
                 <span
                   style={{
                     fontSize: 12,
-                    fontWeight: 700,
-                    color: 'var(--accent-primary)',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                    fontWeight: 600,
+                    color: 'var(--cc-emphasis)',
+                    backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                    border: '1px solid rgba(244, 244, 236, 0.225)',
                     borderRadius: 8,
                     padding: '7px 14px',
                     whiteSpace: 'nowrap',
@@ -1915,8 +1923,8 @@ export function Screen04Idea({
               <div
                 data-testid="own-idea-input-panel"
                 style={{
-                  backgroundColor: customDirection.trim() ? 'rgba(139, 92, 246, 0.08)' : 'var(--bg-surface)',
-                  border: customDirection.trim() ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  backgroundColor: customDirection.trim() ? 'rgba(244, 244, 236, 0.04)' : 'var(--bg-surface)',
+                  border: customDirection.trim() ? '1.5px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                   borderRadius: 12,
                   padding: '16px 20px',
                   display: 'flex',
@@ -1926,10 +1934,10 @@ export function Screen04Idea({
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Lightbulb size={16} style={{ color: 'var(--accent-primary)' }} />
+                    <Lightbulb size={16} style={{ color: 'var(--cc-emphasis)' }} />
                     <label
                       htmlFor="own-creative-idea-input"
-                      style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+                      style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}
                     >
                       Start with your own creative idea
                     </label>
@@ -1993,15 +2001,16 @@ export function Screen04Idea({
       )}
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -2016,17 +2025,17 @@ export function Screen04Idea({
           onClick={onContinue}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: isLoadingDirections ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <span>Continue</span>
@@ -2065,7 +2074,7 @@ export function Screen05Opening({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Title & Short Explanation */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
           Choose an Opening
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
@@ -2086,7 +2095,7 @@ export function Screen05Opening({
             {hooksList.map((hk, idx) => {
               const isSelected = selectedHook?.id === hk.id;
               const isEditing = editingHookId === hk.id;
-              const icons = ['📱', '🎁', '😮', '💬', '⚡', '👀'];
+              const icons = [Smartphone, Gift, Eye, MessageCircle, Zap, Eye];
               const icon = icons[idx % icons.length];
 
               return (
@@ -2095,7 +2104,7 @@ export function Screen05Opening({
                   onClick={() => !isEditing && handleSelectHook(hk)}
                   style={{
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                    border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                     borderRadius: 10,
                     padding: 14,
                     cursor: isEditing ? 'default' : 'pointer',
@@ -2107,15 +2116,15 @@ export function Screen05Opening({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>{icon}</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-primary)' }}>
+                      <span style={{ display: 'inline-flex', color: 'var(--text-tertiary)' }}>{React.createElement(icon, { size: 14, 'aria-hidden': true })}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)' }}>
                         {hk.archetype || hk.type || 'Opening'}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', gap: 6 }}>
                       {hk.recommended && (
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 4, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-primary)' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 5px', borderRadius: 4, backgroundColor: 'rgba(244, 244, 236, 0.075)', color: 'var(--cc-emphasis)' }}>
                           TOP PICK
                         </span>
                       )}
@@ -2137,7 +2146,7 @@ export function Screen05Opening({
                             setEditingHookId(hk.id);
                           }
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                       >
                         {isEditing ? 'Save' : '[Edit]'}
                       </button>
@@ -2165,13 +2174,13 @@ export function Screen05Opening({
                       style={{ padding: '6px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35 }}>
                       "{hk.hookLine || hk.text}"
                     </div>
                   )}
 
                   {hk.visualAction && (
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
                       {hk.visualAction}
                     </div>
                   )}
@@ -2189,7 +2198,7 @@ export function Screen05Opening({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-primary)',
+                  color: 'var(--cc-emphasis)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -2212,7 +2221,7 @@ export function Screen05Opening({
                 flexDirection: 'column',
                 gap: 8
               }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>
                   Your opening line or action
                 </label>
                 <input
@@ -2246,15 +2255,16 @@ export function Screen05Opening({
       )}
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -2269,17 +2279,17 @@ export function Screen05Opening({
           onClick={onContinue}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: isLoadingHooks ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <span>Continue to Script</span>
@@ -2532,10 +2542,10 @@ export function Screen06Story({
 
   const beats = storyWorldData?.beats || [];
   const beatStages = [
-    { key: 'START', label: 'START', color: '#3b82f6' },
-    { key: 'SHOW', label: 'SHOW', color: '#8b5cf6' },
-    { key: 'MOMENT', label: 'MOMENT', color: '#ec4899' },
-    { key: 'END', label: 'END', color: '#10b981' },
+    { key: 'START', label: 'START', color: 'var(--cc-text-2)' },
+    { key: 'SHOW', label: 'SHOW', color: 'var(--cc-emphasis)' },
+    { key: 'MOMENT', label: 'MOMENT', color: 'var(--cc-text-2)' },
+    { key: 'END', label: 'END', color: 'var(--cc-success)' },
   ];
 
   const dur = parseInt(userContext.targetDuration, 10) || 20;
@@ -2565,15 +2575,15 @@ export function Screen06Story({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '2px solid var(--accent-primary)',
+          border: '2px solid var(--cc-selected-line)',
           boxShadow: '0 0 20px var(--accent-glow)'
         }}>
-          <Sparkles size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+          <Sparkles size={30} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
         </div>
 
         {/* Title & Subtitle */}
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
             Writing and polishing your script…
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
@@ -2585,7 +2595,7 @@ export function Screen06Story({
         <div style={{
           fontSize: 12,
           fontFamily: "'JetBrains Mono', monospace",
-          color: 'var(--accent-primary)',
+          color: 'var(--cc-emphasis)',
           backgroundColor: 'var(--bg-elevated)',
           padding: '5px 14px',
           borderRadius: 20,
@@ -2594,7 +2604,7 @@ export function Screen06Story({
           alignItems: 'center',
           gap: 6
         }}>
-          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
+          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--cc-action)' }} />
           Elapsed: {elapsedTime || '00:00'}
         </div>
 
@@ -2629,23 +2639,23 @@ export function Screen06Story({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isDone ? 'rgba(16, 185, 129, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
-                  border: isDone ? '1px solid #10b981' : isCurrent ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  backgroundColor: isDone ? 'rgba(95, 212, 174, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
+                  border: isDone ? '1px solid var(--cc-success)' : isCurrent ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                   flexShrink: 0
                 }}>
                   {isDone ? (
-                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={13} style={{ color: 'var(--cc-success)' }} />
                   ) : isCurrent ? (
-                    <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+                    <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
                   ) : (
-                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: 12, fontWeight: isCurrent ? 600 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                     {s.label}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {s.desc}
                   </div>
                 </div>
@@ -2658,8 +2668,8 @@ export function Screen06Story({
         <div style={{
           width: '100%',
           maxWidth: 480,
-          backgroundColor: 'rgba(59, 130, 246, 0.06)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
+          backgroundColor: 'rgba(244, 244, 236, 0.03)',
+          border: '1px solid rgba(244, 244, 236, 0.18)',
           borderRadius: 10,
           padding: '12px 14px',
           textAlign: 'left',
@@ -2667,15 +2677,15 @@ export function Screen06Story({
           gap: 10,
           alignItems: 'flex-start'
         }}>
-          <Lightbulb size={16} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+          <Lightbulb size={16} style={{ color: 'var(--cc-text-2)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 700, color: '#3b82f6' }}>Filmmaking Tip: </span>
+            <span style={{ fontWeight: 600, color: 'var(--cc-text-2)' }}>Filmmaking Tip: </span>
             {filmmakingTips[tipIdx]}
           </div>
         </div>
 
         {/* Dynamic Reassurance footer */}
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>
           {elapsedSec < 28
             ? 'Directing broadcast scenes & running Section 8 quality checks (~25–35s)'
             : elapsedSec < 55
@@ -2690,7 +2700,7 @@ export function Screen06Story({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Title & Short Explanation */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
           Here's your story: World & Narrative Arc
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
@@ -2714,12 +2724,12 @@ export function Screen06Story({
             flexDirection: 'column',
             gap: 12
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Layers size={13} style={{ color: 'var(--accent-primary)' }} />
+                <Layers size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>1. Narrative Progression (4 Beats)</span>
               </div>
-              <span style={{ fontSize: 10, textTransform: 'none', color: 'var(--accent-primary)', fontWeight: 600 }}>
+              <span style={{ fontSize: 11.5, textTransform: 'none', color: 'var(--cc-emphasis)', fontWeight: 600 }}>
                 {userContext.targetDuration || '20s'} Film
               </span>
             </div>
@@ -2749,8 +2759,8 @@ export function Screen06Story({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{
-                        fontSize: 10,
-                        fontWeight: 800,
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
                         backgroundColor: 'var(--bg-surface)',
@@ -2759,21 +2769,21 @@ export function Screen06Story({
                       }}>
                         {st.label} ({timingLabel})
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                         0{idx + 1}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                       {b.title || `Part ${idx + 1}`}
                     </div>
 
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
                       {b.action || 'Visual action unfolding here.'}
                     </div>
 
                     {b.dialogue && (
-                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 2, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 2, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
                         "{b.dialogue}"
                       </div>
                     )}
@@ -2793,12 +2803,12 @@ export function Screen06Story({
             flexDirection: 'column',
             gap: 10
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Users size={13} style={{ color: 'var(--accent-primary)' }} />
+                <Users size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>2. People & Setting (Continuity Anchors)</span>
               </div>
-              <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'none', fontWeight: 500 }}>
+              <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', textTransform: 'none', fontWeight: 500 }}>
                 Kept consistent across all scenes
               </span>
             </div>
@@ -2807,7 +2817,7 @@ export function Screen06Story({
               {/* Lead */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>👩 Main person</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Main person</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -2817,7 +2827,7 @@ export function Screen06Story({
                         startEditLead();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'lead' ? 'Save' : '[Edit]'}
                   </button>
@@ -2830,7 +2840,7 @@ export function Screen06Story({
                       onChange={(e) => setEditLeadName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveLead(); } }}
                       placeholder="Name"
-                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                     <input
                       type="text"
@@ -2838,7 +2848,7 @@ export function Screen06Story({
                       onChange={(e) => setEditLeadRole(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveLead(); } }}
                       placeholder="Role"
-                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                   </div>
                 ) : (
@@ -2851,7 +2861,7 @@ export function Screen06Story({
               {/* Supporting */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>👨 Other person</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Other person</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -2861,7 +2871,7 @@ export function Screen06Story({
                         startEditSupp();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'supp' ? 'Save' : '[Edit]'}
                   </button>
@@ -2874,7 +2884,7 @@ export function Screen06Story({
                       onChange={(e) => setEditSuppName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveSupp(); } }}
                       placeholder="Name"
-                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                     <input
                       type="text"
@@ -2882,7 +2892,7 @@ export function Screen06Story({
                       onChange={(e) => setEditSuppRole(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveSupp(); } }}
                       placeholder="Role"
-                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                     />
                   </div>
                 ) : (
@@ -2895,7 +2905,7 @@ export function Screen06Story({
               {/* Setting */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>🏠 Place</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -2905,7 +2915,7 @@ export function Screen06Story({
                         startEditPlace();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'place' ? 'Save' : '[Edit]'}
                   </button>
@@ -2917,7 +2927,7 @@ export function Screen06Story({
                     onChange={(e) => setEditSettingName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePlace(); } }}
                     placeholder="Place / Location"
-                    style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                    style={{ width: '100%', padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                   />
                 ) : (
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2935,8 +2945,8 @@ export function Screen06Story({
                   <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)' }}>
-                          {isService ? '🎯 Service Offering' : '🎁 Featured Product'}
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                          {isService ? 'Service Offering' : 'Featured Product'}
                         </span>
                       </div>
                       <button
@@ -2948,7 +2958,7 @@ export function Screen06Story({
                             startEditProduct();
                           }
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                       >
                         {editingCard === 'prod' ? 'Save' : '[Edit Text]'}
                       </button>
@@ -2960,14 +2970,14 @@ export function Screen06Story({
                         onChange={(e) => setEditProductName(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProduct(); } }}
                         placeholder={isService ? "e.g. Group Fitness & Personal Training" : "Featured Product"}
-                        style={{ width: '100%', padding: '4px 8px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
+                        style={{ width: '100%', padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}
                       />
                     ) : (
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || (isService ? `${userContext.businessName || 'Business'} Service` : `${userContext.businessName || 'Store'} items`)}
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
                           {isService ? 'Service experience showcased' : 'Product highlighted in scenes'}
                         </div>
                       </div>
@@ -2998,16 +3008,16 @@ export function Screen06Story({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ShieldCheck size={13} style={{ color: 'var(--accent-primary)' }} />
+                <ShieldCheck size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>3. Story Constraints & Avoid Rules (Optional)</span>
                 {(currentConstraints.length > 0 || currentAvoid.length > 0) && (
                   <span style={{
-                    fontSize: 10,
-                    fontWeight: 700,
+                    fontSize: 11.5,
+                    fontWeight: 600,
                     padding: '2px 6px',
                     borderRadius: 10,
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--accent-primary)'
+                    backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                    color: 'var(--cc-emphasis)'
                   }}>
                     {currentConstraints.length + currentAvoid.length} active
                   </span>
@@ -3020,13 +3030,13 @@ export function Screen06Story({
               <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* Things to include */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                     Things to include
                   </div>
                   {currentConstraints.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                       {currentConstraints.map((c, i) => (
-                        <span key={i} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span key={i} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(244, 244, 236, 0.06)', color: 'var(--cc-emphasis)', border: '1px solid rgba(244, 244, 236, 0.225)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <span>{c}</span>
                           <X size={11} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => handleRemoveConstraint(i)} />
                         </span>
@@ -3062,7 +3072,7 @@ export function Screen06Story({
                       style={{
                         padding: '8px 16px',
                         fontSize: 12,
-                        fontWeight: 700,
+                        fontWeight: 600,
                         borderRadius: 6,
                         border: '1px solid var(--border-default)',
                         backgroundColor: 'var(--bg-elevated)',
@@ -3078,13 +3088,13 @@ export function Screen06Story({
 
                 {/* Things to avoid */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                     Things to avoid
                   </div>
                   {currentAvoid.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                       {currentAvoid.map((a, i) => (
-                        <span key={i} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span key={i} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(255, 122, 107, 0.1)', color: 'var(--cc-danger)', border: '1px solid rgba(255, 122, 107, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <span>{a}</span>
                           <X size={11} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => handleRemoveAvoid(i)} />
                         </span>
@@ -3120,7 +3130,7 @@ export function Screen06Story({
                       style={{
                         padding: '8px 16px',
                         fontSize: 12,
-                        fontWeight: 700,
+                        fontWeight: 600,
                         borderRadius: 6,
                         border: '1px solid var(--border-default)',
                         backgroundColor: 'var(--bg-elevated)',
@@ -3140,15 +3150,16 @@ export function Screen06Story({
       )}
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -3163,17 +3174,17 @@ export function Screen06Story({
           onClick={handleProceed}
           style={{
             padding: '12px 28px',
-            borderRadius: 8,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 14,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: isBusy || isLoadingStory ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           {isBusy && <RefreshCw size={14} className="icon-spinner" />}
@@ -3384,10 +3395,10 @@ export function Screen07Script({
     }
     return (
       <div style={{ maxWidth: 640, margin: '60px auto', padding: '40px 24px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, textAlign: 'center' }}>
-        <div style={{ width: 44, height: 44, margin: '0 auto 16px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--error, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 44, height: 44, margin: '0 auto 16px', borderRadius: '50%', backgroundColor: 'rgba(255, 122, 107, 0.1)', color: 'var(--error, var(--cc-danger))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <RotateCcw size={20} />
         </div>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
           No Script Scenes Generated Yet
         </h3>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
@@ -3418,10 +3429,10 @@ export function Screen07Script({
               onClick={onTryAnotherVersion}
               style={{
                 padding: '9px 20px',
-                borderRadius: 8,
-                backgroundColor: 'var(--accent-primary)',
+                borderRadius: 999,
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                color: '#fff',
+                color: 'var(--cc-on-action)',
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -3563,7 +3574,7 @@ export function Screen07Script({
       {/* Title & Badge */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>Here's your script: Broadcast & Camera Direction</span>
             <HelpTooltip
               title={HELP_TOOLTIPS.script_editing.title}
@@ -3586,9 +3597,9 @@ export function Screen07Script({
                 borderRadius: 6,
                 fontSize: 12,
                 fontWeight: 600,
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
-                color: '#34D399',
+                backgroundColor: 'rgba(95, 212, 174, 0.12)',
+                border: '1px solid rgba(95, 212, 174, 0.35)',
+                color: 'var(--cc-success)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -3605,10 +3616,10 @@ export function Screen07Script({
             gap: 4,
             padding: '3px 8px',
             borderRadius: 4,
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            backgroundColor: 'rgba(95, 212, 174, 0.12)',
             color: 'var(--success)',
-            fontSize: 11,
-            fontWeight: 700,
+            fontSize: 12,
+            fontWeight: 600,
           }}>
             <CheckCircle2 size={12} />
             <span>Section 8 Gate: Passed</span>
@@ -3619,9 +3630,9 @@ export function Screen07Script({
             borderRadius: 20,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--accent-primary)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--cc-emphasis)',
             display: 'flex',
             alignItems: 'center',
             gap: 6
@@ -3658,15 +3669,15 @@ export function Screen07Script({
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
-            fontSize: 11,
+            fontSize: 12,
           }}>
-            <div style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Lock size={12} style={{ color: 'var(--accent-primary)' }} />
+            <div style={{ fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.005em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Lock size={12} style={{ color: 'var(--cc-emphasis)' }} />
               <span>Edit Cast & Setting Continuity</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>🏠 PLACE / SETTING</label>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />PLACE / SETTING</label>
                 <input
                   type="text"
                   value={editSettingVal}
@@ -3676,7 +3687,7 @@ export function Screen07Script({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>👩 LEAD CHARACTER</label>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />LEAD CHARACTER</label>
                 <input
                   type="text"
                   value={editChar1Val}
@@ -3686,7 +3697,7 @@ export function Screen07Script({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 3 }}>👨 SUPPORTING CHARACTER</label>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />SUPPORTING CHARACTER</label>
                 <input
                   type="text"
                   value={editChar2Val}
@@ -3700,14 +3711,14 @@ export function Screen07Script({
               <button
                 type="button"
                 onClick={() => setIsEditingContinuity(false)}
-                style={{ padding: '5px 12px', borderRadius: 6, background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                style={{ padding: '5px 12px', borderRadius: 6, background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveContinuity}
-                style={{ padding: '5px 16px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+                style={{ padding: '5px 16px', borderRadius: 999, backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
               >
                 Save Continuity
               </button>
@@ -3724,22 +3735,22 @@ export function Screen07Script({
             justifyContent: 'space-between',
             gap: 10,
             flexWrap: 'wrap',
-            fontSize: 11,
+            fontSize: 12,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Lock size={12} style={{ color: 'var(--accent-primary)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.005em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Lock size={12} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>Story Continuity:</span>
               </span>
               {(setting || editSettingVal) && (
                 <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <span>🏠 Place:</span>
+                  <span><House size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place:</span>
                   <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{setting || editSettingVal}</strong>
                 </span>
               )}
               {(character1 || editChar1Val) && (
                 <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <span>👥 Cast:</span>
+                  <span><Users size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Cast:</span>
                   <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character1 || editChar1Val}</strong>
                   {(character2 || editChar2Val) && (
                     <>
@@ -3763,8 +3774,8 @@ export function Screen07Script({
                   background: 'none',
                   border: 'none',
                   padding: '2px 6px',
-                  color: 'var(--accent-primary)',
-                  fontSize: 11,
+                  color: 'var(--cc-emphasis)',
+                  fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -3785,8 +3796,8 @@ export function Screen07Script({
       {guardrailReport && (guardrailReport.hasCriticalViolation || (guardrailReport.automatedChecks?.warnings?.length > 0) || (guardrailReport.visualReviewRequired?.length > 0)) && (
         <div
           style={{
-            backgroundColor: guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.07)',
-            border: `1px solid ${guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.3)' : 'rgba(99, 102, 241, 0.25)'}`,
+            backgroundColor: guardrailReport.hasCriticalViolation ? 'rgba(255, 122, 107, 0.08)' : 'rgba(244, 244, 236, 0.035)',
+            border: `1px solid ${guardrailReport.hasCriticalViolation ? 'rgba(255, 122, 107, 0.3)' : 'rgba(244, 244, 236, 0.2)'}`,
             borderRadius: 8,
             padding: '10px 14px',
             display: 'flex',
@@ -3796,7 +3807,7 @@ export function Screen07Script({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <span style={{ fontWeight: 700, color: guardrailReport.hasCriticalViolation ? '#ef4444' : 'var(--text-primary)' }}>
+            <span style={{ fontWeight: 600, color: guardrailReport.hasCriticalViolation ? 'var(--cc-danger)' : 'var(--text-primary)' }}>
               {guardrailReport.hasCriticalViolation
                 ? 'Creative Guardrail Alert — Critical Instruction Issue'
                 : 'Creative Guardrails Checked (Text Verified · Visual Review Noted)'}
@@ -3808,11 +3819,11 @@ export function Screen07Script({
                 style={{
                   padding: '4px 10px',
                   borderRadius: 6,
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444',
-                  fontSize: 11,
-                  fontWeight: 700,
+                  border: '1px solid rgba(255, 122, 107, 0.4)',
+                  backgroundColor: 'rgba(255, 122, 107, 0.15)',
+                  color: 'var(--cc-danger)',
+                  fontSize: 12,
+                  fontWeight: 600,
                   cursor: 'pointer',
                 }}
               >
@@ -3821,17 +3832,17 @@ export function Screen07Script({
             )}
           </div>
           {(guardrailReport.automatedChecks?.criticalViolations || []).map((v, i) => (
-            <div key={`cv_${i}`} style={{ color: '#ef4444', fontSize: 11 }}>
+            <div key={`cv_${i}`} style={{ color: 'var(--cc-danger)', fontSize: 12 }}>
               • {v.explanation}
             </div>
           ))}
           {(guardrailReport.automatedChecks?.warnings || []).slice(0, 3).map((w, i) => (
-            <div key={`w_${i}`} style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+            <div key={`w_${i}`} style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
               • Advisory: {w.explanation}
             </div>
           ))}
           {guardrailReport.visualReviewRequired && guardrailReport.visualReviewRequired.length > 0 && (
-            <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
               Visual Review Needed: {guardrailReport.visualReviewRequired.map((r) => r.text).join('; ')} (constraints injected into video prompts; verify rendered visuals manually).
             </div>
           )}
@@ -3856,7 +3867,7 @@ export function Screen07Script({
             data-testid="scene-nav-strip"
             style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginRight: 4 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginRight: 4 }}>
               Scenes ({scenes.length}):
             </span>
             {scenes.map((sceneText, idx) => {
@@ -3874,11 +3885,11 @@ export function Screen07Script({
                   style={{
                     padding: '4px 10px',
                     borderRadius: 14,
-                    fontSize: 11,
-                    fontWeight: isCurrent ? 700 : 600,
-                    backgroundColor: isCurrent ? 'rgba(99, 102, 241, 0.16)' : 'var(--bg-elevated)',
-                    border: `1px solid ${isCurrent ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                    color: isCurrent ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    fontSize: 12,
+                    fontWeight: isCurrent ? 600 : 600,
+                    backgroundColor: isCurrent ? 'rgba(244, 244, 236, 0.08)' : 'var(--bg-elevated)',
+                    border: `1px solid ${isCurrent ? 'var(--cc-emphasis)' : 'var(--border-subtle)'}`,
+                    color: isCurrent ? 'var(--cc-emphasis)' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -3886,7 +3897,7 @@ export function Screen07Script({
                   }}
                 >
                   <span>S{idx + 1} · {shortBeat}</span>
-                  <span style={{ opacity: 0.7, fontSize: 10 }}>{parsed.timing}</span>
+                  <span style={{ opacity: 0.7, fontSize: 11.5 }}>{parsed.timing}</span>
                   {isEdited && (
                     <span
                       title="Modified scene"
@@ -3894,7 +3905,7 @@ export function Screen07Script({
                         width: 6,
                         height: 6,
                         borderRadius: '50%',
-                        backgroundColor: '#F59E0B',
+                        backgroundColor: 'var(--cc-warning)',
                         display: 'inline-block',
                       }}
                     />
@@ -3916,30 +3927,30 @@ export function Screen07Script({
                 gap: 6,
                 padding: '4px 10px',
                 borderRadius: 12,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 backgroundColor: resolvedSaveError
-                  ? 'rgba(239, 68, 68, 0.12)'
+                  ? 'rgba(255, 122, 107, 0.12)'
                   : isScriptSaving
                     ? 'var(--bg-elevated)'
                     : hasUnsavedChanges
-                      ? 'rgba(245, 158, 11, 0.12)'
-                      : 'rgba(16, 185, 129, 0.12)',
+                      ? 'rgba(242, 184, 75, 0.12)'
+                      : 'rgba(95, 212, 174, 0.12)',
                 border: '1px solid ' + (
                   resolvedSaveError
-                    ? 'rgba(239, 68, 68, 0.35)'
+                    ? 'rgba(255, 122, 107, 0.35)'
                     : isScriptSaving
                       ? 'var(--border-subtle)'
                       : hasUnsavedChanges
-                        ? 'rgba(245, 158, 11, 0.35)'
-                        : 'rgba(16, 185, 129, 0.3)'
+                        ? 'rgba(242, 184, 75, 0.35)'
+                        : 'rgba(95, 212, 174, 0.3)'
                 ),
                 color: resolvedSaveError
-                  ? '#EF4444'
+                  ? 'var(--cc-danger)'
                   : isScriptSaving
                     ? 'var(--text-secondary)'
                     : hasUnsavedChanges
-                      ? '#F59E0B'
+                      ? 'var(--cc-warning)'
                       : 'var(--success)',
               }}
             >
@@ -3956,11 +3967,11 @@ export function Screen07Script({
                         marginLeft: 2,
                         padding: '1px 7px',
                         borderRadius: 6,
-                        border: '1px solid rgba(239, 68, 68, 0.45)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.16)',
-                        color: '#FCA5A5',
-                        fontSize: 10.5,
-                        fontWeight: 700,
+                        border: '1px solid rgba(255, 122, 107, 0.45)',
+                        backgroundColor: 'rgba(255, 122, 107, 0.16)',
+                        color: '#FFA79C',
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         cursor: 'pointer',
                       }}
                     >
@@ -3981,11 +3992,11 @@ export function Screen07Script({
                         marginLeft: 2,
                         padding: '1px 7px',
                         borderRadius: 6,
-                        border: '1px solid rgba(245, 158, 11, 0.45)',
-                        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-                        color: '#FCD34D',
-                        fontSize: 10.5,
-                        fontWeight: 700,
+                        border: '1px solid rgba(242, 184, 75, 0.45)',
+                        backgroundColor: 'rgba(242, 184, 75, 0.16)',
+                        color: 'var(--cc-emphasis)',
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         cursor: 'pointer',
                       }}
                     >
@@ -4009,7 +4020,7 @@ export function Screen07Script({
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 6,
                 padding: '4px 9px',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 color: 'var(--text-secondary)',
                 cursor: 'pointer',
@@ -4040,7 +4051,7 @@ export function Screen07Script({
               tabIndex={-1}
               style={{
                 backgroundColor: 'var(--bg-surface)',
-                border: `1px solid ${activeSceneNavIdx === idx ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                border: `1px solid ${activeSceneNavIdx === idx ? 'var(--cc-emphasis)' : 'var(--border-default)'}`,
                 borderRadius: 10,
                 padding: '14px 18px',
                 display: 'flex',
@@ -4079,12 +4090,12 @@ export function Screen07Script({
                     ) : (
                       <ChevronDown size={15} style={{ color: 'var(--text-tertiary)' }} aria-hidden="true" />
                     )}
-                    <h2 style={{ margin: 0, fontSize: 12, fontWeight: 800, padding: '3px 9px', borderRadius: 4, backgroundColor: 'rgba(99, 102, 241, 0.14)', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, padding: '3px 9px', borderRadius: 4, backgroundColor: 'rgba(244, 244, 236, 0.07)', color: 'var(--cc-emphasis)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {s.title} · {s.timing}
                     </h2>
                   </button>
                   <span style={{
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     fontWeight: 600,
                     color: 'var(--text-secondary)',
                     backgroundColor: 'var(--bg-elevated)',
@@ -4096,13 +4107,13 @@ export function Screen07Script({
                   </span>
                   {isSceneDirty && (
                     <span style={{
-                      fontSize: 10,
-                      fontWeight: 700,
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       padding: '2px 7px',
                       borderRadius: 10,
-                      backgroundColor: 'rgba(245, 158, 11, 0.14)',
-                      color: '#F59E0B',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      backgroundColor: 'rgba(242, 184, 75, 0.14)',
+                      color: 'var(--cc-warning)',
+                      border: '1px solid rgba(242, 184, 75, 0.3)',
                     }}>
                       Edited
                     </span>
@@ -4122,8 +4133,8 @@ export function Screen07Script({
                       borderRadius: 6,
                       backgroundColor: 'var(--bg-elevated)',
                       border: '1px solid var(--border-subtle)',
-                      color: 'var(--accent-primary)',
-                      fontSize: 11,
+                      color: 'var(--cc-emphasis)',
+                      fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
@@ -4148,10 +4159,10 @@ export function Screen07Script({
                     style={{
                       padding: '4px 10px',
                       borderRadius: 6,
-                      backgroundColor: isEditing ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                      backgroundColor: isEditing ? 'var(--cc-active)' : 'var(--bg-elevated)',
                       border: isEditing ? 'none' : '1px solid var(--border-subtle)',
-                      color: isEditing ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: 11,
+                      color: isEditing ? 'var(--cc-text-1)' : 'var(--text-secondary)',
+                      fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
@@ -4184,7 +4195,7 @@ export function Screen07Script({
                 <div id={`script-scene-body-${idx}`}>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label htmlFor={`scene-editor-textarea-${idx}`} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      <label htmlFor={`scene-editor-textarea-${idx}`} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Scene {idx + 1} Script Text
                       </label>
                       <textarea
@@ -4204,7 +4215,7 @@ export function Screen07Script({
                         }}
                         style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontSize: 13, lineHeight: 1.5, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
                       />
-                      <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
                         Press Save or Ctrl+Enter to apply scene edits (auto-retained when switching between scenes).
                       </div>
                     </div>
@@ -4212,15 +4223,15 @@ export function Screen07Script({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {/* Visual Setup (Showing / Doing) */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <Camera size={14} style={{ color: 'var(--accent-primary)', marginTop: 3, flexShrink: 0 }} aria-hidden="true" />
+                        <Camera size={14} style={{ color: 'var(--cc-emphasis)', marginTop: 3, flexShrink: 0 }} aria-hidden="true" />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
                             Showing / Doing
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                             {s.visual}
                             {s.camera && (
-                              <span style={{ color: 'var(--text-tertiary)', fontSize: 11, marginLeft: 6 }}>
+                              <span style={{ color: 'var(--text-tertiary)', fontSize: 12, marginLeft: 6 }}>
                                 · Camera: {s.camera}
                               </span>
                             )}
@@ -4237,7 +4248,7 @@ export function Screen07Script({
                               backgroundColor: 'var(--bg-elevated)',
                               padding: '10px 14px',
                               borderRadius: '0 8px 8px 0',
-                              borderLeft: '3px solid var(--accent-primary)',
+                              borderLeft: '3px solid var(--cc-selected-line)',
                               borderTop: '1px solid var(--border-subtle)',
                               borderRight: '1px solid var(--border-subtle)',
                               borderBottom: '1px solid var(--border-subtle)',
@@ -4248,18 +4259,17 @@ export function Screen07Script({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                letterSpacing: '0.04em',
-                                color: 'var(--accent-primary)',
-                                textTransform: 'uppercase',
-                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                letterSpacing: '0.005em',
+                                color: 'var(--cc-emphasis)',
+                                backgroundColor: 'rgba(244, 244, 236, 0.05)',
                                 padding: '1px 6px',
                                 borderRadius: 3
                               }}>
                                 {d.speaker || s.character}
                               </span>
-                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
                             </div>
                             <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                               "{d.text}"
@@ -4271,7 +4281,7 @@ export function Screen07Script({
                           backgroundColor: 'var(--bg-elevated)',
                           padding: '10px 14px',
                           borderRadius: '0 8px 8px 0',
-                          borderLeft: '3px solid var(--accent-primary)',
+                          borderLeft: '3px solid var(--cc-selected-line)',
                           borderTop: '1px solid var(--border-subtle)',
                           borderRight: '1px solid var(--border-subtle)',
                           borderBottom: '1px solid var(--border-subtle)',
@@ -4281,18 +4291,17 @@ export function Screen07Script({
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              letterSpacing: '0.04em',
-                              color: 'var(--accent-primary)',
-                              textTransform: 'uppercase',
-                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              letterSpacing: '0.005em',
+                              color: 'var(--cc-emphasis)',
+                              backgroundColor: 'rgba(244, 244, 236, 0.05)',
                               padding: '1px 6px',
                               borderRadius: 3
                             }}>
                               {s.character}
                             </span>
-                            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
                           </div>
                           <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                             "{s.dialogue}"
@@ -4303,7 +4312,7 @@ export function Screen07Script({
                           display: 'flex',
                           alignItems: 'center',
                           gap: 6,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           padding: '6px 10px',
                           backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -4317,7 +4326,7 @@ export function Screen07Script({
 
                       {/* Audio / SFX if present */}
                       {s.audio && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)', paddingLeft: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-tertiary)', paddingLeft: 2 }}>
                           <Volume2 size={12} style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
                           <span>Audio / SFX: {s.audio}</span>
                         </div>
@@ -4332,15 +4341,16 @@ export function Screen07Script({
       </div>
 
       {/* Navigation & Action Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -4386,7 +4396,7 @@ export function Screen07Script({
                 fontWeight: 600,
                 cursor: (isSavingProject || isProjectSaved) ? 'not-allowed' : 'pointer',
                 opacity: isSavingProject ? 0.7 : 1,
-                color: isProjectSaved ? 'var(--success)' : 'var(--accent-primary)',
+                color: isProjectSaved ? 'var(--success)' : 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
@@ -4433,17 +4443,17 @@ export function Screen07Script({
             onClick={onApproveScript}
             style={{
               padding: '12px 28px',
-              borderRadius: 8,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
+              color: 'var(--cc-on-action)',
               border: 'none',
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: isBusy ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 2px 10px var(--accent-glow)'
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
             }}
           >
             <Sparkles size={16} />
@@ -4593,15 +4603,15 @@ export function Screen08Video({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '2px solid var(--accent-primary)',
+          border: '2px solid var(--cc-selected-line)',
           boxShadow: '0 0 24px var(--accent-glow)'
         }}>
-          <Film size={30} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+          <Film size={30} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
         </div>
 
         {/* Title & Subtitle */}
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
             Producing your commercial…
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4, maxWidth: 500 }}>
@@ -4614,7 +4624,7 @@ export function Screen08Video({
           <div style={{
             fontSize: 12,
             fontFamily: "'JetBrains Mono', monospace",
-            color: 'var(--accent-primary)',
+            color: 'var(--cc-emphasis)',
             backgroundColor: 'var(--bg-elevated)',
             padding: '5px 14px',
             borderRadius: 20,
@@ -4623,12 +4633,12 @@ export function Screen08Video({
             alignItems: 'center',
             gap: 6
           }}>
-            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
+            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--cc-action)' }} />
             Elapsed: {elapsedTime || '00:00'}
           </div>
 
           <div style={{
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-tertiary)',
             backgroundColor: 'var(--bg-elevated)',
             padding: '5px 12px',
@@ -4655,7 +4665,7 @@ export function Screen08Video({
           gap: 12,
           textAlign: 'left'
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: -2 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: -2 }}>
             Neural Video Pipeline
           </div>
           {videoProductionStages.map((s, idx) => {
@@ -4676,28 +4686,28 @@ export function Screen08Video({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isDone ? 'rgba(16, 185, 129, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
-                  border: isDone ? '1px solid #10b981' : isCurrent ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  backgroundColor: isDone ? 'rgba(95, 212, 174, 0.15)' : isCurrent ? 'var(--bg-active)' : 'transparent',
+                  border: isDone ? '1px solid var(--cc-success)' : isCurrent ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                   flexShrink: 0
                 }}>
                   {isDone ? (
-                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={14} style={{ color: 'var(--cc-success)' }} />
                   ) : isCurrent ? (
-                    <RefreshCw size={12} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+                    <RefreshCw size={12} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
                   ) : (
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: 12, fontWeight: isCurrent ? 600 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                       {s.title}
                     </div>
-                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {s.timeRange}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1, lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1, lineHeight: 1.3 }}>
                     {s.desc}
                   </div>
                 </div>
@@ -4719,16 +4729,16 @@ export function Screen08Video({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 8,
-          fontSize: 11,
+          fontSize: 12,
           textAlign: 'left'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Clapperboard size={13} style={{ color: 'var(--accent-primary)' }} />
+            <Clapperboard size={13} style={{ color: 'var(--cc-emphasis)' }} />
             <span style={{ color: 'var(--text-secondary)' }}>Rendering:</span>
             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userContext.businessName || 'Brand Film'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-active)', color: 'var(--accent-primary)', fontWeight: 600 }}>
+            <span style={{ padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-active)', color: 'var(--cc-emphasis)', fontWeight: 600 }}>
               {userContext.creativeStyle || 'Storytelling'}
             </span>
             <span style={{ padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
@@ -4741,8 +4751,8 @@ export function Screen08Video({
         <div style={{
           width: '100%',
           maxWidth: 520,
-          backgroundColor: 'rgba(59, 130, 246, 0.06)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
+          backgroundColor: 'rgba(244, 244, 236, 0.03)',
+          border: '1px solid rgba(244, 244, 236, 0.18)',
           borderRadius: 10,
           padding: '12px 14px',
           textAlign: 'left',
@@ -4750,9 +4760,9 @@ export function Screen08Video({
           gap: 10,
           alignItems: 'flex-start'
         }}>
-          <Lightbulb size={16} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+          <Lightbulb size={16} style={{ color: 'var(--cc-text-2)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 700, color: '#3b82f6' }}>Filmmaking Insight: </span>
+            <span style={{ fontWeight: 600, color: 'var(--cc-text-2)' }}>Filmmaking Insight: </span>
             {videoProductionTips[videoTipIdx]}
           </div>
         </div>
@@ -4779,7 +4789,7 @@ export function Screen08Video({
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileText size={13} style={{ color: 'var(--accent-primary)' }} />
+                <FileText size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>Read the 4 approved scenes while video renders</span>
               </span>
               {showScriptPreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -4802,9 +4812,9 @@ export function Screen08Video({
                     backgroundColor: 'var(--bg-elevated)',
                     borderRadius: 8,
                     border: '1px solid var(--border-subtle)',
-                    fontSize: 11
+                    fontSize: 12
                   }}>
-                    <div style={{ fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 2 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--cc-emphasis)', marginBottom: 2 }}>
                       Scene {i + 1}
                     </div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.3, maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -4818,7 +4828,7 @@ export function Screen08Video({
         )}
 
         {/* Reassurance Footer */}
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 440, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', maxWidth: 440, lineHeight: 1.4 }}>
           Keep this tab open — your video will play here when ready.
         </div>
       </div>
@@ -4839,11 +4849,11 @@ export function Screen08Video({
         margin: '0 auto',
       }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <CheckCircle2 size={14} />
             <span>Production Complete</span>
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
             Your video is ready!
           </h1>
         </div>
@@ -4859,8 +4869,8 @@ export function Screen08Video({
         }}>
           {videoUnavailable ? (
             <div style={{ padding: '48px 24px', maxWidth: 420, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-              <AlertCircle size={28} style={{ color: 'var(--warning, #f59e0b)' }} />
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#ffffff' }}>This video's link has expired</div>
+              <AlertCircle size={28} style={{ color: 'var(--warning, var(--cc-warning))' }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#ffffff' }}>This video's link has expired</div>
               <div style={{ fontSize: 12, lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.7)' }}>
                 Videos made before permanent storage was added were kept on a temporary rendering link. Your script is still saved — generate the video again to get a copy that doesn't expire.
               </div>
@@ -4895,22 +4905,22 @@ export function Screen08Video({
             style={{
               width: '100%',
               padding: '15px 20px',
-              borderRadius: 12,
-              backgroundColor: 'var(--accent-primary)',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              color: '#ffffff',
+              color: 'var(--cc-on-action)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
               textAlign: 'left',
-              boxShadow: '0 4px 16px var(--accent-glow)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
               transition: 'all 0.15s ease',
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <Sparkles size={16} />
                 <span>Create another video</span>
               </span>
@@ -4925,10 +4935,9 @@ export function Screen08Video({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: '0.005em',
                 color: 'var(--text-tertiary)',
               }}
             >
@@ -5074,7 +5083,7 @@ export function Screen08Video({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
           {errorMessage ? 'Video Generation Incomplete' : 'Ready to Generate Video'}
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
@@ -5083,22 +5092,23 @@ export function Screen08Video({
       </div>
 
       {errorMessage && (
-        <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ color: 'var(--error)', backgroundColor: 'rgba(255, 122, 107, 0.1)', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--error)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertCircle size={16} />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+      <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <button
           type="button"
           onClick={onBack}
+          className="cc-ghost-hover"
           style={{
-            padding: '10px 18px',
-            borderRadius: 8,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
+            padding: '10px 16px',
+            borderRadius: 999,
+            backgroundColor: 'transparent',
+            border: 'none',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -5113,17 +5123,17 @@ export function Screen08Video({
           onClick={onMakeVideo}
           style={{
             padding: '14px 34px',
-            borderRadius: 10,
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff',
+            borderRadius: 999,
+            backgroundColor: 'var(--cc-action)',
+            color: 'var(--cc-on-action)',
             border: 'none',
             fontSize: 15,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 4px 16px var(--accent-glow)'
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)'
           }}
         >
           <Sparkles size={16} />

@@ -232,7 +232,7 @@ export default function AuthModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 12, 0.82)',
+        backgroundColor: 'rgba(10, 10, 9, 0.82)',
         backdropFilter: 'blur(10px)',
         zIndex: 10000,
         display: 'flex',
@@ -251,7 +251,7 @@ export default function AuthModal({
           width: '100%',
           maxWidth: 960,
           maxHeight: '90vh',
-          backgroundColor: '#0B0C11',
+          backgroundColor: '#121211',
           borderRadius: 24,
           border: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '0 32px 96px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.05)',
@@ -273,7 +273,7 @@ export default function AuthModal({
             zIndex: 30,
             background: 'rgba(255, 255, 255, 0.06)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#9CA3AF',
+            color: 'var(--cc-text-2)',
             borderRadius: '50%',
             width: 32,
             height: 32,
@@ -289,7 +289,7 @@ export default function AuthModal({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
-            e.currentTarget.style.color = '#9CA3AF';
+            e.currentTarget.style.color = 'var(--cc-text-2)';
           }}
           title="Close modal"
         >
@@ -335,22 +335,22 @@ export default function AuthModal({
                     width: 54,
                     height: 54,
                     borderRadius: 14,
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.35) 100%)',
-                    border: '1px solid rgba(129, 140, 248, 0.35)',
+                    background: 'linear-gradient(135deg, rgba(244, 244, 236, 0.2) 0%, rgba(244, 244, 236, 0.2) 100%)',
+                    border: '1px solid rgba(244, 244, 236, 0.315)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto 16px',
-                    boxShadow: '0 8px 24px -4px rgba(99, 102, 241, 0.4)',
+                    boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.4)',
                   }}
                 >
-                  <Mail size={26} color="#818CF8" />
+                  <Mail size={26} color="var(--cc-emphasis)" />
                 </div>
 
                 <h2
                   style={{
                     fontSize: 22,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     letterSpacing: '-0.025em',
                     color: '#FFFFFF',
                     margin: '0 0 8px',
@@ -359,7 +359,7 @@ export default function AuthModal({
                   Check your inbox
                 </h2>
 
-                <p style={{ fontSize: 13, color: '#9CA3AF', margin: '0 0 16px', lineHeight: 1.45 }}>
+                <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: '0 0 16px', lineHeight: 1.45 }}>
                   We've sent a verification link to your email address. Verify your email to continue.
                 </p>
 
@@ -375,24 +375,24 @@ export default function AuthModal({
                     justifyContent: 'center',
                     gap: 8,
                     fontWeight: 600,
-                    color: '#F5F7FA',
+                    color: 'var(--cc-text-1)',
                     fontSize: 13,
                     wordBreak: 'break-all',
                   }}
                 >
-                  <Mail size={15} color="#818CF8" style={{ flexShrink: 0 }} />
+                  <Mail size={15} color="var(--cc-emphasis)" style={{ flexShrink: 0 }} />
                   <span>{pendingVerificationEmail}</span>
                 </div>
 
                 {resendMessage && (
                   <div
                     style={{
-                      backgroundColor: resendStatus === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                      border: resendStatus === 'error' ? '1px solid rgba(239, 68, 68, 0.28)' : '1px solid rgba(16, 185, 129, 0.28)',
+                      backgroundColor: resendStatus === 'error' ? 'rgba(255, 122, 107, 0.12)' : 'rgba(95, 212, 174, 0.12)',
+                      border: resendStatus === 'error' ? '1px solid rgba(255, 122, 107, 0.28)' : '1px solid rgba(95, 212, 174, 0.28)',
                       borderRadius: 8,
                       padding: '8px 12px',
                       marginBottom: 14,
-                      color: resendStatus === 'error' ? '#F87171' : '#34D399',
+                      color: resendStatus === 'error' ? '#FFA79C' : 'var(--cc-success)',
                       fontSize: 12,
                       lineHeight: 1.4,
                     }}
@@ -408,8 +408,8 @@ export default function AuthModal({
                   style={{
                     width: '100%',
                     padding: '11px 16px',
-                    background: resendCooldown > 0 ? 'rgba(255, 255, 255, 0.05)' : 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                    color: resendCooldown > 0 ? '#9CA3AF' : '#FFFFFF',
+                    background: resendCooldown > 0 ? 'rgba(255, 255, 255, 0.05)' : 'var(--cc-action)',
+                    color: resendCooldown > 0 ? 'var(--cc-text-2)' : 'var(--cc-on-action)',
                     border: resendCooldown > 0 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
                     borderRadius: 10,
                     fontSize: 13,
@@ -420,7 +420,7 @@ export default function AuthModal({
                     justifyContent: 'center',
                     gap: 8,
                     marginBottom: 14,
-                    boxShadow: resendCooldown > 0 ? 'none' : '0 4px 14px rgba(79, 70, 229, 0.35)',
+                    boxShadow: resendCooldown > 0 ? 'none' : '0 4px 14px rgba(0, 0, 0, 0.35)',
                   }}
                 >
                   {resendStatus === 'sending' ? (
@@ -441,7 +441,7 @@ export default function AuthModal({
                   )}
                 </button>
 
-                <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 16px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: 'var(--cc-text-3)', margin: '0 0 16px', lineHeight: 1.5 }}>
                   Verification links expire in 30 minutes. Check your Spam or Promotions folder if needed.
                 </p>
 
@@ -456,7 +456,7 @@ export default function AuthModal({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#9CA3AF',
+                      color: 'var(--cc-text-2)',
                       fontSize: 12,
                       cursor: 'pointer',
                       textDecoration: 'underline',
@@ -476,7 +476,7 @@ export default function AuthModal({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#818CF8',
+                      color: 'var(--cc-emphasis)',
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -492,7 +492,7 @@ export default function AuthModal({
               <h2
                 style={{
                   fontSize: 24,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   letterSpacing: '-0.025em',
                   color: '#FFFFFF',
                   margin: '0 0 6px',
@@ -500,7 +500,7 @@ export default function AuthModal({
               >
                 {mode === 'signup' ? 'Create an account' : 'Welcome back'}
               </h2>
-              <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0, lineHeight: 1.4 }}>
+              <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: 0, lineHeight: 1.4 }}>
                 {mode === 'signup'
                   ? 'Access your saved scripts and campaigns anywhere.'
                   : 'Log in to continue creating with CleverCut.'}
@@ -519,20 +519,20 @@ export default function AuthModal({
                 gap: 10,
                 padding: '11px 16px',
                 borderRadius: 12,
-                backgroundColor: '#14151F',
+                backgroundColor: '#21211E',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#E5E7EB',
+                color: 'var(--cc-text-1)',
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'background-color 0.15s ease, border-color 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#1A1C2C';
+                e.currentTarget.style.backgroundColor = '#21211E';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#14151F';
+                e.currentTarget.style.backgroundColor = '#21211E';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
               }}
             >
@@ -560,12 +560,12 @@ export default function AuthModal({
             {googleNotice && (
               <div
                 style={{
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                  border: '1px solid rgba(244, 244, 236, 0.225)',
                   borderRadius: 10,
                   padding: '8px 12px',
                   marginTop: 10,
-                  color: '#C7D2FE',
+                  color: 'var(--cc-text-1)',
                   fontSize: 12,
                   lineHeight: 1.4,
                   textAlign: 'center',
@@ -582,8 +582,8 @@ export default function AuthModal({
                 alignItems: 'center',
                 gap: 12,
                 margin: '18px 0',
-                color: '#6B7280',
-                fontSize: 11,
+                color: 'var(--cc-text-3)',
+                fontSize: 12,
                 fontWeight: 500,
               }}
             >
@@ -595,15 +595,15 @@ export default function AuthModal({
             {errorMsg && (
               <div
                 style={{
-                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.28)',
+                  backgroundColor: 'rgba(255, 122, 107, 0.12)',
+                  border: '1px solid rgba(255, 122, 107, 0.28)',
                   borderRadius: 10,
                   padding: '9px 12px',
                   marginBottom: 14,
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 8,
-                  color: '#F87171',
+                  color: '#FFA79C',
                   fontSize: 12,
                   lineHeight: 1.4,
                 }}
@@ -616,15 +616,15 @@ export default function AuthModal({
             {noticeMsg && (
               <div
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid rgba(59, 130, 246, 0.28)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                  border: '1px solid rgba(244, 244, 236, 0.252)',
                   borderRadius: 10,
                   padding: '9px 12px',
                   marginBottom: 14,
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 8,
-                  color: '#93C5FD',
+                  color: 'var(--cc-text-1)',
                   fontSize: 12,
                   lineHeight: 1.4,
                 }}
@@ -637,7 +637,7 @@ export default function AuthModal({
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
               {mode === 'signup' && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#E5E7EB', marginBottom: 5 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--cc-text-1)', marginBottom: 5 }}>
                     Your name
                   </label>
                   <input
@@ -653,7 +653,7 @@ export default function AuthModal({
                       fontSize: 13,
                       borderRadius: 10,
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: '#14151F',
+                      backgroundColor: '#21211E',
                       color: '#FFFFFF',
                       outline: 'none',
                     }}
@@ -662,7 +662,7 @@ export default function AuthModal({
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#E5E7EB', marginBottom: 5 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--cc-text-1)', marginBottom: 5 }}>
                   Email address
                 </label>
                 <input
@@ -680,7 +680,7 @@ export default function AuthModal({
                     fontSize: 13,
                     borderRadius: 10,
                     border: '1px solid rgba(255, 255, 255, 0.1)',
-                    backgroundColor: '#14151F',
+                    backgroundColor: '#21211E',
                     color: '#FFFFFF',
                     outline: 'none',
                   }}
@@ -689,7 +689,7 @@ export default function AuthModal({
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#E5E7EB' }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--cc-text-1)' }}>
                     Password
                   </label>
                   {mode === 'signin' && (
@@ -699,8 +699,8 @@ export default function AuthModal({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#818CF8',
-                        fontSize: 11,
+                        color: 'var(--cc-emphasis)',
+                        fontSize: 12,
                         fontWeight: 600,
                         cursor: 'pointer',
                         padding: 0,
@@ -726,7 +726,7 @@ export default function AuthModal({
                       fontSize: 13,
                       borderRadius: 10,
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: '#14151F',
+                      backgroundColor: '#21211E',
                       color: '#FFFFFF',
                       outline: 'none',
                     }}
@@ -742,7 +742,7 @@ export default function AuthModal({
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#9CA3AF',
+                      color: 'var(--cc-text-2)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -762,9 +762,9 @@ export default function AuthModal({
                     id="modalRememberMe"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ width: 14, height: 14, accentColor: '#6366F1', cursor: 'pointer' }}
+                    style={{ width: 14, height: 14, accentColor: 'var(--cc-action)', cursor: 'pointer' }}
                   />
-                  <label htmlFor="modalRememberMe" style={{ fontSize: 12, color: '#9CA3AF', cursor: 'pointer' }}>
+                  <label htmlFor="modalRememberMe" style={{ fontSize: 12, color: 'var(--cc-text-2)', cursor: 'pointer' }}>
                     Remember me
                   </label>
                 </div>
@@ -777,18 +777,18 @@ export default function AuthModal({
                   width: '100%',
                   marginTop: 4,
                   padding: '12px 18px',
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                  color: '#FFFFFF',
+                  borderRadius: 999,
+                  background: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
                   fontSize: 14,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: isSubmitting ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
-                  boxShadow: '0 4px 16px rgba(99, 102, 241, 0.35)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
                   opacity: isSubmitting ? 0.7 : 1,
                 }}
               >
@@ -811,14 +811,14 @@ export default function AuthModal({
               </button>
             </form>
 
-            <div style={{ marginTop: 18, textAlign: 'center', fontSize: 12, color: '#9CA3AF' }}>
+            <div style={{ marginTop: 18, textAlign: 'center', fontSize: 12, color: 'var(--cc-text-2)' }}>
               {mode === 'signup' ? (
                 <span>
                   Already have an account?{' '}
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    style={{ background: 'none', border: 'none', padding: 0, color: '#818CF8', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--cc-emphasis)', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
                   >
                     Log In
                   </button>
@@ -829,7 +829,7 @@ export default function AuthModal({
                   <button
                     type="button"
                     onClick={() => switchMode('signup')}
-                    style={{ background: 'none', border: 'none', padding: 0, color: '#818CF8', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--cc-emphasis)', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
                   >
                     Sign Up
                   </button>
@@ -845,8 +845,8 @@ export default function AuthModal({
               style={{
                 marginTop: 18,
                 textAlign: 'center',
-                fontSize: 11,
-                color: '#6B7280',
+                fontSize: 12,
+                color: 'var(--cc-text-3)',
                 lineHeight: 1.45,
               }}
             >
@@ -861,18 +861,18 @@ export default function AuthModal({
                   background: 'none',
                   border: 'none',
                   padding: 0,
-                  color: '#9CA3AF',
+                  color: 'var(--cc-text-2)',
                   textDecoration: 'underline',
                   cursor: 'pointer',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 500,
                   fontFamily: 'inherit',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#818CF8';
+                  e.currentTarget.style.color = 'var(--cc-emphasis)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#9CA3AF';
+                  e.currentTarget.style.color = 'var(--cc-text-2)';
                 }}
               >
                 Terms of Service
@@ -888,18 +888,18 @@ export default function AuthModal({
                   background: 'none',
                   border: 'none',
                   padding: 0,
-                  color: '#9CA3AF',
+                  color: 'var(--cc-text-2)',
                   textDecoration: 'underline',
                   cursor: 'pointer',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 500,
                   fontFamily: 'inherit',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#818CF8';
+                  e.currentTarget.style.color = 'var(--cc-emphasis)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#9CA3AF';
+                  e.currentTarget.style.color = 'var(--cc-text-2)';
                 }}
               >
                 Privacy Policy

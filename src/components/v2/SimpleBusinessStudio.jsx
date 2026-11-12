@@ -39,6 +39,10 @@ import {
   Globe,
   Mic,
   MicOff,
+  Timer,
+  Ratio,
+  Clapperboard,
+  MessageCircle,
 } from 'lucide-react';
 
 const POPULAR_LANGUAGES = [
@@ -389,9 +393,9 @@ export default function SimpleBusinessStudio({
                   alignItems: 'center',
                   gap: 6,
                   fontSize: 12,
-                  fontWeight: isCurrent ? 700 : isCompleted ? 600 : 500,
+                  fontWeight: isCurrent ? 600 : isCompleted ? 600 : 500,
                   color: isCurrent
-                    ? 'var(--accent-primary)'
+                    ? 'var(--cc-emphasis)'
                     : isCompleted
                     ? 'var(--text-primary)'
                     : 'var(--text-tertiary)',
@@ -406,9 +410,9 @@ export default function SimpleBusinessStudio({
                     height: 18,
                     borderRadius: '50%',
                     backgroundColor: isCurrent
-                      ? 'var(--accent-primary)'
+                      ? 'var(--cc-action)'
                       : isCompleted
-                      ? 'rgba(34, 197, 94, 0.15)'
+                      ? 'rgba(95, 212, 174, 0.15)'
                       : 'var(--bg-elevated)',
                     color: isCurrent
                       ? '#ffffff'
@@ -418,8 +422,8 @@ export default function SimpleBusinessStudio({
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 10,
-                    fontWeight: 800,
+                    fontSize: 11.5,
+                    fontWeight: 600,
                   }}
                 >
                   {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : s.num}
@@ -427,7 +431,7 @@ export default function SimpleBusinessStudio({
                 <span>{s.label}</span>
               </button>
               {idx < 2 && (
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>›</span>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>›</span>
               )}
             </React.Fragment>
           );
@@ -448,8 +452,8 @@ export default function SimpleBusinessStudio({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
-            <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <Store size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} aria-hidden="true" />
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>
               {businessName}
             </span>
             {businessType && (
@@ -459,7 +463,7 @@ export default function SimpleBusinessStudio({
             )}
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 color: 'var(--text-tertiary)',
                 paddingLeft: 4,
@@ -494,7 +498,7 @@ export default function SimpleBusinessStudio({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                  <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>What are you promoting?</span>
                     <HelpTooltip
                       title={HELP_TOOLTIPS.brief_input.title}
@@ -597,10 +601,10 @@ export default function SimpleBusinessStudio({
                         gap: 5,
                         padding: '5px 10px',
                         borderRadius: 16,
-                        backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.14)' : 'var(--bg-surface)',
+                        backgroundColor: isRecording ? 'rgba(255, 122, 107, 0.14)' : 'var(--bg-surface)',
                         border: isRecording ? '1px solid var(--error)' : '1px solid var(--border-subtle)',
                         color: isRecording ? 'var(--error)' : 'var(--text-secondary)',
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 500,
                         cursor: 'pointer',
                       }}
@@ -633,11 +637,11 @@ export default function SimpleBusinessStudio({
                     }}
                   >
                     {briefOptionalExpanded.inspiration ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronRight size={13} aria-hidden="true" />}
-                    <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <Sparkles size={12} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
                     <span>Sample ideas</span>
                   </button>
 
-                  <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {charCount} characters
                   </span>
                 </div>
@@ -652,7 +656,7 @@ export default function SimpleBusinessStudio({
                         style={{
                           padding: '6px 12px',
                           borderRadius: 18,
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: 'var(--bg-elevated)',
                           border: '1px solid var(--border-subtle)',
@@ -662,7 +666,7 @@ export default function SimpleBusinessStudio({
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = 'var(--text-primary)';
-                          e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                          e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = 'var(--text-secondary)';
@@ -682,9 +686,9 @@ export default function SimpleBusinessStudio({
                       marginTop: 14,
                       padding: '10px 14px',
                       borderRadius: 8,
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      color: '#EF4444',
+                      backgroundColor: 'rgba(255, 122, 107, 0.1)',
+                      border: '1px solid rgba(255, 122, 107, 0.3)',
+                      color: 'var(--cc-danger)',
                       fontSize: 12,
                     }}
                   >
@@ -850,9 +854,9 @@ export default function SimpleBusinessStudio({
                                   border: 'none',
                                   borderRadius: 6,
                                   fontSize: 12.5,
-                                  fontWeight: isSelected ? 700 : 500,
-                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
-                                  color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                                  fontWeight: isSelected ? 600 : 500,
+                                  backgroundColor: isSelected ? 'var(--cc-active)' : 'transparent',
+                                  color: isSelected ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                                   cursor: 'pointer',
                                   transition: 'all 0.15s ease',
                                 }}
@@ -900,8 +904,8 @@ export default function SimpleBusinessStudio({
                                 padding: '10px 12px',
                                 borderRadius: 8,
                                 backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                                border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                                color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                border: isSelected ? '1.5px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                                color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 transition: 'all 0.15s ease',
@@ -915,18 +919,18 @@ export default function SimpleBusinessStudio({
                                       width: dim.frameWidth,
                                       height: dim.frameHeight,
                                       borderRadius: 2,
-                                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
-                                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.16)' : 'transparent',
+                                      border: isSelected ? '1.5px solid var(--cc-selected-line)' : '1.5px solid var(--text-tertiary)',
+                                      backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.08)' : 'transparent',
                                       flexShrink: 0,
                                     }}
                                   />
-                                  <span style={{ fontSize: 12.5, fontWeight: isSelected ? 700 : 600 }}>
+                                  <span style={{ fontSize: 12.5, fontWeight: isSelected ? 600 : 600 }}>
                                     {dim.label}
                                   </span>
                                 </div>
                                 {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
                               </div>
-                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
+                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
                                 {dim.hint}
                               </span>
                             </button>
@@ -971,20 +975,20 @@ export default function SimpleBusinessStudio({
                                 padding: '10px 12px',
                                 borderRadius: 8,
                                 backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                                border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                                color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                border: isSelected ? '1.5px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                                color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 transition: 'all 0.15s ease',
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 6 }}>
-                                <span style={{ fontSize: 12.5, fontWeight: isSelected ? 700 : 600 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: isSelected ? 600 : 600 }}>
                                   {st.label}
                                 </span>
                                 {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
                               </div>
-                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
+                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
                                 {st.desc}
                               </span>
                             </button>
@@ -998,7 +1002,7 @@ export default function SimpleBusinessStudio({
 
               {/* D. Optional Details Grouping */}
               <div data-testid="brief-optional-details" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
                   Optional Details
                 </span>
 
@@ -1040,26 +1044,16 @@ export default function SimpleBusinessStudio({
               </div>
 
               {/* E. Dominant Primary Action */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
+              <div className="cc-sticky-action" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
                 <button
                   type="button"
                   disabled={isLoadingPackages || !brief.trim()}
                   onClick={handleGeneratePackages}
+                  className="cc-btn cc-btn--primary cc-btn--lg"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '13px 28px',
-                    borderRadius: 10,
-                    backgroundColor: 'var(--accent-primary)',
-                    border: 'none',
-                    color: '#FFFFFF',
-                    fontSize: 14,
-                    fontWeight: 700,
+                    padding: '0 26px',
                     cursor: isLoadingPackages || !brief.trim() ? 'not-allowed' : 'pointer',
-                    opacity: isLoadingPackages || !brief.trim() ? 0.55 : 1,
-                    boxShadow: '0 4px 16px var(--accent-glow)',
-                    transition: 'all 0.15s ease',
+                    boxShadow: isLoadingPackages || !brief.trim() ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 32px rgba(0,0,0,0.45)',
                   }}
                 >
                   <Sparkles size={15} aria-hidden="true" />
@@ -1088,7 +1082,7 @@ export default function SimpleBusinessStudio({
       {step === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ textAlign: 'center', marginBottom: 6 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
               Choose Your Ad Script
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
@@ -1108,7 +1102,7 @@ export default function SimpleBusinessStudio({
                   onClick={() => setSelectedPackageId(pkg.id)}
                   style={{
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                    border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                     borderRadius: 14,
                     padding: 20,
                     cursor: 'pointer',
@@ -1121,26 +1115,25 @@ export default function SimpleBusinessStudio({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          letterSpacing: '0.005em',
                           padding: '3px 8px',
                           borderRadius: 4,
-                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(99, 102, 241, 0.15)',
-                          color: isSelected ? '#FFFFFF' : 'var(--accent-primary)',
+                          backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.1)' : 'rgba(244, 244, 236, 0.075)',
+                          color: isSelected ? 'var(--cc-text-1)' : 'var(--cc-emphasis)',
                         }}
                       >
                         {pkg.badge || `Ad Concept ${idx + 1}`}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         {pkg.angle}
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
-                        ⏱️ {pkg.duration || duration}
+                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        <Timer size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{pkg.duration || duration}
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
-                        📐 {pkg.aspectRatio || aspectRatio}
+                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        <Ratio size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{pkg.aspectRatio || aspectRatio}
                       </span>
                     </div>
 
@@ -1149,14 +1142,14 @@ export default function SimpleBusinessStudio({
                         width: 20,
                         height: 20,
                         borderRadius: '50%',
-                        border: isSelected ? '6px solid var(--accent-primary)' : '2px solid var(--border-default)',
+                        border: isSelected ? '6px solid var(--cc-selected-line)' : '2px solid var(--border-default)',
                         backgroundColor: '#FFFFFF',
                       }}
                     />
                   </div>
 
                   {/* Title & Hook Headline */}
-                  <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                     {pkg.title}
                   </h3>
 
@@ -1169,10 +1162,10 @@ export default function SimpleBusinessStudio({
                       marginBottom: 10,
                     }}
                   >
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: 2 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--cc-emphasis)', marginBottom: 2 }}>
                       Opening Hook
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontStyle: 'italic' }}>
                       "{pkg.hookHeadline}"
                     </div>
                   </div>
@@ -1188,10 +1181,10 @@ export default function SimpleBusinessStudio({
                         marginBottom: 10,
                         padding: '7px 10px',
                         borderRadius: 7,
-                        fontSize: 11,
-                        backgroundColor: pkg.guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.08)',
-                        border: `1px solid ${pkg.guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.2)'}`,
-                        color: pkg.guardrailReport.hasCriticalViolation ? '#ef4444' : 'var(--text-secondary)',
+                        fontSize: 12,
+                        backgroundColor: pkg.guardrailReport.hasCriticalViolation ? 'rgba(255, 122, 107, 0.08)' : 'rgba(244, 244, 236, 0.04)',
+                        border: `1px solid ${pkg.guardrailReport.hasCriticalViolation ? 'rgba(255, 122, 107, 0.25)' : 'rgba(244, 244, 236, 0.2)'}`,
+                        color: pkg.guardrailReport.hasCriticalViolation ? 'var(--cc-danger)' : 'var(--text-secondary)',
                       }}
                     >
                       {pkg.guardrailReport.hasCriticalViolation
@@ -1211,7 +1204,7 @@ export default function SimpleBusinessStudio({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: 'var(--accent-primary)',
+                        color: 'var(--cc-emphasis)',
                         fontSize: 12,
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -1238,17 +1231,17 @@ export default function SimpleBusinessStudio({
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                                 Scene {sc.sceneNumber || sIdx + 1} · {sc.beat}
                               </span>
-                              <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{sc.timing}</span>
+                              <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{sc.timing}</span>
                             </div>
                             <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>
-                              🎬 {sc.visual}
+                              <Clapperboard size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{sc.visual}
                             </div>
                             {sc.dialogue && (
-                              <div style={{ color: 'var(--accent-primary)', fontWeight: 600, fontStyle: 'italic' }}>
-                                💬 {sc.dialogue}
+                              <div style={{ color: 'var(--cc-emphasis)', fontWeight: 600, fontStyle: 'italic' }}>
+                                <MessageCircle size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{sc.dialogue}
                               </div>
                             )}
                           </div>
@@ -1262,18 +1255,19 @@ export default function SimpleBusinessStudio({
           </div>
 
           {/* Navigation Controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          <div className="cc-production-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
             <button
               type="button"
               onClick={() => setStep(1)}
+              className="cc-ghost-hover"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '9px 18px',
-                borderRadius: 8,
+                padding: '10px 16px',
+                borderRadius: 999,
                 backgroundColor: 'transparent',
-                border: '1px solid var(--border-default)',
+                border: 'none',
                 color: 'var(--text-secondary)',
                 fontSize: 13,
                 fontWeight: 600,
@@ -1287,22 +1281,10 @@ export default function SimpleBusinessStudio({
             <button
               type="button"
               onClick={handleStartProduction}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '12px 28px',
-                borderRadius: 10,
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px var(--accent-glow)',
-              }}
+              className="cc-btn cc-btn--primary cc-btn--lg"
+              style={{ padding: '0 24px' }}
             >
-              <Play size={15} fill="#FFFFFF" />
+              <Play size={15} fill="currentColor" />
               <span>Produce Video for Selected Script ➔</span>
             </button>
           </div>
@@ -1316,10 +1298,10 @@ export default function SimpleBusinessStudio({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div
             style={{
-              backgroundColor: 'var(--bg-surface)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 14,
-              padding: 24,
+              backgroundColor: producedVideoUrl && !isProducingVideo ? 'transparent' : 'var(--bg-surface)',
+              border: producedVideoUrl && !isProducingVideo ? '1px solid transparent' : '1px solid var(--border-subtle)',
+              borderRadius: 20,
+              padding: producedVideoUrl && !isProducingVideo ? '8px 0' : 24,
               textAlign: 'center',
             }}
           >
@@ -1330,8 +1312,8 @@ export default function SimpleBusinessStudio({
               />
             ) : producedVideoUrl ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--success)', fontWeight: 700, fontSize: 14 }}>
-                  <CheckCircle2 size={18} />
+                <div className="cc-enter" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontWeight: 600, fontSize: 24, letterSpacing: '-0.02em', fontFamily: 'var(--cc-font-display)' }}>
+                  <CheckCircle2 size={22} style={{ color: 'var(--success)' }} />
                   <span>Your video is ready!</span>
                 </div>
 
@@ -1339,12 +1321,12 @@ export default function SimpleBusinessStudio({
                 <div
                   style={{
                     width: '100%',
-                    maxWidth: 420,
-                    borderRadius: 12,
+                    maxWidth: 720,
+                    borderRadius: 20,
                     overflow: 'hidden',
                     backgroundColor: '#000000',
                     border: '1px solid var(--border-default)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                    boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
                   }}
                 >
                   <video
@@ -1352,12 +1334,12 @@ export default function SimpleBusinessStudio({
                     controls
                     autoPlay
                     loop
-                    style={{ width: '100%', display: 'block', maxHeight: 520, objectFit: 'contain' }}
+                    style={{ width: '100%', display: 'block', maxHeight: '72vh', objectFit: 'contain' }}
                   />
                 </div>
 
                 {/* 3-Tier CTA Hierarchy for Completed Video */}
-                <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ width: '100%', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {shouldShowContextualTip('tip_create_another_video', onboardingState, { hasVideo: Boolean(producedVideoUrl) }) && (
                     <ContextualTipBanner
                       tipId={CONTEXTUAL_TIPS.tip_create_another_video.id}
@@ -1375,42 +1357,39 @@ export default function SimpleBusinessStudio({
                     }}
                     disabled={isLoadingPackages}
                     data-testid="simple-create-another-video-cta"
+                    className="cc-btn cc-btn--primary cc-btn--lg"
                     style={{
                       width: '100%',
-                      padding: '14px 18px',
-                      borderRadius: 12,
-                      backgroundColor: 'var(--accent-primary)',
-                      border: 'none',
-                      color: '#FFFFFF',
+                      height: 'auto',
+                      padding: '12px 14px 12px 22px',
+                      borderRadius: 999,
                       cursor: isLoadingPackages ? 'wait' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: 12,
                       textAlign: 'left',
-                      boxShadow: '0 4px 16px var(--accent-glow)',
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                         <Sparkles size={15} />
                         <span>Create another video</span>
                       </span>
-                      <span style={{ fontSize: 12, opacity: 0.9, fontWeight: 400 }}>
+                      <span style={{ fontSize: 12.5, opacity: 0.75, fontWeight: 500 }}>
                         Explore another creative direction using the same brief.
                       </span>
                     </div>
-                    <ArrowRight size={17} style={{ flexShrink: 0 }} />
+                    <span style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(11, 13, 2, 0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ArrowRight size={17} />
+                    </span>
                   </button>
 
                   {/* 2. Existing Video-Level Actions (Secondary) */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
                     <div
                       style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        letterSpacing: '0.005em',
                         color: 'var(--text-tertiary)',
                       }}
                     >
@@ -1441,15 +1420,16 @@ export default function SimpleBusinessStudio({
                           } catch {}
                         }}
                         style={{
-                          flex: '1 1 140px',
+                          flex: '1 1 130px',
+                          whiteSpace: 'nowrap',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 6,
-                          padding: '9px 14px',
-                          borderRadius: 8,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
+                          gap: 7,
+                          padding: '10px 14px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                          border: '1px solid var(--border-subtle)',
                           color: 'var(--text-primary)',
                           fontSize: 13,
                           fontWeight: 600,
@@ -1473,15 +1453,16 @@ export default function SimpleBusinessStudio({
                         type="button"
                         onClick={handleStartProduction}
                         style={{
-                          flex: '1 1 140px',
+                          flex: '1 1 130px',
+                          whiteSpace: 'nowrap',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 6,
-                          padding: '9px 14px',
-                          borderRadius: 8,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
+                          gap: 7,
+                          padding: '10px 14px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                          border: '1px solid var(--border-subtle)',
                           color: 'var(--text-primary)',
                           fontSize: 13,
                           fontWeight: 600,
@@ -1502,15 +1483,16 @@ export default function SimpleBusinessStudio({
                           }
                         }}
                         style={{
-                          flex: '1 1 140px',
+                          flex: '1 1 130px',
+                          whiteSpace: 'nowrap',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 6,
-                          padding: '9px 14px',
-                          borderRadius: 8,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
+                          gap: 7,
+                          padding: '10px 14px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                          border: '1px solid var(--border-subtle)',
                           color: 'var(--text-primary)',
                           fontSize: 13,
                           fontWeight: 600,
@@ -1528,14 +1510,15 @@ export default function SimpleBusinessStudio({
                           disabled={isSavingProject}
                           style={{
                             flex: '1 1 130px',
+                          whiteSpace: 'nowrap',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 6,
-                            padding: '9px 14px',
-                            borderRadius: 8,
-                            backgroundColor: isProjectSaved ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-elevated)',
-                            border: `1px solid ${isProjectSaved ? 'var(--success)' : 'var(--border-default)'}`,
+                            padding: '10px 14px',
+                            borderRadius: 999,
+                            backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                            border: '1px solid var(--border-subtle)',
                             color: isProjectSaved ? 'var(--success)' : 'var(--text-primary)',
                             fontSize: 13,
                             fontWeight: 600,
@@ -1552,15 +1535,16 @@ export default function SimpleBusinessStudio({
                         type="button"
                         onClick={handleCopyScriptText}
                         style={{
-                          flex: '1 1 120px',
+                          flex: '1 1 130px',
+                          whiteSpace: 'nowrap',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 6,
-                          padding: '9px 14px',
-                          borderRadius: 8,
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-default)',
+                          gap: 7,
+                          padding: '10px 14px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                          border: '1px solid var(--border-subtle)',
                           color: copiedScript ? 'var(--success)' : 'var(--text-primary)',
                           fontSize: 13,
                           fontWeight: 600,
@@ -1583,7 +1567,7 @@ export default function SimpleBusinessStudio({
               </div>
             ) : videoRunError ? (
               <div style={{ padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                <div style={{ color: '#EF4444', fontSize: 16, fontWeight: 700 }}>
+                <div style={{ color: 'var(--cc-danger)', fontSize: 16, fontWeight: 600 }}>
                   Video Generation Notice
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 440, margin: 0 }}>
@@ -1595,10 +1579,10 @@ export default function SimpleBusinessStudio({
                     onClick={() => handleStartProduction()}
                     style={{
                       padding: '8px 18px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--accent-primary)',
+                      borderRadius: 999,
+                      backgroundColor: 'var(--cc-action)',
                       border: 'none',
-                      color: '#FFFFFF',
+                      color: 'var(--cc-on-action)',
                       fontSize: 13,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -1631,12 +1615,12 @@ export default function SimpleBusinessStudio({
                   onClick={handleStartProduction}
                   style={{
                     padding: '12px 28px',
-                    borderRadius: 10,
-                    backgroundColor: 'var(--accent-primary)',
+                    borderRadius: 999,
+                    backgroundColor: 'var(--cc-action)',
                     border: 'none',
-                    color: '#FFFFFF',
+                    color: 'var(--cc-on-action)',
                     fontSize: 14,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >

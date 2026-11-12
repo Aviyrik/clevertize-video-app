@@ -1,113 +1,345 @@
+/* ==========================================================================
+   CleverCut · "Signal" design system
+   One green light on a warm graphite set. See README-DESIGN in the PR notes.
+   - --cc-* tokens are the source of truth.
+   - Legacy tokens (--bg-*, --text-*, --border-*, --accent-*) are kept as
+     aliases so every existing inline style resolves to the new system.
+   ========================================================================== */
 :root {
-  --bg-app: #0B0C0F;
-  --bg-surface: #101217;
-  --bg-elevated: #151820;
-  --bg-active: #1B1F29;
-  
-  --border-subtle: #1D212B;
-  --border-default: #252833;
-  --border-strong: #323645;
-  --border-focus: #6366F1;
-  
-  --text-primary: #F5F7FA;
-  --text-secondary: #A6ACB8;
-  --text-tertiary: #737986;
-  
-  --accent-primary: #6366F1;
-  --accent-hover: #4F46E5;
-  --accent-subtle: rgba(99, 102, 241, 0.12);
-  --accent-glow: rgba(99, 102, 241, 0.25);
-  
-  --success: #10B981;
-  --success-subtle: rgba(16, 185, 129, 0.12);
-  --error: #EF4444;
-  --error-subtle: rgba(239, 68, 68, 0.12);
-  --warning: #F59E0B;
-  --warning-subtle: rgba(245, 158, 11, 0.12);
+  color-scheme: dark;
+
+  /* Neutrals: warm graphite with a faint olive bias toward the signal */
+  --cc-bg: #0A0A09;          /* app canvas, video stage */
+  --cc-surface: #121211;     /* sidebar, panels, modals */
+  --cc-raised: #191917;      /* fields, tiles, cards */
+  --cc-hover: #21211E;       /* hover + selected fill */
+  --cc-active: #2B2B27;      /* pressed, active segment */
+
+  --cc-line-1: rgba(244, 244, 236, 0.06);  /* dividers */
+  --cc-line-2: rgba(244, 244, 236, 0.10);  /* default hairline */
+  --cc-line-3: rgba(244, 244, 236, 0.18);  /* strong / hover */
+
+  --cc-text-1: #F3F3EE;
+  --cc-text-2: #A8A8A0;
+  --cc-text-3: #87877F;
+  --cc-text-4: #5C5C56;
+
+  /* Signal: the one brand light. ≤ 1 primary action per view. */
+  --cc-action: #C5EF34;
+  --cc-action-hover: #D4F65E;
+  --cc-action-press: #AED61F;
+  --cc-on-action: #0B0D02;
+  --cc-action-tint: rgba(197, 239, 52, 0.12);
+  --cc-focus: rgba(197, 239, 52, 0.55);
+
+  /* Roles that used to be "purple" */
+  --cc-selected-line: rgba(244, 244, 236, 0.42); /* chosen tile/card ring */
+  --cc-emphasis: #F3F3EE;                        /* emphasized text, active icons */
+  --cc-tint: rgba(244, 244, 236, 0.06);          /* subtle highlighted fills */
+  --cc-tint-strong: rgba(244, 244, 236, 0.10);
+
+  /* Semantic (always paired with an icon or label) */
+  --cc-success: #5FD4AE;
+  --cc-success-tint: rgba(95, 212, 174, 0.12);
+  --cc-warning: #F2B84B;
+  --cc-warning-tint: rgba(242, 184, 75, 0.12);
+  --cc-danger: #FF7A6B;
+  --cc-danger-tint: rgba(255, 122, 107, 0.12);
+  --cc-info: #8DB8FF;
+  --cc-info-tint: rgba(141, 184, 255, 0.12);
+
+  /* Materials */
+  --cc-glass: rgba(26, 26, 24, 0.72);
+  --cc-glass-blur: blur(24px) saturate(150%);
+  --cc-glass-clear: rgba(18, 18, 16, 0.34);
+  --cc-glass-edge: inset 0 0 0 1px rgba(244, 244, 236, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --cc-shadow-float: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --cc-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --cc-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0) 120px);
+  --cc-keylight: radial-gradient(60% 420px at 50% -80px, rgba(197, 239, 52, 0.065), transparent 70%);
+  --cc-scrim: linear-gradient(180deg, rgba(10, 10, 9, 0) 0%, rgba(10, 10, 9, 0.82) 100%);
+
+  /* Shape (concentric) */
+  --cc-radius-xs: 6px;
+  --cc-radius-sm: 10px;
+  --cc-radius-md: 14px;
+  --cc-radius-lg: 20px;
+  --cc-radius-xl: 28px;
+  --cc-radius-pill: 999px;
+
+  /* Type */
+  --cc-font-display: 'Inter Tight', 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --cc-font-text: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --cc-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Motion */
+  --cc-dur-1: 120ms;
+  --cc-dur-2: 200ms;
+  --cc-dur-3: 320ms;
+  --cc-dur-4: 480ms;
+  --cc-ease: cubic-bezier(0.2, 0, 0, 1);
+  --cc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --cc-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---- Legacy aliases (do not add new uses; prefer --cc-*) ---- */
+  --bg-app: var(--cc-bg);
+  --bg-surface: var(--cc-surface);
+  --bg-elevated: var(--cc-raised);
+  --bg-active: var(--cc-hover);
+  --bg-card: var(--cc-raised);
+
+  --border-subtle: var(--cc-line-1);
+  --border-default: var(--cc-line-2);
+  --border-strong: var(--cc-line-3);
+  --border-focus: var(--cc-focus);
+
+  --text-primary: var(--cc-text-1);
+  --text-secondary: var(--cc-text-2);
+  --text-tertiary: var(--cc-text-3);
+
+  --accent-primary: var(--cc-action);
+  --accent-hover: var(--cc-action-hover);
+  --accent-subtle: var(--cc-tint);
+  --accent-glow: rgba(0, 0, 0, 0.35);
+
+  --success: var(--cc-success);
+  --success-subtle: var(--cc-success-tint);
+  --error: var(--cc-danger);
+  --error-subtle: var(--cc-danger-tint);
+  --status-error: var(--cc-danger);
+  --warning: var(--cc-warning);
+  --warning-subtle: var(--cc-warning-tint);
 }
+
+/* ==========================================================================
+   Reset (replaces the former third-party reset; zero-specificity :where)
+   ========================================================================== */
+:where(*, *::before, *::after) {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: currentColor;
+}
+:where(html) {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(h1, h2, h3, h4, h5, h6) { font-size: inherit; font-weight: inherit; }
+:where(h1, h2, h3, h4, h5, h6, p, blockquote, figure, pre, dl, dd) { margin: 0; }
+:where(a) { color: inherit; text-decoration: inherit; }
+:where(b, strong) { font-weight: 600; }
+:where(code, kbd, samp, pre) { font-family: var(--cc-font-mono); font-size: 1em; }
+:where(small) { font-size: 80%; }
+:where(ol, ul, menu) { list-style: none; margin: 0; padding: 0; }
+:where(img, svg, video, canvas, audio, iframe, embed, object) { display: block; vertical-align: middle; }
+:where(img, video) { max-width: 100%; height: auto; }
+:where(button, input, optgroup, select, textarea) { font: inherit; color: inherit; margin: 0; padding: 0; }
+:where(button, [type='button'], [type='reset'], [type='submit']) { -webkit-appearance: button; appearance: button; background-color: transparent; background-image: none; }
+:where(button, [role='button']) { cursor: pointer; }
+:where(:disabled, [aria-disabled='true']) { cursor: default; }
+:where(textarea) { resize: vertical; }
+:where(fieldset) { margin: 0; padding: 0; }
+:where(legend) { padding: 0; }
+:where(table) { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+:where(hr) { height: 0; color: inherit; border-top-width: 1px; }
+:where(summary) { display: list-item; }
+:where(dialog) { padding: 0; }
+:where([hidden]) { display: none; }
 
 * {
   box-sizing: border-box;
 }
 
+html, body {
+  background-color: var(--cc-bg);
+}
+
 body {
   margin: 0;
-  background-color: var(--bg-app);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--cc-text-1);
+  font-family: var(--cc-font-text);
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4, .font-heading {
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-family: var(--cc-font-display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
-/* Custom subtle scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-app);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
+::selection {
+  background: rgba(197, 239, 52, 0.28);
+  color: var(--cc-text-1);
 }
 
-/* Inputs and interactive focus styles */
+/* Quiet scrollbars */
+* { scrollbar-color: var(--cc-active) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--cc-active); border-radius: 8px; border: 2px solid var(--cc-bg); }
+::-webkit-scrollbar-thumb:hover { background: #3A3A35; }
+
+/* ==========================================================================
+   Fields & focus
+   ========================================================================== */
 input, textarea, select {
   font-family: inherit;
-  color: var(--text-primary);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  color: var(--cc-text-1);
+  background-color: var(--cc-raised);
+  border: 1px solid var(--cc-line-2);
+  border-radius: var(--cc-radius-sm);
+  transition: border-color var(--cc-dur-2) var(--cc-ease), box-shadow var(--cc-dur-2) var(--cc-ease), background-color var(--cc-dur-2) var(--cc-ease);
 }
+select { cursor: pointer; }
+select option { background: var(--cc-raised); color: var(--cc-text-1); }
 
 input:hover, textarea:hover, select:hover {
-  border-color: var(--border-strong);
+  border-color: var(--cc-line-3);
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: var(--border-focus) !important;
-  box-shadow: 0 0 0 1px var(--border-focus) !important;
+  border-color: var(--cc-focus) !important;
+  box-shadow: 0 0 0 3px rgba(197, 239, 52, 0.14) !important;
 }
 
-button:focus-visible, [role="button"]:focus-visible, a:focus-visible {
-  outline: 2px solid var(--border-focus);
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--cc-action);
+}
+
+/* Inline styles set outline:none on many controls; restore a visible ring for keyboard users */
+button:focus-visible, [role="button"]:focus-visible, a:focus-visible, [tabindex]:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--cc-action) !important;
   outline-offset: 2px;
 }
 
 input::placeholder, textarea::placeholder {
-  color: var(--text-tertiary);
+  color: var(--cc-text-3);
+  opacity: 1;
 }
 
-/* Segmented Tab / Pill Switchers */
+button { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled):active { transform: translateY(0.5px); }
+
+/* ==========================================================================
+   Shared presentation classes
+   ========================================================================== */
+.cc-display { font-family: var(--cc-font-display); font-weight: 600; letter-spacing: -0.025em; line-height: 1.08; }
+.cc-mono { font-family: var(--cc-font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+
+.cc-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 18px; border-radius: var(--cc-radius-pill);
+  font: 500 14px/1 var(--cc-font-text); letter-spacing: -0.005em; white-space: nowrap;
+  border: none; cursor: pointer; text-decoration: none;
+  transition: background-color var(--cc-dur-2) var(--cc-ease), color var(--cc-dur-2) var(--cc-ease), box-shadow var(--cc-dur-2) var(--cc-ease), transform var(--cc-dur-1) var(--cc-ease);
+}
+.cc-btn:not(:disabled):active { transform: scale(0.98); }
+.cc-btn--primary { background: var(--cc-action); color: var(--cc-on-action); font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.cc-btn--primary:hover:not(:disabled) { background: var(--cc-action-hover); }
+.cc-btn--primary:active:not(:disabled) { background: var(--cc-action-press); }
+.cc-btn--secondary { background: rgba(255, 255, 255, 0.08); color: var(--cc-text-1); box-shadow: inset 0 0 0 1px var(--cc-line-2); }
+.cc-btn--secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.cc-btn--ghost { background: transparent; color: var(--cc-text-2); }
+.cc-btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.06); color: var(--cc-text-1); }
+.cc-btn--danger { background: transparent; color: var(--cc-danger); box-shadow: inset 0 0 0 1px rgba(255, 122, 107, 0.35); }
+.cc-btn--danger:hover:not(:disabled) { background: var(--cc-danger-tint); }
+.cc-btn:disabled { background: rgba(255, 255, 255, 0.05) !important; color: var(--cc-text-4) !important; box-shadow: none !important; cursor: not-allowed; }
+.cc-btn--sm { height: 32px; padding: 0 14px; font-size: 13px; }
+.cc-btn--lg { height: 48px; padding: 0 24px; font-size: 15px; }
+
+.cc-panel { background: var(--cc-surface); border: 1px solid var(--cc-line-1); border-radius: var(--cc-radius-lg); background-image: var(--cc-sheen); }
+
+.cc-glass {
+  background: var(--cc-glass);
+  -webkit-backdrop-filter: var(--cc-glass-blur);
+  backdrop-filter: var(--cc-glass-blur);
+  box-shadow: var(--cc-glass-edge), var(--cc-shadow-float);
+}
+.cc-glass--flat { box-shadow: var(--cc-glass-edge); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cc-glass, .cc-glass--flat { background: var(--cc-raised); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cc-glass, .cc-glass--flat { background: var(--cc-raised); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .cc-glass, .cc-glass--flat { background: var(--cc-raised); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--cc-line-3); }
+}
+
+/* Hover feedback for inline-styled ghost buttons and rows */
+.cc-ghost-hover { transition: background-color var(--cc-dur-1) var(--cc-ease), color var(--cc-dur-1) var(--cc-ease); }
+.cc-ghost-hover:hover { background-color: rgba(255, 255, 255, 0.06) !important; color: var(--cc-text-1) !important; }
+
+/* Hover lift for clickable tiles/cards that are styled inline */
+.cc-hoverable { transition: background-color var(--cc-dur-2) var(--cc-ease), border-color var(--cc-dur-2) var(--cc-ease), box-shadow var(--cc-dur-2) var(--cc-ease); }
+.cc-hoverable:hover { border-color: var(--cc-line-3) !important; }
+
+/* Production bar: keeps the stage's primary action in reach while scrolling */
+.cc-production-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 30;
+  padding: 10px 10px 10px 12px !important;
+  border-radius: var(--cc-radius-pill) !important;
+  background: var(--cc-glass) !important;
+  -webkit-backdrop-filter: var(--cc-glass-blur);
+  backdrop-filter: var(--cc-glass-blur);
+  box-shadow: var(--cc-glass-edge), var(--cc-shadow-float) !important;
+  border: none !important;
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .cc-production-bar { background: var(--cc-raised) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* A lone primary action that stays in reach while the form scrolls */
+.cc-sticky-action { position: sticky; bottom: 16px; z-index: 30; pointer-events: none; }
+.cc-sticky-action > * { pointer-events: auto; }
+
+/* Key light behind hero moments */
+.cc-keylight { background-image: var(--cc-keylight); background-repeat: no-repeat; }
+
+/* Screen-to-screen entrance */
+@keyframes cc-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cc-enter { animation: cc-enter var(--cc-dur-4) var(--cc-ease-out) both; }
+
+@keyframes cc-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+.cc-pop { animation: cc-pop var(--cc-dur-2) var(--cc-ease-out) both; }
+
+/* ==========================================================================
+   Segmented Tab / Pill Switchers
+   ========================================================================== */
 .tab-group {
   display: flex;
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
+  background-color: var(--cc-raised);
+  border: 1px solid var(--cc-line-1);
+  border-radius: var(--cc-radius-pill);
   padding: 3px;
-  gap: 4px;
+  gap: 2px;
 }
 
 .tab-pill {
   flex: 1;
-  padding: 9px 14px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: var(--cc-radius-pill);
   border: 1px solid transparent;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   background: transparent;
-  color: var(--text-secondary);
-  transition: all 0.15s ease;
+  color: var(--cc-text-2);
+  transition: background-color var(--cc-dur-2) var(--cc-ease), color var(--cc-dur-2) var(--cc-ease), box-shadow var(--cc-dur-2) var(--cc-ease);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,42 +349,44 @@ input::placeholder, textarea::placeholder {
 }
 
 .tab-pill:hover {
-  color: var(--text-primary);
+  color: var(--cc-text-1);
   background-color: rgba(255, 255, 255, 0.04);
 }
 
 .tab-pill.active {
-  background-color: var(--bg-active);
-  color: var(--text-primary);
-  font-weight: 600;
-  border-color: var(--border-subtle);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background-color: var(--cc-active);
+  color: var(--cc-text-1);
+  font-weight: 500;
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .tab-pill.active-accent {
-  background-color: var(--accent-primary);
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 1px 6px var(--accent-glow);
+  background-color: var(--cc-active);
+  color: var(--cc-text-1);
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-/* Editorial Storyboard Elements */
+/* ==========================================================================
+   Editorial storyboard elements
+   ========================================================================== */
 .quote-block {
-  background-color: var(--bg-active);
-  border-left: 3px solid var(--accent-primary);
-  border-radius: 0 8px 8px 0;
+  background-color: var(--cc-raised);
+  border-left: 2px solid var(--cc-line-3);
+  border-radius: 0 var(--cc-radius-sm) var(--cc-radius-sm) 0;
   padding: 14px 18px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
-  color: var(--text-primary);
+  color: var(--cc-text-1);
   font-style: normal;
   position: relative;
 }
 
 .production-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
+  background-color: var(--cc-surface);
+  border: 1px solid var(--cc-line-1);
+  border-radius: var(--cc-radius-md);
   padding: 20px;
 }
 
@@ -161,31 +395,29 @@ input::placeholder, textarea::placeholder {
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--cc-radius-sm);
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: background-color var(--cc-dur-2) var(--cc-ease);
   width: 100%;
 }
 
 .scene-nav-item:hover {
-  background-color: var(--bg-elevated);
+  background-color: var(--cc-raised);
 }
 
 .scene-nav-item.active {
-  background-color: var(--bg-active);
-  border-color: var(--border-subtle);
-  border-left: 3px solid var(--accent-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background-color: var(--cc-hover);
+  border-color: var(--cc-line-2);
 }
 
-/* Pulse animation for microphone */
+/* Pulse animation for microphone (carries recording state) */
 @keyframes mic-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(255, 122, 107, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 122, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 122, 107, 0); }
 }
 
 .mic-recording {
@@ -200,18 +432,18 @@ input::placeholder, textarea::placeholder {
 }
 
 .progress-indeterminate {
-  animation: progress-slide 1.8s infinite ease-in-out;
+  animation: progress-slide 1.8s infinite var(--cc-ease);
 }
 
-/* Spinner pulse/spin for icon badges */
+/* Calm breathing for status icons (was a spin) */
 @keyframes pulse-spin {
-  0% { transform: rotate(0deg) scale(0.95); opacity: 0.85; }
-  50% { transform: rotate(180deg) scale(1.05); opacity: 1; }
-  100% { transform: rotate(360deg) scale(0.95); opacity: 0.85; }
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
 }
 
 .icon-spinner {
-  animation: pulse-spin 3s infinite ease-in-out;
+  animation: pulse-spin 2.4s infinite ease-in-out;
 }
 
 /* Modal and Backdrop Animations */
@@ -228,24 +460,26 @@ input::placeholder, textarea::placeholder {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  background-color: rgba(5, 5, 4, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   padding: 16px;
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn var(--cc-dur-2) var(--cc-ease-out);
 }
 
 .modal-card {
   width: 100%;
   max-width: 540px;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: var(--cc-surface);
+  background-image: var(--cc-sheen);
+  border: 1px solid var(--cc-line-2);
+  border-radius: var(--cc-radius-lg);
+  box-shadow: var(--cc-shadow-modal);
+  animation: scaleUp var(--cc-dur-3) var(--cc-ease-out);
   overflow: hidden;
 }
 
@@ -285,7 +519,7 @@ input::placeholder, textarea::placeholder {
     top: 0;
     bottom: 0;
     width: 280px !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--cc-dur-3) var(--cc-ease-out);
     z-index: 1000 !important;
   }
   .app-sidebar-container.open {
@@ -302,6 +536,9 @@ input::placeholder, textarea::placeholder {
   }
   .mobile-mode-switcher {
     display: flex !important;
+  }
+  .cc-production-bar {
+    bottom: 10px;
   }
 }
 
@@ -334,7 +571,7 @@ input::placeholder, textarea::placeholder {
   bottom: 44px;
   left: 48px;
   z-index: 20;
-  max-width: 500px;
+  max-width: 520px;
   pointer-events: none;
   user-select: none;
 }
@@ -394,11 +631,21 @@ input::placeholder, textarea::placeholder {
   .auth-floating-panel {
     max-width: 100% !important;
     padding: 24px 20px !important;
-    border-radius: 18px !important;
+    border-radius: var(--cc-radius-lg) !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
 }
 
-
-
+/* ==========================================================================
+   Motion preferences: every transform becomes a short fade
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mic-recording { animation: none; box-shadow: 0 0 0 2px rgba(255, 122, 107, 0.6); }
+}

@@ -107,7 +107,7 @@ export default function ProductPhotoSection({
               >
                 {productPhoto.name || 'Product photo'}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                 {productPhoto.fromWebsite
                   ? '✓ Attached from website'
                   : 'Ready for video production'}
@@ -123,7 +123,7 @@ export default function ProductPhotoSection({
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-default)',
                 color: 'var(--text-secondary)',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -152,7 +152,7 @@ export default function ProductPhotoSection({
                 backgroundColor: 'transparent',
                 border: 'none',
                 color: 'var(--error)',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -191,7 +191,7 @@ export default function ProductPhotoSection({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--accent-primary)',
+              color: 'var(--cc-emphasis)',
               border: '1px solid var(--border-subtle)',
             }}
           >
@@ -201,7 +201,7 @@ export default function ProductPhotoSection({
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
               {PRODUCT_PHOTO_COPY.uploadCta}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
               {PRODUCT_PHOTO_COPY.formatsHint}
             </div>
           </div>

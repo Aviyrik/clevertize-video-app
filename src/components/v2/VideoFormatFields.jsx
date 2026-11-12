@@ -75,9 +75,8 @@ export default function VideoFormatFields({
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            fontWeight: 600,
+            letterSpacing: '0.005em',
             color: 'var(--text-tertiary)',
             marginBottom: 10,
           }}
@@ -109,8 +108,8 @@ export default function VideoFormatFields({
                   padding: '12px 8px',
                   borderRadius: 10,
                   backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                  border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                  boxShadow: isSelected ? '0 0 0 1px var(--accent-primary), 0 4px 12px rgba(99, 102, 241, 0.14)' : 'none',
+                  border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                  boxShadow: isSelected ? '0 0 0 1px var(--cc-selected-line), 0 4px 12px rgba(244, 244, 236, 0.14)' : 'none',
                   cursor: 'pointer',
                   textAlign: 'center',
                   transition: 'all 0.15s ease',
@@ -127,8 +126,8 @@ export default function VideoFormatFields({
                       width: 15,
                       height: 15,
                       borderRadius: '50%',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#FFFFFF',
+                      backgroundColor: 'var(--cc-action)',
+                      color: 'var(--cc-on-action)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -151,16 +150,16 @@ export default function VideoFormatFields({
                       width: dim.frameWidth,
                       height: dim.frameHeight,
                       borderRadius: 3,
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
-                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                      border: isSelected ? '2px solid var(--cc-selected-line)' : '1.5px solid var(--text-tertiary)',
+                      backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.09)' : 'rgba(255, 255, 255, 0.03)',
                       transition: 'all 0.15s ease',
                     }}
                   />
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)' }}>
                   {dim.label}
                 </div>
-                <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
                   {dim.platformHint}
                 </div>
               </button>
@@ -177,9 +176,8 @@ export default function VideoFormatFields({
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            fontWeight: 600,
+            letterSpacing: '0.005em',
             color: 'var(--text-tertiary)',
             marginBottom: 10,
           }}
@@ -211,8 +209,8 @@ export default function VideoFormatFields({
                   padding: '12px 8px',
                   borderRadius: 10,
                   backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                  border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                  boxShadow: isSelected ? '0 0 0 1px var(--accent-primary), 0 4px 12px rgba(99, 102, 241, 0.14)' : 'none',
+                  border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                  boxShadow: isSelected ? '0 0 0 1px var(--cc-selected-line), 0 4px 12px rgba(244, 244, 236, 0.14)' : 'none',
                   cursor: 'pointer',
                   textAlign: 'center',
                   transition: 'all 0.15s ease',
@@ -229,8 +227,8 @@ export default function VideoFormatFields({
                       width: 15,
                       height: 15,
                       borderRadius: '50%',
-                      backgroundColor: 'var(--accent-primary)',
-                      color: '#FFFFFF',
+                      backgroundColor: 'var(--cc-action)',
+                      color: 'var(--cc-on-action)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -239,18 +237,18 @@ export default function VideoFormatFields({
                     <Check size={9} strokeWidth={3} />
                   </span>
                 )}
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)' }}>
                   {dur.label}
                 </div>
-                <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
                   {dur.pacingNote}
                 </div>
                 {dur.recommended && (
                   <span
                     style={{
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--cc-emphasis)',
                       letterSpacing: '0.02em',
                     }}
                   >

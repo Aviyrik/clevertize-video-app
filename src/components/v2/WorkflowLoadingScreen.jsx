@@ -10,6 +10,7 @@ import {
   Film,
   Clapperboard,
 } from 'lucide-react';
+import BrandMark from './BrandMark.jsx';
 
 /**
  * Reusable Workflow Loading Screen
@@ -105,7 +106,7 @@ export default function WorkflowLoadingScreen({
           gap: 16,
           maxWidth: compact ? '100%' : 580,
           margin: compact ? '0' : '20px auto',
-          boxShadow: '0 8px 32px rgba(239, 68, 68, 0.1)',
+          boxShadow: '0 8px 32px rgba(255, 122, 107, 0.1)',
           ...style,
         }}
       >
@@ -124,7 +125,7 @@ export default function WorkflowLoadingScreen({
           <AlertCircle size={26} style={{ color: 'var(--error)' }} />
         </div>
         <div>
-          <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
             Operation Incomplete
           </h3>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, maxWidth: 460 }}>
@@ -157,9 +158,9 @@ export default function WorkflowLoadingScreen({
                 onClick={onRetry}
                 style={{
                   padding: '9px 20px',
-                  borderRadius: 8,
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#FFFFFF',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 600,
@@ -167,7 +168,7 @@ export default function WorkflowLoadingScreen({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  boxShadow: '0 2px 10px var(--accent-glow)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
                 }}
               >
                 <RefreshCw size={14} />
@@ -238,12 +239,12 @@ export default function WorkflowLoadingScreen({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '2px solid var(--accent-primary)',
+          border: '2px solid var(--cc-selected-line)',
           boxShadow: '0 0 24px var(--accent-glow)',
           flexShrink: 0,
         }}
       >
-        <Icon size={compact ? 24 : 28} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+        <Icon size={compact ? 24 : 28} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
       </div>
 
       {/* Title & Subtitle */}
@@ -251,11 +252,10 @@ export default function WorkflowLoadingScreen({
         {badgeLabel && (
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--accent-primary)',
+              fontSize: 11.5,
+              fontWeight: 600,
+              letterSpacing: '0.005em',
+              color: 'var(--cc-emphasis)',
               marginBottom: 6,
             }}
           >
@@ -265,7 +265,7 @@ export default function WorkflowLoadingScreen({
         <h2
           style={{
             fontSize: compact ? 17 : 20,
-            fontWeight: 700,
+            fontWeight: 600,
             margin: '0 0 6px',
             color: 'var(--text-primary)',
             lineHeight: 1.3,
@@ -299,9 +299,9 @@ export default function WorkflowLoadingScreen({
       >
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: "'JetBrains Mono', monospace",
-            color: 'var(--accent-primary)',
+            color: 'var(--cc-emphasis)',
             backgroundColor: 'var(--bg-elevated)',
             padding: '4px 12px',
             borderRadius: 20,
@@ -317,7 +317,7 @@ export default function WorkflowLoadingScreen({
               width: 6,
               height: 6,
               borderRadius: '50%',
-              backgroundColor: 'var(--accent-primary)',
+              backgroundColor: 'var(--cc-action)',
             }}
           />
           Elapsed: {displayTime}
@@ -327,12 +327,12 @@ export default function WorkflowLoadingScreen({
           <div
             data-testid="workflow-estimate-badge"
             style={{
-              fontSize: 11,
-              color: hasExceededEstimate ? '#F59E0B' : 'var(--text-tertiary)',
-              backgroundColor: hasExceededEstimate ? 'rgba(245, 158, 11, 0.1)' : 'var(--bg-elevated)',
+              fontSize: 12,
+              color: hasExceededEstimate ? 'var(--cc-warning)' : 'var(--text-tertiary)',
+              backgroundColor: hasExceededEstimate ? 'rgba(242, 184, 75, 0.1)' : 'var(--bg-elevated)',
               padding: '4px 11px',
               borderRadius: 20,
-              border: `1px solid ${hasExceededEstimate ? 'rgba(245, 158, 11, 0.35)' : 'var(--border-subtle)'}`,
+              border: `1px solid ${hasExceededEstimate ? 'rgba(242, 184, 75, 0.35)' : 'var(--border-subtle)'}`,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
@@ -357,8 +357,8 @@ export default function WorkflowLoadingScreen({
             maxWidth: 500,
             padding: '10px 14px',
             borderRadius: 10,
-            backgroundColor: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.28)',
+            backgroundColor: 'rgba(242, 184, 75, 0.08)',
+            border: '1px solid rgba(242, 184, 75, 0.28)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -367,7 +367,7 @@ export default function WorkflowLoadingScreen({
             textAlign: 'left',
           }}
         >
-          <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
             Taking longer than expected. You can wait, retry, or go back.
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -381,7 +381,7 @@ export default function WorkflowLoadingScreen({
                   backgroundColor: 'transparent',
                   border: '1px solid var(--border-default)',
                   color: 'var(--text-secondary)',
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -395,12 +395,12 @@ export default function WorkflowLoadingScreen({
                 onClick={onRetry}
                 style={{
                   padding: '5px 11px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--accent-primary)',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--cc-action)',
                   border: 'none',
-                  color: '#FFFFFF',
-                  fontSize: 11.5,
-                  fontWeight: 700,
+                  color: 'var(--cc-on-action)',
+                  fontSize: 12,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -433,10 +433,9 @@ export default function WorkflowLoadingScreen({
         >
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              fontSize: 11.5,
+              fontWeight: 600,
+              letterSpacing: '0.005em',
               color: 'var(--text-tertiary)',
               marginBottom: -2,
             }}
@@ -466,26 +465,26 @@ export default function WorkflowLoadingScreen({
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: isDone
-                      ? 'rgba(16, 185, 129, 0.15)'
+                      ? 'rgba(95, 212, 174, 0.15)'
                       : isCurrent
                       ? 'var(--bg-active)'
                       : 'transparent',
                     border: isDone
-                      ? '1px solid #10B981'
+                      ? '1px solid var(--cc-success)'
                       : isCurrent
-                      ? '1px solid var(--accent-primary)'
+                      ? '1px solid var(--cc-selected-line)'
                       : '1px solid var(--border-default)',
                     flexShrink: 0,
                   }}
                 >
                   {isDone ? (
-                    <CheckCircle2 size={13} style={{ color: '#10B981' }} />
+                    <CheckCircle2 size={13} style={{ color: 'var(--cc-success)' }} />
                   ) : isCurrent ? (
-                    <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--accent-primary)' }} />
+                    <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
                   ) : (
                     <span
                       style={{
-                        fontSize: 10,
+                        fontSize: 11.5,
                         color: 'var(--text-tertiary)',
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -498,7 +497,7 @@ export default function WorkflowLoadingScreen({
                   <div
                     style={{
                       fontSize: 12,
-                      fontWeight: isCurrent ? 700 : 600,
+                      fontWeight: isCurrent ? 600 : 600,
                       color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
                       display: 'flex',
                       alignItems: 'center',
@@ -510,7 +509,7 @@ export default function WorkflowLoadingScreen({
                     {stg.timeRange && (
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 11.5,
                           color: 'var(--text-tertiary)',
                           fontFamily: "'JetBrains Mono', monospace",
                         }}
@@ -522,7 +521,7 @@ export default function WorkflowLoadingScreen({
                   {stg.desc && (
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         color: 'var(--text-tertiary)',
                         marginTop: 1,
                         lineHeight: 1.3,
@@ -556,7 +555,7 @@ export default function WorkflowLoadingScreen({
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 6,
-            fontSize: 11,
+            fontSize: 12,
           }}
         >
           {metadata.map((item, mIdx) => (
@@ -584,8 +583,8 @@ export default function WorkflowLoadingScreen({
           style={{
             width: '100%',
             maxWidth: 500,
-            backgroundColor: 'rgba(59, 130, 246, 0.06)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
+            backgroundColor: 'rgba(244, 244, 236, 0.03)',
+            border: '1px solid rgba(244, 244, 236, 0.18)',
             borderRadius: 10,
             padding: '10px 14px',
             textAlign: 'left',
@@ -594,9 +593,9 @@ export default function WorkflowLoadingScreen({
             alignItems: 'flex-start',
           }}
         >
-          <Lightbulb size={15} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-            <span style={{ fontWeight: 700, color: '#3B82F6' }}>{tipPrefix}: </span>
+          <Lightbulb size={15} style={{ color: 'var(--cc-text-2)', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            <span style={{ fontWeight: 600, color: 'var(--cc-text-2)' }}>{tipPrefix}: </span>
             {tips[tipIndex]}
           </div>
         </div>
@@ -606,7 +605,7 @@ export default function WorkflowLoadingScreen({
       {nextStep && (
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-tertiary)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -932,11 +931,11 @@ export function AuthSessionLoader({ style = {} }) {
         @keyframes cleverPulseGlow {
           0%, 100% {
             transform: scale(1);
-            box-shadow: 0 8px 32px -4px rgba(99, 102, 241, 0.45), 0 0 24px rgba(99, 102, 241, 0.25);
+            box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.45), 0 0 24px rgba(244, 244, 236, 0.2);
           }
           50% {
             transform: scale(1.05);
-            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.7), 0 0 36px rgba(129, 140, 248, 0.5);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45), 0 0 36px rgba(244, 244, 236, 0.2);
           }
         }
         @keyframes cleverShimmerBar {
@@ -946,29 +945,14 @@ export function AuthSessionLoader({ style = {} }) {
       `}</style>
 
       {/* CleverCut Squircle Brand Mark with Breathing Animation */}
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #312E81 100%)',
-          border: '1px solid rgba(199, 210, 254, 0.45)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#FFFFFF',
-          animation: 'cleverPulseGlow 2.4s ease-in-out infinite',
-        }}
-      >
-        <Clapperboard size={26} color="#FFFFFF" strokeWidth={2.2} />
-      </div>
+      <BrandMark size={56} style={{ boxShadow: '0 8px 24px -2px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(244, 244, 236, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.06)', animation: 'cleverPulseGlow 2.4s ease-in-out infinite' }} />
 
       {/* Brand Name & Sleek Progress Bar */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <span
           style={{
             fontSize: 20,
-            fontWeight: 800,
+            fontWeight: 600,
             letterSpacing: '-0.025em',
             color: '#FFFFFF',
             textShadow: '0 2px 12px rgba(0, 0, 0, 0.5)',
@@ -994,7 +978,7 @@ export function AuthSessionLoader({ style = {} }) {
               top: 0,
               bottom: 0,
               width: '50%',
-              background: 'linear-gradient(90deg, transparent, #6366F1, transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(244, 244, 236, 0.2), transparent)',
               borderRadius: 2,
               animation: 'cleverShimmerBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite',
             }}

@@ -262,12 +262,12 @@ test('6. Unified Mode Selection, Project Resumption Bypass, Mobile Mode Switcher
 
 test('7. ProductTourEngine Spotlight Overlay: High-contrast dim (~85%), cutout-only blur, glow ring & tooltip layering', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ProductTourEngine.jsx'), 'utf8');
-  assert.ok(tourSrc.includes('rgba(4, 6, 12, 0.85)'), 'Overlay fill must use high-contrast ~85% dark backdrop');
+  assert.ok(tourSrc.includes('rgba(10, 10, 9, 0.85)'), 'Overlay fill must use high-contrast ~85% dark backdrop');
   assert.ok(tourSrc.includes("backdropFilter: 'blur(2.5px)'"), 'Backdrop outside spotlight must use subtle ~2.5px blur');
   assert.ok(tourSrc.includes('polygon(evenodd,'), 'Blur layer must exclude highlighted element via evenodd clip-path cutout');
   assert.ok(tourSrc.includes('const pad = 8;'), 'Spotlight cutout must maintain generous padding around target');
-  assert.ok(tourSrc.includes("border: '2px solid var(--accent-primary)'"), 'Spotlight ring must feature a crisp 2px accent border');
-  assert.ok(tourSrc.includes('0 0 26px rgba(99, 102, 241, 0.45)'), 'Spotlight ring must include subtle outer glow');
+  assert.ok(tourSrc.includes("border: '2px solid var(--cc-action)'"), 'Spotlight ring must feature a crisp 2px signal (brand accent) border');
+  assert.ok(tourSrc.includes('0 0 24px rgba(197, 239, 52, 0.18)'), 'Spotlight ring must include subtle outer glow');
   assert.ok(tourSrc.includes('zIndex: 9996'), 'Tooltip card must render cleanly above the spotlight overlay');
 });
 

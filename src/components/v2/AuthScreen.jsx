@@ -10,6 +10,7 @@ import {
   Mail,
   Clock,
 } from 'lucide-react';
+import BrandMark from './BrandMark.jsx';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
 import LegalDocumentModal from './LegalDocumentModal.jsx';
 
@@ -246,8 +247,8 @@ export default function AuthScreen({
         width: '100%',
         maxWidth: '100vw',
         overflowX: 'hidden',
-        backgroundColor: '#05060A',
-        color: '#F3F4F6',
+        backgroundColor: '#0A0A09',
+        color: 'var(--cc-text-1)',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
     >
@@ -269,7 +270,7 @@ export default function AuthScreen({
           max-width: 430px;
           margin-left: auto !important;
           margin-right: 0 !important;
-          background-color: rgba(13, 14, 22, 0.88);
+          background-color: rgba(18, 18, 17, 0.88);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           border: 1px solid rgba(255, 255, 255, 0.10);
@@ -296,15 +297,15 @@ export default function AuthScreen({
           font-size: 14px;
           border-radius: 12px;
           border: 1px solid rgba(255, 255, 255, 0.1);
-          background-color: rgba(20, 21, 31, 0.85);
+          background-color: rgba(33, 33, 30, 0.85);
           color: #FFFFFF;
           outline: none;
           transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
         }
         .auth-input:focus {
-          border-color: #6366F1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
-          background-color: rgba(22, 23, 36, 0.95);
+          border-color: var(--cc-focus);
+          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.22);
+          background-color: rgba(33, 33, 30, 0.95);
         }
 
         .auth-btn-google {
@@ -315,16 +316,16 @@ export default function AuthScreen({
           gap: 10px;
           padding: 12px 18px;
           border-radius: 12px;
-          background-color: rgba(20, 21, 31, 0.85);
+          background-color: rgba(33, 33, 30, 0.85);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          color: #E5E7EB;
+          color: var(--cc-text-1);
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: background-color 0.15s ease, border-color 0.15s ease;
         }
         .auth-btn-google:hover {
-          background-color: rgba(26, 28, 44, 0.95);
+          background-color: rgba(33, 33, 30, 0.95);
           border-color: rgba(255, 255, 255, 0.2);
         }
 
@@ -332,24 +333,23 @@ export default function AuthScreen({
           width: 100%;
           margin-top: 6px;
           padding: 14px 20px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-          color: #FFFFFF;
+          border-radius: 999px;
+          background: var(--cc-action);
+          color: var(--cc-on-action);
           border: none;
           font-size: 15px;
-          font-weight: 700;
+          font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
           transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
         }
         .auth-btn-primary:hover:not(:disabled) {
-          background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
+          background: var(--cc-action-hover);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
         }
         .auth-btn-primary:active:not(:disabled) {
           transform: translateY(0);
@@ -435,27 +435,11 @@ export default function AuthScreen({
           userSelect: 'none',
         }}
       >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 13,
-            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #312E81 100%)',
-            border: '1px solid rgba(199, 210, 254, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            boxShadow:
-              '0 8px 24px -2px rgba(99, 102, 241, 0.6), 0 0 16px rgba(99, 102, 241, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4)',
-          }}
-        >
-          <Clapperboard size={22} color="#FFFFFF" strokeWidth={2.2} />
-        </div>
+        <BrandMark size={42} style={{ boxShadow: '0 8px 24px -2px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(244, 244, 236, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.06)' }} />
         <span
           style={{
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             letterSpacing: '-0.025em',
             color: '#FFFFFF',
             textShadow: '0 2px 12px rgba(0, 0, 0, 0.85)',
@@ -474,26 +458,24 @@ export default function AuthScreen({
             gap: 8,
             padding: '5px 12px',
             borderRadius: 999,
-            backgroundColor: 'rgba(99, 102, 241, 0.2)',
-            border: '1px solid rgba(99, 102, 241, 0.35)',
+            backgroundColor: 'rgba(244, 244, 236, 0.1)',
+            border: '1px solid rgba(244, 244, 236, 0.315)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            color: '#C7D2FE',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
+            color: 'var(--cc-text-1)',
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.005em',
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: 12 }}>✨</span>
           <span>AI Commercial Video Studio</span>
         </div>
 
         <h2
           style={{
             fontSize: 'clamp(24px, 2.4vw, 32px)',
-            fontWeight: 800,
+            fontWeight: 600,
             lineHeight: 1.22,
             letterSpacing: '-0.025em',
             color: '#FFFFFF',
@@ -540,7 +522,7 @@ export default function AuthScreen({
             maxWidth: 430,
             marginLeft: 'auto',
             marginRight: 0,
-            backgroundColor: 'rgba(13, 14, 22, 0.88)',
+            backgroundColor: 'rgba(18, 18, 17, 0.88)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
             border: '1px solid rgba(255, 255, 255, 0.10)',
@@ -558,22 +540,22 @@ export default function AuthScreen({
                   width: 58,
                   height: 58,
                   borderRadius: 16,
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.35) 100%)',
-                  border: '1px solid rgba(129, 140, 248, 0.35)',
+                  background: 'linear-gradient(135deg, rgba(244, 244, 236, 0.2) 0%, rgba(244, 244, 236, 0.2) 100%)',
+                  border: '1px solid rgba(244, 244, 236, 0.315)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 18px',
-                  boxShadow: '0 8px 24px -4px rgba(99, 102, 241, 0.4)',
+                  boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.4)',
                 }}
               >
-                <Mail size={28} color="#818CF8" />
+                <Mail size={28} color="var(--cc-emphasis)" />
               </div>
 
               <h1
                 style={{
                   fontSize: 22,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   letterSpacing: '-0.025em',
                   color: '#FFFFFF',
                   margin: '0 0 8px',
@@ -585,7 +567,7 @@ export default function AuthScreen({
               <p
                 style={{
                   fontSize: 13,
-                  color: '#9CA3AF',
+                  color: 'var(--cc-text-2)',
                   margin: '0 0 18px',
                   lineHeight: 1.5,
                 }}
@@ -606,12 +588,12 @@ export default function AuthScreen({
                   justifyContent: 'center',
                   gap: 8,
                   fontWeight: 600,
-                  color: '#F5F7FA',
+                  color: 'var(--cc-text-1)',
                   fontSize: 13,
                   wordBreak: 'break-all',
                 }}
               >
-                <Mail size={15} color="#818CF8" style={{ flexShrink: 0 }} />
+                <Mail size={15} color="var(--cc-emphasis)" style={{ flexShrink: 0 }} />
                 <span>{pendingVerificationEmail}</span>
               </div>
 
@@ -619,12 +601,12 @@ export default function AuthScreen({
               {resendMessage && (
                 <div
                   style={{
-                    backgroundColor: resendStatus === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                    border: resendStatus === 'error' ? '1px solid rgba(239, 68, 68, 0.28)' : '1px solid rgba(16, 185, 129, 0.28)',
+                    backgroundColor: resendStatus === 'error' ? 'rgba(255, 122, 107, 0.12)' : 'rgba(95, 212, 174, 0.12)',
+                    border: resendStatus === 'error' ? '1px solid rgba(255, 122, 107, 0.28)' : '1px solid rgba(95, 212, 174, 0.28)',
                     borderRadius: 8,
                     padding: '8px 12px',
                     marginBottom: 14,
-                    color: resendStatus === 'error' ? '#F87171' : '#34D399',
+                    color: resendStatus === 'error' ? '#FFA79C' : 'var(--cc-success)',
                     fontSize: 12,
                     lineHeight: 1.4,
                   }}
@@ -641,8 +623,8 @@ export default function AuthScreen({
                 style={{
                   width: '100%',
                   padding: '11px 16px',
-                  background: resendCooldown > 0 ? 'rgba(255, 255, 255, 0.05)' : 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                  color: resendCooldown > 0 ? '#9CA3AF' : '#FFFFFF',
+                  background: resendCooldown > 0 ? 'rgba(255, 255, 255, 0.05)' : 'var(--cc-action)',
+                  color: resendCooldown > 0 ? 'var(--cc-text-2)' : 'var(--cc-on-action)',
                   border: resendCooldown > 0 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
                   borderRadius: 10,
                   fontSize: 13,
@@ -653,7 +635,7 @@ export default function AuthScreen({
                   justifyContent: 'center',
                   gap: 8,
                   marginBottom: 14,
-                  boxShadow: resendCooldown > 0 ? 'none' : '0 4px 14px rgba(79, 70, 229, 0.35)',
+                  boxShadow: resendCooldown > 0 ? 'none' : '0 4px 14px rgba(0, 0, 0, 0.35)',
                   transition: 'all 0.2s',
                 }}
               >
@@ -675,7 +657,7 @@ export default function AuthScreen({
                 )}
               </button>
 
-              <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 18px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: 'var(--cc-text-3)', margin: '0 0 18px', lineHeight: 1.5 }}>
                 Verification links expire in 30 minutes. If you don't see the email, please check your Spam or Junk folder.
               </p>
 
@@ -690,7 +672,7 @@ export default function AuthScreen({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#9CA3AF',
+                    color: 'var(--cc-text-2)',
                     fontSize: 12,
                     cursor: 'pointer',
                     textDecoration: 'underline',
@@ -710,7 +692,7 @@ export default function AuthScreen({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#818CF8',
+                    color: 'var(--cc-emphasis)',
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -727,7 +709,7 @@ export default function AuthScreen({
             <h1
               style={{
                 fontSize: 24,
-                fontWeight: 800,
+                fontWeight: 600,
                 letterSpacing: '-0.025em',
                 color: '#FFFFFF',
                 margin: '0 0 6px',
@@ -738,7 +720,7 @@ export default function AuthScreen({
             <p
               style={{
                 fontSize: 13,
-                color: '#9CA3AF',
+                color: 'var(--cc-text-2)',
                 margin: 0,
                 lineHeight: 1.45,
               }}
@@ -780,12 +762,12 @@ export default function AuthScreen({
           {googleNotice && (
             <div
               style={{
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                border: '1px solid rgba(244, 244, 236, 0.225)',
                 borderRadius: 10,
                 padding: '8px 12px',
                 marginTop: 10,
-                color: '#C7D2FE',
+                color: 'var(--cc-text-1)',
                 fontSize: 12,
                 lineHeight: 1.4,
                 textAlign: 'center',
@@ -802,7 +784,7 @@ export default function AuthScreen({
               alignItems: 'center',
               gap: 12,
               margin: '18px 0',
-              color: '#6B7280',
+              color: 'var(--cc-text-3)',
               fontSize: 12,
               fontWeight: 500,
             }}
@@ -816,15 +798,15 @@ export default function AuthScreen({
           {errorMsg && (
             <div
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.28)',
+                backgroundColor: 'rgba(255, 122, 107, 0.12)',
+                border: '1px solid rgba(255, 122, 107, 0.28)',
                 borderRadius: 10,
                 padding: '10px 14px',
                 marginBottom: 14,
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 10,
-                color: '#F87171',
+                color: '#FFA79C',
                 fontSize: 13,
                 lineHeight: 1.4,
               }}
@@ -838,15 +820,15 @@ export default function AuthScreen({
           {noticeMsg && (
             <div
               style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                border: '1px solid rgba(59, 130, 246, 0.28)',
+                backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                border: '1px solid rgba(244, 244, 236, 0.252)',
                 borderRadius: 10,
                 padding: '10px 14px',
                 marginBottom: 14,
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 10,
-                color: '#93C5FD',
+                color: 'var(--cc-text-1)',
                 fontSize: 13,
                 lineHeight: 1.4,
               }}
@@ -866,7 +848,7 @@ export default function AuthScreen({
                     display: 'block',
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#E5E7EB',
+                    color: 'var(--cc-text-1)',
                     marginBottom: 5,
                   }}
                 >
@@ -893,7 +875,7 @@ export default function AuthScreen({
                   display: 'block',
                   fontSize: 12,
                   fontWeight: 600,
-                  color: '#E5E7EB',
+                  color: 'var(--cc-text-1)',
                   marginBottom: 5,
                 }}
               >
@@ -918,7 +900,7 @@ export default function AuthScreen({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#E5E7EB',
+                    color: 'var(--cc-text-1)',
                   }}
                 >
                   Password
@@ -930,7 +912,7 @@ export default function AuthScreen({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#818CF8',
+                      color: 'var(--cc-emphasis)',
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -965,7 +947,7 @@ export default function AuthScreen({
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: '#9CA3AF',
+                    color: 'var(--cc-text-2)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -990,7 +972,7 @@ export default function AuthScreen({
                   style={{
                     width: 15,
                     height: 15,
-                    accentColor: '#6366F1',
+                    accentColor: 'var(--cc-action)',
                     cursor: 'pointer',
                     borderRadius: 4,
                   }}
@@ -999,7 +981,7 @@ export default function AuthScreen({
                   htmlFor="rememberMe"
                   style={{
                     fontSize: 12,
-                    color: '#9CA3AF',
+                    color: 'var(--cc-text-2)',
                     cursor: 'pointer',
                     userSelect: 'none',
                   }}
@@ -1040,7 +1022,7 @@ export default function AuthScreen({
               marginTop: 20,
               textAlign: 'center',
               fontSize: 13,
-              color: '#9CA3AF',
+              color: 'var(--cc-text-2)',
             }}
           >
             {mode === 'signup' ? (
@@ -1053,8 +1035,8 @@ export default function AuthScreen({
                     background: 'none',
                     border: 'none',
                     padding: 0,
-                    color: '#818CF8',
-                    fontWeight: 700,
+                    color: 'var(--cc-emphasis)',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     fontSize: 13,
                   }}
@@ -1072,8 +1054,8 @@ export default function AuthScreen({
                     background: 'none',
                     border: 'none',
                     padding: 0,
-                    color: '#818CF8',
-                    fontWeight: 700,
+                    color: 'var(--cc-emphasis)',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     fontSize: 13,
                   }}
@@ -1092,8 +1074,8 @@ export default function AuthScreen({
             style={{
               marginTop: 22,
               textAlign: 'center',
-              fontSize: 11,
-              color: '#6B7280',
+              fontSize: 12,
+              color: 'var(--cc-text-3)',
               lineHeight: 1.45,
             }}
           >
@@ -1108,18 +1090,18 @@ export default function AuthScreen({
                 background: 'none',
                 border: 'none',
                 padding: 0,
-                color: '#9CA3AF',
+                color: 'var(--cc-text-2)',
                 textDecoration: 'underline',
                 cursor: 'pointer',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 fontFamily: 'inherit',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#818CF8';
+                e.currentTarget.style.color = 'var(--cc-emphasis)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#9CA3AF';
+                e.currentTarget.style.color = 'var(--cc-text-2)';
               }}
             >
               Terms of Service
@@ -1135,18 +1117,18 @@ export default function AuthScreen({
                 background: 'none',
                 border: 'none',
                 padding: 0,
-                color: '#9CA3AF',
+                color: 'var(--cc-text-2)',
                 textDecoration: 'underline',
                 cursor: 'pointer',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 fontFamily: 'inherit',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#818CF8';
+                e.currentTarget.style.color = 'var(--cc-emphasis)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#9CA3AF';
+                e.currentTarget.style.color = 'var(--cc-text-2)';
               }}
             >
               Privacy Policy

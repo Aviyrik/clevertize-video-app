@@ -47,7 +47,7 @@ export default function LegalDocumentModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        backgroundColor: 'rgba(5, 7, 15, 0.82)',
+        backgroundColor: 'rgba(10, 10, 9, 0.82)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
@@ -64,14 +64,14 @@ export default function LegalDocumentModal({
           width: '100%',
           maxWidth: '820px',
           maxHeight: '90vh',
-          backgroundColor: '#0D0F18',
+          backgroundColor: '#121211',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: 16,
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.15)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(244, 244, 236, 0.15)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#E5E7EB',
+          color: 'var(--cc-text-1)',
           fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -86,7 +86,7 @@ export default function LegalDocumentModal({
             justifyContent: 'space-between',
             gap: 16,
             flexWrap: 'wrap',
-            backgroundColor: 'rgba(18, 20, 32, 0.8)',
+            backgroundColor: 'rgba(25, 25, 23, 0.8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -95,21 +95,21 @@ export default function LegalDocumentModal({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: '#818CF8',
+                backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                border: '1px solid rgba(244, 244, 236, 0.27)',
               }}
             >
               <Scale size={18} />
             </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
                 CleverCut Legal & Policy
               </div>
-              <div style={{ fontSize: 12, color: '#9CA3AF' }}>
+              <div style={{ fontSize: 12, color: 'var(--cc-text-2)' }}>
                 Commercial video creation platform policies
               </div>
             </div>
@@ -130,7 +130,7 @@ export default function LegalDocumentModal({
                 fontWeight: 600,
                 backgroundColor: 'rgba(255, 255, 255, 0.06)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#D1D5DB',
+                color: 'var(--cc-text-1)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -140,7 +140,7 @@ export default function LegalDocumentModal({
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
-                e.currentTarget.style.color = '#D1D5DB';
+                e.currentTarget.style.color = 'var(--cc-text-1)';
               }}
             >
               <Printer size={13} />
@@ -157,7 +157,7 @@ export default function LegalDocumentModal({
                 borderRadius: 8,
                 backgroundColor: 'rgba(255, 255, 255, 0.06)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#9CA3AF',
+                color: 'var(--cc-text-2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -165,12 +165,12 @@ export default function LegalDocumentModal({
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
-                e.currentTarget.style.color = '#EF4444';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 122, 107, 0.15)';
+                e.currentTarget.style.color = 'var(--cc-danger)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
-                e.currentTarget.style.color = '#9CA3AF';
+                e.currentTarget.style.color = 'var(--cc-text-2)';
               }}
             >
               <X size={16} />
@@ -182,7 +182,7 @@ export default function LegalDocumentModal({
         <div
           style={{
             padding: '10px 24px',
-            backgroundColor: 'rgba(13, 15, 24, 0.95)',
+            backgroundColor: 'rgba(18, 18, 17, 0.95)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
             display: 'flex',
             gap: 12,
@@ -198,10 +198,10 @@ export default function LegalDocumentModal({
               padding: '8px 16px',
               borderRadius: 8,
               fontSize: 13,
-              fontWeight: activeTab === 'terms' ? 700 : 500,
-              backgroundColor: activeTab === 'terms' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              color: activeTab === 'terms' ? '#818CF8' : '#9CA3AF',
-              border: activeTab === 'terms' ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
+              fontWeight: activeTab === 'terms' ? 600 : 500,
+              backgroundColor: activeTab === 'terms' ? 'rgba(244, 244, 236, 0.075)' : 'transparent',
+              color: activeTab === 'terms' ? 'var(--cc-emphasis)' : 'var(--cc-text-2)',
+              border: activeTab === 'terms' ? '1px solid rgba(244, 244, 236, 0.315)' : '1px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -220,10 +220,10 @@ export default function LegalDocumentModal({
               padding: '8px 16px',
               borderRadius: 8,
               fontSize: 13,
-              fontWeight: activeTab === 'privacy' ? 700 : 500,
-              backgroundColor: activeTab === 'privacy' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              color: activeTab === 'privacy' ? '#818CF8' : '#9CA3AF',
-              border: activeTab === 'privacy' ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
+              fontWeight: activeTab === 'privacy' ? 600 : 500,
+              backgroundColor: activeTab === 'privacy' ? 'rgba(244, 244, 236, 0.075)' : 'transparent',
+              color: activeTab === 'privacy' ? 'var(--cc-emphasis)' : 'var(--cc-text-2)',
+              border: activeTab === 'privacy' ? '1px solid rgba(244, 244, 236, 0.315)' : '1px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -241,7 +241,7 @@ export default function LegalDocumentModal({
             padding: '28px 32px',
             fontSize: 13,
             lineHeight: 1.65,
-            color: '#D1D5DB',
+            color: 'var(--cc-text-1)',
           }}
         >
           {activeTab === 'terms' ? (
@@ -251,25 +251,24 @@ export default function LegalDocumentModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      letterSpacing: '0.005em',
                       padding: '3px 8px',
                       borderRadius: 6,
-                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                      color: '#818CF8',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                      color: 'var(--cc-emphasis)',
+                      border: '1px solid rgba(244, 244, 236, 0.27)',
                     }}
                   >
                     Standard SaaS Terms
                   </span>
-                  <span style={{ fontSize: 12, color: '#9CA3AF' }}>Effective: October 2026 • Version 2.4</span>
+                  <span style={{ fontSize: 12, color: 'var(--cc-text-2)' }}>Effective: October 2026 • Version 2.4</span>
                 </div>
-                <h1 style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: 22, fontWeight: 600, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
                   CleverCut Terms of Service
                 </h1>
-                <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: 0 }}>
                   Please read these Terms of Service carefully before accessing or using the CleverCut commercial video creation studio.
                 </p>
               </div>
@@ -279,23 +278,23 @@ export default function LegalDocumentModal({
                 style={{
                   padding: 16,
                   borderRadius: 10,
-                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.04)',
+                  border: '1px solid rgba(244, 244, 236, 0.18)',
                   marginBottom: 24,
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 12,
                 }}
               >
-                <CheckCircle2 size={18} style={{ color: '#818CF8', flexShrink: 0, marginTop: 2 }} />
-                <div style={{ fontSize: 12, color: '#E0E7FF', lineHeight: 1.55 }}>
+                <CheckCircle2 size={18} style={{ color: 'var(--cc-emphasis)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 12, color: 'var(--cc-text-1)', lineHeight: 1.55 }}>
                   <strong style={{ color: '#FFFFFF' }}>Commercial Ownership Guarantee:</strong> You retain 100% full commercial rights to the video ads, scripts, and promotional assets you produce with CleverCut. You are free to run them on Instagram, YouTube, television, websites, or any paid advertising channel.
                 </div>
               </div>
 
               {/* Section 1 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   1. Acceptance of Terms
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -305,7 +304,7 @@ export default function LegalDocumentModal({
 
               {/* Section 2 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   2. Service Description & AI Generation
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -315,7 +314,7 @@ export default function LegalDocumentModal({
 
               {/* Section 3 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   3. User Accounts & Security
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -325,7 +324,7 @@ export default function LegalDocumentModal({
 
               {/* Section 4 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   4. Intellectual Property & Commercial Usage Rights
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>
@@ -338,7 +337,7 @@ export default function LegalDocumentModal({
 
               {/* Section 5 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   5. Acceptable Use Policy
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>You agree not to use the Service to create or disseminate:</p>
@@ -355,7 +354,7 @@ export default function LegalDocumentModal({
 
               {/* Section 6 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   6. Third-Party Integrations & Generation Latency
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -365,7 +364,7 @@ export default function LegalDocumentModal({
 
               {/* Section 7 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   7. Subscriptions, Credits & Billing
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -375,7 +374,7 @@ export default function LegalDocumentModal({
 
               {/* Section 8 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   8. Disclaimers & Limitation of Liability
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -385,7 +384,7 @@ export default function LegalDocumentModal({
 
               {/* Section 9 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   9. Account Deletion & Termination
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -395,12 +394,12 @@ export default function LegalDocumentModal({
 
               {/* Section 10 */}
               <div style={{ marginBottom: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   10. Contact Information
                 </h3>
                 <p style={{ margin: 0 }}>
                   If you have questions regarding these Terms of Service, please reach out to our legal department at{' '}
-                  <span style={{ color: '#818CF8' }}>legal@clevercut.ai</span> or through our support channels.
+                  <span style={{ color: 'var(--cc-emphasis)' }}>legal@clevercut.ai</span> or through our support channels.
                 </p>
               </div>
             </div>
@@ -411,25 +410,24 @@ export default function LegalDocumentModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      letterSpacing: '0.005em',
                       padding: '3px 8px',
                       borderRadius: 6,
-                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                      color: '#818CF8',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                      color: 'var(--cc-emphasis)',
+                      border: '1px solid rgba(244, 244, 236, 0.27)',
                     }}
                   >
                     Data Privacy & Security
                   </span>
-                  <span style={{ fontSize: 12, color: '#9CA3AF' }}>Effective: October 2026 • Version 2.4</span>
+                  <span style={{ fontSize: 12, color: 'var(--cc-text-2)' }}>Effective: October 2026 • Version 2.4</span>
                 </div>
-                <h1 style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: 22, fontWeight: 600, color: '#FFFFFF', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
                   CleverCut Privacy Policy
                 </h1>
-                <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: 0 }}>
                   Learn how CleverCut collects, utilizes, and protects your business context, uploaded brand assets, and personal information.
                 </p>
               </div>
@@ -439,23 +437,23 @@ export default function LegalDocumentModal({
                 style={{
                   padding: 16,
                   borderRadius: 10,
-                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.04)',
+                  border: '1px solid rgba(244, 244, 236, 0.18)',
                   marginBottom: 24,
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 12,
                 }}
               >
-                <Lock size={18} style={{ color: '#818CF8', flexShrink: 0, marginTop: 2 }} />
-                <div style={{ fontSize: 12, color: '#E0E7FF', lineHeight: 1.55 }}>
+                <Lock size={18} style={{ color: 'var(--cc-emphasis)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 12, color: 'var(--cc-text-1)', lineHeight: 1.55 }}>
                   <strong style={{ color: '#FFFFFF' }}>Privacy First Commitment:</strong> We never sell your personal data or uploaded brand media to data brokers or advertising exchanges. Your brand details and product imagery are used exclusively to create your commercial video ads.
                 </div>
               </div>
 
               {/* Section 1 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   1. Information We Collect
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>We collect information necessary to deliver video creation workflows:</p>
@@ -470,7 +468,7 @@ export default function LegalDocumentModal({
 
               {/* Section 2 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   2. How We Use Your Information
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>Your data is processed strictly for the following purposes:</p>
@@ -484,7 +482,7 @@ export default function LegalDocumentModal({
 
               {/* Section 3 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   3. Third-Party AI Processors & Cloud Infrastructure
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -494,7 +492,7 @@ export default function LegalDocumentModal({
 
               {/* Section 4 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   4. Data Security & Storage Standards
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -504,7 +502,7 @@ export default function LegalDocumentModal({
 
               {/* Section 5 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   5. Your Privacy Rights & Control
                 </h3>
                 <p style={{ margin: '0 0 8px' }}>
@@ -519,7 +517,7 @@ export default function LegalDocumentModal({
 
               {/* Section 6 */}
               <div style={{ marginBottom: 22 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   6. Local Storage & Session State
                 </h3>
                 <p style={{ margin: 0 }}>
@@ -529,12 +527,12 @@ export default function LegalDocumentModal({
 
               {/* Section 7 */}
               <div style={{ marginBottom: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', marginBottom: 8 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
                   7. Contact the Privacy Team
                 </h3>
                 <p style={{ margin: 0 }}>
                   If you have inquiries about this Privacy Policy or wish to submit a data subject request, please contact our Data Protection Officer at{' '}
-                  <span style={{ color: '#818CF8' }}>privacy@clevercut.ai</span>.
+                  <span style={{ color: 'var(--cc-emphasis)' }}>privacy@clevercut.ai</span>.
                 </p>
               </div>
             </div>
@@ -549,10 +547,10 @@ export default function LegalDocumentModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'rgba(18, 20, 32, 0.95)',
+            backgroundColor: 'rgba(25, 25, 23, 0.95)',
           }}
         >
-          <div style={{ fontSize: 12, color: '#9CA3AF' }}>
+          <div style={{ fontSize: 12, color: 'var(--cc-text-2)' }}>
             {activeTab === 'terms' ? 'Reading CleverCut Terms of Service' : 'Reading CleverCut Privacy Policy'}
           </div>
 
@@ -561,11 +559,11 @@ export default function LegalDocumentModal({
             onClick={onClose}
             style={{
               padding: '8px 20px',
-              borderRadius: 8,
+              borderRadius: 999,
               fontSize: 13,
-              fontWeight: 700,
-              backgroundColor: 'var(--accent-primary, #6366F1)',
-              color: '#FFFFFF',
+              fontWeight: 600,
+              backgroundColor: 'var(--cc-action)',
+              color: 'var(--cc-on-action)',
               border: 'none',
               cursor: 'pointer',
               transition: 'opacity 0.15s ease',

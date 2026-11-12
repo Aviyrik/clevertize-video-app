@@ -259,7 +259,7 @@ export default function ProductTourEngine({
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(4, 6, 12, 0.85)"
+          fill="rgba(10, 10, 9, 0.85)"
           mask="url(#clevercut-tour-spotlight-mask)"
         />
       </svg>
@@ -275,8 +275,8 @@ export default function ProductTourEngine({
             width: targetRect.width,
             height: targetRect.height,
             borderRadius: 12,
-            border: '2px solid var(--accent-primary)',
-            boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.25), 0 0 26px rgba(99, 102, 241, 0.45)',
+            border: '2px solid var(--cc-action)',
+            boxShadow: '0 0 0 4px rgba(0, 0, 0, 0.35), 0 0 24px rgba(197, 239, 52, 0.18)',
             pointerEvents: 'none',
             transition: 'all 0.18s ease-out',
           }}
@@ -294,7 +294,7 @@ export default function ProductTourEngine({
           left: cardLeft,
           width: cardWidth,
           backgroundColor: 'var(--bg-surface)',
-          border: '1px solid rgba(99, 102, 241, 0.42)',
+          border: '1px solid rgba(244, 244, 236, 0.378)',
           borderRadius: 14,
           padding: '16px 18px',
           boxShadow: '0 24px 56px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.06)',
@@ -329,12 +329,11 @@ export default function ProductTourEngine({
           <span
             data-testid="tour-step-counter"
             style={{
-              fontSize: 10.5,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--accent-primary)',
-              backgroundColor: 'rgba(99, 102, 241, 0.14)',
+              fontSize: 11.5,
+              fontWeight: 600,
+              letterSpacing: '0.005em',
+              color: 'var(--cc-emphasis)',
+              backgroundColor: 'rgba(244, 244, 236, 0.07)',
               padding: '2px 8px',
               borderRadius: 10,
             }}
@@ -356,7 +355,7 @@ export default function ProductTourEngine({
                   background: 'none',
                   border: 'none',
                   color: 'var(--text-tertiary)',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -378,7 +377,7 @@ export default function ProductTourEngine({
                 background: 'none',
                 border: 'none',
                 color: 'var(--text-tertiary)',
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -395,7 +394,7 @@ export default function ProductTourEngine({
         </div>
 
         <div>
-          <h3 style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
+          <h3 style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
             {activeStep.title}
           </h3>
           <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -415,11 +414,11 @@ export default function ProductTourEngine({
               style={{
                 padding: '6px 11px',
                 borderRadius: 7,
-                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                border: '1px solid rgba(99, 102, 241, 0.35)',
-                color: 'var(--accent-primary)',
-                fontSize: 11.5,
-                fontWeight: 700,
+                backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                border: '1px solid rgba(244, 244, 236, 0.315)',
+                color: 'var(--cc-emphasis)',
+                fontSize: 12,
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -467,12 +466,12 @@ export default function ProductTourEngine({
             onClick={handleNext}
             style={{
               padding: '7px 14px',
-              borderRadius: 8,
-              backgroundColor: 'var(--accent-primary)',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              color: '#FFFFFF',
+              color: 'var(--cc-on-action)',
               fontSize: 12.5,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',

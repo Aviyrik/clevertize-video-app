@@ -20,6 +20,11 @@ import {
   Package,
   Upload,
   Trash2,
+  Timer,
+  Ratio,
+  House,
+  Mic,
+  MessageCircle,
 } from 'lucide-react';
 
 const SAMPLE_SCRIPTS = [
@@ -733,7 +738,7 @@ export default function ExistingScriptModal({
                 height: 36,
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -743,13 +748,13 @@ export default function ExistingScriptModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {modalStep === 2 ? 'Review & Edit Production Script' : 'Start with an Existing Script'}
                 </h3>
                 <span
                   style={{
-                    fontSize: 10,
-                    fontWeight: 700,
+                    fontSize: 11.5,
+                    fontWeight: 600,
                     padding: '2px 8px',
                     borderRadius: 12,
                     backgroundColor: 'var(--bg-surface)',
@@ -793,9 +798,9 @@ export default function ExistingScriptModal({
                   background: 'none',
                   border: 'none',
                   cursor: isValidating ? 'not-allowed' : 'pointer',
-                  fontSize: 11,
-                  fontWeight: modalStep === 1 ? 700 : 500,
-                  color: modalStep === 1 ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  fontSize: 12,
+                  fontWeight: modalStep === 1 ? 600 : 500,
+                  color: modalStep === 1 ? 'var(--cc-emphasis)' : 'var(--text-tertiary)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
@@ -815,9 +820,9 @@ export default function ExistingScriptModal({
                   background: 'none',
                   border: 'none',
                   cursor: validationResult && !isValidating ? 'pointer' : 'not-allowed',
-                  fontSize: 11,
-                  fontWeight: modalStep === 2 ? 700 : 500,
-                  color: modalStep === 2 ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  fontSize: 12,
+                  fontWeight: modalStep === 2 ? 600 : 500,
+                  color: modalStep === 2 ? 'var(--cc-emphasis)' : 'var(--text-tertiary)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
@@ -903,11 +908,11 @@ export default function ExistingScriptModal({
                       onClick={() => handleLoadSample(s)}
                       aria-label={`Insert example script: ${s.name}`}
                       style={{
-                        backgroundColor: loadedSampleName === s.name ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
-                        border: `1px solid ${loadedSampleName === s.name ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                        backgroundColor: loadedSampleName === s.name ? 'rgba(244, 244, 236, 0.07)' : 'var(--bg-elevated)',
+                        border: `1px solid ${loadedSampleName === s.name ? 'var(--cc-emphasis)' : 'var(--border-default)'}`,
                         borderRadius: 6,
                         padding: '5px 10px',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         cursor: 'pointer',
@@ -916,7 +921,7 @@ export default function ExistingScriptModal({
                         gap: 6,
                       }}
                     >
-                      <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                      <Sparkles size={12} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
                       <span>Example: {s.name}</span>
                     </button>
                   ))}
@@ -930,8 +935,8 @@ export default function ExistingScriptModal({
                   style={{
                     padding: '9px 12px',
                     borderRadius: 8,
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                    border: '1px solid rgba(244, 244, 236, 0.27)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -952,7 +957,7 @@ export default function ExistingScriptModal({
                       border: '1px solid var(--border-default)',
                       borderRadius: 6,
                       padding: '4px 10px',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       cursor: 'pointer',
@@ -979,10 +984,10 @@ export default function ExistingScriptModal({
                   {/* 1. Target Duration */}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-                        ⏱️ Target Video Duration
+                      <label style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-secondary)' }}>
+                        <Timer size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Target Video Duration
                       </label>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         {selectedDuration === '15s' ? '3 scenes (~5s per shot)' : selectedDuration === '30s' ? '6 scenes (~5s per shot)' : '4 scenes (~5s per shot, Standard)'}
                       </span>
                     </div>
@@ -1003,10 +1008,10 @@ export default function ExistingScriptModal({
                               padding: '7px 8px',
                               borderRadius: 6,
                               fontSize: 12,
-                              fontWeight: isSel ? 700 : 500,
-                              backgroundColor: isSel ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                              color: isSel ? '#ffffff' : 'var(--text-secondary)',
-                              border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                              fontWeight: isSel ? 600 : 500,
+                              backgroundColor: isSel ? 'var(--cc-active)' : 'var(--bg-surface)',
+                              color: isSel ? 'var(--cc-text-1)' : 'var(--text-secondary)',
+                              border: isSel ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                               cursor: 'pointer',
                               display: 'flex',
                               flexDirection: 'column',
@@ -1016,7 +1021,7 @@ export default function ExistingScriptModal({
                             }}
                           >
                             <span>{d.label}</span>
-                            <span style={{ fontSize: 9.5, opacity: isSel ? 0.9 : 0.65 }}>{d.subtitle}</span>
+                            <span style={{ fontSize: 11, opacity: isSel ? 0.9 : 0.65 }}>{d.subtitle}</span>
                           </button>
                         );
                       })}
@@ -1026,17 +1031,17 @@ export default function ExistingScriptModal({
                   {/* 2. Aspect Ratio / Dimension */}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-                        📐 Video Dimension
+                      <label style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-secondary)' }}>
+                        <Ratio size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Video Dimension
                       </label>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         {selectedAspect === '16:9' ? 'YouTube / TV' : selectedAspect === '1:1' ? 'Social Feed' : 'Reels / Shorts'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {[
-                        { id: '9:16', label: '📱 9:16', subtitle: 'Vertical' },
-                        { id: '16:9', label: '🖥️ 16:9', subtitle: 'Landscape' },
+                        { id: '9:16', label: '9:16', subtitle: 'Vertical' },
+                        { id: '16:9', label: '16:9', subtitle: 'Landscape' },
                         { id: '1:1', label: '⏹️ 1:1', subtitle: 'Square' },
                       ].map((a) => {
                         const isSel = selectedAspect === a.id;
@@ -1050,10 +1055,10 @@ export default function ExistingScriptModal({
                               padding: '7px 8px',
                               borderRadius: 6,
                               fontSize: 12,
-                              fontWeight: isSel ? 700 : 500,
-                              backgroundColor: isSel ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                              color: isSel ? '#ffffff' : 'var(--text-secondary)',
-                              border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                              fontWeight: isSel ? 600 : 500,
+                              backgroundColor: isSel ? 'var(--cc-active)' : 'var(--bg-surface)',
+                              color: isSel ? 'var(--cc-text-1)' : 'var(--text-secondary)',
+                              border: isSel ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                               cursor: 'pointer',
                               display: 'flex',
                               flexDirection: 'column',
@@ -1063,7 +1068,7 @@ export default function ExistingScriptModal({
                             }}
                           >
                             <span>{a.label}</span>
-                            <span style={{ fontSize: 9.5, opacity: isSel ? 0.9 : 0.65 }}>{a.subtitle}</span>
+                            <span style={{ fontSize: 11, opacity: isSel ? 0.9 : 0.65 }}>{a.subtitle}</span>
                           </button>
                         );
                       })}
@@ -1099,7 +1104,7 @@ export default function ExistingScriptModal({
                           border: '1px solid var(--border-default)',
                           borderRadius: 6,
                           padding: '3px 9px',
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           color: 'var(--text-secondary)',
                           cursor: 'pointer',
@@ -1156,7 +1161,7 @@ export default function ExistingScriptModal({
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
                     gap: 8,
-                    fontSize: 11.5,
+                    fontSize: 12,
                     color: 'var(--text-secondary)',
                   }}
                 >
@@ -1199,10 +1204,10 @@ export default function ExistingScriptModal({
               <div
                 style={{
                   backgroundColor: validationResult?.passedGate
-                    ? 'rgba(16, 185, 129, 0.08)'
-                    : 'rgba(245, 158, 11, 0.08)',
+                    ? 'rgba(95, 212, 174, 0.08)'
+                    : 'rgba(242, 184, 75, 0.08)',
                   border: `1px solid ${
-                    validationResult?.passedGate ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)'
+                    validationResult?.passedGate ? 'rgba(95, 212, 174, 0.35)' : 'rgba(242, 184, 75, 0.35)'
                   }`,
                   borderRadius: 8,
                   padding: '12px 16px',
@@ -1221,7 +1226,7 @@ export default function ExistingScriptModal({
                     <span
                       style={{
                         fontSize: 13,
-                        fontWeight: 700,
+                        fontWeight: 600,
                         color: validationResult?.passedGate ? 'var(--success)' : 'var(--warning)',
                       }}
                     >
@@ -1232,8 +1237,8 @@ export default function ExistingScriptModal({
                   </div>
                   <span
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
+                      fontSize: 12,
+                      fontWeight: 600,
                       color: 'var(--text-secondary)',
                       backgroundColor: 'var(--bg-surface)',
                       padding: '2px 8px',
@@ -1274,7 +1279,7 @@ export default function ExistingScriptModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                   {/* Spoken Language */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 0 }}>
                       Language:
                     </span>
                     <select
@@ -1303,7 +1308,7 @@ export default function ExistingScriptModal({
 
                   {/* Production Format */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 0 }}>
                       Format:
                     </span>
                     <select
@@ -1329,7 +1334,7 @@ export default function ExistingScriptModal({
 
                   {/* Dimension Switch */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 0 }}>
                       Dimension:
                     </span>
                     <select
@@ -1346,8 +1351,8 @@ export default function ExistingScriptModal({
                         cursor: 'pointer',
                       }}
                     >
-                      <option value="9:16">📱 9:16 Vertical</option>
-                      <option value="16:9">🖥️ 16:9 Landscape</option>
+                      <option value="9:16">9:16 Vertical</option>
+                      <option value="16:9">16:9 Landscape</option>
                       <option value="1:1">⏹️ 1:1 Square</option>
                     </select>
                   </div>
@@ -1357,15 +1362,15 @@ export default function ExistingScriptModal({
                   {/* Duration Badge */}
                   <span
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--cc-emphasis)',
                       backgroundColor: 'var(--accent-subtle)',
                       padding: '4px 8px',
                       borderRadius: 6,
                     }}
                   >
-                    ⏱️ {selectedDuration} ({scenesData.length} Shots)
+                    <Timer size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{selectedDuration} ({scenesData.length} Shots)
                   </span>
 
                   {/* Delivery Mode Badge */}
@@ -1374,10 +1379,10 @@ export default function ExistingScriptModal({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
-                      fontSize: 11,
-                      fontWeight: 700,
+                      fontSize: 12,
+                      fontWeight: 600,
                       color: detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
-                        ? 'var(--accent-primary)'
+                        ? 'var(--cc-emphasis)'
                         : 'var(--text-secondary)',
                       backgroundColor: detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
                         ? 'var(--accent-subtle)'
@@ -1388,8 +1393,8 @@ export default function ExistingScriptModal({
                     }}
                   >
                     {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
-                      ? '🎙️ Voiceover-led (VO)'
-                      : '💬 Character Dialogue'}
+                      ? 'Voiceover-led (VO)'
+                      : 'Character Dialogue'}
                   </div>
                 </div>
               </div>
@@ -1398,8 +1403,8 @@ export default function ExistingScriptModal({
               {selectedStyle.includes('Demo') && (
                 <div
                   style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.06)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    backgroundColor: 'rgba(244, 244, 236, 0.03)',
+                    border: '1px solid rgba(244, 244, 236, 0.27)',
                     borderRadius: 10,
                     padding: '14px 18px',
                     display: 'flex',
@@ -1409,16 +1414,16 @@ export default function ExistingScriptModal({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Package size={17} style={{ color: 'var(--accent-primary)' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <Package size={17} style={{ color: 'var(--cc-emphasis)' }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                         Product Demo Detected — Attach Product Photo
                       </span>
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                          color: 'var(--accent-primary)',
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                          color: 'var(--cc-emphasis)',
                           padding: '2px 8px',
                           borderRadius: 10,
                         }}
@@ -1426,7 +1431,7 @@ export default function ExistingScriptModal({
                         Visual Clarity Boost
                       </span>
                     </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                       Renders exact packaging & label details
                     </span>
                   </div>
@@ -1457,7 +1462,7 @@ export default function ExistingScriptModal({
                           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {productPhoto.name || 'Product photo'}
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Check size={12} /> Ready for video generation
                           </div>
                         </div>
@@ -1465,7 +1470,7 @@ export default function ExistingScriptModal({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <label
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 600,
                             padding: '5px 10px',
                             borderRadius: 6,
@@ -1490,7 +1495,7 @@ export default function ExistingScriptModal({
                           type="button"
                           onClick={() => setProductPhoto(null)}
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             padding: '5px 8px',
                             borderRadius: 6,
                             backgroundColor: 'transparent',
@@ -1519,7 +1524,7 @@ export default function ExistingScriptModal({
                           borderRadius: 8,
                           backgroundColor: 'var(--bg-surface)',
                           cursor: 'pointer',
-                          color: 'var(--accent-primary)',
+                          color: 'var(--cc-emphasis)',
                           fontSize: 12,
                           fontWeight: 600,
                           transition: 'border-color 0.15s ease',
@@ -1556,16 +1561,16 @@ export default function ExistingScriptModal({
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Lock size={15} style={{ color: 'var(--accent-primary)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <Lock size={15} style={{ color: 'var(--cc-emphasis)' }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                       World Continuity Lock
                     </span>
                     <span
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         backgroundColor: 'var(--accent-subtle)',
-                        color: 'var(--accent-primary)',
+                        color: 'var(--cc-emphasis)',
                         padding: '2px 6px',
                         borderRadius: 4,
                       }}
@@ -1573,7 +1578,7 @@ export default function ExistingScriptModal({
                       AI Consistency Anchor
                     </span>
                   </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     Holds faces & background identical across all shots
                   </span>
                 </div>
@@ -1589,13 +1594,13 @@ export default function ExistingScriptModal({
                     <label
                       style={{
                         display: 'block',
-                        fontSize: 11,
-                        fontWeight: 700,
+                        fontSize: 12,
+                        fontWeight: 600,
                         color: 'var(--text-secondary)',
                         marginBottom: 4,
                       }}
                     >
-                      🏠 Single Setting / Environment
+                      <House size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Single Setting / Environment
                     </label>
                     <input
                       type="text"
@@ -1613,7 +1618,7 @@ export default function ExistingScriptModal({
                         outline: 'none',
                       }}
                     />
-                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                       Kept consistent across all shots.
                     </span>
                   </div>
@@ -1622,15 +1627,15 @@ export default function ExistingScriptModal({
                     <label
                       style={{
                         display: 'block',
-                        fontSize: 11,
-                        fontWeight: 700,
+                        fontSize: 12,
+                        fontWeight: 600,
                         color: 'var(--text-secondary)',
                         marginBottom: 4,
                       }}
                     >
                       {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
-                        ? '👤 On-Screen Visual Subject (Solo Actor)'
-                        : '👩 Character 1 (Lead Host / Actor)'}
+                        ? 'On-Screen Visual Subject (Solo Actor)'
+                        : 'Character 1 (Lead Host / Actor)'}
                     </label>
                     <input
                       type="text"
@@ -1652,7 +1657,7 @@ export default function ExistingScriptModal({
                         outline: 'none',
                       }}
                     />
-                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                       {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
                         ? 'Actor performing physical actions on camera (visual only, no spoken lines).'
                         : 'Face, skin tone, and clothing consistent in every shot.'}
@@ -1663,18 +1668,18 @@ export default function ExistingScriptModal({
                     <label
                       style={{
                         display: 'block',
-                        fontSize: 11,
-                        fontWeight: 700,
+                        fontSize: 12,
+                        fontWeight: 600,
                         color:
                           detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
-                            ? 'var(--accent-primary)'
+                            ? 'var(--cc-emphasis)'
                             : 'var(--text-secondary)',
                         marginBottom: 4,
                       }}
                     >
                       {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
-                        ? '🎙️ Audio Delivery Mode'
-                        : '👨 Character 2 (Supporting / Customer)'}
+                        ? 'Audio Delivery Mode'
+                        : 'Character 2 (Supporting / Customer)'}
                     </label>
                     {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover' ? (
                       <div>
@@ -1693,10 +1698,10 @@ export default function ExistingScriptModal({
                             gap: 6,
                           }}
                         >
-                          <span style={{ color: 'var(--accent-primary)' }}>●</span>
+                          <span style={{ color: 'var(--cc-emphasis)' }}>●</span>
                           <span>Voiceover (VO) — Off-Screen Narrator</span>
                         </div>
-                        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                           Narration plays over visual scene action. No secondary character or lip-sync needed.
                         </span>
                       </div>
@@ -1718,7 +1723,7 @@ export default function ExistingScriptModal({
                             outline: 'none',
                           }}
                         />
-                        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                           Secondary character or customer interaction.
                         </span>
                       </>
@@ -1731,12 +1736,12 @@ export default function ExistingScriptModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Film size={15} style={{ color: 'var(--accent-primary)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <Film size={15} style={{ color: 'var(--cc-emphasis)' }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                       Production Shots (Compiled for Video Generation)
                     </span>
                   </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     Edit visual staging or dialogue directly
                   </span>
                 </div>
@@ -1768,12 +1773,12 @@ export default function ExistingScriptModal({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span
                           style={{
-                            fontSize: 11,
-                            fontWeight: 800,
+                            fontSize: 12,
+                            fontWeight: 600,
                             padding: '3px 9px',
                             borderRadius: 4,
-                            backgroundColor: 'rgba(99, 102, 241, 0.14)',
-                            color: 'var(--accent-primary)',
+                            backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                            color: 'var(--cc-emphasis)',
                             fontFamily: "'JetBrains Mono', monospace",
                           }}
                         >
@@ -1781,7 +1786,7 @@ export default function ExistingScriptModal({
                         </span>
                         <span
                           style={{
-                            fontSize: 10,
+                            fontSize: 11.5,
                             fontWeight: 600,
                             color: 'var(--text-tertiary)',
                             backgroundColor: 'var(--bg-elevated)',
@@ -1797,10 +1802,9 @@ export default function ExistingScriptModal({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                           style={{
-                            fontSize: 10,
+                            fontSize: 11.5,
                             color: 'var(--text-tertiary)',
                             fontWeight: 600,
-                            textTransform: 'uppercase',
                           }}
                         >
                           Shot {idx + 1} of 4
@@ -1819,15 +1823,15 @@ export default function ExistingScriptModal({
                       >
                         <label
                           style={{
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 12,
+                            fontWeight: 600,
                             color: 'var(--text-secondary)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
                           }}
                         >
-                          <Camera size={13} style={{ color: 'var(--accent-primary)' }} />
+                          <Camera size={13} style={{ color: 'var(--cc-emphasis)' }} />
                           <span>Visual Staging & Physical Action (Camera Prompt)</span>
                         </label>
                       </div>
@@ -1862,8 +1866,8 @@ export default function ExistingScriptModal({
                       >
                         <span
                           style={{
-                            fontSize: 10,
-                            fontWeight: 700,
+                            fontSize: 11.5,
+                            fontWeight: 600,
                             color: 'var(--text-tertiary)',
                             flexShrink: 0,
                           }}
@@ -1877,7 +1881,7 @@ export default function ExistingScriptModal({
                           placeholder="e.g. smooth slow push-in, steady two-shot"
                           style={{
                             flex: 1,
-                            fontSize: 11,
+                            fontSize: 12,
                             backgroundColor: 'transparent',
                             border: 'none',
                             color: 'var(--text-primary)',
@@ -1892,15 +1896,15 @@ export default function ExistingScriptModal({
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <label
                           style={{
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 12,
+                            fontWeight: 600,
                             color: 'var(--text-secondary)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
                           }}
                         >
-                          <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
+                          <MessageSquare size={13} style={{ color: 'var(--cc-emphasis)' }} />
                           <span>
                             {/^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                               s.dialogue || ''
@@ -1921,13 +1925,13 @@ export default function ExistingScriptModal({
                             style={{
                               padding: '2px 8px',
                               borderRadius: 4,
-                              fontSize: 10,
+                              fontSize: 11.5,
                               fontWeight: 600,
                               cursor: 'pointer',
                               border: /^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
                               )
-                                ? '1px solid var(--accent-primary)'
+                                ? '1px solid var(--cc-selected-line)'
                                 : '1px solid var(--border-subtle)',
                               backgroundColor: /^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
@@ -1937,11 +1941,11 @@ export default function ExistingScriptModal({
                               color: /^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
                               )
-                                ? 'var(--accent-primary)'
+                                ? 'var(--cc-emphasis)'
                                 : 'var(--text-tertiary)',
                             }}
                           >
-                            🎙️ VO (Voiceover)
+                            <Mic size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />VO (Voiceover)
                           </button>
                           <button
                             type="button"
@@ -1953,13 +1957,13 @@ export default function ExistingScriptModal({
                             style={{
                               padding: '2px 8px',
                               borderRadius: 4,
-                              fontSize: 10,
+                              fontSize: 11.5,
                               fontWeight: 600,
                               cursor: 'pointer',
                               border: !/^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
                               )
-                                ? '1px solid var(--accent-primary)'
+                                ? '1px solid var(--cc-selected-line)'
                                 : '1px solid var(--border-subtle)',
                               backgroundColor: !/^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
@@ -1969,11 +1973,11 @@ export default function ExistingScriptModal({
                               color: !/^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
                                 s.dialogue || ''
                               )
-                                ? 'var(--accent-primary)'
+                                ? 'var(--cc-emphasis)'
                                 : 'var(--text-tertiary)',
                             }}
                           >
-                            💬 On-Screen Actor
+                            <MessageCircle size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />On-Screen Actor
                           </button>
                         </div>
                       </div>
@@ -2039,13 +2043,13 @@ export default function ExistingScriptModal({
                 onClick={() => handleValidateScript(false)}
                 disabled={isValidating || !scriptText.trim()}
                 style={{
-                  backgroundColor: 'var(--accent-primary)',
+                  backgroundColor: 'var(--cc-action)',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 999,
                   padding: '9px 18px',
                   fontSize: 13,
                   fontWeight: 600,
-                  color: '#FFFFFF',
+                  color: 'var(--cc-on-action)',
                   cursor: isValidating || !scriptText.trim() ? 'not-allowed' : 'pointer',
                   opacity: isValidating || !scriptText.trim() ? 0.6 : 1,
                   display: 'flex',
@@ -2111,21 +2115,21 @@ export default function ExistingScriptModal({
                   type="button"
                   onClick={handleProceedToStudio}
                   style={{
-                    backgroundColor: 'var(--accent-primary)',
+                    backgroundColor: 'var(--cc-action)',
                     border: 'none',
-                    borderRadius: 6,
+                    borderRadius: 999,
                     padding: '9px 20px',
                     fontSize: 13,
-                    fontWeight: 700,
-                    color: '#FFFFFF',
+                    fontWeight: 600,
+                    color: 'var(--cc-on-action)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    boxShadow: '0 2px 10px var(--accent-glow)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
                   }}
                 >
-                  <span>Proceed to Script Studio (Stage 07)</span>
+                  <span>Proceed to Script Studio (Stage 06)</span>
                   <ArrowRight size={14} />
                 </button>
               </div>

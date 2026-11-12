@@ -40,8 +40,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Sarees, boutiques, ethnic & modern wear',
     icon: Shirt,
     image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3) 0%, rgba(136, 19, 55, 0.5) 100%)',
-    accentColor: '#F43F5E',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-danger)',
   },
   {
     id: 'jewellery',
@@ -50,8 +50,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Gold, silver, diamonds & bridal ornaments',
     icon: Gem,
     image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(234, 179, 8, 0.3) 0%, rgba(161, 98, 7, 0.5) 100%)',
-    accentColor: '#EAB308',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-emphasis)',
   },
   {
     id: 'sweets',
@@ -60,8 +60,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Mithai, bakeries, cafes & restaurants',
     icon: UtensilsCrossed,
     image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(249, 115, 22, 0.3) 0%, rgba(154, 52, 18, 0.5) 100%)',
-    accentColor: '#F97316',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-text-2)',
   },
   {
     id: 'grocery',
@@ -70,8 +70,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Daily essentials, FMCG & grocery provisions',
     icon: ShoppingBag,
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(6, 95, 70, 0.5) 100%)',
-    accentColor: '#10B981',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-success)',
   },
   {
     id: 'electronics',
@@ -80,8 +80,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Smartphones, home appliances & gadgets',
     icon: Smartphone,
     image: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(30, 58, 138, 0.5) 100%)',
-    accentColor: '#3B82F6',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-text-2)',
   },
   {
     id: 'salon',
@@ -90,8 +90,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Hair salons, makeup, skincare & wellness',
     icon: Scissors,
     image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(236, 72, 153, 0.3) 0%, rgba(157, 23, 77, 0.5) 100%)',
-    accentColor: '#EC4899',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-text-2)',
   },
   {
     id: 'healthcare',
@@ -100,8 +100,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Doctors, dental, diagnostics & pharmacy',
     icon: HeartPulse,
     image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(20, 184, 166, 0.3) 0%, rgba(15, 118, 110, 0.5) 100%)',
-    accentColor: '#14B8A6',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-success)',
   },
   {
     id: 'realestate',
@@ -110,8 +110,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Properties, interior design & furniture',
     icon: Home,
     image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(107, 33, 168, 0.5) 100%)',
-    accentColor: '#A855F7',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-emphasis)',
   },
   {
     id: 'fitness',
@@ -120,8 +120,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Workout centers, yoga studios & training',
     icon: Dumbbell,
     image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(153, 27, 27, 0.5) 100%)',
-    accentColor: '#EF4444',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-danger)',
   },
   {
     id: 'education',
@@ -130,8 +130,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Tuitions, coaching classes & academies',
     icon: GraduationCap,
     image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(49, 46, 129, 0.5) 100%)',
-    accentColor: '#6366F1',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-emphasis)',
   },
   {
     id: 'automobile',
@@ -140,8 +140,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Car & bike service, repairs & detailing',
     icon: Car,
     image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(51, 65, 85, 0.5) 100%)',
-    accentColor: '#64748B',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-text-2)',
   },
   {
     id: 'other',
@@ -150,8 +150,8 @@ const CATEGORY_CARDS = [
     subtitle: 'Specialized local services & crafts',
     icon: Store,
     image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=400&q=80',
-    gradient: 'linear-gradient(135deg, rgba(147, 51, 234, 0.3) 0%, rgba(88, 28, 135, 0.5) 100%)',
-    accentColor: '#9333EA',
+    gradient: 'linear-gradient(135deg, rgba(244, 244, 236, 0.07) 0%, rgba(244, 244, 236, 0.02) 100%)',
+    accentColor: 'var(--cc-emphasis)',
   },
 ];
 
@@ -463,7 +463,7 @@ export default function BusinessOnboardingModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 12, 0.85)',
+        backgroundColor: 'rgba(10, 10, 9, 0.85)',
         backdropFilter: 'blur(10px)',
         zIndex: 10000,
         display: 'flex',
@@ -493,25 +493,24 @@ export default function BusinessOnboardingModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span
                 style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--cc-emphasis)',
                   backgroundColor: 'var(--accent-subtle)',
                   padding: '3px 8px',
                   borderRadius: 4,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.005em',
                 }}
               >
                 Step {step} of 4
               </span>
-              <span id="business-onboarding-step-title" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span id="business-onboarding-step-title" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>
                 {step === 1 && 'Business Identity'}
                 {step === 2 && 'Location & Online Presence'}
                 {step === 3 && 'Brand Voice & Personality'}
                 {step === 4 && 'Confirm & Save'}
               </span>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                 · {activeStepMeta.req}
               </span>
             </div>
@@ -556,16 +555,16 @@ export default function BusinessOnboardingModal({
                     style={{
                       height: 4,
                       borderRadius: 2,
-                      backgroundColor: isDone || isCurrent ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                      backgroundColor: isDone || isCurrent ? 'var(--cc-action)' : 'var(--bg-elevated)',
                       opacity: isDone ? 0.65 : 1,
                       transition: 'background-color 0.2s',
                     }}
                   />
                   <div
                     style={{
-                      fontSize: 10.5,
-                      fontWeight: isCurrent ? 700 : 500,
-                      color: isCurrent ? 'var(--accent-primary)' : isDone ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                      fontSize: 11.5,
+                      fontWeight: isCurrent ? 600 : 500,
+                      color: isCurrent ? 'var(--cc-emphasis)' : isDone ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
@@ -590,8 +589,8 @@ export default function BusinessOnboardingModal({
                 marginTop: 12,
                 padding: '9px 12px',
                 borderRadius: 8,
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
+                backgroundColor: 'rgba(242, 184, 75, 0.1)',
+                border: '1px solid rgba(242, 184, 75, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -612,7 +611,7 @@ export default function BusinessOnboardingModal({
                     backgroundColor: 'var(--bg-surface)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -628,11 +627,11 @@ export default function BusinessOnboardingModal({
                   style={{
                     padding: '5px 10px',
                     borderRadius: 6,
-                    backgroundColor: '#EF4444',
+                    backgroundColor: 'var(--cc-danger)',
                     border: 'none',
-                    color: '#FFFFFF',
-                    fontSize: 11.5,
-                    fontWeight: 700,
+                    color: '#1A0703',
+                    fontSize: 12,
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
@@ -658,7 +657,7 @@ export default function BusinessOnboardingModal({
             }}
           >
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Tell us about your business
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -669,8 +668,8 @@ export default function BusinessOnboardingModal({
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
               {/* Logo Upload Dropzone / Avatar */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                  Logo <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Logo <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   {brandLogo ? (
@@ -683,8 +682,8 @@ export default function BusinessOnboardingModal({
                           height: 50,
                           borderRadius: 10,
                           objectFit: 'cover',
-                          border: '1.5px solid var(--accent-primary)',
-                          backgroundColor: '#161922',
+                          border: '1.5px solid var(--cc-selected-line)',
+                          backgroundColor: '#21211E',
                         }}
                       />
                       <button
@@ -701,15 +700,15 @@ export default function BusinessOnboardingModal({
                           width: 18,
                           height: 18,
                           borderRadius: '50%',
-                          backgroundColor: '#EF4444',
-                          color: '#FFFFFF',
+                          backgroundColor: 'var(--cc-danger)',
+                          color: '#1A0703',
                           border: 'none',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: 10,
-                          fontWeight: 800,
+                          fontSize: 11.5,
+                          fontWeight: 600,
                           lineHeight: 1,
                         }}
                       >
@@ -733,8 +732,8 @@ export default function BusinessOnboardingModal({
                         transition: 'all 0.15s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                        e.currentTarget.style.color = 'var(--accent-primary)';
+                        e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
+                        e.currentTarget.style.color = 'var(--cc-emphasis)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -743,7 +742,7 @@ export default function BusinessOnboardingModal({
                       title="Upload business logo"
                     >
                       <Upload size={16} />
-                      <span style={{ fontSize: 9, fontWeight: 700, marginTop: 2, textTransform: 'uppercase' }}>Logo</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, marginTop: 2, }}>Logo</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -764,8 +763,8 @@ export default function BusinessOnboardingModal({
 
               {/* Business Name Input */}
               <div style={{ flex: 1 }}>
-                <label htmlFor="onboarding-business-name" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                  Business or Brand Name <span style={{ color: '#EF4444' }}>*</span>
+                <label htmlFor="onboarding-business-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Business or Brand Name <span style={{ color: 'var(--cc-danger)' }}>*</span>
                 </label>
                 <input
                   id="onboarding-business-name"
@@ -790,14 +789,14 @@ export default function BusinessOnboardingModal({
                     padding: '11px 14px',
                     fontSize: 14,
                     borderRadius: 10,
-                    border: `1.5px solid ${nameError ? '#EF4444' : 'var(--border-default)'}`,
+                    border: `1.5px solid ${nameError ? 'var(--cc-danger)' : 'var(--border-default)'}`,
                     backgroundColor: 'var(--bg-elevated)',
                     color: 'var(--text-primary)',
                     outline: 'none',
                   }}
                 />
                 {nameError && (
-                  <div id="onboarding-name-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                  <div id="onboarding-name-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--cc-danger)', fontSize: 12, marginTop: 5 }}>
                     <AlertCircle size={13} aria-hidden="true" />
                     <span>Please enter your business or brand name.</span>
                   </div>
@@ -807,8 +806,8 @@ export default function BusinessOnboardingModal({
 
             <div>
               <div style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Business Category <span style={{ color: '#EF4444' }}>*</span>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Business Category <span style={{ color: 'var(--cc-danger)' }}>*</span>
                 </label>
               </div>
 
@@ -842,10 +841,10 @@ export default function BusinessOnboardingModal({
                         display: 'flex',
                         flexDirection: 'column',
                         textAlign: 'left',
-                        backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.12)' : 'var(--bg-elevated)',
-                        border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                        backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.06)' : 'var(--bg-elevated)',
+                        border: isSelected ? '1.5px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
                         boxShadow: isSelected
-                          ? '0 0 0 1px var(--accent-primary), 0 8px 20px rgba(124, 58, 237, 0.18)'
+                          ? '0 0 0 1px var(--cc-selected-line), 0 8px 20px rgba(244, 244, 236, 0.18)'
                           : 'none',
                         borderRadius: 12,
                         overflow: 'hidden',
@@ -861,7 +860,7 @@ export default function BusinessOnboardingModal({
                           position: 'relative',
                           height: 70,
                           width: '100%',
-                          backgroundColor: '#151821',
+                          backgroundColor: '#21211E',
                           background: cat.gradient,
                           overflow: 'hidden',
                         }}
@@ -886,7 +885,7 @@ export default function BusinessOnboardingModal({
                             position: 'absolute',
                             inset: 0,
                             background:
-                              'linear-gradient(to top, rgba(11, 12, 15, 0.95) 0%, rgba(11, 12, 15, 0.35) 60%, rgba(11, 12, 15, 0.15) 100%)',
+                              'linear-gradient(to top, rgba(18, 18, 17, 0.95) 0%, rgba(18, 18, 17, 0.35) 60%, rgba(18, 18, 17, 0.15) 100%)',
                           }}
                         />
 
@@ -899,9 +898,9 @@ export default function BusinessOnboardingModal({
                             width: 26,
                             height: 26,
                             borderRadius: 6,
-                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.18)',
+                            backgroundColor: isSelected ? 'var(--cc-active)' : 'rgba(255, 255, 255, 0.18)',
                             backdropFilter: 'blur(6px)',
-                            color: '#FFFFFF',
+                            color: 'var(--cc-text-1)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -921,8 +920,8 @@ export default function BusinessOnboardingModal({
                               width: 20,
                               height: 20,
                               borderRadius: '50%',
-                              backgroundColor: 'var(--accent-primary)',
-                              color: '#FFFFFF',
+                              backgroundColor: 'var(--cc-action)',
+                              color: 'var(--cc-on-action)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -939,8 +938,8 @@ export default function BusinessOnboardingModal({
                         <div
                           style={{
                             fontSize: 12,
-                            fontWeight: 700,
-                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                            fontWeight: 600,
+                            color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                             letterSpacing: '-0.01em',
                             lineHeight: 1.25,
                           }}
@@ -949,7 +948,7 @@ export default function BusinessOnboardingModal({
                         </div>
                         <div
                           style={{
-                            fontSize: 10,
+                            fontSize: 11.5,
                             color: 'var(--text-tertiary)',
                             marginTop: 3,
                             lineHeight: 1.3,
@@ -973,7 +972,7 @@ export default function BusinessOnboardingModal({
                   <label
                     style={{
                       display: 'block',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: 'var(--text-secondary)',
                       marginBottom: 5,
@@ -1006,7 +1005,7 @@ export default function BusinessOnboardingModal({
 
               {/* Category Validation Error */}
               {categoryError && (
-                <div id="onboarding-category-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 10 }}>
+                <div id="onboarding-category-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--cc-danger)', fontSize: 12, marginTop: 10 }}>
                   <AlertCircle size={13} aria-hidden="true" />
                   <span>Please select a business category to guide your video scripts.</span>
                 </div>
@@ -1030,7 +1029,7 @@ export default function BusinessOnboardingModal({
             }}
           >
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Where is your business located?
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -1039,8 +1038,8 @@ export default function BusinessOnboardingModal({
             </div>
 
             <div>
-              <label htmlFor="onboarding-town" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                City or Town <span style={{ color: '#EF4444' }}>*</span>
+              <label htmlFor="onboarding-town" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                City or Town <span style={{ color: 'var(--cc-danger)' }}>*</span>
               </label>
               <input
                 id="onboarding-town"
@@ -1065,14 +1064,14 @@ export default function BusinessOnboardingModal({
                   padding: '11px 14px',
                   fontSize: 14,
                   borderRadius: 8,
-                  border: `1.5px solid ${townError ? '#EF4444' : 'var(--border-default)'}`,
+                  border: `1.5px solid ${townError ? 'var(--cc-danger)' : 'var(--border-default)'}`,
                   backgroundColor: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
                   outline: 'none',
                 }}
               />
               {townError && (
-                <div id="onboarding-town-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                <div id="onboarding-town-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--cc-danger)', fontSize: 12, marginTop: 5 }}>
                   <AlertCircle size={13} aria-hidden="true" />
                   <span>Please enter your city or town so we can localize your video scripts.</span>
                 </div>
@@ -1120,7 +1119,7 @@ export default function BusinessOnboardingModal({
             }}
           >
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Brand Voice & Personality
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -1145,8 +1144,8 @@ export default function BusinessOnboardingModal({
                       style={{
                         padding: '12px 14px',
                         borderRadius: 10,
-                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-elevated)',
-                        border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                        backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.06)' : 'var(--bg-elevated)',
+                        border: `1.5px solid ${isSelected ? 'var(--cc-emphasis)' : 'var(--border-default)'}`,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         display: 'flex',
@@ -1161,8 +1160,8 @@ export default function BusinessOnboardingModal({
                           width: 36,
                           height: 36,
                           borderRadius: 8,
-                          backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.22)' : 'rgba(255, 255, 255, 0.05)',
-                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                          color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-secondary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1176,17 +1175,17 @@ export default function BusinessOnboardingModal({
                         <div
                           style={{
                             fontSize: 13,
-                            fontWeight: 700,
-                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                            fontWeight: 600,
+                            color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                           }}
                         >
                           <span>{t.label}</span>
-                          {isSelected && <Check size={13} strokeWidth={2.5} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />}
+                          {isSelected && <Check size={13} strokeWidth={2.5} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} aria-hidden="true" />}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.3 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.3 }}>
                           {t.desc}
                         </div>
                       </div>
@@ -1200,7 +1199,7 @@ export default function BusinessOnboardingModal({
 
             {/* Optional Brand Asset */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Brand Logo (Optional)
               </label>
               {brandLogo ? (
@@ -1225,14 +1224,14 @@ export default function BusinessOnboardingModal({
                         borderRadius: 8,
                         objectFit: 'cover',
                         border: '1px solid var(--border-subtle)',
-                        backgroundColor: '#161922',
+                        backgroundColor: '#21211E',
                       }}
                     />
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                         Brand logo attached
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                         Appears on video end-cards & watermark
                       </div>
                     </div>
@@ -1298,8 +1297,8 @@ export default function BusinessOnboardingModal({
                     transition: 'all 0.18s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                    e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.04)';
+                    e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
+                    e.currentTarget.style.backgroundColor = 'rgba(244, 244, 236, 0.02)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -1312,7 +1311,7 @@ export default function BusinessOnboardingModal({
                       height: 38,
                       borderRadius: 10,
                       backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
+                      color: 'var(--cc-emphasis)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1321,10 +1320,10 @@ export default function BusinessOnboardingModal({
                   >
                     <Upload size={18} />
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                     Upload brand logo or storefront photo
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     PNG, JPG, or WebP up to 5MB · Used for end-frame compositing & watermark
                   </div>
                   <input
@@ -1366,7 +1365,7 @@ export default function BusinessOnboardingModal({
                   width: 52,
                   height: 52,
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  backgroundColor: 'rgba(95, 212, 174, 0.15)',
                   color: 'var(--success)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1376,7 +1375,7 @@ export default function BusinessOnboardingModal({
               >
                 <CheckCircle2 size={28} />
               </div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                 Your Brand Profile is Ready!
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, maxWidth: 420, margin: '0 auto', lineHeight: 1.5 }}>
@@ -1407,24 +1406,24 @@ export default function BusinessOnboardingModal({
                         height: 32,
                         borderRadius: 6,
                         backgroundColor: 'var(--accent-subtle)',
-                        color: 'var(--accent-primary)',
+                        color: 'var(--cc-emphasis)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 14,
-                        fontWeight: 800,
+                        fontWeight: 600,
                       }}
                     >
                       {businessName ? businessName[0].toUpperCase() : 'B'}
                     </div>
                   )}
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
                       {businessName || 'My Business'}
                     </div>
                     {town && (
                       <div style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={11} style={{ color: 'var(--accent-primary)' }} />
+                        <MapPin size={11} style={{ color: 'var(--cc-emphasis)' }} />
                         <span>{town}</span>
                       </div>
                     )}
@@ -1433,7 +1432,7 @@ export default function BusinessOnboardingModal({
 
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     backgroundColor: 'var(--bg-surface)',
                     border: '1px solid var(--border-subtle)',
                     padding: '3px 8px',
@@ -1449,7 +1448,7 @@ export default function BusinessOnboardingModal({
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {websiteUrl && (
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Globe size={12} style={{ color: 'var(--accent-primary)' }} />
+                    <Globe size={12} style={{ color: 'var(--cc-emphasis)' }} />
                     <span>{websiteUrl}</span>
                   </div>
                 )}
@@ -1506,18 +1505,18 @@ export default function BusinessOnboardingModal({
               type="button"
               onClick={handleNext}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 999,
                 padding: '9px 20px',
                 fontSize: 13,
-                fontWeight: 700,
-                color: '#FFFFFF',
+                fontWeight: 600,
+                color: 'var(--cc-on-action)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                boxShadow: '0 2px 10px var(--accent-glow)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
               }}
             >
               <span>Continue</span>
@@ -1530,18 +1529,18 @@ export default function BusinessOnboardingModal({
               type="button"
               onClick={handleFinish}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 999,
                 padding: '10px 24px',
                 fontSize: 13,
-                fontWeight: 700,
-                color: '#FFFFFF',
+                fontWeight: 600,
+                color: 'var(--cc-on-action)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                boxShadow: '0 2px 12px var(--accent-glow)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
               }}
             >
               <Check size={16} />
