@@ -110,10 +110,10 @@ export default function FeedbackModal({
       activeProject?.name ||
       (activeProjectId ? `Project ${activeProjectId}` : 'Untitled Project'),
     projectId: activeProjectId || activeProject?.id || 'N/A',
-    appMode: studioMode === 'director' ? 'Director Mode' : 'Simple Studio',
+    appMode: (studioMode === 'director' || studioMode === 'advanced') ? 'Director Mode' : 'Simple Studio',
     workflowStage:
       activeView === 'studio'
-        ? studioMode === 'director'
+        ? (studioMode === 'director' || studioMode === 'advanced')
           ? studioStage
           : 'Simple Studio - 3-Step Creation'
         : activeView,
@@ -359,7 +359,7 @@ export default function FeedbackModal({
                   color: 'var(--text-tertiary)',
                 }}
               >
-                Help us improve CleverCut — we review every report directly.
+                Share an issue or suggestion.
               </p>
             </div>
           </div>
@@ -447,7 +447,7 @@ export default function FeedbackModal({
                   maxWidth: '380px',
                 }}
               >
-                Thanks for helping us improve CleverCut! Your feedback has been sent to our team.
+                Your feedback has been sent.
               </p>
               <button
                 type="button"
@@ -469,7 +469,7 @@ export default function FeedbackModal({
                   (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')
                 }
               >
-                Close Window
+                Close
               </button>
             </div>
           ) : (

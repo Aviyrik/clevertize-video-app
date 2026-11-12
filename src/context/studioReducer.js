@@ -7,23 +7,32 @@
  */
 
 const STAGE_ORDER = [
-  'brief',    // Stage 1
-  'settings', // Stage 2
-  'idea',     // Stage 3
-  'opening',  // Stage 4
-  'story',    // Stage 5
-  'script',   // Stage 6
-  'video',    // Stage 7
+  'brief',         // Stage 1
+  'settings',      // Stage 2
+  'understanding', // Stage 3
+  'idea',          // Stage 4
+  'opening',       // Stage 5
+  'script',        // Stage 6
+  'video',         // Stage 7
 ];
+
+const AUXILIARY_STAGES = [
+  'entry',
+  'business',
+  'story',
+];
+
+const VALID_STAGES = [...STAGE_ORDER, ...AUXILIARY_STAGES];
 
 const STAGE_NUMBER_MAP = {
   brief: 1,
   settings: 2,
-  idea: 3,
-  opening: 4,
-  story: 5,
+  understanding: 3,
+  idea: 4,
+  opening: 5,
   script: 6,
   video: 7,
+  story: 6,
 };
 
 const StudioActionTypes = {
@@ -166,7 +175,7 @@ function studioReducer(state, action) {
   switch (action.type) {
     case StudioActionTypes.SET_STAGE: {
       const stage = action.payload.stage;
-      if (!STAGE_ORDER.includes(stage)) return state;
+      if (!VALID_STAGES.includes(stage)) return state;
       return {
         ...state,
         currentStage: stage,
@@ -523,7 +532,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           explicitChoices: nextChoices,
-          completedStages: state.completedStages.filter((s) => ['brief', 'settings', 'idea'].includes(s)),
+          completedStages: state.completedStages.filter((s) => ['brief', 'settings', 'understanding', 'idea'].includes(s)),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
       }
@@ -540,7 +549,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['brief', 'settings', 'idea', 'opening'].includes(s)
+            ['brief', 'settings', 'understanding', 'idea', 'opening'].includes(s)
           ),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
@@ -557,7 +566,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['brief', 'settings', 'idea', 'opening', 'story'].includes(s)
+            ['brief', 'settings', 'understanding', 'idea', 'opening', 'story'].includes(s)
           ),
           hasStaleWarning: Boolean(state.scenes.length > 0 || state.generatedScript),
         };
@@ -571,7 +580,7 @@ function studioReducer(state, action) {
           videoUrl: '',
           downloadUrl: '',
           completedStages: state.completedStages.filter((s) =>
-            ['brief', 'settings', 'idea', 'opening', 'story', 'script'].includes(s)
+            ['brief', 'settings', 'understanding', 'idea', 'opening', 'story', 'script'].includes(s)
           ),
           hasStaleWarning: false,
         };
@@ -601,6 +610,61 @@ function studioReducer(state, action) {
   }
 }
 
+/**
+ * Preserves the architectural distinction between:
+ *  - 'ai': selecting an AI-generated idea directly
+ *  - 'custom': starting from the user's own creative idea
+ *  - 'ai_extended': selecting an AI idea and extending it with user creative direction
+ */
+function resolveIdeaSelection(selectedDirection, customDirection = '', fallbackDirection = null) {
+  const cleanCustom = typeof customDirection === 'string' ? customDirection.trim() : '';
+  const hasAi = Boolean(selectedDirection && typeof selectedDirection === 'object');
+
+  if (hasAi && cleanCustom) {
+    return {
+      ideaSource: 'ai_extended',
+      selectedAiDirection: selectedDirection,
+      customDirection: cleanCustom,
+      direction: { ...selectedDirection, userExtension: cleanCustom, source: 'ai_extended' },
+      label: selectedDirection.title || selectedDirection.heading || cleanCustom,
+    };
+  }
+  if (hasAi) {
+    return {
+      ideaSource: 'ai',
+      selectedAiDirection: selectedDirection,
+      customDirection: '',
+      direction: { ...selectedDirection, source: 'ai' },
+      label: selectedDirection.title || selectedDirection.heading || '',
+    };
+  }
+  if (cleanCustom) {
+    return {
+      ideaSource: 'custom',
+      selectedAiDirection: null,
+      customDirection: cleanCustom,
+      direction: { title: cleanCustom, isCustom: true, source: 'custom' },
+      label: cleanCustom,
+    };
+  }
+  if (fallbackDirection && typeof fallbackDirection === 'object') {
+    return {
+      ideaSource: 'ai',
+      selectedAiDirection: fallbackDirection,
+      customDirection: '',
+      direction: { ...fallbackDirection, source: 'ai' },
+      label: fallbackDirection.title || fallbackDirection.heading || '',
+    };
+  }
+  return {
+    ideaSource: null,
+    selectedAiDirection: null,
+    customDirection: '',
+    direction: null,
+    label: '',
+  };
+}
+
 // Support both CommonJS (Node.js test runner) and ES Modules (Vite)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -610,6 +674,7 @@ if (typeof module !== 'undefined' && module.exports) {
     createInitialStudioState,
     initialStudioState,
     isStaleResponse,
+    resolveIdeaSelection,
     studioReducer,
   };
 }

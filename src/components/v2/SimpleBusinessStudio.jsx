@@ -7,6 +7,13 @@ import {
   SimpleVideoProductionLoader,
 } from './WorkflowLoadingScreen.jsx';
 import CreativeInstructionsSection from './CreativeInstructionsSection.jsx';
+import OccasionEventSection from './OccasionEventSection.jsx';
+import ProductPhotoSection from './ProductPhotoSection.jsx';
+import TargetAudienceSection from './TargetAudienceSection.jsx';
+import HelpTooltip from './HelpTooltip.jsx';
+import ContextualTipBanner from './ContextualTipBanner.jsx';
+import { HELP_TOOLTIPS, CONTEXTUAL_TIPS } from '../../data/tourSteps.js';
+import { shouldShowContextualTip } from '../../utils/onboarding.js';
 import {
   Sparkles,
   Zap,
@@ -19,16 +26,19 @@ import {
   Check,
   RotateCcw,
   Store,
-  Upload,
-  Trash2,
   Film,
   Layers,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   MessageSquare,
   Sliders,
   ExternalLink,
   Share2,
+  FileCode2,
+  Globe,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 
 const POPULAR_LANGUAGES = [
@@ -45,23 +55,29 @@ const POPULAR_LANGUAGES = [
 ];
 
 const AD_STYLES = [
-  { id: 'UGC / Creator-style', label: 'Creator / UGC', desc: 'Friendly, relatable, high trust', icon: '📱', recommended: true },
-  { id: 'Product Demo', label: 'Product Showcase', desc: 'Hands-on quality demonstration', icon: '✨' },
-  { id: 'Situational Comedy', label: 'Humorous & Fun', desc: 'Playful situational sketch', icon: '😄' },
-  { id: 'Storytelling', label: 'Heartwarming Story', desc: 'Warm customer connection', icon: '🎬' },
+  { id: 'UGC / Creator-style', label: 'UGC', shortLabel: 'UGC', desc: 'A creator speaks naturally about your product.' },
+  { id: 'Product Demo', label: 'Product Demo', shortLabel: 'Product Demo', desc: 'Show your product in action.' },
+  { id: 'Situational Comedy', label: 'Humorous & Fun', shortLabel: 'Funny', desc: 'Use humour and playful situations.' },
+  { id: 'Storytelling', label: 'Story', shortLabel: 'Story', desc: 'Build an emotional connection through storytelling.' },
 ];
 
-const DIMENSION_OPTIONS = [
-  { id: '9:16', label: '9:16 Vertical', desc: 'Reels / Shorts / TikTok', icon: '📱' },
-  { id: '16:9', label: '16:9 Landscape', desc: 'YouTube / TV / Desktop', icon: '🖥️' },
-  { id: '1:1', label: '1:1 Square', desc: 'Social Feed / Posts', icon: '⏹️' },
+function formatStyleShortLabel(style = '') {
+  const s = String(style || '');
+  if (s.includes('UGC')) return 'UGC';
+  if (s.includes('Demo')) return 'Product Demo';
+  if (s.includes('Comedy') || s.includes('Funny')) return 'Funny';
+  if (s.includes('Conversational')) return 'Conversational';
+  if (s.includes('Story')) return 'Story';
+  return s || 'UGC';
+}
+
+const SIMPLE_DIMENSION_OPTIONS = [
+  { id: '9:16', label: '9:16 Vertical', hint: 'Best for Reels, Shorts & TikTok.', frameWidth: 10, frameHeight: 16 },
+  { id: '16:9', label: '16:9 Landscape', hint: 'Best for YouTube & websites.', frameWidth: 16, frameHeight: 10 },
+  { id: '1:1', label: '1:1 Square', hint: 'Suitable for social feeds.', frameWidth: 13, frameHeight: 13 },
 ];
 
-const DURATION_OPTIONS = [
-  { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
-  { id: '20s', label: '20s Standard', desc: 'Commercial pacing', recommended: true },
-  { id: '30s', label: '30s Extended', desc: 'Full product story' },
-];
+const SIMPLE_DURATION_OPTIONS = ['15s', '20s', '30s'];
 
 // Dynamic category suggestions are loaded inside the component via getBriefSuggestions
 
@@ -71,16 +87,26 @@ export default function SimpleBusinessStudio({
   category: categoryProp,
   town = '',
   initialBrief = '',
+  initialTargetAudience = '',
   initialLanguage = 'English',
   initialStyle = 'UGC / Creator-style',
   initialDuration = '20s',
   initialAspectRatio = '9:16',
   brandTone = 'Warm & Authentic',
   brandLogo = null,
+  productPhoto: controlledProductPhoto,
+  onUploadProductPhoto = null,
+  onRemoveProductPhoto = null,
   onSwitchToDirectorMode,
   onProduceVideo, // (packageData) => Promise<videoUrl>
   onSaveProject,
   onEditBrand,
+  onStartNewBrief,
+  onOpenScriptModal = null,
+  onOpenUrlModal = null,
+  isRecording = false,
+  onToggleRecording = null,
+  dictatedBriefSync = null,
   isProducingVideo = false,
   isSavingProject = false,
   isProjectSaved = false,
@@ -90,6 +116,9 @@ export default function SimpleBusinessStudio({
   onDraftChange, // (state, { flush }) => void — lets the app autosave this flow as a draft
   projectId = null,
   userId = null,
+  onboardingState = null,
+  onDismissTip,
+  onBehaviorEvent,
 }) {
   const category = categoryProp || businessType || 'Local Business';
 
@@ -114,15 +143,23 @@ export default function SimpleBusinessStudio({
 
   // Step 1 Form state
   const [brief, setBrief] = useState(draft.brief ?? (initialBrief || ''));
+  const [targetAudience, setTargetAudience] = useState(draft.targetAudience ?? (initialTargetAudience || ''));
   const [language, setLanguage] = useState(draft.language || initialLanguage || 'English');
   const [creativeStyle, setCreativeStyle] = useState(draft.creativeStyle || initialStyle || 'UGC / Creator-style');
-  const [duration, setDuration] = useState(draft.duration || initialDuration || '30s');
+  const [duration, setDuration] = useState(draft.duration || initialDuration || '20s');
   const [aspectRatio, setAspectRatio] = useState(draft.aspectRatio || initialAspectRatio || '9:16');
-  const [productPhoto, setProductPhoto] = useState(() => (
-    draft.productPhoto && draft.productPhoto.data
-      ? { ...draft.productPhoto, previewUrl: `data:${draft.productPhoto.mime || 'image/jpeg'};base64,${draft.productPhoto.data}` }
-      : null
-  ));
+  const [videoSettingsExpanded, setVideoSettingsExpanded] = useState(true);
+  const isControlledPhoto = controlledProductPhoto !== undefined;
+  const [localProductPhoto, setLocalProductPhoto] = useState(() => {
+    if (draft.productPhoto && (draft.productPhoto.data || draft.productPhoto.previewUrl)) {
+      return {
+        ...draft.productPhoto,
+        previewUrl: draft.productPhoto.previewUrl || `data:${draft.productPhoto.mime || 'image/jpeg'};base64,${draft.productPhoto.data}`,
+      };
+    }
+    return null;
+  });
+  const productPhoto = isControlledPhoto ? controlledProductPhoto : localProductPhoto;
   const [charCount, setCharCount] = useState(brief.length);
 
   // Step 2 Packages state
@@ -131,32 +168,50 @@ export default function SimpleBusinessStudio({
   const [selectedPackageId, setSelectedPackageId] = useState(draft.selectedPackageId ?? null);
   const [aiUnderstanding, setAiUnderstanding] = useState(draft.aiUnderstanding || null);
   const [creativeGuardrails, setCreativeGuardrails] = useState(draft.creativeGuardrails || null);
+  const [guardrailDraftInputs, setGuardrailDraftInputs] = useState(
+    draft.guardrailDraftInputs || { doText: '', dontText: '' }
+  );
+  const [eventContext, setEventContext] = useState(draft.eventContext || null);
   const [expandedPackageId, setExpandedPackageId] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [briefOptionalExpanded, setBriefOptionalExpanded] = useState(
+    draft.briefOptionalExpanded || { inspiration: false, audience: false, instructions: false, occasion: false, productPhoto: false }
+  );
 
-  // Step 3 / Script copy state
+  // Step 3 / Script copy & share state
   const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
   const [editableDialogue, setEditableDialogue] = useState({});
 
   useEffect(() => {
     setCharCount(brief.length);
   }, [brief]);
 
+  useEffect(() => {
+    if (dictatedBriefSync && typeof dictatedBriefSync.text === 'string' && dictatedBriefSync.seq > 0) {
+      setBrief(dictatedBriefSync.text);
+    }
+  }, [dictatedBriefSync?.seq]);
+
   // Report this flow's state so the app can autosave it as a draft (it debounces; step changes save at once)
-  const draftState = () => ({ step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails });
+  const draftState = () => ({ step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, briefOptionalExpanded });
   useEffect(() => {
     if (onDraftChange) onDraftChange(draftState(), { flush: false });
-  }, [step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails]);
+  }, [step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, briefOptionalExpanded]);
 
   const handleApplyTemplate = (tpl) => {
     setBrief(tpl);
   };
 
   const handlePhotoUpload = (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || (file.type && !file.type.startsWith('image/'))) return;
+    if (typeof onUploadProductPhoto === 'function') {
+      onUploadProductPhoto(file);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
-      setProductPhoto({
+      setLocalProductPhoto({
         name: file.name,
         previewUrl: e.target.result,
         data: e.target.result.split(',')[1],
@@ -164,6 +219,14 @@ export default function SimpleBusinessStudio({
       });
     };
     reader.readAsDataURL(file);
+  };
+
+  const handlePhotoRemove = () => {
+    if (typeof onRemoveProductPhoto === 'function') {
+      onRemoveProductPhoto();
+    } else {
+      setLocalProductPhoto(null);
+    }
   };
 
   const handleGeneratePackages = async () => {
@@ -195,9 +258,11 @@ export default function SimpleBusinessStudio({
           duration,
           aspectRatio,
           hasLogo: Boolean(brandLogo),
+          hasProductPhoto: Boolean(productPhoto),
           projectId,
           aiUnderstanding,
           creativeGuardrails,
+          eventContext,
         }),
       });
 
@@ -213,6 +278,9 @@ export default function SimpleBusinessStudio({
         }
         if (data.creativeGuardrails) {
           setCreativeGuardrails(data.creativeGuardrails);
+        }
+        if (data.eventContext !== undefined) {
+          setEventContext(data.eventContext);
         }
         setPackages(data.packages);
         setSelectedPackageId(data.packages[0].id);
@@ -366,105 +434,48 @@ export default function SimpleBusinessStudio({
         })}
       </div>
 
-      {/* ACTIVE BRAND BANNER */}
+      {/* COMPACT CAMPAIGN IDENTITY */}
       {businessName && (
         <div
+          data-testid="simple-campaign-identity"
           style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 12,
-            padding: '12px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 12,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            marginBottom: 20,
+            gap: 8,
+            padding: '2px 2px 12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Store size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--text-tertiary)',
-                  }}
-                >
-                  Creating Video For
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {businessName}
-                </span>
-                {businessType && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      padding: '2px 8px',
-                      borderRadius: 4,
-                      color: 'var(--text-secondary)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {businessType}
-                  </span>
-                )}
-                {town && (
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>· {town}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
+            <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {businessName}
+            </span>
+            {businessType && (
+              <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                · {businessType}
+              </span>
+            )}
+            <span
               style={{
                 fontSize: 11,
-                color: 'var(--accent-primary)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                padding: '4px 10px',
-                borderRadius: 6,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
+                fontWeight: 500,
+                color: 'var(--text-tertiary)',
+                paddingLeft: 4,
               }}
             >
-              <Sparkles size={12} />
-              <span>Active Brand Context</span>
-            </div>
-
+              Active brand
+            </span>
           </div>
         </div>
       )}
 
       {/* ========================================================
-          STEP 1: YOUR OFFER & PROMOTION
+          STEP 1: WHAT ARE YOU PROMOTING?
       ======================================================== */}
       {step === 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {isLoadingPackages ? (
             <SimpleAdPackagesLoader
               businessName={businessName}
@@ -474,462 +485,602 @@ export default function SimpleBusinessStudio({
           ) : (
             <>
               <div
+                data-testid="simple-brief-screen"
                 style={{
                   backgroundColor: 'var(--bg-surface)',
                   border: '1px solid var(--border-default)',
                   borderRadius: 14,
-                  padding: 24,
+                  padding: '22px 24px',
                 }}
               >
-            <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-              What would you like to promote?
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Enter your deal, discount, or announcement. CleverCut will write 3 ready-to-produce commercial script concepts.
-            </p>
-
-            {/* Quick Inspiration Pills */}
-            <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: 'var(--text-tertiary)',
-                  marginBottom: 8,
-                }}
-              >
-                Quick Ideas for {businessName}:
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {quickIdeas.map((tpl, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => handleApplyTemplate(tpl)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 20,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'var(--text-primary)';
-                      e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                    }}
-                  >
-                    + {tpl}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Textarea */}
-            <div style={{ position: 'relative' }}>
-              <textarea
-                value={brief}
-                onChange={(e) => setBrief(e.target.value)}
-                placeholder={dynamicPlaceholder}
-                rows={4}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '14px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border-default)',
-                  backgroundColor: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                  resize: 'vertical',
-                  outline: 'none',
-                }}
-              />
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  marginTop: 6,
-                  fontSize: 11,
-                  color: 'var(--text-tertiary)',
-                }}
-              >
-                {charCount} characters
-              </div>
-            </div>
-
-            {/* Language & Style Selector */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginTop: 18 }}>
-              {/* Language */}
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--text-tertiary)',
-                    marginBottom: 8,
-                  }}
-                >
-                  Ad Language
-                </label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {POPULAR_LANGUAGES.map((lang) => {
-                    const isSelected = language === lang;
-                    return (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => setLanguage(lang)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: isSelected ? 700 : 500,
-                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                          color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
-                          border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {lang}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Format Style */}
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--text-tertiary)',
-                    marginBottom: 8,
-                  }}
-                >
-                  Video Format
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {AD_STYLES.map((st) => {
-                    const isSelected = creativeStyle === st.id;
-                    return (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => setCreativeStyle(st.id)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '8px 10px',
-                          borderRadius: 8,
-                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                        }}
-                      >
-                        <span style={{ fontSize: 16 }}>{st.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            {st.label}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Video Dimension & Duration Selectors */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginTop: 18 }}>
-              {/* Video Dimension */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: 'var(--text-tertiary)',
-                    }}
-                  >
-                    Video Dimension
-                  </label>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                    {aspectRatio === '16:9' ? 'Landscape (YouTube)' : aspectRatio === '1:1' ? 'Square (Feed)' : 'Vertical (Reels/Shorts)'}
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {DIMENSION_OPTIONS.map((dim) => {
-                    const isSelected = aspectRatio === dim.id;
-                    return (
-                      <button
-                        key={dim.id}
-                        type="button"
-                        onClick={() => setAspectRatio(dim.id)}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4,
-                          padding: '10px 6px',
-                          borderRadius: 8,
-                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <span style={{ fontSize: 16 }}>{dim.icon}</span>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                          {dim.label}
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                          {dim.desc}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Video Length / Duration */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: 'var(--text-tertiary)',
-                    }}
-                  >
-                    Video Length
-                  </label>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                    Target run-time
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {DURATION_OPTIONS.map((dur) => {
-                    const isSelected = duration === dur.id;
-                    return (
-                      <button
-                        key={dur.id}
-                        type="button"
-                        onClick={() => setDuration(dur.id)}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4,
-                          padding: '10px 6px',
-                          borderRadius: 8,
-                          backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.15s ease',
-                          position: 'relative',
-                        }}
-                      >
-                        <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                          ⏱️ {dur.label}
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                          {dur.desc}
-                        </div>
-                        {dur.recommended && (
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              color: isSelected ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                              backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-surface)',
-                              padding: '1px 5px',
-                              borderRadius: 4,
-                            }}
-                          >
-                            Popular
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Optional Product Photo Upload */}
-            <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Product or Store Photo <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>(Optional)</span>
-                </label>
-                {productPhoto && (
-                  <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle2 size={12} />
-                    Attached
-                  </span>
-                )}
-              </div>
-
-              {productPhoto ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--bg-elevated)',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <img
-                      src={productPhoto.previewUrl}
-                      alt="Product"
-                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>What are you promoting?</span>
+                    <HelpTooltip
+                      title={HELP_TOOLTIPS.brief_input.title}
+                      body={HELP_TOOLTIPS.brief_input.body}
+                      ariaLabel="Help with promotion brief"
                     />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {productPhoto.name || 'Product photo'}
-                    </span>
-                  </div>
+                  </h2>
+
+                  {(onOpenScriptModal || onOpenUrlModal) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {onOpenScriptModal && (
+                        <button
+                          type="button"
+                          onClick={onOpenScriptModal}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '5px 10px',
+                            borderRadius: 7,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            backgroundColor: 'transparent',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Paste an existing script draft to auto-import scenes"
+                        >
+                          <FileCode2 size={13} aria-hidden="true" />
+                          <span>Paste Script</span>
+                        </button>
+                      )}
+                      {onOpenUrlModal && (
+                        <button
+                          type="button"
+                          onClick={onOpenUrlModal}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '5px 10px',
+                            borderRadius: 7,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            backgroundColor: 'transparent',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Scan your store or landing page to extract products & offers"
+                        >
+                          <Globe size={13} aria-hidden="true" />
+                          <span>Scan URL</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Primary Brief Textarea */}
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    value={brief}
+                    onChange={(e) => {
+                      setBrief(e.target.value);
+                      if (loadError) setLoadError('');
+                    }}
+                    placeholder={dynamicPlaceholder}
+                    rows={4}
+                    aria-label="What are you promoting?"
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '14px',
+                      borderRadius: 10,
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-elevated)',
+                      color: 'var(--text-primary)',
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      resize: 'vertical',
+                      outline: 'none',
+                    }}
+                  />
+
+                  {onToggleRecording && (
+                    <button
+                      type="button"
+                      onClick={() => onToggleRecording(brief)}
+                      aria-label={isRecording ? 'Stop recording voice brief' : 'Dictate your brief using microphone'}
+                      style={{
+                        position: 'absolute',
+                        bottom: 10,
+                        right: 10,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '5px 10px',
+                        borderRadius: 16,
+                        backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.14)' : 'var(--bg-surface)',
+                        border: isRecording ? '1px solid var(--error)' : '1px solid var(--border-subtle)',
+                        color: isRecording ? 'var(--error)' : 'var(--text-secondary)',
+                        fontSize: 11.5,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                      title={isRecording ? 'Stop recording' : 'Dictate your brief'}
+                    >
+                      {isRecording ? <MicOff size={12} aria-hidden="true" /> : <Mic size={12} aria-hidden="true" />}
+                      <span>{isRecording ? 'Listening…' : 'Dictate'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Calm Utility Row: Expandable Sample Ideas + Character Count */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                   <button
                     type="button"
-                    onClick={() => setProductPhoto(null)}
+                    aria-expanded={Boolean(briefOptionalExpanded.inspiration)}
+                    aria-controls="simple-brief-inspiration-panel"
+                    onClick={() => setBriefOptionalExpanded((prev) => ({ ...prev, inspiration: !prev.inspiration }))}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--error)',
+                      padding: '2px 0',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: 'var(--text-secondary)',
                       cursor: 'pointer',
-                      padding: 4,
                     }}
                   >
-                    <Trash2 size={14} />
+                    {briefOptionalExpanded.inspiration ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronRight size={13} aria-hidden="true" />}
+                    <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <span>Sample ideas</span>
                   </button>
+
+                  <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+                    {charCount} characters
+                  </span>
                 </div>
-              ) : (
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    padding: '12px',
-                    borderRadius: 8,
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px dashed var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Upload size={14} />
-                  <span>Attach a photo of your product or storefront</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handlePhotoUpload(f);
+
+                {briefOptionalExpanded.inspiration && (
+                  <div id="simple-brief-inspiration-panel" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                    {quickIdeas.map((tpl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleApplyTemplate(tpl)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 18,
+                          fontSize: 11.5,
+                          fontWeight: 500,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--text-primary)';
+                          e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--text-secondary)';
+                          e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                        }}
+                      >
+                        + {tpl}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {loadError && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: 14,
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#EF4444',
+                      fontSize: 12,
                     }}
-                  />
-                </label>
-              )}
+                  >
+                    {loadError}
+                  </div>
+                )}
+              </div>
 
-              {brandLogo && (
-                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>💡</span>
-                  <span>Brand logo attached: will add a dedicated +5s branded outro scene with your logo at the end.</span>
-                </div>
-              )}
-            </div>
-
-            {loadError && (
+              {/* C. Video Settings (Expanded by default; manually collapsible with summary) */}
               <div
+                data-testid="simple-video-settings-section"
                 style={{
-                  marginTop: 16,
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#EF4444',
-                  fontSize: 12,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 12,
+                  overflow: 'hidden',
                 }}
               >
-                {loadError}
+                <button
+                  type="button"
+                  data-testid="simple-video-settings-toggle"
+                  aria-expanded={videoSettingsExpanded}
+                  aria-controls="simple-video-settings-panel"
+                  onClick={() => setVideoSettingsExpanded((prev) => !prev)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 18px',
+                    background: 'none',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {videoSettingsExpanded ? (
+                      <ChevronDown size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} aria-hidden="true" />
+                    ) : (
+                      <ChevronRight size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} aria-hidden="true" />
+                    )}
+                    <Sliders size={14} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} aria-hidden="true" />
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Video Settings
+                    </span>
+                  </div>
+
+                  {!videoSettingsExpanded && (
+                    <span
+                      data-testid="simple-video-settings-summary"
+                      style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-secondary)' }}
+                    >
+                      {`${language} · ${formatStyleShortLabel(creativeStyle)} · ${aspectRatio} · ${duration}`}
+                    </span>
+                  )}
+                </button>
+
+                {videoSettingsExpanded && (
+                  <div
+                    id="simple-video-settings-panel"
+                    style={{
+                      padding: '18px 20px 20px',
+                      borderTop: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 20,
+                    }}
+                  >
+                    {/* Row 1: Guided Language Select + Segmented Duration */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
+                        gap: 18,
+                        alignItems: 'start',
+                      }}
+                    >
+                      {/* 1. Language Dropdown */}
+                      <div>
+                        <label
+                          htmlFor="simple-ad-language"
+                          style={{
+                            display: 'block',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                            marginBottom: 3,
+                          }}
+                        >
+                          What language should your video use?
+                        </label>
+                        <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+                          Choose the language for spoken dialogue.
+                        </p>
+                        <select
+                          id="simple-ad-language"
+                          aria-label="What language should your video use?"
+                          data-testid="simple-language-select"
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          style={{
+                            width: '100%',
+                            height: 38,
+                            padding: '0 12px',
+                            borderRadius: 8,
+                            border: '1px solid var(--border-default)',
+                            backgroundColor: 'var(--bg-elevated)',
+                            color: 'var(--text-primary)',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            outline: 'none',
+                          }}
+                        >
+                          {(POPULAR_LANGUAGES.includes(language)
+                            ? POPULAR_LANGUAGES
+                            : [language, ...POPULAR_LANGUAGES]
+                          ).map((lang) => (
+                            <option key={lang} value={lang}>
+                              {lang}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 4. Duration (Horizontal Segmented Control) */}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
+                          How long should your video be?
+                        </div>
+                        <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+                          Short videos suit quick offers; longer videos allow more storytelling.
+                        </p>
+                        <div
+                          role="group"
+                          aria-label="How long should your video be?"
+                          data-testid="simple-duration-segmented"
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                            padding: 3,
+                            height: 38,
+                            boxSizing: 'border-box',
+                            borderRadius: 8,
+                            backgroundColor: 'var(--bg-elevated)',
+                            border: '1px solid var(--border-default)',
+                            gap: 3,
+                          }}
+                        >
+                          {SIMPLE_DURATION_OPTIONS.map((dur) => {
+                            const isSelected = duration === dur;
+                            return (
+                              <button
+                                key={dur}
+                                type="button"
+                                aria-pressed={isSelected}
+                                data-testid={`simple-duration-option-${dur}`}
+                                onClick={() => setDuration(dur)}
+                                style={{
+                                  border: 'none',
+                                  borderRadius: 6,
+                                  fontSize: 12.5,
+                                  fontWeight: isSelected ? 700 : 500,
+                                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+                                  color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                {dur}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Video Dimension (3 compact guided options) */}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
+                        Where will you share your video?
+                      </div>
+                      <p style={{ margin: '0 0 9px', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+                        Choose a format that fits your platform.
+                      </p>
+                      <div
+                        role="group"
+                        aria-label="Where will you share your video?"
+                        data-testid="simple-dimension-group"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))',
+                          gap: 8,
+                        }}
+                      >
+                        {SIMPLE_DIMENSION_OPTIONS.map((dim) => {
+                          const isSelected = aspectRatio === dim.id;
+                          return (
+                            <button
+                              key={dim.id}
+                              type="button"
+                              aria-pressed={isSelected}
+                              data-testid={`simple-dimension-option-${dim.id}`}
+                              onClick={() => setAspectRatio(dim.id)}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: 4,
+                                padding: '10px 12px',
+                                borderRadius: 8,
+                                backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                                border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                                color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8 }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                                  <span
+                                    aria-hidden="true"
+                                    style={{
+                                      width: dim.frameWidth,
+                                      height: dim.frameHeight,
+                                      borderRadius: 2,
+                                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
+                                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.16)' : 'transparent',
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <span style={{ fontSize: 12.5, fontWeight: isSelected ? 700 : 600 }}>
+                                    {dim.label}
+                                  </span>
+                                </div>
+                                {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
+                              </div>
+                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
+                                {dim.hint}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2. Creative Style (All 4 visible compact tiles with plain-language cues) */}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
+                        What style would you like?
+                      </div>
+                      <p style={{ margin: '0 0 9px', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+                        Choose how your product or offer should be presented.
+                      </p>
+                      <div
+                        role="group"
+                        aria-label="Creative Style"
+                        data-testid="simple-style-group"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(min(185px, 100%), 1fr))',
+                          gap: 8,
+                        }}
+                      >
+                        {AD_STYLES.map((st) => {
+                          const isSelected = creativeStyle === st.id;
+                          return (
+                            <button
+                              key={st.id}
+                              type="button"
+                              aria-pressed={isSelected}
+                              data-testid={`simple-style-option-${st.shortLabel.toLowerCase().replace(/\s+/g, '-')}`}
+                              onClick={() => setCreativeStyle(st.id)}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                justifyContent: 'flex-start',
+                                gap: 4,
+                                padding: '10px 12px',
+                                borderRadius: 8,
+                                backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                                border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                                color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 6 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: isSelected ? 700 : 600 }}>
+                                  {st.label}
+                                </span>
+                                {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
+                              </div>
+                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
+                                {st.desc}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Creative Instructions (Optional · Collapsed by default) */}
-          <CreativeInstructionsSection
-            creativeGuardrails={creativeGuardrails}
-            onChange={setCreativeGuardrails}
-          />
+              {/* D. Optional Details Grouping */}
+              <div data-testid="brief-optional-details" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
+                  Optional Details
+                </span>
 
-          {/* Submit Action */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              disabled={isLoadingPackages || !brief.trim()}
-              onClick={handleGeneratePackages}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '12px 28px',
-                borderRadius: 10,
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: isLoadingPackages || !brief.trim() ? 'not-allowed' : 'pointer',
-                opacity: isLoadingPackages || !brief.trim() ? 0.6 : 1,
-                boxShadow: '0 4px 16px var(--accent-glow)',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Sparkles size={15} />
-              <span>Generate 3 Ad Scripts ➔</span>
-            </button>
-          </div>
-        </>
+                <TargetAudienceSection
+                  id="simple-target-audience"
+                  testId="target-audience-section"
+                  targetAudience={targetAudience}
+                  businessType={businessType}
+                  onChange={setTargetAudience}
+                  expanded={Boolean(briefOptionalExpanded.audience)}
+                  onToggleExpand={(next) => setBriefOptionalExpanded((prev) => ({ ...prev, audience: next }))}
+                />
+
+                <CreativeInstructionsSection
+                  creativeGuardrails={creativeGuardrails}
+                  onChange={setCreativeGuardrails}
+                  draftInputs={guardrailDraftInputs}
+                  onDraftChange={setGuardrailDraftInputs}
+                  expanded={Boolean(briefOptionalExpanded.instructions)}
+                  onToggleExpand={(next) => setBriefOptionalExpanded((prev) => ({ ...prev, instructions: next }))}
+                />
+
+                <OccasionEventSection
+                  eventContext={eventContext}
+                  onChange={setEventContext}
+                  expanded={Boolean(briefOptionalExpanded.occasion)}
+                  onToggleExpand={(next) => setBriefOptionalExpanded((prev) => ({ ...prev, occasion: next }))}
+                />
+
+                <ProductPhotoSection
+                  id="simple-product-photo"
+                  testId="product-photo-section"
+                  productPhoto={productPhoto}
+                  onUploadFile={handlePhotoUpload}
+                  onRemove={handlePhotoRemove}
+                  expanded={Boolean(briefOptionalExpanded.productPhoto)}
+                  onToggleExpand={(next) => setBriefOptionalExpanded((prev) => ({ ...prev, productPhoto: next }))}
+                />
+              </div>
+
+              {/* E. Dominant Primary Action */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
+                <button
+                  type="button"
+                  disabled={isLoadingPackages || !brief.trim()}
+                  onClick={handleGeneratePackages}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '13px 28px',
+                    borderRadius: 10,
+                    backgroundColor: 'var(--accent-primary)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: isLoadingPackages || !brief.trim() ? 'not-allowed' : 'pointer',
+                    opacity: isLoadingPackages || !brief.trim() ? 0.55 : 1,
+                    boxShadow: '0 4px 16px var(--accent-glow)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Sparkles size={15} aria-hidden="true" />
+                  <span>Generate 3 Ad Scripts ➔</span>
+                </button>
+              </div>
+
+              {shouldShowContextualTip('tip_try_director', onboardingState, { studioMode: 'simple' }) && (
+                <ContextualTipBanner
+                  tipId={CONTEXTUAL_TIPS.tip_try_director.id}
+                  title={CONTEXTUAL_TIPS.tip_try_director.title}
+                  body={CONTEXTUAL_TIPS.tip_try_director.body}
+                  actionLabel={onSwitchToDirectorMode ? CONTEXTUAL_TIPS.tip_try_director.actionLabel : undefined}
+                  onAction={onSwitchToDirectorMode}
+                  onDismiss={onDismissTip}
+                />
+              )}
+            </>
+          )}
+        </div>
       )}
-    </div>
-  )}
 
       {/* ========================================================
           STEP 2: CHOOSE YOUR AD SCRIPT
@@ -941,7 +1092,7 @@ export default function SimpleBusinessStudio({
               Choose Your Ad Script
             </h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Select the script angle that best fits your campaign. Once chosen, CleverCut will film and produce the complete video ad.
+              Pick a script below to generate your video.
             </p>
           </div>
 
@@ -1019,7 +1170,7 @@ export default function SimpleBusinessStudio({
                     }}
                   >
                     <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: 2 }}>
-                      Opening Hook (First 3 Seconds):
+                      Opening Hook
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontStyle: 'italic' }}>
                       "{pkg.hookHeadline}"
@@ -1070,7 +1221,7 @@ export default function SimpleBusinessStudio({
                         gap: 4,
                       }}
                     >
-                      <span>{isExpanded ? 'Hide Scene Details' : 'Preview All 4 Scenes'}</span>
+                      <span>{isExpanded ? 'Hide Scenes' : 'Preview Scenes'}</span>
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
 
@@ -1130,7 +1281,7 @@ export default function SimpleBusinessStudio({
               }}
             >
               <ArrowLeft size={14} />
-              <span>Back to Offer</span>
+              <span>Back</span>
             </button>
 
             <button
@@ -1181,7 +1332,7 @@ export default function SimpleBusinessStudio({
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--success)', fontWeight: 700, fontSize: 14 }}>
                   <CheckCircle2 size={18} />
-                  <span>Your Commercial Video Is Ready!</span>
+                  <span>Your video is ready!</span>
                 </div>
 
                 {/* Video Player */}
@@ -1205,81 +1356,222 @@ export default function SimpleBusinessStudio({
                   />
                 </div>
 
-                {/* Video Actions */}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {/* 3-Tier CTA Hierarchy for Completed Video */}
+                <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {shouldShowContextualTip('tip_create_another_video', onboardingState, { hasVideo: Boolean(producedVideoUrl) }) && (
+                    <ContextualTipBanner
+                      tipId={CONTEXTUAL_TIPS.tip_create_another_video.id}
+                      title={CONTEXTUAL_TIPS.tip_create_another_video.title}
+                      body={CONTEXTUAL_TIPS.tip_create_another_video.body}
+                      onDismiss={onDismissTip}
+                    />
+                  )}
+                  {/* 1. Primary Action: Create another video */}
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await downloadVideoWithTicket(producedVideoUrl, `${(businessName || 'ad').replace(/\s+/g, '_')}_commercial.mp4`);
-                      } catch (err) {
-                        alert(err.message || 'Download failed');
-                      }
+                    onClick={() => {
+                      if (onBehaviorEvent) onBehaviorEvent('createdAnotherCount');
+                      handleGeneratePackages();
                     }}
+                    disabled={isLoadingPackages}
+                    data-testid="simple-create-another-video-cta"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '10px 22px',
-                      borderRadius: 8,
+                      width: '100%',
+                      padding: '14px 18px',
+                      borderRadius: 12,
                       backgroundColor: 'var(--accent-primary)',
-                      color: '#FFFFFF',
-                      fontSize: 13,
-                      fontWeight: 700,
                       border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 10px var(--accent-glow)',
+                      color: '#FFFFFF',
+                      cursor: isLoadingPackages ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      textAlign: 'left',
+                      boxShadow: '0 4px 16px var(--accent-glow)',
                     }}
                   >
-                    <Download size={14} />
-                    <span>Download Video (MP4)</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                        <Sparkles size={15} />
+                        <span>Create another video</span>
+                      </span>
+                      <span style={{ fontSize: 12, opacity: 0.9, fontWeight: 400 }}>
+                        Explore another creative direction using the same brief.
+                      </span>
+                    </div>
+                    <ArrowRight size={17} style={{ flexShrink: 0 }} />
                   </button>
 
-                  {onSaveProject && (
-                    <button
-                      type="button"
-                      onClick={() => onSaveProject(selectedPackage)}
-                      disabled={isSavingProject}
+                  {/* 2. Existing Video-Level Actions (Secondary) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
+                    <div
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '10px 18px',
-                        borderRadius: 8,
-                        backgroundColor: isProjectSaved ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-elevated)',
-                        border: `1px solid ${isProjectSaved ? 'var(--success)' : 'var(--border-default)'}`,
-                        color: isProjectSaved ? 'var(--success)' : 'var(--text-primary)',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: isSavingProject ? 'not-allowed' : 'pointer',
-                        opacity: isSavingProject ? 0.7 : 1,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--text-tertiary)',
                       }}
                     >
-                      {isProjectSaved ? <Check size={14} /> : <CheckCircle2 size={14} />}
-                      <span>{isSavingProject ? 'Saving...' : isProjectSaved ? 'Saved to Library' : 'Save Project'}</span>
-                    </button>
-                  )}
+                      Actions for this video
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!producedVideoUrl) return;
+                          const shareData = {
+                            title: `${businessName || 'CleverCut'} Commercial`,
+                            text: `Watch our commercial video for ${businessName || 'our brand'}!`,
+                            url: producedVideoUrl,
+                          };
+                          if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                            try {
+                              await navigator.share(shareData);
+                              return;
+                            } catch (err) {
+                              if (err.name === 'AbortError') return;
+                            }
+                          }
+                          try {
+                            await navigator.clipboard.writeText(producedVideoUrl);
+                            setCopiedShareLink(true);
+                            setTimeout(() => setCopiedShareLink(false), 2500);
+                          } catch {}
+                        }}
+                        style={{
+                          flex: '1 1 140px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '9px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {copiedShareLink ? (
+                          <>
+                            <Check size={14} style={{ color: 'var(--success)' }} />
+                            <span style={{ color: 'var(--success)' }}>Link Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 size={14} />
+                            <span>Share Video</span>
+                          </>
+                        )}
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={handleCopyScriptText}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '10px 18px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      color: copiedScript ? 'var(--success)' : 'var(--text-primary)',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {copiedScript ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedScript ? 'Script Copied!' : 'Copy Script'}</span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={handleStartProduction}
+                        style={{
+                          flex: '1 1 140px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '9px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <RotateCcw size={14} />
+                        <span>Regenerate Video</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await downloadVideoWithTicket(producedVideoUrl, `${(businessName || 'ad').replace(/\s+/g, '_')}_commercial.mp4`);
+                          } catch (err) {
+                            alert(err.message || 'Download failed');
+                          }
+                        }}
+                        style={{
+                          flex: '1 1 140px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '9px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>Download Video</span>
+                      </button>
+
+                      {onSaveProject && (
+                        <button
+                          type="button"
+                          onClick={() => onSaveProject(selectedPackage)}
+                          disabled={isSavingProject}
+                          style={{
+                            flex: '1 1 130px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            padding: '9px 14px',
+                            borderRadius: 8,
+                            backgroundColor: isProjectSaved ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-elevated)',
+                            border: `1px solid ${isProjectSaved ? 'var(--success)' : 'var(--border-default)'}`,
+                            color: isProjectSaved ? 'var(--success)' : 'var(--text-primary)',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: isSavingProject ? 'not-allowed' : 'pointer',
+                            opacity: isSavingProject ? 0.7 : 1,
+                          }}
+                        >
+                          {isProjectSaved ? <Check size={14} /> : <CheckCircle2 size={14} />}
+                          <span>{isSavingProject ? 'Saving…' : isProjectSaved ? 'Saved' : 'Save Project'}</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleCopyScriptText}
+                        style={{
+                          flex: '1 1 120px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '9px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-default)',
+                          color: copiedScript ? 'var(--success)' : 'var(--text-primary)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {copiedScript ? <Check size={14} /> : <Copy size={14} />}
+                        <span>{copiedScript ? 'Script Copied!' : 'Copy Script'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Post-Generation Creative Rating Prompt (Subtle & Non-blocking) */}
@@ -1312,7 +1604,7 @@ export default function SimpleBusinessStudio({
                       cursor: 'pointer',
                     }}
                   >
-                    Retry Generation
+                    Retry
                   </button>
                   <button
                     type="button"
@@ -1328,7 +1620,7 @@ export default function SimpleBusinessStudio({
                       cursor: 'pointer',
                     }}
                   >
-                    Copy Script Text
+                    Copy Script
                   </button>
                 </div>
               </div>
@@ -1354,8 +1646,8 @@ export default function SimpleBusinessStudio({
             )}
           </div>
 
-          {/* Create Another Ad / Restart */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Footer Navigation & Tertiary New Brief Action */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <button
               type="button"
               onClick={() => setStep(2)}
@@ -1383,23 +1675,26 @@ export default function SimpleBusinessStudio({
                 setStep(1);
                 setBrief('');
                 setCreativeGuardrails(null);
+                setGuardrailDraftInputs({ doText: '', dontText: '' });
+                setEventContext(null);
+                setAiUnderstanding(null);
+                setPackages([]);
+                setSelectedPackageId(null);
+                if (onStartNewBrief) onStartNewBrief();
               }}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 16px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-tertiary)',
                 fontSize: 12,
-                fontWeight: 600,
+                fontWeight: 500,
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
                 cursor: 'pointer',
+                padding: '4px 8px',
               }}
             >
-              <RotateCcw size={13} />
-              <span>Create Another Video Ad</span>
+              Start a new brief
             </button>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   Upload,
   Check,
   MessageSquare,
+  Compass,
 } from 'lucide-react';
 
 export default function AccountModal({
@@ -24,6 +25,11 @@ export default function AccountModal({
   onDeleteAccount,
   onUpdateProfile,
   onOpenFeedback,
+  onReplayTour,
+  onResumeTour,
+  hasPausedTour = false,
+  pausedTourStep = 0,
+  totalTourSteps = 5,
   projectCount = 0,
   businessCount = 0,
 }) {
@@ -34,12 +40,58 @@ export default function AccountModal({
   const [successMsg, setSuccessMsg] = useState('');
   const [avatar, setAvatar] = useState(currentUser?.avatar || null);
   const fileInputRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const deleteTriggerRef = useRef(null);
+  const deleteInputRef = useRef(null);
 
   useEffect(() => {
     if (currentUser?.avatar !== undefined) {
       setAvatar(currentUser.avatar || null);
     }
   }, [currentUser?.avatar]);
+
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = typeof document !== 'undefined' ? document.activeElement : null;
+      const timer = setTimeout(() => {
+        if (closeButtonRef.current && typeof closeButtonRef.current.focus === 'function') {
+          try { closeButtonRef.current.focus(); } catch {}
+        }
+      }, 20);
+      return () => clearTimeout(timer);
+    } else if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+      try { previousFocusRef.current.focus(); } catch {}
+      previousFocusRef.current = null;
+    }
+  }, [isOpen]);
+
+  const handleCancelDeleteConfirm = () => {
+    if (isDeleting) return;
+    setShowConfirm(false);
+    setConfirmInput('');
+    setTimeout(() => {
+      if (deleteTriggerRef.current && typeof deleteTriggerRef.current.focus === 'function') {
+        try { deleteTriggerRef.current.focus(); } catch {}
+      }
+    }, 10);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showConfirm) {
+          handleCancelDeleteConfirm();
+        } else if (!isDeleting) {
+          handleClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, showConfirm, isDeleting]);
 
   if (!isOpen || !currentUser) return null;
 
@@ -121,6 +173,9 @@ export default function AccountModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="account-settings-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -139,7 +194,7 @@ export default function AccountModal({
       <div
         style={{
           width: '100%',
-          maxWidth: 490,
+          maxWidth: 500,
           maxHeight: 'min(90vh, 720px)',
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
@@ -175,19 +230,20 @@ export default function AccountModal({
                 justifyContent: 'center',
               }}
             >
-              <User size={16} />
+              <User size={16} aria-hidden="true" />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h2 id="account-settings-title" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
                 Account Settings
               </h2>
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                CleverCut Profile & Preferences
+                Profile, authentication, tour &amp; data controls
               </span>
             </div>
           </div>
 
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={handleClose}
             disabled={isDeleting}
@@ -221,6 +277,7 @@ export default function AccountModal({
         >
           {errorMsg && (
             <div
+              role="alert"
               style={{
                 padding: '10px 14px',
                 borderRadius: 8,
@@ -233,13 +290,15 @@ export default function AccountModal({
                 gap: 8,
               }}
             >
-              <AlertTriangle size={16} />
+              <AlertTriangle size={16} aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
             <div
+              role="status"
+              aria-live="polite"
               style={{
                 padding: '10px 14px',
                 borderRadius: 8,
@@ -252,12 +311,16 @@ export default function AccountModal({
                 gap: 8,
               }}
             >
-              <Check size={16} />
+              <Check size={16} aria-hidden="true" />
               <span>{successMsg}</span>
             </div>
           )}
 
-          {/* User Profile & Avatar Card */}
+          {/* Section 1: Personal & Account Information */}
+          <section aria-labelledby="account-profile-heading" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <h3 id="account-profile-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+              Personal Information
+            </h3>
           <div
             style={{
               padding: 18,
@@ -270,12 +333,22 @@ export default function AccountModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              {/* Avatar with Upload Badge */}
-              <div
-                style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
-                onClick={() => fileInputRef.current?.click()}
-                title="Click to change profile picture"
-              >
+              {/* Avatar Upload Button (keyboard-accessible) */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label={avatar ? 'Change profile picture' : 'Upload profile picture'}
+                  title="Click to change profile picture"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    borderRadius: '50%',
+                    display: 'block',
+                  }}
+                >
                 {avatar ? (
                   <img
                     src={avatar}
@@ -310,8 +383,8 @@ export default function AccountModal({
                   </div>
                 )}
 
-                {/* Camera Overlay Icon Badge */}
                 <div
+                  aria-hidden="true"
                   style={{
                     position: 'absolute',
                     bottom: 0,
@@ -326,11 +399,12 @@ export default function AccountModal({
                     justifyContent: 'center',
                     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
                     border: '2px solid var(--bg-surface)',
+                    pointerEvents: 'none',
                   }}
-                  title="Upload profile picture"
                 >
                   <Camera size={12} />
                 </div>
+                </button>
 
                 <input
                   type="file"
@@ -424,7 +498,7 @@ export default function AccountModal({
                 }}
               >
                 <Upload size={13} />
-                <span>{avatar ? 'Change Profile Picture' : 'Upload Profile Picture'}</span>
+                <span>{avatar ? 'Replace Photo' : 'Upload Photo'}</span>
               </button>
 
               {avatar && (
@@ -533,151 +607,340 @@ export default function AccountModal({
               </div>
             </div>
           </div>
+          </section>
 
-          {/* Subtle Compact Delete Account Row */}
-          <div
+          {/* Section 2: Preferences & Guidance */}
+          {(onReplayTour || onResumeTour || onOpenFeedback) && (
+            <section aria-labelledby="account-preferences-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <h3 id="account-preferences-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+                Preferences &amp; Walkthrough
+              </h3>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                {hasPausedTour && onResumeTour && (
+                  <button
+                    type="button"
+                    data-testid="account-resume-tour-btn"
+                    aria-label={`Resume product tour from Step ${pausedTourStep + 1} of ${totalTourSteps}`}
+                    onClick={() => {
+                      handleClose();
+                      onResumeTour();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      backgroundColor: 'rgba(99, 102, 241, 0.14)',
+                      border: '1px solid rgba(99, 102, 241, 0.35)',
+                      color: 'var(--accent-primary)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Compass size={13} aria-hidden="true" />
+                    <span>Resume Tour (Step {pausedTourStep + 1}/{totalTourSteps})</span>
+                  </button>
+                )}
+
+                {onReplayTour && (
+                  <button
+                    type="button"
+                    data-testid="account-replay-tour-btn"
+                    aria-label="Replay Guided Tour from Step 1"
+                    onClick={() => {
+                      handleClose();
+                      onReplayTour();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Compass size={13} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <span>Replay Tour</span>
+                  </button>
+                )}
+
+                {onOpenFeedback && (
+                  <button
+                    type="button"
+                    aria-label="Send Feedback"
+                    onClick={() => {
+                      handleClose();
+                      onOpenFeedback();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <span>Send Feedback</span>
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Section 3: Authentication & Session */}
+          <section aria-labelledby="account-auth-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <h3 id="account-auth-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+              Security &amp; Session
+            </h3>
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 12,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Active Session
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  Sign out of this browser. Projects and brands stay saved.
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Sign out of CleverCut"
+                onClick={() => {
+                  handleClose();
+                  if (onLogout) onLogout();
+                }}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <LogOut size={13} aria-hidden="true" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Section 4: Danger Zone — Permanent & Irreversible Actions */}
+          <section
+            aria-labelledby="danger-zone-heading"
+            data-testid="account-danger-zone"
             style={{
-              borderTop: '1px solid var(--border-subtle)',
-              paddingTop: 16,
-              marginTop: 4,
+              padding: 14,
+              borderRadius: 12,
+              backgroundColor: 'rgba(239, 68, 68, 0.04)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
             }}
           >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={14} style={{ color: '#EF4444' }} aria-hidden="true" />
+              <h3 id="danger-zone-heading" style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#EF4444' }}>
+                Danger Zone · Permanent &amp; Irreversible
+              </h3>
+            </div>
+
             {!showConfirm ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Delete Account
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ flex: '1 1 220px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Delete Account Permanently
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                    Permanently delete your profile and saved videos.
+                  <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>
+                    Permanently erases your CleverCut profile, all brand profiles, saved scripts, and generated videos. This cannot be undone.
                   </div>
                 </div>
 
                 <button
+                  ref={deleteTriggerRef}
                   type="button"
-                  onClick={() => setShowConfirm(true)}
+                  data-testid="delete-account-trigger"
+                  aria-expanded={showConfirm}
+                  aria-label="Delete account permanently — opens confirmation"
+                  onClick={() => {
+                    setShowConfirm(true);
+                    setTimeout(() => {
+                      if (deleteInputRef.current && typeof deleteInputRef.current.focus === 'function') {
+                        try { deleteInputRef.current.focus(); } catch {}
+                      }
+                    }, 20);
+                  }}
                   style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
+                    padding: '7px 12px',
+                    borderRadius: 7,
                     backgroundColor: 'transparent',
-                    border: '1px solid var(--border-default)',
+                    border: '1px solid rgba(239, 68, 68, 0.45)',
                     color: '#EF4444',
-                    fontSize: 11,
-                    fontWeight: 600,
+                    fontSize: 12,
+                    fontWeight: 700,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    transition: 'all 0.15s ease',
                     flexShrink: 0,
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                    e.currentTarget.style.borderColor = '#EF4444';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = 'var(--border-default)';
-                  }}
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={13} aria-hidden="true" />
                   <span>Delete Account…</span>
                 </button>
               </div>
             ) : (
               <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="delete-account-confirm-title"
+                aria-describedby="delete-account-confirm-desc"
+                data-testid="delete-account-confirm-panel"
                 style={{
                   padding: 12,
                   borderRadius: 8,
-                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
+                  gap: 10,
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>
-                  To confirm, type <strong style={{ color: '#F87171' }}>DELETE</strong> below:
+                <div>
+                  <div id="delete-account-confirm-title" style={{ fontSize: 12.5, fontWeight: 800, color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertTriangle size={14} aria-hidden="true" />
+                    <span>Confirm permanent account deletion</span>
+                  </div>
+                  <div id="delete-account-confirm-desc" style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
+                    This irreversible action will immediately sign you out and permanently remove all {projectCount} project(s) and {businessCount} brand profile(s).
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={confirmInput}
-                    onChange={(e) => setConfirmInput(e.target.value)}
-                    placeholder="Type DELETE"
-                    disabled={isDeleting}
-                    style={{
-                      flex: 1,
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: 6,
-                      padding: '6px 10px',
-                      fontSize: 12,
-                      color: 'var(--text-primary)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      outline: 'none',
-                    }}
-                    autoFocus
-                  />
+                <label htmlFor="account-delete-confirm-input" style={{ fontSize: 11.5, fontWeight: 600, color: '#FCA5A5' }}>
+                  To confirm permanent deletion, type <strong>DELETE</strong> below:
+                </label>
 
+                <input
+                  id="account-delete-confirm-input"
+                  ref={deleteInputRef}
+                  type="text"
+                  value={confirmInput}
+                  onChange={(e) => setConfirmInput(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  disabled={isDeleting}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 6,
+                    padding: '7px 10px',
+                    fontSize: 12,
+                    color: 'var(--text-primary)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    outline: 'none',
+                  }}
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowConfirm(false);
-                      setConfirmInput('');
-                    }}
+                    data-testid="delete-account-cancel-btn"
+                    onClick={handleCancelDeleteConfirm}
                     disabled={isDeleting}
                     style={{
-                      padding: '6px 10px',
+                      padding: '7px 14px',
                       borderRadius: 6,
-                      backgroundColor: 'transparent',
+                      backgroundColor: 'var(--bg-surface)',
                       border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      fontSize: 11,
+                      color: 'var(--text-primary)',
+                      fontSize: 12,
+                      fontWeight: 600,
                       cursor: isDeleting ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    Cancel
+                    Cancel &amp; Keep Account
                   </button>
 
                   <button
                     type="button"
+                    data-testid="delete-account-confirm-btn"
                     onClick={handleConfirmDelete}
                     disabled={confirmInput.trim().toUpperCase() !== 'DELETE' || isDeleting}
                     style={{
-                      padding: '6px 12px',
+                      padding: '7px 12px',
                       borderRadius: 6,
-                      backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? '#DC2626' : 'rgba(220, 38, 38, 0.4)',
+                      backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? '#DC2626' : 'rgba(220, 38, 38, 0.35)',
                       border: 'none',
                       color: '#ffffff',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 700,
                       cursor: confirmInput.trim().toUpperCase() === 'DELETE' && !isDeleting ? 'pointer' : 'not-allowed',
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
                       gap: 5,
                     }}
                   >
                     {isDeleting ? (
                       <>
-                        <RefreshCw size={11} className="icon-spinner" />
+                        <RefreshCw size={12} className="icon-spinner" aria-hidden="true" />
                         <span>Deleting…</span>
                       </>
                     ) : (
                       <>
-                        <Trash2 size={11} />
-                        <span>Delete</span>
+                        <Trash2 size={12} aria-hidden="true" />
+                        <span>Permanently Delete Account</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
 
-        {/* Modal Footer: Logout */}
+        {/* Modal Footer */}
         <div
           style={{
             padding: '14px 24px',
@@ -685,96 +948,26 @@ export default function AccountModal({
             backgroundColor: 'var(--bg-elevated)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             flexShrink: 0,
           }}
         >
           <button
             type="button"
-            onClick={() => {
-              handleClose();
-              if (onLogout) onLogout();
-            }}
+            onClick={handleClose}
             style={{
-              background: 'none',
+              padding: '8px 20px',
+              borderRadius: 8,
+              backgroundColor: 'var(--accent-primary)',
               border: 'none',
-              color: 'var(--text-tertiary)',
+              color: '#FFFFFF',
+              fontSize: 13,
+              fontWeight: 700,
               cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              padding: '6px 8px',
-              borderRadius: 6,
-              transition: 'color 0.15s ease, background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#EF4444';
-              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-tertiary)';
-              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            <LogOut size={14} />
-            <span>Sign Out</span>
+            Done
           </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {onOpenFeedback && (
-              <button
-                type="button"
-                onClick={() => {
-                  handleClose();
-                  onOpenFeedback();
-                }}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  backgroundColor: 'var(--bg-active)',
-                  border: '1px solid var(--border-default)',
-                  color: 'var(--text-secondary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.borderColor = 'var(--border-default)';
-                }}
-              >
-                <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
-                <span>Send Feedback</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleClose}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 8,
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Done
-            </button>
-          </div>
         </div>
       </div>
     </div>

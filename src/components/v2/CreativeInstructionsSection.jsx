@@ -27,12 +27,55 @@ import {
 export default function CreativeInstructionsSection({
   creativeGuardrails,
   onChange,
+  draftInputs = null,
+  onDraftChange = null,
   defaultExpanded = false,
+  expanded,
+  onToggleExpand = null,
 }) {
-  const [isExpanded, setIsExpanded] = useState(Boolean(defaultExpanded));
-  const [newDoText, setNewDoText] = useState('');
-  const [newDontText, setNewDontText] = useState('');
+  const hasDraftInput = Boolean(
+    (draftInputs?.doText && String(draftInputs.doText).trim()) ||
+    (draftInputs?.dontText && String(draftInputs.dontText).trim())
+  );
+  const [localExpanded, setLocalExpanded] = useState(Boolean(defaultExpanded));
+  const isExpanded = typeof expanded === 'boolean' ? expanded : localExpanded;
+
+  const setExpandedState = (next) => {
+    if (typeof onToggleExpand === 'function') {
+      onToggleExpand(next);
+    } else {
+      setLocalExpanded(next);
+    }
+  };
+
+  React.useEffect(() => {
+    if (hasDraftInput) {
+      setExpandedState(true);
+    }
+  }, [hasDraftInput]);
+  const [localDoText, setLocalDoText] = useState('');
+  const [localDontText, setLocalDontText] = useState('');
   const [editingItem, setEditingItem] = useState(null); // { type: 'do'|'dont', id, text, priority }
+
+  const isControlledDraft = Boolean(onDraftChange);
+  const newDoText = isControlledDraft ? String(draftInputs?.doText ?? '') : localDoText;
+  const newDontText = isControlledDraft ? String(draftInputs?.dontText ?? '') : localDontText;
+
+  const setNewDoText = (val) => {
+    if (isControlledDraft) {
+      onDraftChange({ doText: val, dontText: newDontText });
+    } else {
+      setLocalDoText(val);
+    }
+  };
+
+  const setNewDontText = (val) => {
+    if (isControlledDraft) {
+      onDraftChange({ doText: newDoText, dontText: val });
+    } else {
+      setLocalDontText(val);
+    }
+  };
 
   const normalized = normalizeClientGuardrails(creativeGuardrails);
   const { dosCount, dontsCount, total } = guardrailsCount(normalized);
@@ -340,8 +383,9 @@ export default function CreativeInstructionsSection({
       {/* Compact Collapsible Header */}
       <button
         type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={() => setExpandedState(!isExpanded)}
         aria-expanded={isExpanded}
+        aria-controls="creative-instructions-panel"
         style={{
           width: '100%',
           padding: '11px 16px',
@@ -362,14 +406,9 @@ export default function CreativeInstructionsSection({
             <ChevronRight size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           )}
           <Shield size={14} style={{ color: total > 0 ? 'var(--accent-primary)' : 'var(--text-tertiary)', flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Creative Instructions
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Optional · Do&apos;s &amp; Don&apos;ts enforced across scripts and scenes
-            </span>
-          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            Creative Instructions
+          </span>
         </div>
 
         {/* Subtle active badge */}
@@ -386,16 +425,30 @@ export default function CreativeInstructionsSection({
                 border: '1px solid rgba(99, 102, 241, 0.25)',
               }}
             >
-              {[
+              ✓ {[
                 dosCount > 0 ? `${dosCount} Do${dosCount > 1 ? "'s" : ''}` : null,
                 dontsCount > 0 ? `${dontsCount} Don't${dontsCount > 1 ? 's' : ''}` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </span>
+          ) : hasDraftInput ? (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: 12,
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                color: '#F59E0B',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+              }}
+            >
+              Draft text · click Add
+            </span>
           ) : (
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              {isExpanded ? 'Hide' : 'Add Do\'s / Don\'ts'}
+              {isExpanded ? 'Optional · Open' : 'Optional · Not added'}
             </span>
           )}
         </div>
@@ -404,6 +457,7 @@ export default function CreativeInstructionsSection({
       {/* Collapsible Content */}
       {isExpanded && (
         <div
+          id="creative-instructions-panel"
           style={{
             padding: '4px 16px 14px',
             display: 'flex',

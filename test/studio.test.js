@@ -36,14 +36,15 @@ const {
   STAGE_NUMBER_MAP,
 } = require('../src/context/studioReducer.js');
 
-test('Guided Studio Architecture: 6 Streamlined Stages (Story screen eliminated to prevent extra clicks)', () => {
+test('Guided Studio Architecture: 7 Streamlined Stages (Brief -> Settings -> Understanding -> Ideas -> Opening -> Script -> Video)', () => {
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes("{ id: 'brief', num: '01', label: 'Brief' }"), 'Stage 01 Brief');
   assert.ok(guidedStudioSrc.includes("{ id: 'settings', num: '02', label: 'Settings' }"), 'Stage 02 Settings');
-  assert.ok(guidedStudioSrc.includes("{ id: 'idea', num: '03', label: 'Idea' }"), 'Stage 03 Idea');
-  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '04', label: 'Opening' }"), 'Stage 04 Opening');
-  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '05', label: 'Script' }"), 'Stage 05 Script');
-  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '06', label: 'Video' }"), 'Stage 06 Video');
+  assert.ok(guidedStudioSrc.includes("{ id: 'understanding', num: '03', label: 'Understanding' }"), 'Stage 03 Understanding');
+  assert.ok(guidedStudioSrc.includes("{ id: 'idea', num: '04', label: 'Ideas' }"), 'Stage 04 Ideas');
+  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '05', label: 'Opening' }"), 'Stage 05 Opening');
+  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '06', label: 'Script' }"), 'Stage 06 Script');
+  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '07', label: 'Video' }"), 'Stage 07 Video');
   assert.ok(!guidedStudioSrc.includes("{ id: 'story', num:"), 'Story must not be a studio stage');
 });
 
@@ -865,26 +866,27 @@ test('Studio Stage 07 Script: Headline says "Here\'s your script", not "Here\'s 
   );
 });
 
-test('Studio Stage 02 Brief: Product Image upload option is present after brief', () => {
+test('Studio Stage 02 Brief: Unified Product Photo upload option is present after brief', () => {
   const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const productPhotoSource = fs.readFileSync(path.join(__dirname, '../src/components/v2/ProductPhotoSection.jsx'), 'utf8');
   assert.equal(
-    guidedStudioSource.includes('Product Image (Optional)'),
+    guidedStudioSource.includes('<ProductPhotoSection'),
     true,
-    'Screen02Brief should have "Product Image (Optional)" card'
+    'Screen02Brief should render the shared ProductPhotoSection component'
   );
   assert.equal(
-    guidedStudioSource.includes('Click to upload product photo (Optional)'),
+    productPhotoSource.includes("title: 'Product Photo'") && productPhotoSource.includes("uploadCta: 'Upload product photo'"),
     true,
-    'Screen02Brief should provide upload button for product photo'
+    'ProductPhotoSection should provide unified "Product Photo" title and "Upload product photo" CTA'
   );
 });
 
-test('Studio Stage 03 Settings: Product Asset option is present and editable', () => {
+test('Studio Stage 03 Settings: Product Photo option is present and editable', () => {
   const guidedStudioSource = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.equal(
-    guidedStudioSource.includes('5. Product Asset (Optional)'),
+    guidedStudioSource.includes('director-settings-product-asset') && guidedStudioSource.includes('<span>Product Photo</span>'),
     true,
-    'Screen03Settings should display Product Asset section'
+    'Screen03Settings should display Product Photo section'
   );
 });
 
@@ -1104,7 +1106,7 @@ test('Studio Stage 08 Video: Share button exists with clipboard copy and share s
   assert.ok(guidedStudioSrc.includes('handleShareVideo'), 'Screen08Video must implement handleShareVideo');
   assert.ok(guidedStudioSrc.includes('navigator.clipboard.writeText'), 'Must have clipboard writeText fallback');
   assert.ok(guidedStudioSrc.includes('Link Copied!'), 'Must display Link Copied confirmation');
-  assert.ok(guidedStudioSrc.includes('<span>Share</span>'), 'Must display Share button label');
+  assert.ok(guidedStudioSrc.includes('<span>Share Video</span>'), 'Must display Share Video button label');
 });
 
 test('Studio Reset: New Film restarts film process cleanly at Stage 01 Brief', () => {
@@ -1149,7 +1151,9 @@ test('Studio Custom Inputs: Stage 04 Idea and Stage 05 Opening support custom en
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   assert.ok(guidedStudioSrc.includes('customDirection.trim()'), 'Screen04Idea must check trimmed custom direction');
   assert.ok(guidedStudioSrc.includes('customHook.trim()'), 'Screen05Opening must check trimmed custom hook');
-  assert.ok(guidedStudioSrc.includes('+ I have my own idea'), 'Screen04Idea must have custom idea button');
+  assert.ok(guidedStudioSrc.includes('Have your own creative idea?'), 'Screen04Idea must render discoverable Own Idea secondary card');
+  assert.ok(guidedStudioSrc.includes('Start with my idea'), 'Screen04Idea card must display clear Start with my idea action');
+  assert.ok(!guidedStudioSrc.includes('+ I have my own idea'), 'Weak + I have my own idea text link must be replaced');
   assert.ok(guidedStudioSrc.includes('+ Write my own opening'), 'Screen05Opening must have custom opening button');
 });
 
@@ -1346,7 +1350,7 @@ test('Centralized Studio State: Initial state has correct defaults, 7 stages, an
   assert.equal(state.hasStaleWarning, false);
   assert.equal(state.requestSequence, 0);
   assert.equal(STAGE_ORDER.length, 7);
-  assert.deepEqual(STAGE_ORDER, ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video']);
+  assert.deepEqual(STAGE_ORDER, ['brief', 'settings', 'understanding', 'idea', 'opening', 'script', 'video']);
   assert.deepEqual(state.explicitChoices, {
     style: null,
     language: null,
@@ -1366,6 +1370,10 @@ test('Centralized Studio State: SET_STAGE updates currentStage and stageNumber c
   state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'settings' } });
   assert.equal(state.currentStage, 'settings');
   assert.equal(state.stageNumber, 2);
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'understanding' } });
+  assert.equal(state.currentStage, 'understanding');
+  assert.equal(state.stageNumber, 3);
 
   state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'script' } });
   assert.equal(state.currentStage, 'script');
@@ -1999,12 +2007,13 @@ test('V2 Creation Flow: Screen02Brief confirms active brand and does not re-ask 
   assert.ok(appSrc.includes("setActiveAppView('home')"), 'Back from Brief must return to Creation Hub when brand exists');
 });
 
-test('Campaign Target Audience: Screen02Brief supports campaign audience with category suggestions and multi-combine', () => {
+test('Campaign Target Audience: Shared TargetAudienceSection supports campaign audience with category suggestions and multi-combine', () => {
   const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
-  assert.ok(studioSrc.includes('Who is this video for? (Target Audience)'), 'Screen02Brief must have target audience input');
-  assert.ok(studioSrc.includes('getSuggestedAudiences'), 'Screen02Brief must use getSuggestedAudiences');
-  assert.ok(studioSrc.includes('[...currentItems, aud].join'), 'Must combine newly clicked suggestion with existing items');
-  assert.ok(studioSrc.includes('Click to apply or combine'), 'Must retain apply or combine label');
+  const audienceSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/TargetAudienceSection.jsx'), 'utf8');
+  assert.ok(studioSrc.includes('<TargetAudienceSection'), 'Screen02Brief must render shared TargetAudienceSection');
+  assert.ok(audienceSrc.includes('Who is this video for? (Target Audience)'), 'TargetAudienceSection must have target audience label');
+  assert.ok(audienceSrc.includes('getSuggestedAudiences'), 'TargetAudienceSection must use getSuggestedAudiences');
+  assert.ok(audienceSrc.includes('[...currentItems, aud].join'), 'Must combine newly clicked suggestion with existing items');
 
   const obSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/BusinessOnboardingModal.jsx'), 'utf8');
   // Must avoid complex jargon and difficult vocabulary
@@ -2304,12 +2313,13 @@ test('UI/UX Audit Enhancements: Breadcrumbs, Modal Scroll Boundaries, Standardiz
   assert.ok(libSrc.includes('aria-label={`Download generated video'), 'Download video button must have aria-label');
   assert.ok(libSrc.includes('aria-label={`Copy 4-scene script'), 'Copy script button must have aria-label');
 
-  // GuidedStudio standardized controls
+  // GuidedStudio & shared ProductPhotoSection standardized controls
   const studioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
-  assert.ok(studioSrc.includes("borderRadius: 8"), 'Screen03Settings must standardize pill radius');
-  assert.ok(studioSrc.includes("padding: '7px 14px'"), 'Screen03Settings must standardize pill padding');
+  const productPhotoSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ProductPhotoSection.jsx'), 'utf8');
+  assert.ok(studioSrc.includes("borderRadius: 8"), 'Screen03Settings must standardize control radius');
+  assert.ok(studioSrc.includes("padding: '10px 12px'"), 'Screen03Settings must standardize compact tile padding');
   assert.ok(studioSrc.includes("aria-label={isRecording ?"), 'Screen02Brief dictation button must have accessible aria-label');
-  assert.ok(studioSrc.includes("aria-label=\"Remove product photo\""), 'Screen02Brief remove button must have aria-label');
+  assert.ok(productPhotoSrc.includes('aria-label="Remove product photo"'), 'Shared ProductPhotoSection remove button must have aria-label');
 });
 
 
@@ -2387,10 +2397,10 @@ test('Streamlined Script Stage: Directly follows Opening Hook, embedding Cast & 
   const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
   const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
 
-  // 1. STUDIO_STAGES has 6 stages with Script immediately following Opening
-  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '04', label: 'Opening' }"), 'Must have Stage 04 Opening');
-  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '05', label: 'Script' }"), 'Must have Stage 05 Script');
-  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '06', label: 'Video' }"), 'Must have Stage 06 Video');
+  // 1. STUDIO_STAGES has 7 stages with Script (06) immediately following Opening (05)
+  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '05', label: 'Opening' }"), 'Must have Stage 05 Opening');
+  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '06', label: 'Script' }"), 'Must have Stage 06 Script');
+  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '07', label: 'Video' }"), 'Must have Stage 07 Video');
 
   // 2. Screen05Opening directly offers Continue to Script
   assert.ok(guidedStudioSrc.includes('Continue to Script'), 'Screen05Opening must offer Continue to Script');
@@ -2491,15 +2501,15 @@ test('Director Mode: Video Dimension and Video Length unified controls & end-to-
   const creativeSrc = fs.readFileSync(path.join(__dirname, '../engine/creative.js'), 'utf8');
 
   // 1. Screen03Settings UI Labels & Options
-  assert.ok(guidedStudioSrc.includes('2. Video Dimension'), 'Must render 2. Video Dimension label');
-  assert.ok(guidedStudioSrc.includes('3. Video Length'), 'Must render 3. Video Length label');
+  assert.ok(guidedStudioSrc.includes('aria-label="Video Dimension"'), 'Must render Video Dimension label');
+  assert.ok(guidedStudioSrc.includes('aria-label="Video Length"'), 'Must render Video Length label');
   assert.ok(guidedStudioSrc.includes('9:16 Vertical'), 'Must offer 9:16 Vertical');
   assert.ok(guidedStudioSrc.includes('16:9 Landscape'), 'Must offer 16:9 Landscape');
   assert.ok(guidedStudioSrc.includes('1:1 Square'), 'Must offer 1:1 Square');
-  assert.ok(guidedStudioSrc.includes('15s Hook'), 'Must offer 15s Hook');
-  assert.ok(guidedStudioSrc.includes('20s Standard'), 'Must offer 20s Standard');
-  assert.ok(guidedStudioSrc.includes('30s Extended'), 'Must offer 30s Extended');
-  assert.ok(guidedStudioSrc.includes('Popular'), 'Must mark 20s Standard as popular/recommended');
+  assert.ok(guidedStudioSrc.includes("label: '15s'"), 'Must offer 15s');
+  assert.ok(guidedStudioSrc.includes("label: '20s', popular: true"), 'Must offer 20s marked Popular');
+  assert.ok(guidedStudioSrc.includes("label: '30s'"), 'Must offer 30s');
+  assert.ok(guidedStudioSrc.includes('Popular'), 'Must mark 20s as popular');
 
   // 2. StudioChoicesBar supports dimension
   assert.ok(guidedStudioSrc.includes("if (dimension || platform) activeChoices.push({ type: 'dimension'"), 'StudioChoicesBar must include dimension');
@@ -2546,6 +2556,135 @@ test('Director Mode: Video Dimension and Video Length unified controls & end-to-
   assert.strictEqual(synthesized.shotSpec.project.aspectRatio, '16:9', 'shotSpec must retain 16:9 aspectRatio');
   assert.strictEqual(synthesized.shotSpec.project.duration, '20s', 'shotSpec must retain 20s duration');
 });
+
+test('P0 Regression: Brief Continue advances from brief -> settings -> understanding -> idea and respects validation', () => {
+  const { StudioActionTypes, createInitialStudioState, studioReducer } = require('../src/context/studioReducer.js');
+
+  // 1. Reducer transition tests for ordered stages: brief -> settings -> understanding -> idea -> opening -> script -> video
+  let state = createInitialStudioState({ currentStage: 'brief' });
+  assert.equal(state.currentStage, 'brief');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'settings' } });
+  assert.equal(state.currentStage, 'settings', 'SET_STAGE must transition from brief -> settings cleanly');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'understanding' } });
+  assert.equal(state.currentStage, 'understanding', 'SET_STAGE must transition from settings -> understanding rather than silently returning old state');
+  assert.equal(state.stageNumber, 3);
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'idea' } });
+  assert.equal(state.currentStage, 'idea');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'opening' } });
+  assert.equal(state.currentStage, 'opening');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'script' } });
+  assert.equal(state.currentStage, 'script');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'video' } });
+  assert.equal(state.currentStage, 'video');
+
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'entry' } });
+  assert.equal(state.currentStage, 'entry', 'SET_STAGE must also support entry stage for New Film Hub');
+
+  // Invalid stage string must still be ignored cleanly
+  const beforeInvalid = state;
+  state = studioReducer(state, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'nonexistent_stage' } });
+  assert.equal(state.currentStage, beforeInvalid.currentStage);
+
+  // 2. Simulate Screen02Brief validation + App.jsx onContinue state transitions (Brief -> Settings)
+  const simulateBriefContinue = (briefInput, currentState) => {
+    let errorMsg = '';
+    if (!String(briefInput || '').trim()) {
+      errorMsg = 'Please tell us what you want this video to say.';
+      return { state: currentState, errorMsg, advanced: false };
+    }
+    let next = studioReducer(currentState, { type: StudioActionTypes.MARK_STAGE_COMPLETE, payload: { stageId: 'brief' } });
+    next = studioReducer(next, { type: StudioActionTypes.SET_STAGE, payload: { stage: 'settings' } });
+    return { state: next, errorMsg, advanced: next.currentStage === 'settings' };
+  };
+
+  // Invalid/empty brief remains on brief and sets validation error
+  const emptyRes = simulateBriefContinue('   ', createInitialStudioState({ currentStage: 'brief' }));
+  assert.equal(emptyRes.advanced, false);
+  assert.equal(emptyRes.state.currentStage, 'brief');
+  assert.equal(emptyRes.errorMsg, 'Please tell us what you want this video to say.');
+
+  // Valid brief clears validation error, completes brief, and advances to settings
+  const validRes = simulateBriefContinue('20% off Diwali festive sweets hamper boxes', createInitialStudioState({ currentStage: 'brief' }));
+  assert.equal(validRes.errorMsg, '');
+  assert.equal(validRes.advanced, true);
+  assert.equal(validRes.state.currentStage, 'settings');
+  assert.deepEqual(validRes.state.completedStages, ['brief']);
+
+  // 3. UI checks: Screen02Brief shows inline alert near navigation bar & ScreenUnderstanding handles loading/error cleanly
+  const guidedSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const understandingSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScreenUnderstanding.jsx'), 'utf8');
+  assert.ok(guidedSrc.includes('Inline Validation Message near Continue Bar'), 'Screen02Brief renders validation feedback near Continue');
+  assert.ok(understandingSrc.includes('if (!draftData || !draftData.business_understanding)'), 'ScreenUnderstanding shows loading/error state whenever business_understanding is absent');
+  assert.ok(understandingSrc.includes('Could Not Analyze Brief'), 'ScreenUnderstanding exposes clear error fallback UI with retry');
+});
+
+test('Post-Generation CTA Hierarchy: Create another video (Primary), Share & Regenerate (Secondary), Start a new brief (Tertiary)', () => {
+  const guidedSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const simpleSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/SimpleBusinessStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // 1. Director Mode Screen08Video order & copy hierarchy
+  const primaryIdx = guidedSrc.indexOf('Create another video');
+  const actionsLabelIdx = guidedSrc.indexOf('Actions for this video');
+  const shareIdx = guidedSrc.indexOf('Share Video');
+  const regenIdx = guidedSrc.indexOf('Regenerate Video');
+  const tertiaryIdx = guidedSrc.indexOf('Start a new brief');
+
+  assert.ok(primaryIdx > -1 && actionsLabelIdx > primaryIdx, 'Primary Create another video sits ABOVE Actions for this video');
+  assert.ok(shareIdx > actionsLabelIdx && regenIdx > actionsLabelIdx, 'Share Video and Regenerate Video appear inside Actions for this video');
+  assert.ok(tertiaryIdx > shareIdx && tertiaryIdx > regenIdx, 'Start a new brief sits below as tertiary action');
+  assert.ok(guidedSrc.includes('Explore another creative direction using the same brief.'));
+  assert.ok(guidedSrc.includes('handleShareVideo'));
+
+  // 2. Simple Mode Step 3 completed video hierarchy
+  const simplePrimaryIdx = simpleSrc.indexOf('Create another video');
+  const simpleActionsIdx = simpleSrc.indexOf('Actions for this video');
+  const simpleShareIdx = simpleSrc.indexOf('Share Video');
+  const simpleRegenIdx = simpleSrc.indexOf('Regenerate Video');
+  const simpleTertiaryIdx = simpleSrc.indexOf('Start a new brief');
+  assert.ok(simplePrimaryIdx > -1 && simpleActionsIdx > simplePrimaryIdx);
+  assert.ok(simpleShareIdx > simpleActionsIdx && simpleRegenIdx > simpleActionsIdx);
+  assert.ok(simpleTertiaryIdx > simpleShareIdx && simpleTertiaryIdx > simpleRegenIdx);
+
+  // 3. Handler separation in App.jsx (3 distinct workflows)
+  assert.ok(appSrc.includes('const handleCreateAnotherFromBrief = async () =>'), 'Dedicated Brief-reuse handler exists');
+  assert.ok(appSrc.includes('const handleRegenerateCurrentVideo = async () =>'), 'Dedicated current-script regenerate handler exists');
+  assert.ok(appSrc.includes('const handleStartNewBrief = () =>'), 'Dedicated fresh-brief handler exists');
+
+  // Verify App wires all 3 handlers distinctly to Screen08Video
+  assert.ok(appSrc.includes('onCreateAnother={handleCreateAnotherFromBrief}'));
+  assert.ok(appSrc.includes('onRegenerateVideo={handleRegenerateCurrentVideo}'));
+  assert.ok(appSrc.includes('onStartNewBrief={handleStartNewBrief}'));
+
+  // Create Another reuses brief & allocates fresh draft/parent project tracking, jumping to Creative Ideas when Understanding is approved & current
+  const createBlock = appSrc.slice(
+    appSrc.indexOf('const handleCreateAnotherFromBrief'),
+    appSrc.indexOf('const handleRegenerateCurrentVideo')
+  );
+  assert.ok(createBlock.includes('parentProjectId: activeProjectId'));
+  assert.ok(createBlock.includes("setStudioStage('idea')"));
+  assert.ok(createBlock.includes('await loadCreativeDirections(true'));
+  assert.ok(!createBlock.includes("brief: ''"), 'Create Another must preserve existing brief');
+
+  // Regenerate Video keeps script, scenes, direction & hook intact and triggers handleRunVideoProduction directly
+  const regenBlock = appSrc.slice(
+    appSrc.indexOf('const handleRegenerateCurrentVideo'),
+    appSrc.indexOf('const handleRegenerateCurrentVideo') + 350
+  );
+  assert.ok(regenBlock.includes('await handleRunVideoProduction()'));
+  assert.ok(!regenBlock.includes('setScenes([])'), 'Regenerate Video must NOT clear current script/scenes');
+  assert.ok(!regenBlock.includes('setSelectedDirection(null)'), 'Regenerate Video must NOT clear selected direction');
+
+  // Start a new brief opens fresh blank brief workflow via handleExecuteNewProject
+  assert.ok(appSrc.includes("handleExecuteNewProject(false, { destination: 'brief' })"));
+});
+
 
 
 

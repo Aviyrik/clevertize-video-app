@@ -39,11 +39,11 @@ test("videoLogoPayload sends { mime, data } or null — never an empty object", 
 test("Settings screen has the per-video logo field next to platform and product image", () => {
   const src = fs.readFileSync(path.join(__dirname, "../src/components/GuidedStudio.jsx"), "utf8");
   const settings = src.slice(src.indexOf("export function Screen03Settings"), src.indexOf("export function Screen04Idea"));
-  assert.ok(settings.includes("Logo Image (Optional)"), "logo field label");
+  assert.ok(settings.includes("<span>Logo Image</span>"), "logo field label");
   assert.ok(settings.includes("handleFileUpload(file, 'videoLogo')"), "upload reads into videoLogo like the product photo");
   assert.ok(settings.includes("updateUserContext('videoLogo', null)"), "remove for this video");
   assert.ok(settings.includes("videoLogoOf(userContext)"), "prefilled from the business profile logo");
-  assert.ok(settings.indexOf("2. Video Dimension") < settings.indexOf("Product Asset") && settings.indexOf("Product Asset") < settings.indexOf("Logo Image (Optional)"), "grouped with the dimension selector and product image");
+  assert.ok(settings.indexOf("Video Dimension") < settings.indexOf("director-settings-product-asset") && settings.indexOf("director-settings-product-asset") < settings.indexOf("director-settings-logo-asset"), "grouped with the dimension selector and product image");
 });
 
 test("every render and pipeline request sends the per-video logo, not userContext.logo", () => {

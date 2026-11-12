@@ -62,27 +62,11 @@ export default function BusinessProfileView({
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '36px 24px 60px' }}>
       {/* Breadcrumb & Section Header */}
       <div style={{ marginBottom: 30 }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--accent-primary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: 8,
-          }}
-        >
-          <Building2 size={13} />
-          <span>Brand Context</span>
-        </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Businesses
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-          Business Profiles & Brand Context — manage store details, logos, and target customer context used across all creative directions and video scripts.
+          Business Profiles used across your scripts and videos.
         </p>
       </div>
 
@@ -137,7 +121,7 @@ export default function BusinessProfileView({
               maxWidth: 420,
             }}
           >
-            Every user manages their own businesses. Create your first business profile to set up your store details, brand voice, and target audience used for your video ads.
+            Create a business profile for your store details, voice, and target audience.
           </p>
           <button
             type="button"
@@ -490,7 +474,7 @@ export default function BusinessProfileView({
             Add Another Business
           </h4>
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5, maxWidth: 220 }}>
-            Set up a new brand profile with guided creation & logo upload.
+            Add a brand profile and logo.
           </p>
         </div>
       </div>

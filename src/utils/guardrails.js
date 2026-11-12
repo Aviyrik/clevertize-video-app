@@ -120,7 +120,27 @@ export function removeGuardrailInstruction(guardrails, type, id) {
   };
 }
 
-export function isUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails) {
+export function normalizeClientSettings(raw = {}) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const language = String(src.language || 'English').trim();
+  const creativeStyle = String(src.creativeStyle || src.format || 'UGC / Creator-style').trim();
+  const platform = String(src.platform || '').trim();
+  const rawDim = String(src.dimension || src.aspectRatio || '').trim();
+  const dimension = rawDim || (
+    platform.includes('16:9') ? '16:9' : platform.includes('1:1') ? '1:1' : '9:16'
+  );
+  const duration = String(src.duration || src.targetDuration || '20s').trim();
+  const hasLogo = Boolean(
+    src.hasLogo === true ||
+    src.videoLogo ||
+    src.brandLogo ||
+    src.logoDataUrl ||
+    src.logo
+  );
+  return { language, creativeStyle, dimension, duration, hasLogo };
+}
+
+export function isUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings = null, currentEventContext = undefined) {
   if (!understanding) return false;
   if (understanding.approval_status === 'outdated') return true;
   if (String(understanding.source_brief || '').trim() !== String(currentBrief || '').trim()) {
@@ -134,6 +154,40 @@ export function isUnderstandingOutdatedClient(understanding, currentBrief, curre
     if ((g.version || 0) !== recVer) return true;
   } else if (g.dos.length > 0 || g.donts.length > 0) {
     return true;
+  }
+
+  if (currentSettings && understanding.source_settings && typeof understanding.source_settings === 'object') {
+    const cur = normalizeClientSettings(currentSettings);
+    const rec = understanding.source_settings;
+    if (
+      String(rec.language || '') !== cur.language ||
+      String(rec.creativeStyle || '') !== cur.creativeStyle ||
+      String(rec.dimension || '') !== cur.dimension ||
+      String(rec.duration || '') !== cur.duration ||
+      Boolean(rec.hasLogo) !== cur.hasLogo
+    ) {
+      return true;
+    }
+  }
+
+  if (currentEventContext !== undefined) {
+    const recEvt = understanding.source_event && typeof understanding.source_event === 'object' ? understanding.source_event : null;
+    const curEvtRaw = currentEventContext && typeof currentEventContext === 'object' ? currentEventContext : null;
+    const normStr = (e) => {
+      if (!e) return '';
+      const cat = String(e.category || '').trim();
+      const name = String(e.name || '').trim();
+      const tim = String(e.timing || '').trim();
+      const inf = String(e.creativeInfluence || '').trim();
+      const ctx = String(e.additionalContext || '').trim();
+      if (!cat && !name && !tim && !ctx) return '';
+      return JSON.stringify({ cat, name, tim, inf, ctx });
+    };
+    const recSig = normStr(recEvt);
+    const curSig = normStr(curEvtRaw);
+    if (recSig !== curSig) {
+      return true;
+    }
   }
   return false;
 }

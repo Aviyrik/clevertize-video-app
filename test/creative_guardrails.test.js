@@ -677,3 +677,208 @@ test('9. UI Boundaries & Experience Wiring Check', () => {
   assert.ok(understandingSrc.includes('Conflicting Instructions'), 'Understanding Screen surfaces guardrail conflicts');
   assert.ok(understandingSrc.includes('Unverified Claim Flagged'), 'Understanding Screen surfaces unsupported claims');
 });
+
+test('10. UX Corrections: Capture-Only Brief Guardrails, Calm Empty State & 3-State Understanding Display', async () => {
+  const { generateAiUnderstanding, createEmptyUnderstanding } = require('../engine/understandingSpine');
+  const understandingSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScreenUnderstanding.jsx'), 'utf8');
+  const sectionSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/CreativeInstructionsSection.jsx'), 'utf8');
+  const simpleSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/SimpleBusinessStudio.jsx'), 'utf8');
+  const guidedSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+
+  // Brief inputs must start empty by default with placeholders only (no pre-populated entries)
+  assert.ok(sectionSrc.includes('placeholder={placeholder}'), 'Brief guardrails use placeholders instead of pre-populated user entries');
+  assert.strictEqual(createEmptyUnderstanding().has_user_guardrails, false);
+
+  // Spine reports has_user_guardrails = false when brief has no instructions
+  const prevKey = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  try {
+    const emptyRes = await generateAiUnderstanding({
+      businessName: 'Pure Silk Emporium',
+      businessType: 'Retail',
+      brief: 'Promote wedding saree collection',
+      creativeGuardrails: { dos: [], donts: [], version: 0 },
+    });
+    assert.strictEqual(emptyRes.has_user_guardrails, false);
+
+    const activeRes = await generateAiUnderstanding({
+      businessName: 'Pure Silk Emporium',
+      businessType: 'Retail',
+      brief: 'Promote wedding saree collection',
+      creativeGuardrails: { dos: ['Show zari weaving close-ups'], donts: ['Never use dark lighting'], version: 1 },
+    });
+    assert.strictEqual(activeRes.has_user_guardrails, true);
+  } finally {
+    process.env.ANTHROPIC_API_KEY = prevKey;
+  }
+
+  // AI Understanding page communicates 3 distinct states + calm empty state + no duplicate Do/Don't editor
+  assert.ok(understandingSrc.includes('Creative Instructions Understanding'));
+  assert.ok(
+    understandingSrc.includes('No specific creative instructions provided. CleverCut will use your brief and brand context to guide creative development.')
+  );
+  assert.ok(understandingSrc.includes('Not user-entered'), 'AI-derived fallback guidelines never pose as user entries');
+  assert.ok(understandingSrc.includes('1. User-Provided Instructions'));
+  assert.ok(understandingSrc.includes('2. AI Interpretation'));
+  assert.ok(understandingSrc.includes('3. Conflicts or Clarification Needed'));
+  assert.ok(understandingSrc.includes('Modify in Brief'));
+  assert.ok(!understandingSrc.includes('Mandatory Elements / Dos'), 'No repeated guardrail editor on AI Understanding page');
+  assert.ok(!understandingSrc.includes('Save Guardrails'), 'Users cannot re-enter guardrails on AI Understanding page');
+
+  // Simple Mode Step 1 collects guardrails once; subsequent Step 2/3 do not ask again
+  const simpleMatches = simpleSrc.match(/<CreativeInstructionsSection/g) || [];
+  assert.strictEqual(simpleMatches.length, 1, 'Simple Mode collects Creative Instructions only once in Brief step');
+  // Director Mode Brief Screen02 collects guardrails once in active flow
+  const guidedMatches = guidedSrc.match(/<CreativeInstructionsSection/g) || [];
+  assert.ok(guidedMatches.length >= 1, 'Director Brief renders CreativeInstructionsSection');
+});
+
+test('11. UX Corrections: Discoverable Own Idea Card & Architectural AI Extension Preservation', () => {
+  const { resolveIdeaSelection } = require('../src/context/studioReducer');
+  const guidedSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+
+  // Change 2: Full-width secondary card in Screen04Idea
+  assert.ok(guidedSrc.includes('data-testid="own-idea-card"'));
+  assert.ok(guidedSrc.includes('Have your own creative idea?'));
+  assert.ok(guidedSrc.includes('Start with your own concept, story or creative direction. Let CleverCut help you develop it into an ad.'));
+  assert.ok(guidedSrc.includes('Start with my idea'));
+  assert.ok(!guidedSrc.includes('+ I have my own idea'));
+
+  // Change 3: Architectural distinction across AI, Custom, and AI-Extended paths
+  const aiDir = { id: 'dir_1', title: 'Warm Morning Routine' };
+
+  const pathAi = resolveIdeaSelection(aiDir, '');
+  assert.strictEqual(pathAi.ideaSource, 'ai');
+  assert.deepStrictEqual(pathAi.selectedAiDirection, aiDir);
+  assert.strictEqual(pathAi.customDirection, '');
+  assert.strictEqual(pathAi.direction.source, 'ai');
+
+  const pathCustom = resolveIdeaSelection(null, 'Customer rushing for last-minute birthday cake');
+  assert.strictEqual(pathCustom.ideaSource, 'custom');
+  assert.strictEqual(pathCustom.selectedAiDirection, null);
+  assert.strictEqual(pathCustom.customDirection, 'Customer rushing for last-minute birthday cake');
+  assert.strictEqual(pathCustom.direction.isCustom, true);
+  assert.strictEqual(pathCustom.direction.source, 'custom');
+
+  const pathExtended = resolveIdeaSelection(aiDir, 'Include grandmother blessing at the doorstep');
+  assert.strictEqual(pathExtended.ideaSource, 'ai_extended');
+  assert.deepStrictEqual(pathExtended.selectedAiDirection, aiDir);
+  assert.strictEqual(pathExtended.customDirection, 'Include grandmother blessing at the doorstep');
+  assert.strictEqual(pathExtended.direction.userExtension, 'Include grandmother blessing at the doorstep');
+  assert.strictEqual(pathExtended.direction.source, 'ai_extended');
+
+  assert.ok(appSrc.includes('resolveIdeaSelection('), 'App.jsx preserves ideaSource and separate AI vs custom direction state');
+  assert.ok(appSrc.includes('customDirection: customDirection || \'\''), 'App.jsx persists customDirection in project stages');
+});
+
+test('12. Backend Settings Stale Enforcement: /api/creative/directions blocks changed settings & Simple Mode refreshes seamlessly', async () => {
+  const projId = `proj_sett_stale_${Date.now()}`;
+  const brief = 'Promote festive organic honey gift packs.';
+  await db.saveProject(
+    {
+      id: projId,
+      businessName: 'Himalayan Hive',
+      businessType: 'Specialty Food',
+      brief,
+      language: 'Hindi',
+      creativeStyle: 'Storytelling',
+    },
+    userAId
+  );
+
+  // 1. Generate Understanding with explicit Settings -> status pending
+  process.env.MOCK_SPINE = 'true';
+  const undRes = await api('POST', '/api/creative/ai-understanding', {
+    businessName: 'Himalayan Hive',
+    businessType: 'Specialty Food',
+    brief,
+    language: 'Hindi',
+    creativeStyle: 'Storytelling',
+    dimension: '16:9',
+    duration: '30s',
+    hasLogo: true,
+    projectId: projId,
+  });
+  delete process.env.MOCK_SPINE;
+  assert.strictEqual(undRes.status, 200);
+  assert.strictEqual(undRes.body.understanding.source_settings.dimension, '16:9');
+  assert.strictEqual(undRes.body.understanding.source_settings.duration, '30s');
+  assert.strictEqual(undRes.body.understanding.source_settings.hasLogo, true);
+
+  // Unapproved understanding cannot generate creative directions (cannot bypass in Director Mode)
+  const unapprovedDir = await api('POST', '/api/creative/directions', {
+    businessName: 'Himalayan Hive',
+    businessType: 'Specialty Food',
+    brief,
+    language: 'Hindi',
+    creativeStyle: 'Storytelling',
+    dimension: '16:9',
+    duration: '30s',
+    hasLogo: true,
+    projectId: projId,
+  });
+  assert.strictEqual(unapprovedDir.status, 409);
+  assert.strictEqual(unapprovedDir.body.code, 'UNDERSTANDING_NOT_APPROVED');
+
+  // Approve Understanding v1
+  const putRes = await api('PUT', `/api/creative/ai-understanding/${projId}`, {
+    understanding: undRes.body.understanding,
+    approvalStatus: 'approved',
+  });
+  assert.strictEqual(putRes.status, 200);
+
+  // Editing Settings (e.g. dimension 16:9 -> 9:16, duration 30s -> 15s) MUST trigger 409 UNDERSTANDING_OUTDATED
+  const staleSettingsDir = await api('POST', '/api/creative/directions', {
+    businessName: 'Himalayan Hive',
+    businessType: 'Specialty Food',
+    brief,
+    language: 'Hindi',
+    creativeStyle: 'Storytelling',
+    dimension: '9:16',
+    duration: '15s',
+    hasLogo: true,
+    projectId: projId,
+    aiUnderstanding: { ...undRes.body.understanding, approval_status: 'approved' }, // spoofed!
+  });
+  assert.strictEqual(staleSettingsDir.status, 409);
+  assert.strictEqual(staleSettingsDir.body.code, 'UNDERSTANDING_OUTDATED');
+
+  // Simple Mode silently processes Settings updates with auto_approved (no user checkpoint)
+  const simpleProjId = `proj_sett_simple_${Date.now()}`;
+  await db.saveProject({ id: simpleProjId, businessName: 'Himalayan Hive', businessType: 'Specialty Food', brief }, userAId);
+  process.env.MOCK_SPINE = 'true';
+  anthropicQueue.push(J({
+    packages: [1, 2, 3].map((i) => ({
+      id: `pkg_${i}`,
+      title: `Package ${i}`,
+      angle: 'Offer',
+      hookHeadline: 'Pure forest honey in a festive jar!',
+      narrativeSummary: 'Gift pure honey.',
+      callToAction: 'Order today',
+      setting: 'Warm kitchen',
+      scenes: [1, 2, 3, 4].map((s) => ({
+        sceneNumber: s,
+        beat: 'Beat',
+        timing: '0-5s',
+        visual: 'Sunlit honey jar poured over warm toast.',
+        dialogue: 'Lead: "Taste the forest pure!"',
+      })),
+    })),
+  }));
+  const simpleRes = await api('POST', '/api/creative/simple-packages', {
+    businessName: 'Himalayan Hive',
+    businessType: 'Specialty Food',
+    brief,
+    language: 'English',
+    creativeStyle: 'UGC / Creator-style',
+    dimension: '9:16',
+    duration: '15s',
+    hasLogo: false,
+    projectId: simpleProjId,
+  });
+  delete process.env.MOCK_SPINE;
+  assert.strictEqual(simpleRes.status, 200);
+  assert.strictEqual(simpleRes.body.aiUnderstanding.approval_status, 'auto_approved');
+  assert.strictEqual(simpleRes.body.aiUnderstanding.source_settings.duration, '15s');
+});

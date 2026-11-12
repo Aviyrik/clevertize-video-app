@@ -230,3 +230,189 @@ test('Review Point 4: Simple Mode uses distinct auto_approved internal status', 
   assert.ok(serverSrc.includes('internalUnderstanding.approval_status = "auto_approved"'),
     'Server sets auto_approved for Simple Mode');
 });
+
+test('Workflow Reorder: Progress indicator shows 01 Brief -> 02 Settings -> 03 Understanding -> 04 Ideas -> 05 Opening -> 06 Script -> 07 Video', () => {
+  const { STAGE_ORDER, STAGE_NUMBER_MAP } = require('../src/context/studioReducer.js');
+  const guidedStudioSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  const understandingSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/ScreenUnderstanding.jsx'), 'utf8');
+
+  assert.ok(guidedStudioSrc.includes("{ id: 'brief', num: '01', label: 'Brief' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'settings', num: '02', label: 'Settings' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'understanding', num: '03', label: 'Understanding' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'idea', num: '04', label: 'Ideas' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'opening', num: '05', label: 'Opening' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'script', num: '06', label: 'Script' }"));
+  assert.ok(guidedStudioSrc.includes("{ id: 'video', num: '07', label: 'Video' }"));
+  assert.deepStrictEqual(STAGE_ORDER, ['brief', 'settings', 'understanding', 'idea', 'opening', 'script', 'video']);
+  assert.strictEqual(STAGE_NUMBER_MAP.brief, 1);
+  assert.strictEqual(STAGE_NUMBER_MAP.settings, 2);
+  assert.strictEqual(STAGE_NUMBER_MAP.understanding, 3);
+  assert.strictEqual(STAGE_NUMBER_MAP.idea, 4);
+
+  // Brief -> Settings (does NOT invoke AI Understanding directly), Settings -> Understanding, Understanding -> Idea
+  assert.ok(appSrc.includes("markStageComplete('brief');\n              setStudioStage('settings');"));
+  assert.ok(appSrc.includes("markStageComplete('understanding');\n      scheduleDraftSave(true);\n      setStudioStage('idea');"));
+
+  // Back navigation from every stage + Edit Settings shortcut on ScreenUnderstanding
+  assert.ok(appSrc.includes("else if (studioStage === 'idea') setStudioStage('understanding');"));
+  assert.ok(appSrc.includes("else if (studioStage === 'understanding') setStudioStage('settings');"));
+  assert.ok(appSrc.includes("else if (studioStage === 'settings') setStudioStage('brief');"));
+  assert.ok(understandingSrc.includes('Edit Settings'));
+  assert.ok(understandingSrc.includes('Edit Original Brief'));
+  assert.ok(understandingSrc.includes('Back to Settings'));
+  assert.ok(understandingSrc.includes('VERIFIED USER INPUTS (CONFIRMED)'));
+});
+
+test('Workflow Reorder: Settings included in AI Understanding, Section H avoids false missing items, and settings change invalidates approval', async () => {
+  const result = await understandingSpine.generateAiUnderstanding({
+    businessName: 'Pure Silk Emporium',
+    businessType: 'Boutique',
+    town: 'Jaipur',
+    brief: 'Flat 20% off wedding sarees this weekend',
+    language: 'Hindi',
+    creativeStyle: 'Storytelling',
+    dimension: '16:9',
+    duration: '30s',
+    hasLogo: true,
+    creativeGuardrails: {
+      dos: ['Show zari weaving border'],
+      donts: ['Avoid dark lighting'],
+      version: 1,
+    },
+  });
+
+  // Settings are captured and hashed alongside brief and guardrails
+  assert.strictEqual(result.source_settings.language, 'Hindi');
+  assert.strictEqual(result.source_settings.creativeStyle, 'Storytelling');
+  assert.strictEqual(result.source_settings.dimension, '16:9');
+  assert.strictEqual(result.source_settings.duration, '30s');
+  assert.strictEqual(result.source_settings.hasLogo, true);
+  assert.ok(result.source_settings_hash);
+
+  // Verified facts are separated from assumptions
+  assert.ok(Array.isArray(result.verified_facts) && result.verified_facts.length >= 3);
+  assert.ok(result.verified_facts.some((f) => f.includes('Hindi') && f.includes('30s') && f.includes('16:9')));
+
+  // Sanitizer removes false-positive missing info already supplied in Settings/Profile
+  const sanitized = understandingSpine.sanitizeMissingInformation(
+    [
+      'Video language not selected',
+      'Aspect ratio or dimensions missing',
+      'Video duration unknown',
+      'Brand logo availability unspecified',
+      'Exact showroom street landmark — matters for viewers visiting in person',
+    ],
+    {
+      businessName: 'Pure Silk Emporium',
+      town: 'Jaipur',
+      settings: result.source_settings,
+      cleanBrief: 'Flat 20% off wedding sarees this weekend',
+    }
+  );
+  assert.deepStrictEqual(sanitized, ['Exact showroom street landmark — matters for viewers visiting in person']);
+
+  // Outdated detection triggers when any production setting changes after approval
+  const approved = { ...result, approval_status: 'approved' };
+  assert.strictEqual(
+    understandingSpine.isUnderstandingOutdated(approved, 'Flat 20% off wedding sarees this weekend', null, {
+      language: 'Hindi',
+      creativeStyle: 'Storytelling',
+      dimension: '16:9',
+      duration: '30s',
+      hasLogo: true,
+    }),
+    false
+  );
+  assert.strictEqual(
+    understandingSpine.isUnderstandingOutdated(approved, 'Flat 20% off wedding sarees this weekend', null, {
+      language: 'English',
+      creativeStyle: 'Storytelling',
+      dimension: '16:9',
+      duration: '30s',
+      hasLogo: true,
+    }),
+    true,
+    'Changing language must mark understanding outdated'
+  );
+  assert.strictEqual(
+    understandingSpine.isUnderstandingOutdated(approved, 'Flat 20% off wedding sarees this weekend', null, {
+      language: 'Hindi',
+      creativeStyle: 'Storytelling',
+      dimension: '9:16',
+      duration: '30s',
+      hasLogo: true,
+    }),
+    true,
+    'Changing video dimension must mark understanding outdated'
+  );
+  assert.strictEqual(
+    understandingSpine.isUnderstandingOutdated(approved, 'Flat 20% off wedding sarees this weekend', null, {
+      language: 'Hindi',
+      creativeStyle: 'Storytelling',
+      dimension: '16:9',
+      duration: '15s',
+      hasLogo: true,
+    }),
+    true,
+    'Changing video duration must mark understanding outdated'
+  );
+
+  // Client stale helper detects settings edits too
+  const { isUnderstandingOutdatedClient } = require('../src/utils/guardrails.js');
+  assert.strictEqual(
+    isUnderstandingOutdatedClient(approved, 'Flat 20% off wedding sarees this weekend', { dos: ['Show zari weaving border'], donts: ['Avoid dark lighting'], version: 1 }, {
+      language: 'Tamil',
+      creativeStyle: 'Storytelling',
+      dimension: '16:9',
+      duration: '30s',
+      hasLogo: true,
+    }),
+    true
+  );
+
+  // DB saveProject & draft restoration preserve understanding stage & productionSettings and invalidate when settings change
+  const { buildDraftProject, resumeTargetOf } = require('../src/utils/drafts.js');
+  const projId = `proj_reorder_${Date.now()}`;
+  const uid = `user_reorder_${Date.now()}`;
+  const draftPayload = buildDraftProject({
+    id: projId,
+    businessName: 'Pure Silk Emporium',
+    businessType: 'Boutique',
+    town: 'Jaipur',
+    studio: 'guided',
+    guided: {
+      currentStage: 'understanding',
+      completedStages: ['brief', 'settings'],
+      context: {
+        brief: 'Flat 20% off wedding sarees this weekend',
+        language: 'Hindi',
+        creativeStyle: 'Storytelling',
+        dimension: '16:9',
+        duration: '30s',
+      },
+      aiUnderstanding: approved,
+    },
+  });
+  const saved = await db.saveProject(draftPayload, uid);
+  assert.strictEqual(saved.currentStage, 'understanding');
+  assert.strictEqual(saved.creativeDNA.productionSettings.dimension, '16:9');
+  assert.strictEqual(resumeTargetOf(saved).stage, 'understanding');
+
+  // Changing settings during saveProject automatically invalidates prior approval
+  const afterSettingsEdit = await db.saveProject(
+    {
+      ...saved,
+      language: 'English',
+      productionSettings: {
+        language: 'English',
+        creativeStyle: 'Storytelling',
+        dimension: '16:9',
+        duration: '30s',
+        hasLogo: false,
+      },
+    },
+    uid
+  );
+  assert.strictEqual(afterSettingsEdit.aiUnderstanding.approval_status, 'outdated');
+});

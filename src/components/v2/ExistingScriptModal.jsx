@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScriptVerificationLoader } from './WorkflowLoadingScreen.jsx';
+import { summarizeScriptImportInput } from '../../utils/scriptSummary.js';
 import {
   X,
   FileCode2,
@@ -346,8 +347,22 @@ export default function ExistingScriptModal({
   const [editChar2, setEditChar2] = useState('');
   const [editSetting, setEditSetting] = useState('');
   const [scenesData, setScenesData] = useState([]);
+  const [verifyAttempt, setVerifyAttempt] = useState(0);
+  const [loadedSampleName, setLoadedSampleName] = useState(null);
+  const validateAbortRef = React.useRef(null);
+  const validateSeqRef = React.useRef(0);
 
   if (!isOpen) return null;
+
+  const handleCancelValidation = () => {
+    validateSeqRef.current += 1;
+    if (validateAbortRef.current) {
+      try { validateAbortRef.current.abort(); } catch {}
+      validateAbortRef.current = null;
+    }
+    setIsValidating(false);
+    setModalStep(1);
+  };
 
   const handlePhotoUpload = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -365,6 +380,7 @@ export default function ExistingScriptModal({
 
   const handleLoadSample = (sample) => {
     setScriptText(sample.text);
+    setLoadedSampleName(sample.name);
     const sLang = sample.lang || detectScriptLanguage(sample.text);
     const sStyle = sample.style || detectScriptFormat(sample.text);
     setSelectedLang(sLang);
@@ -373,12 +389,35 @@ export default function ExistingScriptModal({
     setErrorMsg('');
   };
 
-  const handleValidateScript = async () => {
+  const handleResetScriptInput = () => {
+    setScriptText('');
+    setLoadedSampleName(null);
+    setValidationResult(null);
+    setErrorMsg('');
+  };
+
+  const scriptInputSummary = summarizeScriptImportInput(scriptText, selectedDuration);
+
+  const handleValidateScript = async (forceRetry = false) => {
     if (!scriptText.trim()) {
       setErrorMsg('Please paste or write your script first.');
       return;
     }
+    if (isValidating && !forceRetry) return;
 
+    if (validateAbortRef.current) {
+      try { validateAbortRef.current.abort(); } catch {}
+    }
+    const seq = ++validateSeqRef.current;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    validateAbortRef.current = controller;
+    let timedOut = false;
+    const timeoutId = controller ? setTimeout(() => {
+      timedOut = true;
+      try { controller.abort(); } catch {}
+    }, 65000) : null;
+
+    setVerifyAttempt((a) => a + 1);
     setIsValidating(true);
     setErrorMsg('');
 
@@ -389,6 +428,7 @@ export default function ExistingScriptModal({
       const token = localStorage.getItem('clevertize_token');
       const res = await fetch('/api/script/validate-and-import', {
         method: 'POST',
+        signal: controller?.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -406,6 +446,8 @@ export default function ExistingScriptModal({
           platform: selectedAspect === '16:9' ? 'YouTube / 16:9' : selectedAspect === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16',
         }),
       });
+
+      if (seq !== validateSeqRef.current) return;
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -430,6 +472,16 @@ export default function ExistingScriptModal({
       // Advance directly to Step 2 (Review & Edit Scenes)
       setModalStep(2);
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (seq !== validateSeqRef.current) return;
+      if (err?.name === 'AbortError') {
+        if (timedOut) {
+          setErrorMsg('Script verification timed out after waiting. Your script text is safe—you can retry now.');
+          setValidationResult(null);
+          setIsValidating(false);
+        }
+        return;
+      }
       console.warn('[validate-and-import] validation notice:', err.message);
       // If server returned a business or validation error, display actionable error directly
       if (
@@ -517,7 +569,8 @@ export default function ExistingScriptModal({
       setEditSetting(setting);
       setModalStep(2);
     } finally {
-      setIsValidating(false);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (seq === validateSeqRef.current) setIsValidating(false);
     }
   };
 
@@ -709,10 +762,10 @@ export default function ExistingScriptModal({
               </div>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
                 {isValidating
-                  ? 'Running 18-point Section 8 Quality Gate & extracting continuity anchors…'
+                  ? 'Running Section 8 quality & continuity checks…'
                   : modalStep === 2
-                  ? 'Confirm cast continuity, single setting, and camera actions for AI video production.'
-                  : "Paste your 4-scene script. We'll run the 18-point Section 8 Quality Gate and prep for video."}
+                  ? 'Review cast, setting, and shots before importing.'
+                  : 'Paste your script to run quality checks and prep scenes.'}
               </p>
             </div>
           </div>
@@ -818,12 +871,18 @@ export default function ExistingScriptModal({
                 padding: '12px 0',
               }}
             >
-              <ScriptVerificationLoader businessName={businessName} compact={true} />
+              <ScriptVerificationLoader
+                key={`script-verify-${verifyAttempt}`}
+                businessName={businessName}
+                compact={true}
+                onRetry={() => handleValidateScript(true)}
+                onCancel={handleCancelValidation}
+              />
             </div>
           ) : modalStep === 1 ? (
             /* ==================== STEP 1: SCRIPT INPUT ==================== */
             <>
-              {/* Quick Sample Presets */}
+              {/* Quick Example Presets */}
               <div
                 style={{
                   display: 'flex',
@@ -834,17 +893,18 @@ export default function ExistingScriptModal({
                 }}
               >
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Need an example format?
+                  Try an example:
                 </span>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {SAMPLE_SCRIPTS.map((s, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleLoadSample(s)}
+                      aria-label={`Insert example script: ${s.name}`}
                       style={{
-                        backgroundColor: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
+                        backgroundColor: loadedSampleName === s.name ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
+                        border: `1px solid ${loadedSampleName === s.name ? 'var(--accent-primary)' : 'var(--border-default)'}`,
                         borderRadius: 6,
                         padding: '5px 10px',
                         fontSize: 11,
@@ -856,12 +916,52 @@ export default function ExistingScriptModal({
                         gap: 6,
                       }}
                     >
-                      <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} />
-                      {s.name}
+                      <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                      <span>Example: {s.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
+
+              {loadedSampleName && (
+                <div
+                  data-testid="sample-script-banner"
+                  role="note"
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    fontSize: 12,
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <span>
+                    <strong>Example loaded ({loadedSampleName})</strong> — edit below or clear.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetScriptInput}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 6,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
 
               {/* Upfront Video Specs: Duration & Aspect Ratio */}
               <div
@@ -979,31 +1079,56 @@ export default function ExistingScriptModal({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 8,
                     marginBottom: 6,
                   }}
                 >
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Script Content ({selectedDuration === '15s' ? '3 Scenes' : selectedDuration === '30s' ? '6 Scenes' : '4 Scenes'})
+                  <label htmlFor="existing-script-textarea" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Your Script Content
                   </label>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    {selectedDuration === '15s'
-                      ? 'Target: 3 scenes (~5s per shot) for a 15s commercial (+1 outro if logo attached)'
-                      : selectedDuration === '30s'
-                      ? 'Target: 6 scenes (~5s per shot) for a 30s commercial (+1 outro if logo attached)'
-                      : 'Target: 4 scenes (~5s per shot) for a 20s commercial (+1 outro if logo attached)'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {scriptText.trim().length > 0 && (
+                      <button
+                        type="button"
+                        data-testid="clear-script-btn"
+                        onClick={handleResetScriptInput}
+                        aria-label="Clear script input"
+                        style={{
+                          background: 'none',
+                          border: '1px solid var(--border-default)',
+                          borderRadius: 6,
+                          padding: '3px 9px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        <RotateCcw size={11} aria-hidden="true" />
+                        <span>Clear</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <textarea
+                  id="existing-script-textarea"
                   value={scriptText}
                   onChange={(e) => {
-                    setScriptText(e.target.value);
+                    const nextVal = e.target.value;
+                    setScriptText(nextVal);
+                    if (loadedSampleName) setLoadedSampleName(null);
                     if (validationResult) setValidationResult(null);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  placeholder={`Paste your script here, for example:\n\nSCENE 1 (Hook):\nVisual: Shop owner welcomes early morning customer.\nDialogue: "Are you ready for festive season?"\n\nSCENE 2 (Build)...\nSCENE 3 (Turn)...\nSCENE 4 (Resolution)...`}
+                  placeholder={`Paste or write your own script here.\n\nFormat reference (placeholder guide only):\nSCENE 1 (Hook)\nVisual: Shop owner welcomes morning customer.\nDialogue: "Looking for fresh Diwali gift hampers?"\n\nSCENE 2 ... SCENE 3 ...`}
                   style={{
                     width: '100%',
-                    minHeight: 220,
+                    boxSizing: 'border-box',
+                    minHeight: 210,
                     maxHeight: 320,
                     padding: '12px 14px',
                     fontSize: 13,
@@ -1016,11 +1141,40 @@ export default function ExistingScriptModal({
                     resize: 'vertical',
                   }}
                 />
+
+                {/* Compact Live Script Summary (No fabricated estimates) */}
+                <div
+                  data-testid="script-import-summary"
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    fontSize: 11.5,
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: 'var(--text-primary)' }}>Detected scenes:</strong>{' '}
+                    <span>{scriptInputSummary.sceneLabel}</span>
+                  </div>
+                  <div>
+                    <strong style={{ color: 'var(--text-primary)' }}>Estimated duration:</strong>{' '}
+                    <span>{scriptInputSummary.durationLabel}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Error Message */}
               {errorMsg && (
                 <div
+                  role="alert"
                   style={{
                     backgroundColor: 'var(--error-subtle)',
                     border: '1px solid var(--error)',
@@ -1278,7 +1432,7 @@ export default function ExistingScriptModal({
                   </div>
 
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Since this is a product demonstration, uploading a clear photo of your product or packaging allows the camera to accurately showcase your real branding, packaging shape, and colors.
+                    Upload a product or packaging photo to showcase exact branding in the generated scenes.
                   </div>
 
                   {productPhoto ? (
@@ -1372,7 +1526,7 @@ export default function ExistingScriptModal({
                         }}
                       >
                         <Upload size={15} />
-                        <span>Click or drag to upload a clear product or packaging photo (Optional)</span>
+                        <span>Upload product photo</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1460,7 +1614,7 @@ export default function ExistingScriptModal({
                       }}
                     />
                     <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
-                      Locked across all 4 shots so setting never shifts.
+                      Kept consistent across all shots.
                     </span>
                   </div>
 
@@ -1850,11 +2004,13 @@ export default function ExistingScriptModal({
         {/* Footer Actions */}
         <div
           style={{
-            padding: '16px 24px',
+            padding: '14px 20px',
             borderTop: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
             backgroundColor: 'var(--bg-elevated)',
             flexShrink: 0,
           }}
@@ -1880,7 +2036,7 @@ export default function ExistingScriptModal({
 
               <button
                 type="button"
-                onClick={handleValidateScript}
+                onClick={() => handleValidateScript(false)}
                 disabled={isValidating || !scriptText.trim()}
                 style={{
                   backgroundColor: 'var(--accent-primary)',

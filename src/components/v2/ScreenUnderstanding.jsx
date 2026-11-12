@@ -21,14 +21,24 @@ import {
   AlertTriangle,
   X,
   Save,
+  SlidersHorizontal,
 } from 'lucide-react';
+
+import HelpTooltip from './HelpTooltip.jsx';
+import ContextualTipBanner from './ContextualTipBanner.jsx';
+import { AiUnderstandingLoader } from './WorkflowLoadingScreen.jsx';
+import { HELP_TOOLTIPS, CONTEXTUAL_TIPS } from '../../data/tourSteps.js';
+import { shouldShowContextualTip } from '../../utils/onboarding.js';
 
 export default function ScreenUnderstanding({
   understanding,
   onUpdateUnderstanding,
   onApproveAndContinue,
   onBackToBrief,
+  onEditSettings,
+  settingsContext = null,
   onRegenerate,
+  onCancelAnalysis,
   isRegenerating = false,
   isSaving = false,
   originalBrief = '',
@@ -38,6 +48,10 @@ export default function ScreenUnderstanding({
   isOutdated = false,
   error = '',
   userGuardrails = null,
+  userEventContext = null,
+  onboardingState = null,
+  onDismissTip,
+  attemptKey = 0,
 }) {
   const [editingSection, setEditingSection] = useState(null);
   const [draftData, setDraftData] = useState(understanding || {});
@@ -45,15 +59,29 @@ export default function ScreenUnderstanding({
   const [regenNotes, setRegenNotes] = useState('');
 
   useEffect(() => {
-    if (understanding) {
-      setDraftData(understanding);
-    }
+    setDraftData(understanding || {});
   }, [understanding]);
 
-  if (!draftData || (!draftData.business_understanding && !isRegenerating)) {
+  if (!draftData || !draftData.business_understanding) {
+    if (isRegenerating) {
+      return (
+        <div style={{ maxWidth: 840, margin: '28px auto', padding: '0 20px' }}>
+          <AiUnderstandingLoader
+            key={`ai-u-init-${attemptKey}`}
+            businessName={businessName}
+            category={businessType}
+            onRetry={() => onRegenerate && onRegenerate(undefined, true)}
+            onCancel={onCancelAnalysis || onEditSettings || onBackToBrief}
+            cancelLabel={onEditSettings ? 'Back to Settings' : 'Back to Brief'}
+          />
+        </div>
+      );
+    }
+
     return (
       <div style={{ maxWidth: 840, margin: '40px auto', padding: '0 20px', textAlign: 'center' }}>
         <div
+          role={error ? 'alert' : undefined}
           style={{
             padding: '36px 24px',
             backgroundColor: 'var(--bg-surface)',
@@ -70,25 +98,29 @@ export default function ScreenUnderstanding({
               width: 52,
               height: 52,
               borderRadius: 12,
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--accent-primary)',
+              backgroundColor: error && !isRegenerating ? 'rgba(239, 68, 68, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+              color: error && !isRegenerating ? 'var(--error, #ef4444)' : 'var(--accent-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Sparkles size={28} />
+            {error && !isRegenerating ? <AlertCircle size={28} /> : <Sparkles size={28} />}
           </div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
-            Analyzing Your Creative Brief…
+            {error
+              ? 'Could Not Analyze Brief'
+              : 'Ready to Analyze Brief'}
           </h2>
           <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', maxWidth: 460 }}>
-            Our AI Understanding engine is structuring your business proposition, audience insights, and guardrails.
+            {error
+              ? error
+              : 'Analyze your brief, settings, and instructions before generating ideas.'}
           </p>
-          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               type="button"
-              onClick={onBackToBrief}
+              onClick={onEditSettings || onBackToBrief}
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-default)',
@@ -100,11 +132,11 @@ export default function ScreenUnderstanding({
                 cursor: 'pointer',
               }}
             >
-              Back to Brief
+              {onEditSettings ? 'Back to Settings' : 'Back to Brief'}
             </button>
             <button
               type="button"
-              onClick={() => onRegenerate && onRegenerate('')}
+              onClick={() => onRegenerate && onRegenerate(error ? undefined : '')}
               style={{
                 backgroundColor: 'var(--accent-primary)',
                 border: 'none',
@@ -116,7 +148,7 @@ export default function ScreenUnderstanding({
                 cursor: 'pointer',
               }}
             >
-              Generate Analysis
+              {error ? 'Retry Analysis' : 'Generate Analysis'}
             </button>
           </div>
         </div>
@@ -131,20 +163,6 @@ export default function ScreenUnderstanding({
       ...draftData,
       [sectionKey]: value,
       approval_status: 'pending', // editing resets approval
-    };
-    setDraftData(updated);
-    setEditingSection(null);
-    if (onUpdateUnderstanding) onUpdateUnderstanding(updated);
-  };
-
-  const handleSaveGuardrails = (dos, donts) => {
-    const updated = {
-      ...draftData,
-      creative_guardrails: {
-        dos: Array.isArray(dos) ? dos : [],
-        donts: Array.isArray(donts) ? donts : [],
-      },
-      approval_status: 'pending',
     };
     setDraftData(updated);
     setEditingSection(null);
@@ -191,8 +209,13 @@ export default function ScreenUnderstanding({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                  AI Understanding & Strategy
+                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                  <span>AI Understanding</span>
+                  <HelpTooltip
+                    title={HELP_TOOLTIPS.understanding_review.title}
+                    body={HELP_TOOLTIPS.understanding_review.body}
+                    ariaLabel="Why review AI Understanding"
+                  />
                 </h1>
                 <span
                   style={{
@@ -214,7 +237,7 @@ export default function ScreenUnderstanding({
                       : 'var(--accent-primary, #6366f1)',
                   }}
                 >
-                  {isOutdated ? 'Outdated Brief' : isApproved ? 'Approved' : 'Pending Review'}
+                  {isOutdated ? 'Outdated Context' : isApproved ? 'Approved' : 'Pending Review'}
                 </span>
                 {draftData.is_mock && (
                   <span
@@ -234,7 +257,7 @@ export default function ScreenUnderstanding({
                 )}
               </div>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-                Review, refine, and approve how CleverCut interpreted your brief before generating creative ideas.
+                Review or edit how CleverCut interpreted your brief before generating ideas.
               </p>
             </div>
           </div>
@@ -265,20 +288,35 @@ export default function ScreenUnderstanding({
           </div>
         </div>
 
-        {/* Brand Context Strip */}
+        {/* Contextual Onboarding Tip (Auto-retires after user approves twice or dismisses) */}
+        {shouldShowContextualTip('tip_ai_understanding', onboardingState) && (
+          <div style={{ marginTop: 14, marginBottom: 14 }}>
+            <ContextualTipBanner
+              tipId={CONTEXTUAL_TIPS.tip_ai_understanding.id}
+              title={CONTEXTUAL_TIPS.tip_ai_understanding.title}
+              body={CONTEXTUAL_TIPS.tip_ai_understanding.body}
+              onDismiss={onDismissTip}
+            />
+          </div>
+        )}
+
+        {/* Brand & Production Settings Context Strip */}
+        {(() => {
+          const activeSett = settingsContext || draftData.source_settings || null;
+          return (
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 8,
-            padding: '8px 14px',
+            padding: '10px 14px',
             fontSize: 12,
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 8,
+            gap: 10,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -294,28 +332,83 @@ export default function ScreenUnderstanding({
             )}
             <span>·</span>
             <span style={{ color: 'var(--text-tertiary)' }}>Version {draftData.version || 1}</span>
+            {activeSett && (
+              <>
+                <span>·</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                  {[
+                    activeSett.language,
+                    activeSett.dimension || activeSett.aspectRatio,
+                    activeSett.duration || activeSett.targetDuration,
+                    activeSett.creativeStyle || activeSett.format,
+                    activeSett.hasLogo ? 'Logo included' : 'No custom logo',
+                  ].filter(Boolean).join(' · ')}
+                </span>
+              </>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={onBackToBrief}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent-primary)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: 0,
-            }}
-          >
-            <ArrowLeft size={13} />
-            <span>Edit Original Brief</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={onBackToBrief}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: 0,
+              }}
+            >
+              <ArrowLeft size={13} />
+              <span>Edit Original Brief</span>
+            </button>
+
+            {onEditSettings && (
+              <button
+                type="button"
+                onClick={onEditSettings}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: 0,
+                }}
+              >
+                <SlidersHorizontal size={13} />
+                <span>Edit Settings</span>
+              </button>
+            )}
+          </div>
         </div>
+          );
+        })()}
+
+        {/* Active Regeneration Progress (when refreshing an existing understanding) */}
+        {isRegenerating && (
+          <div style={{ marginTop: 14 }}>
+            <AiUnderstandingLoader
+              key={`ai-u-compact-${attemptKey}`}
+              businessName={businessName}
+              category={businessType}
+              compact={true}
+              onRetry={() => onRegenerate && onRegenerate(undefined, true)}
+              onCancel={onCancelAnalysis || onEditSettings || onBackToBrief}
+              cancelLabel={onEditSettings ? 'Back to Settings' : 'Back to Brief'}
+            />
+          </div>
+        )}
 
         {/* Outdated Notice */}
         {isOutdated && (
@@ -337,7 +430,7 @@ export default function ScreenUnderstanding({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertTriangle size={16} />
               <span>
-                Your original brief or creative instructions changed after approval. Please review the updated interpretation and re-approve.
+                Brief, instructions, or settings changed. Update before continuing.
               </span>
             </div>
             <button
@@ -362,6 +455,7 @@ export default function ScreenUnderstanding({
         {/* Error Notice */}
         {error && (
           <div
+            role="alert"
             style={{
               marginTop: 12,
               padding: '10px 14px',
@@ -370,9 +464,30 @@ export default function ScreenUnderstanding({
               border: '1px solid rgba(239, 68, 68, 0.3)',
               color: 'var(--error, #ef4444)',
               fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
             }}
           >
-            {error}
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => onRegenerate && onRegenerate(undefined, true)}
+              style={{
+                backgroundColor: 'var(--error, #ef4444)',
+                border: 'none',
+                color: '#fff',
+                borderRadius: 6,
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>
@@ -389,7 +504,6 @@ export default function ScreenUnderstanding({
           onStartEdit={() => setEditingSection('business_understanding')}
           onCancelEdit={() => setEditingSection(null)}
           onSave={(val) => handleSaveSection('business_understanding', val)}
-          helper="What CleverCut understood about your business, positioning, and offerings."
         />
 
         {/* B. Campaign Objective */}
@@ -402,7 +516,6 @@ export default function ScreenUnderstanding({
           onStartEdit={() => setEditingSection('campaign_objective')}
           onCancelEdit={() => setEditingSection(null)}
           onSave={(val) => handleSaveSection('campaign_objective', val)}
-          helper="Primary outcome and measurable intent of this film campaign."
         />
 
         {/* C. Target Audience */}
@@ -415,7 +528,6 @@ export default function ScreenUnderstanding({
           onStartEdit={() => setEditingSection('target_audience')}
           onCancelEdit={() => setEditingSection(null)}
           onSave={(val) => handleSaveSection('target_audience', val)}
-          helper="Who this film is speaking to, their motivations, and lifestyle context."
         />
 
         {/* D. Core Communication */}
@@ -428,31 +540,57 @@ export default function ScreenUnderstanding({
           onStartEdit={() => setEditingSection('core_communication')}
           onCancelEdit={() => setEditingSection(null)}
           onSave={(val) => handleSaveSection('core_communication', val)}
-          helper="The single key takeaway and message the viewer must remember."
         />
 
         {/* E. Occasion & Context */}
-        <SectionCard
-          id="occasion_context"
-          title="E. Occasion & Context"
-          icon={<Calendar size={16} style={{ color: '#EC4899' }} />}
-          content={draftData.occasion_context}
-          isEditing={editingSection === 'occasion_context'}
-          onStartEdit={() => setEditingSection('occasion_context')}
-          onCancelEdit={() => setEditingSection(null)}
-          onSave={(val) => handleSaveSection('occasion_context', val)}
-          helper="Festivals, seasonal events, or timing context relevant to the ad."
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <SectionCard
+            id="occasion_context"
+            title="E. Occasion & Context"
+            icon={<Calendar size={16} style={{ color: '#EC4899' }} />}
+            content={draftData.occasion_context}
+            isEditing={editingSection === 'occasion_context'}
+            onStartEdit={() => setEditingSection('occasion_context')}
+            onCancelEdit={() => setEditingSection(null)}
+            onSave={(val) => handleSaveSection('occasion_context', val)}
+          />
+          {userEventContext && (userEventContext.name || userEventContext.category || userEventContext.timing || userEventContext.additionalContext) && (
+            <div
+              style={{
+                padding: '8px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', fontSize: 11 }}>User Event Input:</span>
+              {userEventContext.name && <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{userEventContext.name}</span>}
+              {userEventContext.category && <span>· {userEventContext.category}</span>}
+              {userEventContext.timing && <span>· {userEventContext.timing}</span>}
+              {userEventContext.creativeInfluence && (
+                <span style={{ padding: '1px 7px', borderRadius: 10, backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                  Influence: {userEventContext.creativeInfluence}
+                </span>
+              )}
+              {userEventContext.additionalContext && (
+                <span style={{ color: 'var(--text-tertiary)' }}>— {userEventContext.additionalContext}</span>
+              )}
+            </div>
+          )}
+        </div>
 
-        {/* F. Creative Guardrails (Dos & Don'ts) */}
+        {/* F. Creative Guardrails — Creative Instructions Understanding */}
         <GuardrailsCard
           guardrails={draftData.creative_guardrails || { dos: [], donts: [] }}
           userGuardrails={userGuardrails}
           guardrailAnalysis={draftData.guardrail_analysis || null}
-          isEditing={editingSection === 'creative_guardrails'}
-          onStartEdit={() => setEditingSection('creative_guardrails')}
-          onCancelEdit={() => setEditingSection(null)}
-          onSave={handleSaveGuardrails}
+          onBackToBrief={onBackToBrief}
         />
 
         {/* G. Creative Opportunity */}
@@ -465,11 +603,11 @@ export default function ScreenUnderstanding({
           onStartEdit={() => setEditingSection('creative_opportunity')}
           onCancelEdit={() => setEditingSection(null)}
           onSave={(val) => handleSaveSection('creative_opportunity', val)}
-          helper="Angles, emotional triggers, or unique narrative opportunities identified from the brief."
         />
 
         {/* H. Assumptions & Missing Information */}
         <AssumptionsCard
+          verifiedFacts={draftData.verified_facts || []}
           assumptions={draftData.assumptions || []}
           missing={draftData.missing_information || []}
           isEditing={editingSection === 'assumptions'}
@@ -515,12 +653,18 @@ export default function ScreenUnderstanding({
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {isApproved ? 'Interpretation Approved' : 'Ready to proceed to Creative Ideas?'}
+              {isOutdated
+                ? 'Inputs changed — update before continuing'
+                : isApproved
+                ? 'Approved'
+                : 'Ready for Creative Ideas?'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-              {isApproved
-                ? 'Only this approved interpretation will guide creative idea generation.'
-                : 'Review above sections or make edits, then approve to unlock Idea Generation.'}
+              {isOutdated
+                ? 'Brief, instructions, or settings changed since approval.'
+                : isApproved
+                ? 'This approved version guides idea generation.'
+                : 'Edit sections above, then approve to continue.'}
             </div>
           </div>
         </div>
@@ -528,7 +672,7 @@ export default function ScreenUnderstanding({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             type="button"
-            onClick={onBackToBrief}
+            onClick={onEditSettings || onBackToBrief}
             style={{
               backgroundColor: 'var(--bg-surface)',
               border: '1px solid var(--border-default)',
@@ -540,13 +684,14 @@ export default function ScreenUnderstanding({
               cursor: 'pointer',
             }}
           >
-            Back to Brief
+            {onEditSettings ? 'Back to Settings' : 'Back to Brief'}
           </button>
 
           <button
             type="button"
             onClick={() => onApproveAndContinue && onApproveAndContinue(draftData)}
-            disabled={isSaving || isRegenerating}
+            disabled={isSaving || isRegenerating || isOutdated}
+            title={isOutdated ? 'Click Update Analysis above before approving changed inputs' : ''}
             style={{
               backgroundColor: 'var(--accent-primary)',
               border: 'none',
@@ -555,7 +700,8 @@ export default function ScreenUnderstanding({
               padding: '9px 20px',
               fontSize: 13,
               fontWeight: 700,
-              cursor: isSaving ? 'wait' : 'pointer',
+              cursor: isSaving || isOutdated ? 'not-allowed' : 'pointer',
+              opacity: isOutdated ? 0.55 : 1,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
@@ -567,7 +713,7 @@ export default function ScreenUnderstanding({
             ) : (
               <>
                 <Check size={16} />
-                <span>Approve & Continue to Ideas</span>
+                <span>Approve & Continue</span>
                 <ArrowRight size={15} />
               </>
             )}
@@ -620,7 +766,7 @@ export default function ScreenUnderstanding({
             </div>
 
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 14px' }}>
-              Provide any specific corrections or additional context you want the AI Understanding engine to incorporate.
+              Add any corrections or extra context to include:
             </p>
 
             <textarea
@@ -820,26 +966,21 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
 /**
  * Creative Guardrails Card with Dos & Don'ts
  */
-function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis = null, isEditing, onStartEdit, onCancelEdit, onSave }) {
-  const [dosText, setDosText] = useState((guardrails.dos || []).join('\n'));
-  const [dontsText, setDontsText] = useState((guardrails.donts || []).join('\n'));
-
-  useEffect(() => {
-    setDosText((guardrails.dos || []).join('\n'));
-    setDontsText((guardrails.donts || []).join('\n'));
-  }, [guardrails]);
-
-  const handleSave = () => {
-    const dos = dosText.split('\n').map((l) => l.trim()).filter(Boolean);
-    const donts = dontsText.split('\n').map((l) => l.trim()).filter(Boolean);
-    onSave(dos, donts);
-  };
+function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis = null, onBackToBrief }) {
+  const [showAiFallback, setShowAiFallback] = useState(false);
 
   const rawUserDos = Array.isArray(userGuardrails?.dos) ? userGuardrails.dos : [];
   const rawUserDonts = Array.isArray(userGuardrails?.donts) ? userGuardrails.donts : [];
   const hasUserInputs = rawUserDos.length > 0 || rawUserDonts.length > 0;
+
+  const aiDos = Array.isArray(guardrails?.dos) ? guardrails.dos : [];
+  const aiDonts = Array.isArray(guardrails?.donts) ? guardrails.donts : [];
+  const normalizedRules = Array.isArray(guardrailAnalysis?.rules) ? guardrailAnalysis.rules : [];
+  const interpretationSummary = guardrailAnalysis?.summary || '';
+
   const conflicts = Array.isArray(guardrailAnalysis?.conflicts) ? guardrailAnalysis.conflicts : [];
   const unsupportedClaims = Array.isArray(guardrailAnalysis?.unsupported_claims) ? guardrailAnalysis.unsupported_claims : [];
+  const hasIssues = conflicts.length > 0 || unsupportedClaims.length > 0;
 
   return (
     <div
@@ -850,243 +991,384 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
         padding: '16px 20px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <ShieldCheck size={16} style={{ color: 'var(--accent-primary)' }} />
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-            F. Creative Guardrails
+            F. Creative Guardrails — Creative Instructions Understanding
           </h3>
         </div>
-        {!isEditing && (
+        {onBackToBrief && (
           <button
             type="button"
-            onClick={onStartEdit}
+            onClick={onBackToBrief}
+            title="Edit creative instructions on the Brief page"
             style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-tertiary)',
-              cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 5,
+              background: 'none',
+              border: '1px solid var(--border-default)',
+              borderRadius: 6,
+              padding: '4px 10px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
               fontSize: 12,
               fontWeight: 600,
             }}
           >
-            <Edit3 size={13} />
-            <span>Edit</span>
+            <ArrowLeft size={12} />
+            <span>Modify in Brief</span>
           </button>
         )}
       </div>
 
-      {isEditing ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--success, #10b981)', marginBottom: 4 }}>
-              Mandatory Elements / Dos (One per line):
-            </div>
-            <textarea
-              rows={3}
-              value={dosText}
-              onChange={(e) => setDosText(e.target.value)}
-              style={{
-                width: '100%',
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 6,
-                padding: '8px 10px',
-                color: 'var(--text-primary)',
-                fontSize: 12,
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--error, #ef4444)', marginBottom: 4 }}>
-              Strict Restrictions / Don'ts (One per line):
-            </div>
-            <textarea
-              rows={3}
-              value={dontsText}
-              onChange={(e) => setDontsText(e.target.value)}
-              style={{
-                width: '100%',
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 6,
-                padding: '8px 10px',
-                color: 'var(--text-primary)',
-                fontSize: 12,
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-                borderRadius: 6,
-                padding: '5px 12px',
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              style={{
-                backgroundColor: 'var(--accent-primary)',
-                border: 'none',
-                color: '#fff',
-                borderRadius: 6,
-                padding: '5px 14px',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Save Guardrails
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-          {/* Dos */}
+      {!hasUserInputs ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Calm empty state — no fake user entries or failure badges */}
           <div
             style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.05)',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
-              borderRadius: 8,
               padding: '12px 14px',
+              borderRadius: 8,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--success, #10b981)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <CheckCircle2 size={14} />
-              <span>MUST INCLUDE (DOS)</span>
-            </div>
-            {guardrails.dos && guardrails.dos.length > 0 ? (
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                {guardrails.dos.map((item, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No mandatory inclusions specified</div>
-            )}
+            No specific creative instructions provided. CleverCut will use your brief and brand context to guide creative development.
           </div>
 
-          {/* Don'ts */}
-          <div
-            style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.05)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              borderRadius: 8,
-              padding: '12px 14px',
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--error, #ef4444)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertCircle size={14} />
-              <span>AVOID / RESTRICTIONS (DON'TS)</span>
-            </div>
-            {guardrails.donts && guardrails.donts.length > 0 ? (
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                {guardrails.donts.map((item, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No specific restrictions specified</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Original User Instructions & Spine Conflict / Unsupported Claims Callouts */}
-      {!isEditing && (hasUserInputs || conflicts.length > 0 || unsupportedClaims.length > 0) && (
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {hasUserInputs && (
+          {(aiDos.length > 0 || aiDonts.length > 0) && (
             <div
               style={{
-                padding: '8px 12px',
-                borderRadius: 7,
-                backgroundColor: 'var(--bg-elevated)',
+                borderRadius: 8,
                 border: '1px solid var(--border-subtle)',
-                fontSize: 11,
-                color: 'var(--text-secondary)',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 6,
-                alignItems: 'center',
+                backgroundColor: 'rgba(139, 92, 246, 0.04)',
+                padding: '8px 12px',
               }}
             >
-              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)' }}>
-                Original Brief Instructions:
-              </span>
-              {rawUserDos.map((d) => (
-                <span key={d.id || d.text} style={{ padding: '2px 7px', borderRadius: 4, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                  Do: {d.text}
+              <button
+                type="button"
+                onClick={() => setShowAiFallback((v) => !v)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <span>AI Interpretation — Brief-Derived Guidelines (Not user-entered)</span>
+                <span style={{ fontSize: 11, color: 'var(--accent-primary)' }}>
+                  {showAiFallback ? 'Hide' : 'View'}
                 </span>
-              ))}
-              {rawUserDonts.map((d) => (
-                <span key={d.id || d.text} style={{ padding: '2px 7px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                  Avoid: {d.text}
-                </span>
-              ))}
+              </button>
+              {showAiFallback && (
+                <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                  {aiDos.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                        AI-Derived Focus Areas
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {aiDos.map((item, i) => (
+                          <li key={i} style={{ marginBottom: 3 }}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {aiDonts.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                        AI-Derived Safeguards
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {aiDonts.map((item, i) => (
+                          <li key={i} style={{ marginBottom: 3 }}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {conflicts.map((c, idx) => (
-            <div
-              key={c.id || idx}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 7,
-                backgroundColor: 'rgba(239, 68, 68, 0.09)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                fontSize: 11,
-                color: '#ef4444',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 6,
-              }}
-            >
-              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-              <span>
-                <strong>Conflicting Instructions:</strong> {c.description}
-                {c.resolution_hint ? ` ${c.resolution_hint}` : ''}
+          {hasIssues && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                Conflicts or Clarification Needed
+              </div>
+              {conflicts.map((c, idx) => (
+                <div
+                  key={c.id || idx}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 7,
+                    backgroundColor: 'rgba(239, 68, 68, 0.09)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    fontSize: 12,
+                    color: '#ef4444',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 6,
+                  }}
+                >
+                  <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    <strong>Conflicting Instructions:</strong> {c.description}
+                    {c.resolution_hint ? ` ${c.resolution_hint}` : ''}
+                  </span>
+                </div>
+              ))}
+              {unsupportedClaims.map((u, idx) => (
+                <div
+                  key={u.id || idx}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 7,
+                    backgroundColor: 'rgba(245, 158, 11, 0.09)',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    fontSize: 12,
+                    color: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 6,
+                  }}
+                >
+                  <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    <strong>Unverified Claim Flagged:</strong> &ldquo;{u.text}&rdquo; — {u.reason}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* 1. User-Provided Instructions (verbatim from Brief) */}
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 8,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                1. User-Provided Instructions (Original Brief Instructions)
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(59, 130, 246, 0.14)',
+                  color: '#60a5fa',
+                }}
+              >
+                Entered by You
               </span>
             </div>
-          ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+              <div
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: 7,
+                  padding: '10px 12px',
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success, #10b981)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <CheckCircle2 size={13} />
+                  <span>MUST FOLLOW (DO&apos;S)</span>
+                </div>
+                {rawUserDos.length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    {rawUserDos.map((d, i) => (
+                      <li key={d.id || i} style={{ marginBottom: 3 }}>{d.text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>None specified</div>
+                )}
+              </div>
 
-          {unsupportedClaims.map((u, idx) => (
-            <div
-              key={u.id || idx}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 7,
-                backgroundColor: 'rgba(245, 158, 11, 0.09)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
-                fontSize: 11,
-                color: '#f59e0b',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 6,
-              }}
-            >
-              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-              <span>
-                <strong>Unverified Claim Flagged:</strong> &ldquo;{u.text}&rdquo; — {u.reason}
+              <div
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  borderRadius: 7,
+                  padding: '10px 12px',
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--error, #ef4444)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <AlertCircle size={13} />
+                  <span>MUST AVOID (DON&apos;TS)</span>
+                </div>
+                {rawUserDonts.length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    {rawUserDonts.map((d, i) => (
+                      <li key={d.id || i} style={{ marginBottom: 3 }}>{d.text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>None specified</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. AI Interpretation */}
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 8,
+              backgroundColor: 'rgba(139, 92, 246, 0.05)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                2. AI Interpretation — How CleverCut Will Apply These
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(139, 92, 246, 0.14)',
+                  color: 'var(--accent-primary)',
+                }}
+              >
+                AI Interpreted
               </span>
             </div>
-          ))}
+            {interpretationSummary && (
+              <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                {interpretationSummary}
+              </p>
+            )}
+            {normalizedRules.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                {normalizedRules.map((r, i) => (
+                  <li key={r.id || i} style={{ marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600 }}>
+                      {r.type === 'dont' ? 'Avoid: ' : 'Include: '}
+                    </span>
+                    {r.normalized_rule || r.original_text}
+                    {r.intent_category ? ` (${r.intent_category})` : ''}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                {aiDos.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                      Applied Creative Requirements
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {aiDos.map((item, i) => (
+                        <li key={i} style={{ marginBottom: 3 }}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiDonts.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                      Enforced Exclusions
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {aiDonts.map((item, i) => (
+                        <li key={i} style={{ marginBottom: 3 }}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Conflicts or Clarification Needed */}
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              backgroundColor: hasIssues ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-elevated)',
+              border: hasIssues ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+              3. Conflicts or Clarification Needed
+            </div>
+            {!hasIssues ? (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 size={13} style={{ color: 'var(--success, #10b981)', flexShrink: 0 }} />
+                <span>No conflicts or clarifications needed. Your instructions are clear and consistent.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {conflicts.map((c, idx) => (
+                  <div
+                    key={c.id || idx}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      backgroundColor: 'rgba(239, 68, 68, 0.09)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      fontSize: 12,
+                      color: '#ef4444',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 6,
+                    }}
+                  >
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>
+                      <strong>Conflicting Instructions:</strong> {c.description}
+                      {c.resolution_hint ? ` ${c.resolution_hint}` : ''}
+                    </span>
+                  </div>
+                ))}
+
+                {unsupportedClaims.map((u, idx) => (
+                  <div
+                    key={u.id || idx}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      backgroundColor: 'rgba(245, 158, 11, 0.09)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      fontSize: 12,
+                      color: '#f59e0b',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 6,
+                    }}
+                  >
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>
+                      <strong>Unverified Claim Flagged:</strong> &ldquo;{u.text}&rdquo; — {u.reason}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1097,7 +1379,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
  * H. Assumptions & Missing Information Card
  * Visually distinguishes unconfirmed inferences from facts.
  */
-function AssumptionsCard({ assumptions = [], missing = [], isEditing, onStartEdit, onCancelEdit, onSave }) {
+function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], isEditing, onStartEdit, onCancelEdit, onSave }) {
   const [assumpText, setAssumpText] = useState(assumptions.join('\n'));
   const [missingText, setMissingText] = useState(missing.join('\n'));
 
@@ -1151,8 +1433,30 @@ function AssumptionsCard({ assumptions = [], missing = [], isEditing, onStartEdi
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12 }}>
-        CleverCut clearly separates verified facts from inferences. Please verify these assumptions before proceeding.
+        Confirmed user inputs are shown separately from AI inferences and missing details.
       </div>
+
+      {!isEditing && Array.isArray(verifiedFacts) && verifiedFacts.length > 0 && (
+        <div
+          style={{
+            marginBottom: 14,
+            backgroundColor: 'rgba(16, 185, 129, 0.05)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: 8,
+            padding: '10px 14px',
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success, #10b981)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <CheckCircle2 size={13} />
+            <span>VERIFIED USER INPUTS (CONFIRMED)</span>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            {verifiedFacts.map((item, i) => (
+              <li key={i} style={{ marginBottom: 3 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {isEditing ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1278,7 +1582,7 @@ function AssumptionsCard({ assumptions = [], missing = [], isEditing, onStartEdi
                 ))}
               </ul>
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Brief includes all necessary details</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>All essential brief, brand, and production settings are provided</div>
             )}
           </div>
         </div>

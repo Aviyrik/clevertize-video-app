@@ -19,6 +19,12 @@ const {
   hashGuardrails,
   hasActiveGuardrails,
 } = require('./guardrails');
+const {
+  normalizeEventContext,
+  hasActiveEventContext,
+  hashEventContext,
+  formatEventPromptBlock,
+} = require('./eventContext');
 const guardrailsSpine = require('./guardrailsSpine');
 
 /**
@@ -60,10 +66,64 @@ function hashBrief(brief = '') {
 }
 
 /**
- * Check if an existing interpretation is outdated compared to the current brief
- * and/or current Creative Guardrails version/content.
+ * Normalize production settings context so Brief + Settings + Guardrails form
+ * a single deterministic source snapshot for AI Understanding & stale checks.
  */
-function isUnderstandingOutdated(understanding, currentBrief, currentGuardrails = null) {
+function normalizeUnderstandingSettings(raw = {}) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const language = String(src.language || 'English').trim();
+  const creativeStyle = String(src.creativeStyle || src.format || 'UGC / Creator-style').trim();
+  const platform = String(src.platform || '').trim();
+  const rawDim = String(src.dimension || src.aspectRatio || '').trim();
+  const dimension = rawDim || (
+    platform.includes('16:9') ? '16:9' : platform.includes('1:1') ? '1:1' : '9:16'
+  );
+  const duration = String(src.duration || src.targetDuration || '20s').trim();
+  const hasLogo = Boolean(
+    src.hasLogo === true ||
+    src.videoLogo ||
+    src.brandLogo ||
+    src.logoDataUrl ||
+    src.logo
+  );
+  const hasProductPhoto = Boolean(src.hasProductPhoto || src.productPhoto);
+  return {
+    language,
+    creativeStyle,
+    dimension,
+    duration,
+    hasLogo,
+    hasProductPhoto,
+    platform,
+  };
+}
+
+/**
+ * Deterministic hash of campaign production settings (language, dimension, duration, style, logo).
+ */
+function hashSettings(settings = {}) {
+  const n = normalizeUnderstandingSettings(settings);
+  const sig = JSON.stringify({
+    language: n.language,
+    creativeStyle: n.creativeStyle,
+    dimension: n.dimension,
+    duration: n.duration,
+    hasLogo: n.hasLogo,
+  });
+  return crypto.createHash('sha256').update(sig).digest('hex').slice(0, 16);
+}
+
+/**
+ * Check if an existing interpretation is outdated compared to the current brief,
+ * Creative Guardrails version/content, and/or Production Settings.
+ */
+function isUnderstandingOutdated(
+  understanding,
+  currentBrief,
+  currentGuardrails = null,
+  currentSettings = null,
+  currentEventContext = undefined
+) {
   if (!understanding) return false;
   if (understanding.approval_status === 'outdated') return true;
   const currentHash = hashBrief(currentBrief);
@@ -90,13 +150,104 @@ function isUnderstandingOutdated(understanding, currentBrief, currentGuardrails 
     }
   }
 
+  if (currentSettings !== null && currentSettings !== undefined) {
+    const currentSHash = hashSettings(currentSettings);
+    if (understanding.source_settings_hash && understanding.source_settings_hash !== currentSHash) {
+      return true;
+    }
+  }
+
+  if (currentEventContext !== undefined) {
+    const currentEHash = hashEventContext(currentEventContext);
+    if (understanding.source_event_hash && understanding.source_event_hash !== currentEHash) {
+      return true;
+    }
+  }
+
   return false;
+}
+
+function buildVerifiedFacts({
+  businessName = '',
+  businessType = '',
+  town = '',
+  websiteUrl = '',
+  occasion = '',
+  eventContext = null,
+  brief = '',
+  settings = {},
+}) {
+  const s = normalizeUnderstandingSettings(settings);
+  const ec = normalizeEventContext(eventContext);
+  const hasEvent = hasActiveEventContext(ec);
+  const facts = [];
+  if (businessName) {
+    facts.push(`Business: ${String(businessName).trim()}${businessType ? ` (${String(businessType).trim()})` : ''}${town ? ` in ${String(town).trim()}` : ''}`);
+  }
+  facts.push(`Production Specs: ${s.language}, ${s.duration} duration, ${s.dimension} aspect ratio, ${s.creativeStyle} format`);
+  facts.push(`Brand Logo: ${s.hasLogo ? 'Logo provided for video branding' : 'No custom logo selected (text branding only)'}`);
+  if (s.hasProductPhoto) {
+    facts.push('Product Visual Reference: Product photo uploaded by user');
+  }
+  if (hasEvent) {
+    const parts = [
+      ec.name || ec.category,
+      ec.timing || null,
+      ec.creativeInfluence ? `Influence: ${ec.creativeInfluence}` : null,
+    ].filter(Boolean);
+    facts.push(`Occasion & Event: ${parts.join(' · ')}`);
+  } else if (occasion && String(occasion).trim()) {
+    facts.push(`Occasion: ${String(occasion).trim()}`);
+  }
+  if (websiteUrl && String(websiteUrl).trim()) {
+    facts.push(`Website Reference: ${String(websiteUrl).trim()}`);
+  }
+  if (brief && String(brief).trim()) {
+    facts.push('Campaign Brief: Provided by user');
+  }
+  return facts;
+}
+
+/**
+ * Filter out false-positive missing_information entries that refer to details
+ * already supplied in Settings, Brief, or Business Profile.
+ */
+function sanitizeMissingInformation(items, { businessName = '', town = '', occasion = '', settings = {}, cleanBrief = '' } = {}) {
+  if (!Array.isArray(items)) return [];
+  const s = normalizeUnderstandingSettings(settings);
+  const blockedPatterns = [
+    /\b(video\s+)?language\b/i,
+    /\baspect\s+ratio\b|\bdimension(s)?\b|\bformat\s*(ratio|9:16|16:9|1:1)?\b/i,
+    /\b(video\s+)?(duration|length|runtime)\b|\bhow\s+long\b/i,
+    /\bcreative\s+(style|format)\b|\bad\s+(style|format)\b/i,
+    /\b(brand\s+|video\s+)?logo(\s+availability)?\b/i,
+    /\btarget\s+platform\b|\bplatform\s+(selection|choice)\b/i,
+  ];
+  if (businessName && String(businessName).trim()) {
+    blockedPatterns.push(/\bbusiness\s+name\b|\bbrand\s+name\b/i);
+  }
+  if (town && String(town).trim()) {
+    blockedPatterns.push(/\blocation\b|\bcity\b|\btown\b|\baddress\b/i);
+  }
+  if (occasion && String(occasion).trim()) {
+    blockedPatterns.push(/\boccasion\b|\bfestival\b|\bevent\s+context\b/i);
+  }
+  if (cleanBrief && /\b(off|discount|%|rs\.?|₹|\$\d+|price|free|sale)\b/i.test(cleanBrief)) {
+    // Do not claim the offer itself is missing when pricing/discount is already written in the brief
+    blockedPatterns.push(/^missing offer details$/i);
+  }
+
+  return items
+    .map((x) => String(x || '').trim())
+    .filter(Boolean)
+    .filter((entry) => !blockedPatterns.some((rx) => rx.test(entry)));
 }
 
 /**
  * Factory for a clean, schema-compliant empty understanding object.
  */
 function createEmptyUnderstanding(brief = '') {
+  const defaultSettings = normalizeUnderstandingSettings({});
   return {
     business_understanding: '',
     campaign_objective: '',
@@ -107,7 +258,9 @@ function createEmptyUnderstanding(brief = '') {
       dos: [],
       donts: [],
     },
+    has_user_guardrails: false,
     creative_opportunity: '',
+    verified_facts: [],
     assumptions: [],
     missing_information: [],
     approval_status: 'pending',
@@ -115,6 +268,10 @@ function createEmptyUnderstanding(brief = '') {
     source_brief_hash: hashBrief(brief),
     source_guardrails_version: 0,
     source_guardrails_hash: hashGuardrails(null),
+    source_settings: defaultSettings,
+    source_settings_hash: hashSettings(defaultSettings),
+    source_event: null,
+    source_event_hash: hashEventContext(null),
     version: 1,
     is_mock: false,
     generated_at: new Date().toISOString(),
@@ -132,59 +289,113 @@ function generateLabelledMockUnderstanding({
   town = '',
   brief = '',
   occasion = '',
+  websiteUrl = '',
   creativeGuardrails = null,
   guardrailAnalysis = null,
+  settings = null,
+  eventContext = null,
 }) {
   const brandLabel = (businessName || 'Your Business').trim();
   const locationLabel = town ? ` in ${town}` : '';
   const cleanBrief = (brief || '').trim();
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const normSettings = normalizeUnderstandingSettings(settings || {});
+  const normEvent = normalizeEventContext(eventContext);
+  const hasEvent = hasActiveEventContext(normEvent);
+  const effectiveOccasionLabel = hasEvent ? (normEvent.name || normEvent.category) : String(occasion || '').trim();
   const userDos = normGuardrails.dos.map((d) => d.text);
   const userDonts = normGuardrails.donts.map((d) => d.text);
 
+  const hasSpecificTiming =
+    /\b(valid|until|till|weekend|today|this month|ends|limited|diwali|holi|navratri|eid|christmas|new year|summer|monsoon)\b/i.test(cleanBrief) ||
+    Boolean(effectiveOccasionLabel) ||
+    Boolean(normEvent.timing);
+  const hasSpecificOfferOrProduct = /\b(%|off|discount|free|flat|rs|₹|\$|starter|combo|collection|plan|service|book|order|menu)\b/i.test(cleanBrief);
+
+  const missingItems = [];
+  if (!hasSpecificTiming && /\b(discount|offer|sale|off|%)\b/i.test(cleanBrief)) {
+    missingItems.push('Offer validity window is not mentioned — matters for deciding whether to add an urgency deadline on the end-card CTA.');
+  }
+  if (!hasSpecificOfferOrProduct && cleanBrief.length < 40) {
+    missingItems.push('Specific signature product or offer detail is brief — matters so scenes can highlight a concrete hero visual and clear value proposition.');
+  }
+
+  let occasionSummary = `No specific seasonal event or occasion specified; focus cleanly on everyday brand value in a ${normSettings.dimension} format.`;
+  if (hasEvent) {
+    const inf = normEvent.creativeInfluence || 'Subtly';
+    const timingNote = normEvent.timing ? ` (${normEvent.timing})` : '';
+    const noteTail = normEvent.additionalContext ? ` ${normEvent.additionalContext}` : '';
+    occasionSummary =
+      inf === 'Strongly'
+        ? `Anchored strongly around ${effectiveOccasionLabel}${timingNote}, using festive/event energy to elevate the core product offer without inventing unverified event dates or sponsorships.${noteTail}`
+        : inf === 'Reference only'
+        ? `Mentions ${effectiveOccasionLabel}${timingNote} lightly as contextual timing reference only, keeping the main ad narrative focused on the product brief.${noteTail}`
+        : `Interprets ${effectiveOccasionLabel}${timingNote} subtly as warm seasonal backdrop supporting the brand’s core proposition without forcing it as the central premise.${noteTail}`;
+  } else if (effectiveOccasionLabel) {
+    occasionSummary = `Tied to ${effectiveOccasionLabel}, aligning pacing and mood for seasonal relevance.`;
+  }
+
   return {
-    business_understanding: `${brandLabel} operates as a ${businessType.toLowerCase() || 'business'}${locationLabel}, focusing on delivering quality products and services to their local and digital customer base.`,
+    business_understanding: `${brandLabel} operates as a ${businessType.toLowerCase() || 'business'}${locationLabel}, delivering trusted products and services in a ${normSettings.creativeStyle} presentation tailored for ${normSettings.language} viewers.`,
     campaign_objective: cleanBrief
-      ? `Promote the core offer: "${cleanBrief.slice(0, 120)}", driving customer awareness, engagement, and direct footfall/inquiries.`
-      : `Drive immediate customer attention and engagement for ${brandLabel}.`,
-    target_audience: `Consumers seeking trustworthy ${businessType.toLowerCase() || 'offerings'}${locationLabel} who value authentic quality, clear pricing, and reliable service.`,
+      ? `Promote the core offer: "${cleanBrief.slice(0, 120)}" in a ${normSettings.duration} (${normSettings.dimension}) ${normSettings.creativeStyle} ad, driving immediate viewer interest and inquiries.`
+      : `Drive customer attention and inquiries for ${brandLabel} in a ${normSettings.duration} (${normSettings.dimension}) format.`,
+    target_audience: `${normSettings.language}-speaking consumers seeking trustworthy ${businessType.toLowerCase() || 'offerings'}${locationLabel} who respond to authentic ${normSettings.creativeStyle} storytelling.`,
     core_communication: cleanBrief
-      ? `Highlight: "${cleanBrief.slice(0, 100)}" as the compelling, timely reason to choose ${brandLabel}.`
+      ? `Highlight: "${cleanBrief.slice(0, 100)}" as the primary, actionable reason to choose ${brandLabel}.`
       : `Position ${brandLabel} as the preferred, trusted destination.`,
-    occasion_context: occasion
-      ? `Tied to ${occasion}, leveraging seasonal shopping energy and celebration context.`
-      : `Standard promotional timing with immediate call-to-action relevance.`,
+    occasion_context: occasionSummary,
     creative_guardrails: {
       dos: userDos.length > 0
         ? userDos
         : [
             `Explicitly state ${brandLabel}'s name and core value proposition.`,
-            'Keep messaging crisp, energetic, and relatable.',
-            'Include a clear call-to-action inviting viewers to visit or inquire.',
+            `Structure pacing tightly for a ${normSettings.duration} ${normSettings.creativeStyle} cut.`,
+            normSettings.hasLogo
+              ? 'Feature the provided brand logo cleanly in the closing frame.'
+              : 'Include a clear on-screen brand name and call-to-action.',
           ],
       donts: userDonts.length > 0
         ? userDonts
         : [
             'Avoid making unverified statistical or medical claims.',
-            'Do not overcomplicate the narrative or distract from the main offer.',
+            `Do not overcrowd dialogue beyond what fits comfortably in ${normSettings.duration}.`,
             'Avoid vague pricing statements without context.',
           ],
     },
     guardrail_analysis: guardrailAnalysis || null,
-    creative_opportunity: `Leverage relatable everyday moments that resonate emotionally while showcasing the direct benefits of choosing ${brandLabel}.`,
+    has_user_guardrails: Boolean(hasActiveGuardrails(normGuardrails)),
+    creative_opportunity: `Use a ${normSettings.duration} ${normSettings.creativeStyle} visual arc framed for ${normSettings.dimension} in ${normSettings.language}, grounded in everyday relatable moments for ${brandLabel}.`,
+    verified_facts: buildVerifiedFacts({
+      businessName,
+      businessType,
+      town,
+      websiteUrl,
+      occasion,
+      eventContext: hasEvent ? normEvent : null,
+      brief: cleanBrief,
+      settings: normSettings,
+    }),
     assumptions: [
-      `Assumed ${brandLabel} serves standard retail/consumer needs in its category.`,
-      'Assumed current promotional window allows immediate booking/visiting.',
+      `Inferred that ${brandLabel} serves standard retail/consumer needs in its category (not explicitly detailed in brief).`,
+      `Inferred that visual scenes can follow standard ${normSettings.creativeStyle} tropes in ${normSettings.language}.`,
     ],
-    missing_information: [
-      'Specific promotional expiry dates (if time-sensitive discount applies).',
-      'Target price point or specific bundle details if applicable.',
-    ],
+    missing_information: sanitizeMissingInformation(missingItems, {
+      businessName,
+      town,
+      occasion: effectiveOccasionLabel,
+      settings: normSettings,
+      cleanBrief,
+    }),
     approval_status: 'pending',
     source_brief: cleanBrief,
     source_brief_hash: hashBrief(cleanBrief),
     source_guardrails_version: normGuardrails.version || 0,
     source_guardrails_hash: hashGuardrails(normGuardrails),
+    source_settings: normSettings,
+    source_settings_hash: hashSettings(normSettings),
+    source_event: hasEvent ? normEvent : null,
+    source_event_hash: hashEventContext(hasEvent ? normEvent : null),
     version: 1,
     is_mock: true, // Clearly labelled mock data
     spine_provider: 'mock_understanding_fallback',
@@ -198,15 +409,17 @@ function generateLabelledMockUnderstanding({
 // Owned by AI Intelligence team. Will be replaced by dedicated Spine.
 // =========================================================================
 const TEMPORARY_SPINE_SYSTEM_PROMPT = `You are the CleverCut AI Understanding Spine, a creative strategy intelligence engine.
-Analyze the user's submitted creative brief, business profile, and campaign parameters.
-Structure the information into a rigorous, professional creative understanding before Creative Idea Generation.
+Analyze the user's submitted creative brief, business profile, Creative Guardrails, AND confirmed production settings (language, video dimension/aspect ratio, video duration, creative format/style, logo availability).
+Structure the complete campaign context into a rigorous, professional creative understanding before Creative Idea Generation.
 
 Strict Guidelines:
-1. Do not fabricate business facts, product benefits, statistics, or customer claims not supported by the brief.
-2. Clearly distinguish confirmed facts from assumptions.
-3. Identify genuine missing information where user confirmation would improve outputs.
-4. Preserve original instructions, tone restrictions, and brand guardrails.
-5. Return ONLY a valid JSON object matching the required schema below. No markdown fences, no conversational preambles.
+1. Do not fabricate business facts, product benefits, customer claims, or invent settings/production preferences not supplied by the user.
+2. Clearly distinguish verified user-provided facts (from Brief, Business Profile, and Production Settings) from AI inferences ("assumptions").
+3. NEVER mark information as missing if it is already available in the Brief, Production Settings (language, aspect ratio/dimension, video length/duration, creative format/style, logo availability), saved project, or business profile.
+4. Distinguish genuinely missing critical information from optional details that are unnecessary — do not treat optional fields (e.g., website or optional logo) as mandatory or missing.
+5. Whenever an entry is listed in "missing_information", explain WHY it matters for making an accurate ad rather than listing a bare label. If the Brief, Settings, and Profile give enough context to generate strong ideas, return an empty array [] for "missing_information".
+6. Preserve original instructions, tone restrictions, and brand guardrails verbatim.
+7. Return ONLY a valid JSON object matching the required schema below. No markdown fences, no conversational preambles.
 
 Required JSON Structure:
 {
@@ -237,8 +450,14 @@ function buildTemporarySpineUserPrompt({
   previousUnderstanding,
   creativeGuardrails,
   guardrailAnalysis,
+  settings,
+  eventContext,
 }) {
   const norm = normalizeCreativeGuardrails(creativeGuardrails);
+  const s = normalizeUnderstandingSettings(settings || { language });
+  const ec = normalizeEventContext(eventContext);
+  const hasEvent = hasActiveEventContext(ec);
+  const eventBlock = hasEvent ? `\n\n${formatEventPromptBlock(ec)}` : '';
   const hasG = hasActiveGuardrails(norm);
   const gText = hasG
     ? `\nUser-Defined Creative Guardrails (Must preserve intent cleanly):\nMust Follow (Do's): ${norm.dos.map((d) => `[${d.priority}] ${d.text}`).join(' | ') || 'None'}\nMust Avoid (Don'ts): ${norm.donts.map((d) => `[${d.priority}] ${d.text}`).join(' | ') || 'None'}`
@@ -247,22 +466,31 @@ function buildTemporarySpineUserPrompt({
     ? `\nDetected Guardrail Conflicts: ${guardrailAnalysis.conflicts.map((c) => c.description).join(' | ')}`
     : '';
 
-  return `Analyze this brief and produce the structured understanding:
+  return `Analyze this complete campaign context and produce the structured understanding:
 
+=== VERIFIED BUSINESS PROFILE ===
 Business Name: ${businessName || 'Not specified'}
 Business Category: ${businessType || 'General Retail'}
 Location: ${town || 'Not specified'}
-Website: ${websiteUrl || 'None'}
-Language: ${language}
-Brand Tone: ${brandTone}
-Occasion Context: ${occasion || 'Standard'}
-Original Brief:
+Website (optional): ${websiteUrl || 'Not provided (optional)'}
+Brand Tone: ${brandTone}${(!hasEvent && occasion) ? `\nOccasion Context (optional): ${occasion}` : ''}
+
+=== VERIFIED PRODUCTION SETTINGS (ALREADY CONFIRMED — DO NOT FLAG AS MISSING) ===
+Selected Language: ${s.language}
+Video Dimension / Aspect Ratio: ${s.dimension}
+Video Duration: ${s.duration}
+Creative Style / Format: ${s.creativeStyle}
+Brand Logo Availability: ${s.hasLogo ? 'Brand logo provided' : 'No custom logo selected (use brand name typography)'}
+Product Visual Reference: ${s.hasProductPhoto ? 'Product reference image provided' : 'None uploaded (optional)'}
+
+=== ORIGINAL CREATIVE BRIEF ===
 """
 ${cleanBrief}
-"""${gText}${conflictText}
+"""${eventBlock}${gText}${conflictText}
 ${userCorrections ? `User corrections / refinement notes for this regeneration:\n"""\n${userCorrections}\n"""` : ''}
 ${previousUnderstanding ? `Previous interpretation was:\n${JSON.stringify(previousUnderstanding, null, 2)}` : ''}
 
+Important: If no Occasion & Event context was supplied above, do NOT invent an event or festival — set occasion_context cleanly as general promotional timing. Never invent event dates, fixtures, results, or sponsorships.
 Output ONLY the JSON object.`;
 }
 
@@ -279,6 +507,22 @@ async function generateAiUnderstanding({
   brandTone = 'Warm & Authentic',
   occasion = '',
   websiteUrl = '',
+  creativeStyle = 'UGC / Creator-style',
+  format = '',
+  dimension = '',
+  aspectRatio = '',
+  duration = '',
+  targetDuration = '',
+  platform = '',
+  hasLogo = false,
+  videoLogo = null,
+  brandLogo = null,
+  logoDataUrl = null,
+  logo = null,
+  hasProductPhoto = false,
+  productPhoto = null,
+  settings = null,
+  eventContext = null,
   userCorrections = '',
   previousUnderstanding = null,
   creativeGuardrails = null,
@@ -291,6 +535,24 @@ async function generateAiUnderstanding({
   const isProduction = process.env.NODE_ENV === 'production';
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
+  const normEvent = normalizeEventContext(eventContext);
+  const hasEvent = hasActiveEventContext(normEvent);
+  const normSettings = normalizeUnderstandingSettings(
+    settings || {
+      language,
+      creativeStyle: creativeStyle || format,
+      dimension: dimension || aspectRatio,
+      duration: duration || targetDuration,
+      platform,
+      hasLogo,
+      videoLogo,
+      brandLogo,
+      logoDataUrl,
+      logo,
+      hasProductPhoto,
+      productPhoto,
+    }
+  );
 
   // Interpret Creative Guardrails through Shubhiksha's modular Guardrails Spine adapter
   let guardrailAnalysis = null;
@@ -301,7 +563,7 @@ async function generateAiUnderstanding({
       businessType,
       town,
       brief: cleanBrief,
-      language,
+      language: normSettings.language,
     });
   }
 
@@ -316,8 +578,11 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      websiteUrl,
       creativeGuardrails: normGuardrails,
       guardrailAnalysis,
+      settings: normSettings,
+      eventContext: hasEvent ? normEvent : null,
     });
     if (userCorrections && previousUnderstanding) {
       mock.version = (previousUnderstanding.version || 1) + 1;
@@ -336,8 +601,11 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      websiteUrl,
       creativeGuardrails: normGuardrails,
       guardrailAnalysis,
+      settings: normSettings,
+      eventContext: hasEvent ? normEvent : null,
     });
     return mock;
   }
@@ -348,7 +616,7 @@ async function generateAiUnderstanding({
     businessType,
     town,
     websiteUrl,
-    language,
+    language: normSettings.language,
     brandTone,
     occasion,
     cleanBrief,
@@ -356,6 +624,8 @@ async function generateAiUnderstanding({
     previousUnderstanding,
     creativeGuardrails: normGuardrails,
     guardrailAnalysis,
+    settings: normSettings,
+    eventContext: hasEvent ? normEvent : null,
   });
 
   try {
@@ -393,14 +663,32 @@ async function generateAiUnderstanding({
         donts: mergedDonts,
       },
       guardrail_analysis: guardrailAnalysis || null,
+      has_user_guardrails: Boolean(hasActiveGuardrails(normGuardrails)),
       creative_opportunity: String(parsed.creative_opportunity || '').trim(),
+      verified_facts: buildVerifiedFacts({
+        businessName,
+        businessType,
+        town,
+        websiteUrl,
+        occasion,
+        eventContext: hasEvent ? normEvent : null,
+        brief: cleanBrief,
+        settings: normSettings,
+      }),
       assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions : [],
-      missing_information: Array.isArray(parsed.missing_information) ? parsed.missing_information : [],
+      missing_information: sanitizeMissingInformation(
+        Array.isArray(parsed.missing_information) ? parsed.missing_information : [],
+        { businessName, town, occasion: hasEvent ? (normEvent.name || normEvent.category) : occasion, settings: normSettings, cleanBrief }
+      ),
       approval_status: 'pending',
       source_brief: cleanBrief,
       source_brief_hash: hashBrief(cleanBrief),
       source_guardrails_version: normGuardrails.version || 0,
       source_guardrails_hash: hashGuardrails(normGuardrails),
+      source_settings: normSettings,
+      source_settings_hash: hashSettings(normSettings),
+      source_event: hasEvent ? normEvent : null,
+      source_event_hash: hashEventContext(hasEvent ? normEvent : null),
       version,
       is_mock: false,
       spine_provider: 'anthropic_claude',
@@ -422,8 +710,11 @@ async function generateAiUnderstanding({
       town,
       brief: cleanBrief,
       occasion,
+      websiteUrl,
       creativeGuardrails: normGuardrails,
       guardrailAnalysis,
+      settings: normSettings,
+      eventContext: hasEvent ? normEvent : null,
     });
     fallback.error_fallback = err.message;
     return fallback;
@@ -434,8 +725,12 @@ module.exports = {
   generateAiUnderstanding,
   validateUnderstandingSchema,
   createEmptyUnderstanding,
+  normalizeUnderstandingSettings,
   hashBrief,
+  hashSettings,
   isUnderstandingOutdated,
+  sanitizeMissingInformation,
+  buildVerifiedFacts,
   VALID_APPROVAL_STATUSES,
   TEMPORARY_SPINE_SYSTEM_PROMPT,
 };

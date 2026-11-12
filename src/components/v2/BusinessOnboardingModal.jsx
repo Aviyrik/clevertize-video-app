@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Building2,
@@ -299,6 +299,11 @@ export default function BusinessOnboardingModal({
   const [nameError, setNameError] = useState(false);
   const [townError, setTownError] = useState(false);
   const [categoryError, setCategoryError] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  const previousFocusRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const townInputRef = useRef(null);
 
   const selectedCategoryCard =
     CATEGORY_CARDS.find((c) => c.label === businessType) || CATEGORY_CARDS[0];
@@ -306,7 +311,12 @@ export default function BusinessOnboardingModal({
 
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = typeof document !== 'undefined' ? document.activeElement : null;
       setStep(1);
+      setShowDiscardConfirm(false);
+    } else if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+      try { previousFocusRef.current.focus(); } catch {}
+      previousFocusRef.current = null;
     }
   }, [isOpen]);
 
@@ -335,7 +345,52 @@ export default function BusinessOnboardingModal({
     }
   }, [isOpen, initialData]);
 
+  const hasUnsavedChanges = Boolean(
+    isOpen && (
+      step > 1 ||
+      businessName.trim() !== initialBusinessName ||
+      businessType !== (initialData.businessType || initialData.category || '') ||
+      town.trim() !== String(initialData.town || '').trim() ||
+      websiteUrl.trim() !== String(initialData.websiteUrl || '').trim() ||
+      brandTone !== (initialData.brandTone || 'Warm & Authentic') ||
+      brandLogo !== (initialData.brandLogo || initialData.logo || null)
+    )
+  );
+
+  const handleRequestClose = () => {
+    if (hasUnsavedChanges && !showDiscardConfirm) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    setShowDiscardConfirm(false);
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showDiscardConfirm) {
+          setShowDiscardConfirm(false);
+        } else {
+          handleRequestClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, showDiscardConfirm, hasUnsavedChanges]);
+
   if (!isOpen) return null;
+
+  const STEP_META = [
+    { num: 1, short: 'Identity', title: 'Business Identity', req: 'Required: Name & Category' },
+    { num: 2, short: 'Location', title: 'Location & Online Presence', req: 'Required: City / Town' },
+    { num: 3, short: 'Voice', title: 'Brand Voice & Personality', req: 'Optional preferences' },
+    { num: 4, short: 'Confirm', title: 'Confirm & Save', req: 'Review & save' },
+  ];
+  const activeStepMeta = STEP_META[step - 1] || STEP_META[0];
 
   const validateStep = (currentStep) => {
     if (currentStep === 1) {
@@ -343,6 +398,7 @@ export default function BusinessOnboardingModal({
       if (!businessName.trim()) {
         setNameError(true);
         valid = false;
+        if (nameInputRef.current) nameInputRef.current.focus();
       } else {
         setNameError(false);
       }
@@ -357,6 +413,7 @@ export default function BusinessOnboardingModal({
     if (currentStep === 2) {
       if (!town.trim()) {
         setTownError(true);
+        if (townInputRef.current) townInputRef.current.focus();
         return false;
       }
       setTownError(false);
@@ -400,6 +457,9 @@ export default function BusinessOnboardingModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="business-onboarding-step-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -428,9 +488,9 @@ export default function BusinessOnboardingModal({
         }}
       >
         {/* Progress Bar Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span
                 style={{
                   fontSize: 11,
@@ -445,17 +505,20 @@ export default function BusinessOnboardingModal({
               >
                 Step {step} of 4
               </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span id="business-onboarding-step-title" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                 {step === 1 && 'Business Identity'}
                 {step === 2 && 'Location & Online Presence'}
                 {step === 3 && 'Brand Voice & Personality'}
                 {step === 4 && 'Confirm & Save'}
               </span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                · {activeStepMeta.req}
+              </span>
             </div>
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleRequestClose}
               title="Close"
               aria-label="Close setup modal"
               style={{
@@ -474,21 +537,110 @@ export default function BusinessOnboardingModal({
             </button>
           </div>
 
-          {/* Stepper Dots / Bars */}
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[1, 2, 3, 4].map((s) => (
-              <div
-                key={s}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: s <= step ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                  transition: 'background-color 0.2s',
-                }}
-              />
-            ))}
+          {/* Semantic 4-Step Progress Indicator (text + status icons, not color alone) */}
+          <div
+            role="progressbar"
+            aria-label="Business setup progress"
+            aria-valuemin={1}
+            aria-valuemax={4}
+            aria-valuenow={step}
+            aria-valuetext={`Step ${step} of 4: ${activeStepMeta.title}`}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}
+          >
+            {STEP_META.map((item) => {
+              const isDone = item.num < step;
+              const isCurrent = item.num === step;
+              return (
+                <div key={item.num} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: isDone || isCurrent ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                      opacity: isDone ? 0.65 : 1,
+                      transition: 'background-color 0.2s',
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: isCurrent ? 700 : 500,
+                      color: isCurrent ? 'var(--accent-primary)' : isDone ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {isDone && <Check size={10} strokeWidth={3} aria-hidden="true" />}
+                    <span>{item.num}. {item.short}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {showDiscardConfirm && (
+            <div
+              role="alertdialog"
+              aria-label="Confirm discarding unsaved business setup"
+              style={{
+                marginTop: 12,
+                padding: '9px 12px',
+                borderRadius: 8,
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                You have unsaved business setup details. Discard changes?
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDiscardConfirm(false)}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Keep Editing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDiscardConfirm(false);
+                    onClose();
+                  }}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    backgroundColor: '#EF4444',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Discard &amp; Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 1: Business Identity */}
@@ -510,7 +662,7 @@ export default function BusinessOnboardingModal({
                 Tell us about your business
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                CleverCut uses your brand identity to write high-converting commercial scripts tailored to your market.
+                Add your brand name, optional logo, and category.
               </p>
             </div>
 
@@ -612,12 +764,17 @@ export default function BusinessOnboardingModal({
 
               {/* Business Name Input */}
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                <label htmlFor="onboarding-business-name" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
                   Business or Brand Name <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <input
+                  id="onboarding-business-name"
+                  ref={nameInputRef}
                   type="text"
                   autoFocus
+                  aria-required="true"
+                  aria-invalid={nameError}
+                  aria-describedby={nameError ? 'onboarding-name-error' : undefined}
                   value={businessName}
                   onChange={(e) => {
                     setBusinessName(e.target.value);
@@ -640,8 +797,8 @@ export default function BusinessOnboardingModal({
                   }}
                 />
                 {nameError && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
-                    <AlertCircle size={13} />
+                  <div id="onboarding-name-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                    <AlertCircle size={13} aria-hidden="true" />
                     <span>Please enter your business or brand name.</span>
                   </div>
                 )}
@@ -649,20 +806,19 @@ export default function BusinessOnboardingModal({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ marginBottom: 8 }}>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
                   Business Category <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  Pick your business category to guide industry scripts
-                </span>
               </div>
 
               {/* Category Cards Grid */}
               <div
+                role="group"
+                aria-label="Business Category"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))',
                   gap: 10,
                   maxHeight: 330,
                   overflowY: 'auto',
@@ -677,6 +833,7 @@ export default function BusinessOnboardingModal({
                     <button
                       key={cat.id}
                       type="button"
+                      aria-pressed={isSelected}
                       onClick={() => {
                         setBusinessType(cat.label);
                         if (categoryError) setCategoryError(false);
@@ -849,8 +1006,8 @@ export default function BusinessOnboardingModal({
 
               {/* Category Validation Error */}
               {categoryError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 10 }}>
-                  <AlertCircle size={13} />
+                <div id="onboarding-category-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 10 }}>
+                  <AlertCircle size={13} aria-hidden="true" />
                   <span>Please select a business category to guide your video scripts.</span>
                 </div>
               )}
@@ -877,17 +1034,22 @@ export default function BusinessOnboardingModal({
                 Where is your business located?
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Local references and town slang make your video ads authentic and relatable to local shoppers.
+                Used for local references and store context.
               </p>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+              <label htmlFor="onboarding-town" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
                 City or Town <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
+                id="onboarding-town"
+                ref={townInputRef}
                 type="text"
                 autoFocus
+                aria-required="true"
+                aria-invalid={townError}
+                aria-describedby={townError ? 'onboarding-town-error' : undefined}
                 value={town}
                 onChange={(e) => {
                   setTown(e.target.value);
@@ -910,18 +1072,19 @@ export default function BusinessOnboardingModal({
                 }}
               />
               {townError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
-                  <AlertCircle size={13} />
+                <div id="onboarding-town-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EF4444', fontSize: 12, marginTop: 5 }}>
+                  <AlertCircle size={13} aria-hidden="true" />
                   <span>Please enter your city or town so we can localize your video scripts.</span>
                 </div>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              <label htmlFor="onboarding-website" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
                 Website or Social Link (Optional)
               </label>
               <input
+                id="onboarding-website"
                 type="text"
                 value={websiteUrl}
                 onChange={(e) => setWebsiteUrl(e.target.value)}
@@ -961,7 +1124,7 @@ export default function BusinessOnboardingModal({
                 Brand Voice & Personality
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Define the personality and visual style of your brand for your video ads.
+                Choose your brand tone and optional logo.
               </p>
             </div>
 
@@ -969,13 +1132,15 @@ export default function BusinessOnboardingModal({
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Brand Tone
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div role="group" aria-label="Brand Tone" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(210px, 100%), 1fr))', gap: 10 }}>
                 {BRAND_TONES.map((t) => {
                   const isSelected = brandTone === t.label;
                   const Icon = t.icon;
                   return (
-                    <div
+                    <button
                       key={t.id}
+                      type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setBrandTone(t.label)}
                       style={{
                         padding: '12px 14px',
@@ -987,9 +1152,11 @@ export default function BusinessOnboardingModal({
                         display: 'flex',
                         gap: 12,
                         alignItems: 'center',
+                        textAlign: 'left',
                       }}
                     >
                       <div
+                        aria-hidden="true"
                         style={{
                           width: 36,
                           height: 36,
@@ -1017,13 +1184,13 @@ export default function BusinessOnboardingModal({
                           }}
                         >
                           <span>{t.label}</span>
-                          {isSelected && <Check size={13} strokeWidth={2.5} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />}
+                          {isSelected && <Check size={13} strokeWidth={2.5} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.3 }}>
                           {t.desc}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1213,7 +1380,7 @@ export default function BusinessOnboardingModal({
                 Your Brand Profile is Ready!
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, maxWidth: 420, margin: '0 auto', lineHeight: 1.5 }}>
-                Save your business profile to start creating video ads anytime.
+                Save your profile to start creating videos.
               </p>
             </div>
 
@@ -1353,8 +1520,8 @@ export default function BusinessOnboardingModal({
                 boxShadow: '0 2px 10px var(--accent-glow)',
               }}
             >
-              <span>Next</span>
-              <ArrowRight size={14} />
+              <span>Continue</span>
+              <ArrowRight size={14} aria-hidden="true" />
             </button>
           )}
 

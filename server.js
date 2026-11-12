@@ -22,6 +22,7 @@ const emailService = require("./engine/email");
 const understandingSpine = require("./engine/understandingSpine");
 const guardrails = require("./engine/guardrails");
 const guardrailsSpine = require("./engine/guardrailsSpine");
+const eventContextUtil = require("./engine/eventContext");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -999,10 +1000,26 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       brandTone,
       occasion,
       websiteUrl,
+      creativeStyle,
+      format,
+      dimension,
+      aspectRatio,
+      duration,
+      targetDuration,
+      platform,
+      hasLogo,
+      videoLogo,
+      brandLogo,
+      logoDataUrl,
+      logo,
+      hasProductPhoto,
+      productPhoto,
+      settings: bodySettings,
       projectId,
       userCorrections,
       previousUnderstanding,
       creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
     } = req.body || {};
 
     if (!brief || !String(brief).trim()) {
@@ -1022,15 +1039,39 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
       : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
 
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, existingProject?.eventContext)
+      : eventContextUtil.normalizeEventContext(existingProject?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
+
+    const savedProjSettings = (existingProject && existingProject.creativeDNA && existingProject.creativeDNA.productionSettings) || {};
+    const mergedSettings = understandingSpine.normalizeUnderstandingSettings({
+      ...savedProjSettings,
+      ...(bodySettings && typeof bodySettings === "object" ? bodySettings : {}),
+      ...(language !== undefined ? { language } : {}),
+      ...(creativeStyle !== undefined || format !== undefined ? { creativeStyle: creativeStyle || format } : {}),
+      ...(dimension !== undefined || aspectRatio !== undefined ? { dimension: dimension || aspectRatio } : {}),
+      ...(duration !== undefined || targetDuration !== undefined ? { duration: duration || targetDuration } : {}),
+      ...(platform !== undefined ? { platform } : {}),
+      ...(hasLogo !== undefined || videoLogo !== undefined || brandLogo !== undefined || logoDataUrl !== undefined || logo !== undefined
+        ? { hasLogo: Boolean(hasLogo || videoLogo || brandLogo || logoDataUrl || logo) }
+        : {}),
+      ...(hasProductPhoto !== undefined || productPhoto !== undefined
+        ? { hasProductPhoto: Boolean(hasProductPhoto || productPhoto) }
+        : {}),
+    });
+
     const understanding = await understandingSpine.generateAiUnderstanding({
       businessName,
       businessType,
       town,
       brief: String(brief).trim(),
-      language: language || "English",
+      language: mergedSettings.language,
       brandTone: brandTone || "Warm & Authentic",
       occasion,
       websiteUrl,
+      settings: mergedSettings,
+      eventContext: hasEvent ? activeEventContext : null,
       userCorrections,
       previousUnderstanding,
       creativeGuardrails: activeGuardrails,
@@ -1041,9 +1082,14 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
         await db.saveProject(
           {
             ...existingProject,
+            brief: String(brief).trim(),
+            language: mergedSettings.language,
+            creativeStyle: mergedSettings.creativeStyle,
+            productionSettings: understanding.source_settings,
             creativeGuardrails: guardrails.hasActiveGuardrails(activeGuardrails) || bodyGuardrails !== undefined
               ? activeGuardrails
               : existingProject.creativeGuardrails,
+            eventContext: hasEvent ? activeEventContext : null,
             aiUnderstanding: understanding,
           },
           req.user.id
@@ -1053,7 +1099,13 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       }
     }
 
-    res.json({ ok: true, status: "success", understanding, creativeGuardrails: activeGuardrails });
+    res.json({
+      ok: true,
+      status: "success",
+      understanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
+    });
   } catch (err) {
     console.error("[api/creative/ai-understanding]", err.message);
     res.status(err.status || 500).json({ error: err.message || "Failed to generate AI Understanding." });
@@ -1072,6 +1124,19 @@ app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, r
     const existing = await db.getProjectById(projectId, req.user.id);
     if (!existing) {
       return res.status(404).json({ error: "Project not found or not owned by user." });
+    }
+
+    if (approvalStatus === "approved") {
+      const activeBrief = existing.brief || understanding.source_brief || "";
+      const activeGuardrails = existing.creativeGuardrails || null;
+      const activeSettings = (existing.creativeDNA && existing.creativeDNA.productionSettings) || null;
+      const activeEvent = existing.eventContext || null;
+      if (understandingSpine.isUnderstandingOutdated(understanding, activeBrief, activeGuardrails, activeSettings, activeEvent)) {
+        return res.status(409).json({
+          error: "Cannot approve outdated AI Understanding. Please regenerate with your latest brief, guardrails, event context, and settings.",
+          code: "UNDERSTANDING_OUTDATED",
+        });
+      }
     }
 
     const updated = {
@@ -1124,14 +1189,24 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       format,
       creativeStyle,
       language,
+      dimension,
+      aspectRatio,
+      duration,
+      targetDuration,
+      hasLogo,
+      videoLogo,
+      brandLogo,
+      logoDataUrl,
       brandTone,
       projectId,
       aiUnderstanding: clientSuppliedUnderstanding,
       creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
     } = req.body || {};
 
     let verifiedUnderstanding = null;
     let activeGuardrails = null;
+    let activeEventContext = null;
 
     // Point 3: Backend checks saved approval status and project ownership before allowing Creative Idea Generation
     // Do NOT trust client-supplied aiUnderstanding as proof of approval
@@ -1141,16 +1216,36 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
         return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
       }
       activeGuardrails = guardrails.normalizeCreativeGuardrails(project.creativeGuardrails);
+      activeEventContext = bodyEventContext !== undefined
+        ? eventContextUtil.normalizeEventContext(bodyEventContext, project.eventContext)
+        : eventContextUtil.normalizeEventContext(project.eventContext);
       const saved = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
       if (saved) {
         const currentBrief = brief || project.brief || "";
+        const fallbackSettings = (project.creativeDNA && project.creativeDNA.productionSettings) || saved.source_settings || {};
+        const activeSettings = understandingSpine.normalizeUnderstandingSettings({
+          ...fallbackSettings,
+          ...(language !== undefined ? { language } : {}),
+          ...(format !== undefined || creativeStyle !== undefined ? { creativeStyle: format || creativeStyle } : {}),
+          ...(dimension !== undefined || aspectRatio !== undefined ? { dimension: dimension || aspectRatio } : {}),
+          ...(duration !== undefined || targetDuration !== undefined ? { duration: duration || targetDuration } : {}),
+          ...(hasLogo !== undefined || videoLogo !== undefined || brandLogo !== undefined || logoDataUrl !== undefined
+            ? { hasLogo: Boolean(hasLogo || videoLogo || brandLogo || logoDataUrl) }
+            : {}),
+        });
         const isOutdated =
           understandingSpine.isUnderstandingOutdated(saved, currentBrief) ||
-          understandingSpine.isUnderstandingOutdated(saved, currentBrief, activeGuardrails);
+          understandingSpine.isUnderstandingOutdated(
+            saved,
+            currentBrief,
+            activeGuardrails,
+            activeSettings,
+            eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null
+          );
         if (isOutdated || saved.approval_status === "outdated") {
-          console.warn("[directions] Project understanding is outdated compared to active brief/guardrails");
+          console.warn("[directions] Project understanding is outdated compared to active brief, guardrails, event, or settings");
           return res.status(409).json({
-            error: "AI Understanding is outdated because your brief or creative guardrails changed. Please review and re-approve before generating ideas.",
+            error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating ideas.",
             code: "UNDERSTANDING_OUTDATED",
           });
         }
@@ -1165,6 +1260,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       }
     } else {
       activeGuardrails = guardrails.normalizeCreativeGuardrails(bodyGuardrails);
+      activeEventContext = eventContextUtil.normalizeEventContext(bodyEventContext);
     }
 
     // Point 2: Ensure mock understanding data can never be used in production
@@ -1184,6 +1280,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       brandTone,
       aiUnderstanding: verifiedUnderstanding,
       creativeGuardrails: activeGuardrails,
+      eventContext: eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1195,12 +1292,18 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,
       userId: req.user.id,
       fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
     });
     const result = await creative.generateHooks({
       businessName,
@@ -1211,6 +1314,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1222,12 +1326,18 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
 // 4) Plot Generation
 app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,
       userId: req.user.id,
       fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
     });
     const result = await creative.generatePlots({
       businessName,
@@ -1239,6 +1349,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       language: language || "English",
       brandTone,
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1250,12 +1361,18 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,
       userId: req.user.id,
       fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
     });
     const result = await creative.generateStoryWorld({
       businessName,
@@ -1269,6 +1386,7 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       language: language || "English",
       brandTone,
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1280,7 +1398,7 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
 // 6) Master Script Synthesis & Quality Gate
 app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
   try {
-    const { form, creativeDNA, constraints, avoid, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { form, creativeDNA, constraints, avoid, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
     const validated = validateForm(form);
     const { guardrails: activeGuardrails, project } = await guardrails.resolveProjectGuardrails({
@@ -1291,16 +1409,23 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
       constraints,
       avoid,
     });
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, project?.eventContext)
+      : eventContextUtil.normalizeEventContext(project?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
 
     if (project && project.aiUnderstanding) {
+      const savedSettings = (project.creativeDNA && project.creativeDNA.productionSettings) || null;
       const isOutdated = understandingSpine.isUnderstandingOutdated(
         project.aiUnderstanding,
         validated.brief || project.brief || "",
-        activeGuardrails
+        activeGuardrails,
+        savedSettings,
+        hasEvent ? activeEventContext : null
       );
       if (isOutdated || project.aiUnderstanding.approval_status === "outdated") {
         return res.status(409).json({
-          error: "AI Understanding is outdated because your brief or creative guardrails changed. Please review and re-approve before generating script.",
+          error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating script.",
           code: "UNDERSTANDING_OUTDATED",
         });
       }
@@ -1318,6 +1443,7 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
       constraints: constraints || [],
       avoid: avoid || [],
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1329,13 +1455,19 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,
       userId: req.user.id,
       fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
     });
     const rewritten = await creative.rewriteScene({
       sceneText,
@@ -1347,6 +1479,7 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       setting,
       brandTone: brandTone || form?.brandTone,
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     const guardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
       ? guardrails.validateOutputAgainstGuardrails({
@@ -1384,6 +1517,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       projectId,
       aiUnderstanding: incomingUnderstanding,
       creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
     } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
@@ -1405,10 +1539,29 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
       : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
 
-    // Simple Mode: AI Understanding executes internally on the backend and silently refreshes when brief or guardrails change
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, existingProject?.eventContext)
+      : eventContextUtil.normalizeEventContext(existingProject?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
+
+    const simpleSettings = understandingSpine.normalizeUnderstandingSettings({
+      language: language || "English",
+      creativeStyle: creativeStyle || "UGC / Creator-style",
+      dimension: aspectRatio || dimension || "9:16",
+      duration: duration || "20s",
+      hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
+    });
+
+    // Simple Mode: AI Understanding executes internally on the backend and silently refreshes when brief, guardrails, event, or settings change
     let internalUnderstanding = (existingProject && existingProject.aiUnderstanding) || incomingUnderstanding || null;
     const understandingIsStale = internalUnderstanding
-      ? understandingSpine.isUnderstandingOutdated(internalUnderstanding, brief.trim(), activeGuardrails)
+      ? understandingSpine.isUnderstandingOutdated(
+          internalUnderstanding,
+          brief.trim(),
+          activeGuardrails,
+          simpleSettings,
+          hasEvent ? activeEventContext : null
+        )
       : true;
 
     if (!internalUnderstanding || understandingIsStale) {
@@ -1418,8 +1571,10 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
           businessType: businessType || "Local Business",
           town: town || "",
           brief: brief.trim(),
-          language: language || "English",
+          language: simpleSettings.language,
           brandTone: brandTone || "Warm & Authentic",
+          settings: simpleSettings,
+          eventContext: hasEvent ? activeEventContext : null,
           creativeGuardrails: activeGuardrails,
         });
         // Point 4: Use distinct internal status 'auto_approved' rather than explicit user approval 'approved'
@@ -1442,13 +1597,17 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     }
 
     // Save internally against the project if projectId provided
-    if (projectId && existingProject && (internalUnderstanding || bodyGuardrails !== undefined)) {
+    if (projectId && existingProject && (internalUnderstanding || bodyGuardrails !== undefined || bodyEventContext !== undefined)) {
       try {
         await db.saveProject(
           {
             ...existingProject,
             brief: brief.trim(),
+            language: simpleSettings.language,
+            creativeStyle: simpleSettings.creativeStyle,
+            productionSettings: simpleSettings,
             creativeGuardrails: activeGuardrails,
+            eventContext: hasEvent ? activeEventContext : null,
             aiUnderstanding: internalUnderstanding || existingProject.aiUnderstanding,
           },
           req.user.id
@@ -1472,8 +1631,15 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
       aiUnderstanding: internalUnderstanding,
       creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json({ status: "success", packages, aiUnderstanding: internalUnderstanding, creativeGuardrails: activeGuardrails });
+    res.json({
+      status: "success",
+      packages,
+      aiUnderstanding: internalUnderstanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
+    });
   } catch (e) {
     console.error("[api/creative/simple-packages]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -2263,6 +2429,19 @@ app.put("/api/auth/profile", authRequired, async (req, res) => {
   }
 });
 
+app.patch("/api/auth/onboarding", authRequired, async (req, res) => {
+  try {
+    const patch = req.body && typeof req.body === "object"
+      ? (req.body.onboardingState && typeof req.body.onboardingState === "object" ? req.body.onboardingState : req.body)
+      : {};
+    const onboardingState = await db.updateUserOnboarding(req.user.id, patch);
+    res.json({ status: "success", onboardingState });
+  } catch (err) {
+    console.error("[auth] Update onboarding state error:", err);
+    res.status(400).json({ error: err.message || "Failed to update onboarding preferences." });
+  }
+});
+
 app.delete("/api/auth/account", authRequired, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -2347,6 +2526,50 @@ app.delete("/api/projects/:id", authRequired, async (req, res) => {
     const ok = await db.deleteProject(req.params.id, req.user.id);
     if (!ok) return res.status(404).json({ error: "Project not found." });
     res.json({ status: "success", message: "Project deleted." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/projects/bulk-delete", authRequired, async (req, res) => {
+  try {
+    const rawIds = req.body?.projectIds;
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: "projectIds must be a non-empty array of project IDs." });
+    }
+    const cleanIds = Array.from(
+      new Set(
+        rawIds
+          .filter((id) => typeof id === "string" && id.trim().length > 0)
+          .map((id) => id.trim())
+      )
+    );
+    if (cleanIds.length === 0) {
+      return res.status(400).json({ error: "projectIds must contain at least one valid project ID." });
+    }
+    if (cleanIds.length > 200) {
+      return res.status(400).json({ error: "Cannot delete more than 200 projects in a single request." });
+    }
+
+    const { deletedIds, notDeletedIds } = await db.deleteProjects(cleanIds, req.user.id);
+    if (deletedIds.length === 0) {
+      return res.status(404).json({
+        error: "No matching projects found.",
+        deletedIds: [],
+        notDeletedIds,
+      });
+    }
+
+    const isPartial = notDeletedIds.length > 0;
+    res.json({
+      status: isPartial ? "partial" : "success",
+      deletedIds,
+      notDeletedIds,
+      deletedCount: deletedIds.length,
+      message: isPartial
+        ? `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? "project" : "projects"}; ${notDeletedIds.length} could not be deleted.`
+        : `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? "project" : "projects"}.`,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

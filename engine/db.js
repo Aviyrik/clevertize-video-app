@@ -10,6 +10,19 @@ const {
   hashGuardrails,
   hasActiveGuardrails,
 } = require('./guardrails');
+const {
+  isUnderstandingOutdated,
+  normalizeUnderstandingSettings,
+} = require('./understandingSpine');
+const {
+  normalizeEventContext,
+  hasActiveEventContext,
+} = require('./eventContext');
+const {
+  createDefaultOnboardingState,
+  normalizeOnboardingState,
+  mergeOnboardingState,
+} = require('../src/utils/onboarding');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -57,12 +70,14 @@ async function ensurePgTables() {
         salt TEXT NOT NULL,
         email_verified BOOLEAN DEFAULT FALSE,
         email_verified_at TIMESTAMPTZ,
+        onboarding_state JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_state JSONB DEFAULT '{}'::jsonb;
       UPDATE users SET email_verified = FALSE WHERE email_verified IS NULL;
 
       CREATE TABLE IF NOT EXISTS sessions (
@@ -306,6 +321,7 @@ function mapProjectRow(row) {
     stages: cDNA.stages || null,
     aiUnderstanding: cDNA.aiUnderstanding || null,
     creativeGuardrails: rawGuardrails || null,
+    eventContext: cDNA.eventContext && hasActiveEventContext(cDNA.eventContext) ? cDNA.eventContext : null,
     scenes: typeof row.scenes === 'string' ? JSON.parse(row.scenes) : (row.scenes || []),
     character1: row.character1 || '',
     character2: row.character2 || '',
@@ -330,7 +346,7 @@ async function findUserByEmail(email) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE LOWER(email) = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at FROM users WHERE LOWER(email) = $1',
       [cleanEmail]
     );
     if (!res.rows.length) return null;
@@ -344,6 +360,7 @@ async function findUserByEmail(email) {
       salt: r.salt,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -356,6 +373,7 @@ async function findUserByEmail(email) {
     avatar: u.avatar || null,
     emailVerified: Boolean(u.emailVerified),
     emailVerifiedAt: u.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
   };
 }
 
@@ -366,7 +384,7 @@ async function findUserById(userId) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at FROM users WHERE id = $1',
       [userId]
     );
     if (!res.rows.length) return null;
@@ -380,6 +398,7 @@ async function findUserById(userId) {
       salt: r.salt,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -392,6 +411,7 @@ async function findUserById(userId) {
     avatar: u.avatar || null,
     emailVerified: Boolean(u.emailVerified),
     emailVerifiedAt: u.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
   };
 }
 
@@ -413,15 +433,16 @@ async function createUser({ email, password, name = '', avatar = null }) {
   const id = `usr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const userName = String(name || cleanEmail.split('@')[0]).trim();
   const createdAt = new Date().toISOString();
+  const initialOnboarding = createDefaultOnboardingState();
 
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
     await pool.query(
-      'INSERT INTO users (id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [id, cleanEmail, userName, avatar || null, hash, salt, false, null, createdAt]
+      'INSERT INTO users (id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      [id, cleanEmail, userName, avatar || null, hash, salt, false, null, JSON.stringify(initialOnboarding), createdAt]
     );
-    return { id, email: cleanEmail, name: userName, avatar: avatar || null, emailVerified: false, emailVerifiedAt: null, createdAt };
+    return { id, email: cleanEmail, name: userName, avatar: avatar || null, emailVerified: false, emailVerifiedAt: null, onboardingState: initialOnboarding, createdAt };
   }
 
   const user = {
@@ -433,6 +454,7 @@ async function createUser({ email, password, name = '', avatar = null }) {
     salt,
     emailVerified: false,
     emailVerifiedAt: null,
+    onboardingState: initialOnboarding,
     createdAt,
   };
 
@@ -447,6 +469,7 @@ async function createUser({ email, password, name = '', avatar = null }) {
     avatar: user.avatar || null,
     emailVerified: false,
     emailVerifiedAt: null,
+    onboardingState: initialOnboarding,
     createdAt: user.createdAt,
   };
 }
@@ -470,6 +493,7 @@ async function authenticateUser({ email, password }) {
     avatar: user.avatar || null,
     emailVerified: Boolean(user.emailVerified),
     emailVerifiedAt: user.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(user.onboardingState),
     createdAt: user.createdAt,
   };
 }
@@ -540,8 +564,34 @@ async function updateUserProfile(userId, { name, avatar }) {
     email: u.email,
     name: u.name,
     avatar: u.avatar || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
     createdAt: u.createdAt,
   };
+}
+
+async function updateUserOnboarding(userId, onboardingPatch) {
+  if (!userId) throw new Error('User ID is required.');
+  const existing = await findUserById(userId);
+  if (!existing) throw new Error('User not found.');
+  const merged = mergeOnboardingState(existing.onboardingState, onboardingPatch);
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query(
+      `UPDATE users SET onboarding_state = $2::jsonb WHERE id = $1`,
+      [userId, JSON.stringify(merged)]
+    );
+    const refreshed = await findUserById(userId);
+    return refreshed ? refreshed.onboardingState : merged;
+  }
+
+  const users = readJsonFile('users.json', []);
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw new Error('User not found.');
+  users[idx].onboardingState = merged;
+  writeJsonFile('users.json', users);
+  return merged;
 }
 
 // ----------------------------------------------------
@@ -587,7 +637,7 @@ async function getUserBySessionToken(token) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at
+      `SELECT u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -602,6 +652,7 @@ async function getUserBySessionToken(token) {
       avatar: r.avatar || null,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -621,6 +672,7 @@ async function getUserBySessionToken(token) {
     avatar: user.avatar || null,
     emailVerified: Boolean(user.emailVerified),
     emailVerifiedAt: user.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(user.onboardingState),
     createdAt: user.createdAt,
   };
 }
@@ -843,7 +895,7 @@ async function projectExists(projectId) {
   return projects.some((p) => p.id === projectId || (p.idempotencyKey && p.idempotencyKey === projectId));
 }
 
-function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails) {
+function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails, currentBrief = null, currentSettings = null, currentEventContext = undefined) {
   if (!aiUnder || typeof aiUnder !== 'object') return aiUnder;
   if (aiUnder.approval_status !== 'approved') return aiUnder;
   const gVersion = normalizedGuardrails ? Number(normalizedGuardrails.version || 0) : 0;
@@ -854,14 +906,38 @@ function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails) {
     ? gVersion !== recordedVer
     : hasActiveGuardrails(normalizedGuardrails);
   const hashMismatch = Boolean(aiUnder.source_guardrails_hash && gHash && aiUnder.source_guardrails_hash !== gHash);
+  const briefOrSettingsMismatch = Boolean(
+    (currentBrief && String(currentBrief).trim() && isUnderstandingOutdated(aiUnder, String(currentBrief).trim(), normalizedGuardrails, currentSettings, currentEventContext)) ||
+    (!currentBrief && (currentSettings || currentEventContext !== undefined) && isUnderstandingOutdated(aiUnder, aiUnder.source_brief || '', normalizedGuardrails, currentSettings, currentEventContext))
+  );
 
-  if (versionMismatch || hashMismatch) {
+  if (versionMismatch || hashMismatch || briefOrSettingsMismatch) {
     return {
       ...aiUnder,
       approval_status: 'outdated',
     };
   }
   return aiUnder;
+}
+
+function extractProjectSettingsForSave(projectData, cDNA, existingSettings = null) {
+  const explicit = (projectData && projectData.productionSettings) || (cDNA && cDNA.productionSettings);
+  const guidedCtx = cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.context;
+  if (explicit && typeof explicit === 'object') {
+    return normalizeUnderstandingSettings(explicit);
+  }
+  if (guidedCtx && typeof guidedCtx === 'object') {
+    return normalizeUnderstandingSettings(guidedCtx);
+  }
+  if (existingSettings && typeof existingSettings === 'object') {
+    const merged = {
+      ...existingSettings,
+      ...(projectData && projectData.language ? { language: projectData.language } : {}),
+      ...(projectData && projectData.creativeStyle ? { creativeStyle: projectData.creativeStyle } : {}),
+    };
+    return normalizeUnderstandingSettings(merged);
+  }
+  return null;
 }
 
 async function saveProject(projectData, userId) {
@@ -890,6 +966,7 @@ async function saveProject(projectData, userId) {
     stages,
     aiUnderstanding,
     creativeGuardrails: incomingGuardrails,
+    eventContext: incomingEventContext,
   } = projectData || {};
 
   const now = new Date().toISOString();
@@ -901,7 +978,12 @@ async function saveProject(projectData, userId) {
   const cDNA = Object.assign({}, creativeDNA || {});
   if (shotSpec) cDNA.shotSpec = shotSpec;
   if (stages) cDNA.stages = stages;
-  let aiUnder = aiUnderstanding || (stages && stages.aiUnderstanding) || (creativeDNA && creativeDNA.aiUnderstanding) || null;
+  let aiUnder =
+    aiUnderstanding ||
+    (stages && stages.aiUnderstanding) ||
+    (creativeDNA && creativeDNA.aiUnderstanding) ||
+    (cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.aiUnderstanding) ||
+    null;
   const hasExplicitGuardrails = Boolean(
     projectData && (
       Object.prototype.hasOwnProperty.call(projectData, 'creativeGuardrails') ||
@@ -914,6 +996,24 @@ async function saveProject(projectData, userId) {
     : (stages && stages.creativeGuardrails !== undefined
       ? stages.creativeGuardrails
       : (cDNA && cDNA.creativeGuardrails !== undefined ? cDNA.creativeGuardrails : undefined));
+
+  const hasExplicitEventContext = Boolean(
+    projectData && (
+      Object.prototype.hasOwnProperty.call(projectData, 'eventContext') ||
+      (cDNA && Object.prototype.hasOwnProperty.call(cDNA, 'eventContext')) ||
+      (stages && Object.prototype.hasOwnProperty.call(stages, 'eventContext')) ||
+      (cDNA && cDNA.draft && cDNA.draft.guided && Object.prototype.hasOwnProperty.call(cDNA.draft.guided, 'eventContext'))
+    )
+  );
+  const rawIncomingEventContext = incomingEventContext !== undefined
+    ? incomingEventContext
+    : (stages && stages.eventContext !== undefined
+      ? stages.eventContext
+      : (cDNA && cDNA.eventContext !== undefined
+        ? cDNA.eventContext
+        : (cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.eventContext !== undefined
+          ? cDNA.draft.guided.eventContext
+          : undefined)));
 
   const scList = Array.isArray(scenes) ? scenes : [];
   const pStatus = status || (scList.length >= 4 ? 'script_ready' : 'in_progress');
@@ -943,7 +1043,28 @@ async function saveProject(projectData, userId) {
     if (resolvedGuardrails) {
       cDNA.creativeGuardrails = resolvedGuardrails;
     }
-    aiUnder = invalidateStaleUnderstanding(aiUnder || existingPgUnderstanding, resolvedGuardrails);
+    const existingPgEvent = cDNA.eventContext || null;
+    const resolvedPgEvent = hasExplicitEventContext
+      ? (rawIncomingEventContext === null ? null : normalizeEventContext(rawIncomingEventContext, existingPgEvent))
+      : (existingPgEvent ? normalizeEventContext(existingPgEvent) : null);
+    const activePgEvent = resolvedPgEvent && hasActiveEventContext(resolvedPgEvent) ? resolvedPgEvent : null;
+    if (activePgEvent) {
+      cDNA.eventContext = activePgEvent;
+    } else if (hasExplicitEventContext) {
+      delete cDNA.eventContext;
+    }
+    const existingPgSettings = cDNA.productionSettings || existingPgUnderstanding?.source_settings || null;
+    const resolvedPgSettings = extractProjectSettingsForSave(projectData, cDNA, existingPgSettings);
+    if (resolvedPgSettings) {
+      cDNA.productionSettings = resolvedPgSettings;
+    }
+    aiUnder = invalidateStaleUnderstanding(
+      aiUnder || existingPgUnderstanding,
+      resolvedGuardrails,
+      brief ? String(brief).trim() : null,
+      resolvedPgSettings,
+      hasExplicitEventContext ? activePgEvent : undefined
+    );
     if (aiUnder) {
       cDNA.aiUnderstanding = aiUnder;
     }
@@ -1035,7 +1156,28 @@ async function saveProject(projectData, userId) {
   if (resolvedGuardrails) {
     cDNA.creativeGuardrails = resolvedGuardrails;
   }
-  aiUnder = invalidateStaleUnderstanding(aiUnder || (existingRecord && existingRecord.aiUnderstanding) || null, resolvedGuardrails);
+  const existingFileEvent = existingRecord ? (existingRecord.eventContext || existingRecord.creativeDNA?.eventContext || null) : null;
+  const resolvedFileEvent = hasExplicitEventContext
+    ? (rawIncomingEventContext === null ? null : normalizeEventContext(rawIncomingEventContext, existingFileEvent))
+    : (existingFileEvent ? normalizeEventContext(existingFileEvent) : null);
+  const activeFileEvent = resolvedFileEvent && hasActiveEventContext(resolvedFileEvent) ? resolvedFileEvent : null;
+  if (activeFileEvent) {
+    cDNA.eventContext = activeFileEvent;
+  } else if (hasExplicitEventContext) {
+    delete cDNA.eventContext;
+  }
+  const existingFileSettings = existingRecord?.creativeDNA?.productionSettings || existingRecord?.aiUnderstanding?.source_settings || null;
+  const resolvedFileSettings = extractProjectSettingsForSave(projectData, cDNA, existingFileSettings);
+  if (resolvedFileSettings) {
+    cDNA.productionSettings = resolvedFileSettings;
+  }
+  aiUnder = invalidateStaleUnderstanding(
+    aiUnder || (existingRecord && existingRecord.aiUnderstanding) || null,
+    resolvedGuardrails,
+    brief ? String(brief).trim() : null,
+    resolvedFileSettings,
+    hasExplicitEventContext ? activeFileEvent : undefined
+  );
   if (aiUnder) {
     cDNA.aiUnderstanding = aiUnder;
   }
@@ -1059,6 +1201,7 @@ async function saveProject(projectData, userId) {
     stages: stages || cDNA.stages || (existingIndex >= 0 ? projects[existingIndex].stages : null),
     aiUnderstanding: aiUnder || null,
     creativeGuardrails: resolvedGuardrails || null,
+    eventContext: activeFileEvent || null,
     scenes: scList,
     character1: character1 || '',
     character2: character2 || '',
@@ -1101,6 +1244,43 @@ async function deleteProject(projectId, userId) {
     writeJsonFile('projects.json', filtered);
   }
   return changed;
+}
+
+async function deleteProjects(projectIds, userId) {
+  if (!Array.isArray(projectIds) || !userId) {
+    return { deletedIds: [], notDeletedIds: Array.isArray(projectIds) ? projectIds : [] };
+  }
+  const cleanIds = Array.from(
+    new Set(projectIds.map((id) => String(id || '').trim()).filter(Boolean))
+  );
+  if (cleanIds.length === 0) return { deletedIds: [], notDeletedIds: [] };
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'DELETE FROM projects WHERE user_id = $1 AND id = ANY($2::text[]) RETURNING id',
+      [userId, cleanIds]
+    );
+    const deletedSet = new Set((res.rows || []).map((r) => r.id));
+    return {
+      deletedIds: cleanIds.filter((id) => deletedSet.has(id)),
+      notDeletedIds: cleanIds.filter((id) => !deletedSet.has(id)),
+    };
+  }
+
+  const projects = readJsonFile('projects.json', []);
+  const ownedMatchSet = new Set(
+    projects.filter((p) => p.userId === userId && cleanIds.includes(p.id)).map((p) => p.id)
+  );
+  if (ownedMatchSet.size > 0) {
+    const remaining = projects.filter((p) => !(p.userId === userId && ownedMatchSet.has(p.id)));
+    writeJsonFile('projects.json', remaining);
+  }
+  return {
+    deletedIds: cleanIds.filter((id) => ownedMatchSet.has(id)),
+    notDeletedIds: cleanIds.filter((id) => !ownedMatchSet.has(id)),
+  };
 }
 
 async function saveVideoRun(runId, userId, initialData = {}) {
@@ -1442,7 +1622,7 @@ async function markEmailAsVerified(arg1, arg2) {
        SET email_verified = TRUE, email_verified_at = NOW()
        FROM consumed_token ct
        WHERE u.id = ct.user_id
-       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at`,
       [trimmedToken, hashedCandidate, userId]
     );
 
@@ -1455,6 +1635,7 @@ async function markEmailAsVerified(arg1, arg2) {
         avatar: r.avatar || null,
         emailVerified: Boolean(r.email_verified),
         emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+        onboardingState: normalizeOnboardingState(r.onboarding_state),
         createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
       };
     }
@@ -1523,6 +1704,7 @@ async function markEmailAsVerified(arg1, arg2) {
     avatar: u.avatar || null,
     emailVerified: true,
     emailVerifiedAt: u.emailVerifiedAt,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
     createdAt: u.createdAt,
   };
 }
@@ -1646,7 +1828,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
        SET password_hash = $2, salt = $3, email_verified = TRUE, email_verified_at = COALESCE(u.email_verified_at, NOW())
        FROM consumed_token ct
        WHERE u.id = ct.user_id
-       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at`,
       [tokenHash, hash, salt]
     );
     if (!res.rows.length) {
@@ -1664,6 +1846,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
       avatar: r.avatar || null,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -1684,7 +1867,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
   writeJsonFile('users.json', users);
   writeJsonFile('sessions.json', readJsonFile('sessions.json', []).filter((x) => x.userId !== tok.userId));
   const u = users[idx];
-  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt };
+  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, onboardingState: normalizeOnboardingState(u.onboardingState), createdAt: u.createdAt };
 }
 
 module.exports = {
@@ -1707,7 +1890,9 @@ module.exports = {
   projectExists,
   saveProject,
   deleteProject,
+  deleteProjects,
   updateUserProfile,
+  updateUserOnboarding,
   userOwnsVideoUrl,
   isVideoUrlRegistered,
   saveVideoRun,

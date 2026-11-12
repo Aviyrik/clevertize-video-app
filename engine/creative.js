@@ -16,6 +16,10 @@ const {
   formatGuardrailsPromptBlock,
   validateOutputAgainstGuardrails,
 } = require("./guardrails");
+const {
+  hasActiveEventContext,
+  formatEventPromptBlock,
+} = require("./eventContext");
 
 const BRAND_TONE_GUIDANCE = {
   warm: "BRAND TONE: Warm & Authentic. Establish welcoming neighborhood trust, heartfelt and unhurried human connection, warm natural eye contact, and sincere conversational dialogue.",
@@ -116,12 +120,14 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding, creativeGuardrails = null }) {
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails, gAnalysis)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
   const cleanFormat = String(format || "").trim();
   const isDemo = /demo/i.test(cleanFormat);
   const isComedy = /comedy|funny/i.test(cleanFormat);
@@ -201,7 +207,7 @@ CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${brandTone || "Warm & Authentic"}
 AUDIENCE INSIGHT: ${research?.audienceInsight || aiUnderstanding?.target_audience || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || aiUnderstanding?.creative_opportunity || "Relatable problem-first story"}
-UPCOMING OCCASION: ${festival?.name || aiUnderstanding?.occasion_context || "None"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}`;
+UPCOMING OCCASION: ${(hasActiveEventContext(eventContext) ? (eventContext.name || eventContext.category) : null) || festival?.name || aiUnderstanding?.occasion_context || "None"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}`;
 
   try {
     let raw = await callClaude({ system, content, maxTokens: 1500, thinking: false });
@@ -465,11 +471,13 @@ function validateHooksList(hooks, language = "English") {
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
 async function generateHooks(params = {}) {
-  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone, creativeGuardrails = null } = params;
+  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone, creativeGuardrails = null, eventContext = null } = params;
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const rawLang = params.language;
@@ -595,7 +603,7 @@ CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
 CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${activeTone || "Warm & Authentic"}
-LOCATION: ${direction?.town || "Pan-India / Universal"}${guardrailBlock}`;
+LOCATION: ${direction?.town || "Pan-India / Universal"}${eventBlock}${guardrailBlock}`;
 
   const MAX_RETRIES = 2;
   let lastFailureReason = "";
@@ -807,11 +815,13 @@ Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்)
 /**
  * 4. PLOT LINES (3-5 Structured Narrative Arcs)
  */
-async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone, creativeGuardrails = null }) {
+async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
@@ -868,7 +878,7 @@ BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || "Relatable Tension"}
 CHOSEN HOOK: ${hook?.hookLine || ""} (${hook?.visualAction || ""})
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}${guardrailBlock}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}`;
 
   try {
     let raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
@@ -926,11 +936,13 @@ BRAND TONE: ${activeTone || "Warm & Authentic"}${guardrailBlock}`;
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone, creativeGuardrails = null }) {
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
   const activeTone = brandTone || direction?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
   const isEng = !language || /eng/i.test(language);
@@ -1040,7 +1052,7 @@ HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
 FORMAT: ${cleanFormat}
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}${guardrailBlock}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -1192,8 +1204,9 @@ function sanitizeParsedScript(parsed, form, format, creativeDNA, festName) {
  * Takes all approved decisions, constraints, DNA, and synthesizes the canonical Production Script.
  * Runs Section 8 Quality Gate + auto-repair loop.
  */
-async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], creativeGuardrails = null, options = {} }) {
+async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avoid = [], creativeGuardrails = null, eventContext = null, options = {} }) {
   const effectiveGuardrails = mergeGuardrailsWithLegacy(creativeGuardrails, constraints, avoid);
+  const formattedEvent = formatEventPromptBlock(eventContext);
   const fest = await getFestivals();
   const system = buildSystem(form.scriptMode);
   const rawFormat = creativeDNA?.format || creativeDNA?.story?.format || form.creativeStyle || "Storytelling";
@@ -1247,6 +1260,7 @@ async function synthesizeMasterScript({ form, creativeDNA, constraints = [], avo
       ? formatGuardrailsPromptBlock(effectiveGuardrails)
       : (constraints.length ? `- MANDATORY INCLUSIONS (User constraints):\n${constraints.map((c) => `  * ${c}`).join("\n")}` : null),
     !hasActiveGuardrails(effectiveGuardrails) && avoid.length ? `- MANDATORY EXCLUSIONS (Things to avoid):\n${avoid.map((a) => `  * ${a}`).join("\n")}` : null,
+    formattedEvent || null,
   ].filter(Boolean).join("\n");
 
   const stageInst = `STAGE 4 PRODUCTION SCRIPT SYNTHESIS:
@@ -1273,7 +1287,11 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
 - Return ONLY the standard @@HEADER@@, @@CHARACTER1@@, @@CHARACTER2@@, @@SETTING@@, @@SCENE@@, and @@RECORD@@ markers. In @@HEADER@@, set Format: ${format}.`;
 
   const base = buildUserContent(form, fest, [], todayIST(), stageInst);
-  const festName = creativeDNA?.direction?.festival?.name || form.occasion || "";
+  const festName =
+    (hasActiveEventContext(eventContext) ? (eventContext.name || eventContext.category) : "") ||
+    creativeDNA?.direction?.festival?.name ||
+    form.occasion ||
+    "";
   const gateOpts = {
     scriptMode: form.scriptMode,
     previous: [],
@@ -1384,7 +1402,7 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
  * 7. SCENE-LEVEL AI REWRITER
  * Rewrites a single scene according to user instruction while preserving continuity.
  */
-async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, creativeGuardrails = null }) {
+async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, creativeGuardrails = null, eventContext = null }) {
   const isEng = !form?.language || /eng/i.test(form?.language);
   const activeTone = brandTone || form?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
@@ -1392,6 +1410,8 @@ async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, f
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n\n${formatGuardrailsPromptBlock(normGuardrails)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n\n${formattedEvent}` : "";
 
   const system = `You are a precision scene script editor for a 4-scene commercial ad film.
 Your task is to rewrite ONLY this specific scene based on the user's creative note (e.g. "make it funnier", "make dialogue shorter", "use Hinglish", "feature product earlier").
@@ -1403,7 +1423,7 @@ Rules:
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
 - Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : /hindi|hinglish|marathi/i.test(form?.language) ? "Devanagari script if Hindi/Hinglish/Marathi" : `authentic ${form?.language} script`}).
-- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.${guardrailBlock}`;
+- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.${eventBlock}${guardrailBlock}`;
 
   const content = `ORIGINAL SCENE:
 ${sceneText}
@@ -2364,12 +2384,15 @@ async function generateSimpleAdPackages({
   hasLogo = false,
   aiUnderstanding = null,
   creativeGuardrails = null,
+  eventContext = null,
 }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails, gAnalysis)}`
     : "";
+  const formattedEvent = formatEventPromptBlock(eventContext);
+  const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
   const attachSimpleGuardrailReport = (pkgs) => {
     if (!hasActiveGuardrails(normGuardrails)) return pkgs;
     return pkgs.map((pkg) => {
@@ -2509,7 +2532,7 @@ STYLE: ${creativeStyle}
 DURATION: ${durStr}
 SCENES: ${plan.totalScenes} scenes (~5s each)
 DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
-BRAND TONE: ${brandTone || "Warm & Authentic"}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}
+BRAND TONE: ${brandTone || "Warm & Authentic"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}
 
 Create 3 distinct Ad Packages now:`;
 
