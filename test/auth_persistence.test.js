@@ -286,7 +286,12 @@ test('Auth Redesign: AuthScreen layout, floating panel, and independent logo', (
 
   // Showcase editorial caption on bottom-left
   assert.ok(code.includes('auth-showcase-caption'), 'Must render showcase caption in bottom-left');
-  assert.ok(code.includes('Turn product briefs into customer-converting video ads'), 'Must have compelling headline in bottom-left');
+  assert.ok(code.includes('From one brief to a finished commercial.'), 'Must have compelling headline in bottom-left');
+
+  // Background: Coverr clip wall, with the bundled single video as fallback
+  assert.ok(code.includes("import AuthClipWall from './AuthClipWall.jsx'"), 'AuthScreen must import AuthClipWall');
+  assert.ok(code.includes('<AuthClipWall'), 'AuthScreen must render the clip wall background');
+  assert.ok(code.includes('clipWallUnavailable ?'), 'AuthScreen must fall back to AuthVideoShowcase when the clip wall is unavailable');
 
   // Headers and titles
   assert.ok(code.includes('Create an account'), 'Must support "Create an account" for signup');
@@ -722,4 +727,21 @@ test('Phase 1.1 Data Integrity: Cross-tenant project hijacking prevention & conc
   assert.ok(u1FinalList.body.projects.some((p) => p.id === stableId && p.title === 'Campaign Draft 1 - Updated'));
   assert.ok(u1FinalList.body.projects.some((p) => p.title === 'Fast Store Summer Offer'));
   assert.ok(u1FinalList.body.projects.some((p) => p.title === 'Fast Store Winter Offer'));
+});
+
+test('Auth clip wall: Coverr clips are hotlinked CDN files, lazy, muted, and credit Coverr', () => {
+  const wall = fs.readFileSync(path.join(__dirname, '../src/components/v2/AuthClipWall.jsx'), 'utf8');
+  const data = fs.readFileSync(path.join(__dirname, '../src/data/loginClips.js'), 'utf8');
+
+  // Clips come from Coverr's CDN; the browser never calls the API and no key ships
+  assert.ok(data.includes('https://cdn.coverr.co/videos/'), 'clips are served from Coverr CDN');
+  assert.ok(!/api_key|api\.coverr\.co|COVERR_API_KEY/i.test(data + wall), 'no Coverr API call or key in frontend code');
+  assert.ok((data.match(/label: '/g) || []).length >= 9, 'one clip per kind of business');
+
+  // Background video behaviour
+  assert.ok(wall.includes('muted') && wall.includes('playsInline') && wall.includes('loop'), 'clips are muted, inline, looping');
+  assert.ok(wall.includes('IntersectionObserver'), 'clips only play while on screen');
+  assert.ok(wall.includes('prefers-reduced-motion'), 'reduced motion shows still frames');
+  assert.ok(wall.includes('onUnavailable'), 'falls back when Coverr cannot be reached');
+  assert.ok(wall.includes('Background videos from Coverr'), 'credits Coverr on the page');
 });
