@@ -179,7 +179,7 @@ export default function AccountModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 12, 0.8)',
+        backgroundColor: 'rgba(10, 10, 9, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -223,8 +223,8 @@ export default function AccountModal({
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
+                backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -233,7 +233,7 @@ export default function AccountModal({
               <User size={16} aria-hidden="true" />
             </div>
             <div>
-              <h2 id="account-settings-title" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h2 id="account-settings-title" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Account Settings
               </h2>
               <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
@@ -281,9 +281,9 @@ export default function AccountModal({
               style={{
                 padding: '10px 14px',
                 borderRadius: 8,
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#EF4444',
+                backgroundColor: 'rgba(255, 122, 107, 0.12)',
+                border: '1px solid rgba(255, 122, 107, 0.3)',
+                color: 'var(--cc-danger)',
                 fontSize: 13,
                 display: 'flex',
                 alignItems: 'center',
@@ -302,9 +302,9 @@ export default function AccountModal({
               style={{
                 padding: '10px 14px',
                 borderRadius: 8,
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#10B981',
+                backgroundColor: 'rgba(95, 212, 174, 0.12)',
+                border: '1px solid rgba(95, 212, 174, 0.3)',
+                color: 'var(--cc-success)',
                 fontSize: 13,
                 display: 'flex',
                 alignItems: 'center',
@@ -318,7 +318,7 @@ export default function AccountModal({
 
           {/* Section 1: Personal & Account Information */}
           <section aria-labelledby="account-profile-heading" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h3 id="account-profile-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+            <h3 id="account-profile-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
               Personal Information
             </h3>
           <div
@@ -358,7 +358,7 @@ export default function AccountModal({
                       height: 68,
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid var(--accent-primary)',
+                      border: '2px solid var(--cc-selected-line)',
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
                       display: 'block',
                     }}
@@ -370,9 +370,9 @@ export default function AccountModal({
                       height: 68,
                       borderRadius: '50%',
                       backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--accent-primary)',
+                      color: 'var(--cc-emphasis)',
                       fontSize: 24,
-                      fontWeight: 800,
+                      fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -392,8 +392,8 @@ export default function AccountModal({
                     width: 24,
                     height: 24,
                     borderRadius: '50%',
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#FFFFFF',
+                    backgroundColor: 'var(--cc-active)',
+                    color: 'var(--cc-text-1)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -420,7 +420,7 @@ export default function AccountModal({
                 <div
                   style={{
                     fontSize: 16,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: 'var(--text-primary)',
                     marginBottom: 3,
                     whiteSpace: 'nowrap',
@@ -448,7 +448,7 @@ export default function AccountModal({
                 </div>
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--text-tertiary)',
                     display: 'flex',
                     alignItems: 'center',
@@ -489,8 +489,8 @@ export default function AccountModal({
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  e.currentTarget.style.color = 'var(--accent-primary)';
+                  e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
+                  e.currentTarget.style.color = 'var(--cc-emphasis)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -520,8 +520,8 @@ export default function AccountModal({
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#EF4444';
-                    e.currentTarget.style.color = '#EF4444';
+                    e.currentTarget.style.borderColor = 'var(--cc-danger)';
+                    e.currentTarget.style.color = 'var(--cc-danger)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-subtle)';
@@ -533,7 +533,7 @@ export default function AccountModal({
                 </button>
               )}
 
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
                 JPG, PNG, or WebP up to 5MB
               </span>
             </div>
@@ -557,8 +557,8 @@ export default function AccountModal({
                   width: 32,
                   height: 32,
                   borderRadius: 6,
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  color: 'var(--accent-primary)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                  color: 'var(--cc-emphasis)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -567,10 +567,10 @@ export default function AccountModal({
                 <Film size={16} />
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {projectCount}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saved Projects</div>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saved Projects</div>
               </div>
             </div>
 
@@ -590,8 +590,8 @@ export default function AccountModal({
                   width: 32,
                   height: 32,
                   borderRadius: 6,
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  color: '#10B981',
+                  backgroundColor: 'rgba(95, 212, 174, 0.1)',
+                  color: 'var(--cc-success)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -600,10 +600,10 @@ export default function AccountModal({
                 <Building2 size={16} />
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {businessCount}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Brand Profiles</div>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Brand Profiles</div>
               </div>
             </div>
           </div>
@@ -612,7 +612,7 @@ export default function AccountModal({
           {/* Section 2: Preferences & Guidance */}
           {(onReplayTour || onResumeTour || onOpenFeedback) && (
             <section aria-labelledby="account-preferences-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h3 id="account-preferences-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+              <h3 id="account-preferences-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
                 Preferences &amp; Walkthrough
               </h3>
               <div
@@ -638,11 +638,11 @@ export default function AccountModal({
                     style={{
                       padding: '8px 12px',
                       borderRadius: 8,
-                      backgroundColor: 'rgba(99, 102, 241, 0.14)',
-                      border: '1px solid rgba(99, 102, 241, 0.35)',
-                      color: 'var(--accent-primary)',
+                      backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                      border: '1px solid rgba(244, 244, 236, 0.315)',
+                      color: 'var(--cc-emphasis)',
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -677,7 +677,7 @@ export default function AccountModal({
                       gap: 6,
                     }}
                   >
-                    <Compass size={13} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <Compass size={13} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
                     <span>Replay Tour</span>
                   </button>
                 )}
@@ -704,7 +704,7 @@ export default function AccountModal({
                       gap: 6,
                     }}
                   >
-                    <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+                    <MessageSquare size={13} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
                     <span>Send Feedback</span>
                   </button>
                 )}
@@ -714,7 +714,7 @@ export default function AccountModal({
 
           {/* Section 3: Authentication & Session */}
           <section aria-labelledby="account-auth-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <h3 id="account-auth-heading" style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+            <h3 id="account-auth-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
               Security &amp; Session
             </h3>
             <div
@@ -734,7 +734,7 @@ export default function AccountModal({
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                   Active Session
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
                   Sign out of this browser. Projects and brands stay saved.
                 </div>
               </div>
@@ -772,16 +772,16 @@ export default function AccountModal({
             style={{
               padding: 14,
               borderRadius: 12,
-              backgroundColor: 'rgba(239, 68, 68, 0.04)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
+              backgroundColor: 'rgba(255, 122, 107, 0.04)',
+              border: '1px solid rgba(255, 122, 107, 0.25)',
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertTriangle size={14} style={{ color: '#EF4444' }} aria-hidden="true" />
-              <h3 id="danger-zone-heading" style={{ margin: 0, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#EF4444' }}>
+              <AlertTriangle size={14} style={{ color: 'var(--cc-danger)' }} aria-hidden="true" />
+              <h3 id="danger-zone-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-danger)' }}>
                 Danger Zone · Permanent &amp; Irreversible
               </h3>
             </div>
@@ -789,10 +789,10 @@ export default function AccountModal({
             {!showConfirm ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div style={{ flex: '1 1 220px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                     Delete Account Permanently
                   </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>
                     Permanently erases your CleverCut profile, all brand profiles, saved scripts, and generated videos. This cannot be undone.
                   </div>
                 </div>
@@ -815,10 +815,10 @@ export default function AccountModal({
                     padding: '7px 12px',
                     borderRadius: 7,
                     backgroundColor: 'transparent',
-                    border: '1px solid rgba(239, 68, 68, 0.45)',
-                    color: '#EF4444',
+                    border: '1px solid rgba(255, 122, 107, 0.45)',
+                    color: 'var(--cc-danger)',
                     fontSize: 12,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -840,24 +840,24 @@ export default function AccountModal({
                 style={{
                   padding: 12,
                   borderRadius: 8,
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  backgroundColor: 'rgba(255, 122, 107, 0.08)',
+                  border: '1px solid rgba(255, 122, 107, 0.35)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 10,
                 }}
               >
                 <div>
-                  <div id="delete-account-confirm-title" style={{ fontSize: 12.5, fontWeight: 800, color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div id="delete-account-confirm-title" style={{ fontSize: 12.5, fontWeight: 600, color: '#FFA79C', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <AlertTriangle size={14} aria-hidden="true" />
                     <span>Confirm permanent account deletion</span>
                   </div>
-                  <div id="delete-account-confirm-desc" style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
+                  <div id="delete-account-confirm-desc" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
                     This irreversible action will immediately sign you out and permanently remove all {projectCount} project(s) and {businessCount} brand profile(s).
                   </div>
                 </div>
 
-                <label htmlFor="account-delete-confirm-input" style={{ fontSize: 11.5, fontWeight: 600, color: '#FCA5A5' }}>
+                <label htmlFor="account-delete-confirm-input" style={{ fontSize: 12, fontWeight: 600, color: '#FFA79C' }}>
                   To confirm permanent deletion, type <strong>DELETE</strong> below:
                 </label>
 
@@ -911,11 +911,11 @@ export default function AccountModal({
                     style={{
                       padding: '7px 12px',
                       borderRadius: 6,
-                      backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? '#DC2626' : 'rgba(220, 38, 38, 0.35)',
+                      backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? 'var(--cc-danger)' : 'rgba(255, 122, 107, 0.35)',
                       border: 'none',
                       color: '#ffffff',
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: confirmInput.trim().toUpperCase() === 'DELETE' && !isDeleting ? 'pointer' : 'not-allowed',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -957,12 +957,12 @@ export default function AccountModal({
             onClick={handleClose}
             style={{
               padding: '8px 20px',
-              borderRadius: 8,
-              backgroundColor: 'var(--accent-primary)',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              color: '#FFFFFF',
+              color: 'var(--cc-on-action)',
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
             }}
           >

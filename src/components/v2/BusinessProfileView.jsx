@@ -30,13 +30,13 @@ export function getInitials(name) {
 
 export function getAvatarGradient(name) {
   const gradients = [
-    'linear-gradient(135deg, #6366F1 0%, #A855F7 100%)',
-    'linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)',
-    'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-    'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-    'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
-    'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
+    'linear-gradient(135deg, #2B2B27, #2B2B27)',
+    'linear-gradient(135deg, #2B2B27, #21211E)',
+    'linear-gradient(135deg, #2B2B27, #2B2B27)',
+    'linear-gradient(135deg, #2B2B27, #21211E)',
+    'linear-gradient(135deg, #2B2B27, #2B2B27)',
+    'linear-gradient(135deg, #2B2B27, #21211E)',
+    'linear-gradient(135deg, #2B2B27, #2B2B27)',
   ];
   if (!name) return gradients[0];
   let hash = 0;
@@ -62,7 +62,7 @@ export default function BusinessProfileView({
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '36px 24px 60px' }}>
       {/* Breadcrumb & Section Header */}
       <div style={{ marginBottom: 30 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: 30, fontWeight: 600, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Businesses
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -92,8 +92,8 @@ export default function BusinessProfileView({
               width: 60,
               height: 60,
               borderRadius: '50%',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--accent-primary)',
+              backgroundColor: 'rgba(244, 244, 236, 0.06)',
+              color: 'var(--cc-emphasis)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -105,7 +105,7 @@ export default function BusinessProfileView({
           <h3
             style={{
               fontSize: 18,
-              fontWeight: 700,
+              fontWeight: 600,
               color: 'var(--text-primary)',
               margin: '0 0 8px',
             }}
@@ -130,15 +130,15 @@ export default function BusinessProfileView({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#FFFFFF',
+              backgroundColor: 'var(--cc-action)',
+              color: 'var(--cc-on-action)',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 999,
               padding: '10px 22px',
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
               transition: 'all 0.15s ease',
             }}
           >
@@ -172,14 +172,14 @@ export default function BusinessProfileView({
               key={biz.id || idx}
               style={{
                 backgroundColor: 'var(--bg-surface)',
-                border: isActive ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                border: isActive ? '1.5px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                 borderRadius: 14,
                 padding: '22px 20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 gap: 16,
-                boxShadow: isActive ? '0 8px 24px rgba(99, 102, 241, 0.16)' : '0 4px 16px rgba(0, 0, 0, 0.15)',
+                boxShadow: isActive ? '0 8px 24px rgba(0, 0, 0, 0.16)' : '0 4px 16px rgba(0, 0, 0, 0.15)',
                 position: 'relative',
                 transition: 'all 0.2s ease',
               }}
@@ -199,7 +199,7 @@ export default function BusinessProfileView({
                           borderRadius: 12,
                           objectFit: 'cover',
                           border: '1.5px solid var(--border-subtle)',
-                          backgroundColor: '#151821',
+                          backgroundColor: '#21211E',
                         }}
                       />
                     ) : (
@@ -214,7 +214,7 @@ export default function BusinessProfileView({
                           justifyContent: 'center',
                           color: '#FFFFFF',
                           fontSize: 20,
-                          fontWeight: 800,
+                          fontWeight: 600,
                           letterSpacing: '-0.02em',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
                         }}
@@ -231,7 +231,7 @@ export default function BusinessProfileView({
                         style={{
                           margin: 0,
                           fontSize: 17,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -247,7 +247,7 @@ export default function BusinessProfileView({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           backgroundColor: 'var(--bg-elevated)',
                           border: '1px solid var(--border-subtle)',
                           color: 'var(--text-secondary)',
@@ -261,15 +261,14 @@ export default function BusinessProfileView({
                       {isActive && (
                         <span
                           style={{
-                            fontSize: 10,
-                            fontWeight: 800,
-                            color: 'var(--accent-primary)',
-                            backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                            border: '1px solid var(--accent-primary)',
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            color: 'var(--cc-emphasis)',
+                            backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                            border: '1px solid var(--cc-selected-line)',
                             padding: '2px 7px',
                             borderRadius: 10,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
+                            letterSpacing: '0.005em',
                           }}
                         >
                           ★ Active
@@ -302,7 +301,7 @@ export default function BusinessProfileView({
 
                   {/* Brand Tone */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-                    <Sparkles size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    <Sparkles size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {bTone}
                     </span>
@@ -317,7 +316,7 @@ export default function BusinessProfileView({
                         target="_blank"
                         rel="noreferrer"
                         style={{
-                          color: 'var(--accent-primary)',
+                          color: 'var(--cc-emphasis)',
                           textDecoration: 'none',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -364,8 +363,8 @@ export default function BusinessProfileView({
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                    e.currentTarget.style.color = 'var(--accent-primary)';
+                    e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
+                    e.currentTarget.style.color = 'var(--cc-emphasis)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -396,12 +395,12 @@ export default function BusinessProfileView({
                     onClick={() => onSelectBusiness && onSelectBusiness(biz)}
                     style={{
                       backgroundColor: 'transparent',
-                      border: '1px solid var(--accent-primary)',
+                      border: '1px solid var(--cc-selected-line)',
                       borderRadius: 7,
                       padding: '7px 14px',
                       fontSize: 12,
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
+                      fontWeight: 600,
+                      color: 'var(--cc-emphasis)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -409,12 +408,12 @@ export default function BusinessProfileView({
                       transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                      e.currentTarget.style.backgroundColor = 'var(--cc-action)';
                       e.currentTarget.style.color = '#FFFFFF';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'var(--accent-primary)';
+                      e.currentTarget.style.color = 'var(--cc-emphasis)';
                     }}
                   >
                     <Check size={13} />
@@ -444,8 +443,8 @@ export default function BusinessProfileView({
             textAlign: 'center',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--accent-primary)';
-            e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+            e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
+            e.currentTarget.style.backgroundColor = 'rgba(244, 244, 236, 0.025)';
             e.currentTarget.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
@@ -459,18 +458,18 @@ export default function BusinessProfileView({
               width: 52,
               height: 52,
               borderRadius: '50%',
-              backgroundColor: 'rgba(99, 102, 241, 0.14)',
-              color: 'var(--accent-primary)',
+              backgroundColor: 'rgba(244, 244, 236, 0.07)',
+              color: 'var(--cc-emphasis)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 14,
-              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.18)',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.18)',
             }}
           >
             <Plus size={24} />
           </div>
-          <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
             Add Another Business
           </h4>
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5, maxWidth: 220 }}>

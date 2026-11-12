@@ -172,7 +172,7 @@ export function ProjectRatingBar({
       >
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-tertiary)',
             fontWeight: 500,
           }}
@@ -193,22 +193,22 @@ export function ProjectRatingBar({
               gap: 5,
               padding: '4px 9px',
               borderRadius: 6,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
               border:
                 currentRating === 'like'
-                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  ? '1px solid rgba(95, 212, 174, 0.4)'
                   : '1px solid var(--border-subtle)',
               backgroundColor:
-                currentRating === 'like' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-elevated)',
-              color: currentRating === 'like' ? '#10B981' : 'var(--text-secondary)',
+                currentRating === 'like' ? 'rgba(95, 212, 174, 0.15)' : 'var(--bg-elevated)',
+              color: currentRating === 'like' ? 'var(--cc-success)' : 'var(--text-secondary)',
               transition: 'all 0.15s ease',
             }}
           >
             <ThumbsUp
               size={12}
-              fill={currentRating === 'like' ? '#10B981' : 'none'}
+              fill={currentRating === 'like' ? 'var(--cc-success)' : 'none'}
               strokeWidth={currentRating === 'like' ? 2.5 : 2}
             />
             <span>Like</span>
@@ -226,22 +226,22 @@ export function ProjectRatingBar({
               gap: 5,
               padding: '4px 9px',
               borderRadius: 6,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
               border:
                 currentRating === 'dislike'
-                  ? '1px solid rgba(239, 68, 68, 0.4)'
+                  ? '1px solid rgba(255, 122, 107, 0.4)'
                   : '1px solid var(--border-subtle)',
               backgroundColor:
-                currentRating === 'dislike' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-elevated)',
-              color: currentRating === 'dislike' ? '#EF4444' : 'var(--text-secondary)',
+                currentRating === 'dislike' ? 'rgba(255, 122, 107, 0.15)' : 'var(--bg-elevated)',
+              color: currentRating === 'dislike' ? 'var(--cc-danger)' : 'var(--text-secondary)',
               transition: 'all 0.15s ease',
             }}
           >
             <ThumbsDown
               size={12}
-              fill={currentRating === 'dislike' ? '#EF4444' : 'none'}
+              fill={currentRating === 'dislike' ? 'var(--cc-danger)' : 'none'}
               strokeWidth={currentRating === 'dislike' ? 2.5 : 2}
             />
             <span>Dislike</span>
@@ -268,7 +268,7 @@ export function ProjectRatingBar({
               marginBottom: 8,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
               What didn't you like about this video?
             </span>
             <button
@@ -298,16 +298,16 @@ export function ProjectRatingBar({
                   style={{
                     padding: '3px 8px',
                     borderRadius: 4,
-                    fontSize: 10,
+                    fontSize: 11.5,
                     fontWeight: 600,
                     cursor: 'pointer',
                     border: isSelected
-                      ? '1px solid rgba(239, 68, 68, 0.5)'
+                      ? '1px solid rgba(255, 122, 107, 0.5)'
                       : '1px solid var(--border-subtle)',
                     backgroundColor: isSelected
-                      ? 'rgba(239, 68, 68, 0.15)'
+                      ? 'rgba(255, 122, 107, 0.15)'
                       : 'var(--bg-surface)',
-                    color: isSelected ? '#F87171' : 'var(--text-secondary)',
+                    color: isSelected ? '#FFA79C' : 'var(--text-secondary)',
                     transition: 'all 0.1s ease',
                   }}
                 >
@@ -329,7 +329,7 @@ export function ProjectRatingBar({
               border: '1px solid var(--border-subtle)',
               borderRadius: 6,
               color: 'var(--text-primary)',
-              fontSize: 11,
+              fontSize: 12,
               fontFamily: 'inherit',
               resize: 'vertical',
               boxSizing: 'border-box',
@@ -342,7 +342,7 @@ export function ProjectRatingBar({
               alignItems: 'center',
               justifyContent: 'space-between',
               marginTop: 6,
-              fontSize: 10,
+              fontSize: 11.5,
               color: 'var(--text-tertiary)',
             }}
           >
@@ -353,9 +353,9 @@ export function ProjectRatingBar({
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
                 fontWeight: 600,
-                fontSize: 10,
+                fontSize: 11.5,
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -493,7 +493,7 @@ export function PostGenerationFeedbackPrompt({
         margin: '18px 0 10px',
         padding: '14px 18px',
         borderRadius: 10,
-        backgroundColor: 'rgba(26, 29, 38, 0.85)',
+        backgroundColor: 'rgba(33, 33, 30, 0.85)',
         border: '1px solid var(--border-subtle)',
         backdropFilter: 'blur(8px)',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
@@ -514,7 +514,7 @@ export function PostGenerationFeedbackPrompt({
           <div
             style={{
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: 600,
               color: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
@@ -525,15 +525,15 @@ export function PostGenerationFeedbackPrompt({
             {currentRating && (
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 11.5,
                   fontWeight: 600,
                   padding: '1px 6px',
                   borderRadius: 4,
                   backgroundColor:
                     currentRating === 'like'
-                      ? 'rgba(16, 185, 129, 0.2)'
-                      : 'rgba(239, 68, 68, 0.2)',
-                  color: currentRating === 'like' ? '#10B981' : '#F87171',
+                      ? 'rgba(95, 212, 174, 0.2)'
+                      : 'rgba(255, 122, 107, 0.2)',
+                  color: currentRating === 'like' ? 'var(--cc-success)' : '#FFA79C',
                 }}
               >
                 {currentRating === 'like' ? 'Liked' : 'Disliked'}
@@ -542,7 +542,7 @@ export function PostGenerationFeedbackPrompt({
           </div>
           <p
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--text-secondary)',
               margin: '3px 0 0',
               lineHeight: 1.4,
@@ -568,17 +568,17 @@ export function PostGenerationFeedbackPrompt({
               cursor: 'pointer',
               border:
                 currentRating === 'like'
-                  ? '1px solid rgba(16, 185, 129, 0.5)'
+                  ? '1px solid rgba(95, 212, 174, 0.5)'
                   : '1px solid var(--border-default)',
               backgroundColor:
-                currentRating === 'like' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-elevated)',
-              color: currentRating === 'like' ? '#10B981' : 'var(--text-primary)',
+                currentRating === 'like' ? 'rgba(95, 212, 174, 0.15)' : 'var(--bg-elevated)',
+              color: currentRating === 'like' ? 'var(--cc-success)' : 'var(--text-primary)',
               transition: 'all 0.15s ease',
             }}
           >
             <ThumbsUp
               size={14}
-              fill={currentRating === 'like' ? '#10B981' : 'none'}
+              fill={currentRating === 'like' ? 'var(--cc-success)' : 'none'}
               strokeWidth={currentRating === 'like' ? 2.5 : 2}
             />
             <span>Like</span>
@@ -599,17 +599,17 @@ export function PostGenerationFeedbackPrompt({
               cursor: 'pointer',
               border:
                 currentRating === 'dislike'
-                  ? '1px solid rgba(239, 68, 68, 0.5)'
+                  ? '1px solid rgba(255, 122, 107, 0.5)'
                   : '1px solid var(--border-default)',
               backgroundColor:
-                currentRating === 'dislike' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-elevated)',
-              color: currentRating === 'dislike' ? '#EF4444' : 'var(--text-primary)',
+                currentRating === 'dislike' ? 'rgba(255, 122, 107, 0.15)' : 'var(--bg-elevated)',
+              color: currentRating === 'dislike' ? 'var(--cc-danger)' : 'var(--text-primary)',
               transition: 'all 0.15s ease',
             }}
           >
             <ThumbsDown
               size={14}
-              fill={currentRating === 'dislike' ? '#EF4444' : 'none'}
+              fill={currentRating === 'dislike' ? 'var(--cc-danger)' : 'none'}
               strokeWidth={currentRating === 'dislike' ? 2.5 : 2}
             />
             <span>Dislike</span>
@@ -655,7 +655,7 @@ export function PostGenerationFeedbackPrompt({
               marginBottom: 10,
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
               What didn't you like about this video?
             </span>
             <button
@@ -684,16 +684,16 @@ export function PostGenerationFeedbackPrompt({
                   style={{
                     padding: '5px 10px',
                     borderRadius: 5,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
                     border: isSelected
-                      ? '1px solid rgba(239, 68, 68, 0.5)'
+                      ? '1px solid rgba(255, 122, 107, 0.5)'
                       : '1px solid var(--border-subtle)',
                     backgroundColor: isSelected
-                      ? 'rgba(239, 68, 68, 0.15)'
+                      ? 'rgba(255, 122, 107, 0.15)'
                       : 'var(--bg-elevated)',
-                    color: isSelected ? '#F87171' : 'var(--text-secondary)',
+                    color: isSelected ? '#FFA79C' : 'var(--text-secondary)',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -728,7 +728,7 @@ export function PostGenerationFeedbackPrompt({
               alignItems: 'center',
               justifyContent: 'space-between',
               marginTop: 8,
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--text-tertiary)',
             }}
           >
@@ -737,12 +737,12 @@ export function PostGenerationFeedbackPrompt({
               type="button"
               onClick={() => setShowDislikeDrawer(false)}
               style={{
-                backgroundColor: 'var(--accent-primary)',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--cc-action)',
+                color: 'var(--cc-on-action)',
                 border: 'none',
-                borderRadius: 5,
+                borderRadius: 999,
                 padding: '4px 12px',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}

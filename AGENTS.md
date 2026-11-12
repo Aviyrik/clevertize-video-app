@@ -4,34 +4,29 @@ Project-specific guidance for AI coding agents.
 
 > **CRITICAL CONTEXT**: Always read `PROJECT_CONTEXT.md` at the workspace root before starting work. It contains the complete architectural map, git setup, credentials guide, and recent milestone status.
 
-<!-- ASTRYX:START -->
-Astryx v0.6.5 · 166 components
-CLI: run every command as `npx astryx <cmd>` (shown below as `astryx ...`).
+## UI: the "Signal" design system
 
-SETUP (once, in your app entry e.g. main.tsx) — without these, components render unstyled:
-  import "@astryxdesign/core/reset.css";
-  import "@astryxdesign/core/astryx.css";
+CleverCut's UI is React with inline style objects plus a small set of shared classes. There is no component library and no CSS framework. All visual decisions come from tokens in `src/index.css`.
 
-WORKFLOW — start every page from a template. Never lay out a page from scratch:
-1. `astryx build "<idea>"` — START HERE: names the [page] template to start from (always one: the closest match, or the app shell), two other templates, and the [block]s + [component]s for parts it lacks. No args = full playbook.
-2. `astryx template <name> <path>` — scaffold that template into your project. Keep its frame, gap and padding; replace its data, copy and sections; delete sections you do not need.
-3. `astryx template <Block>` for a part the template lacks; `astryx component <Name>` for props + examples before you use or change a component.
-Changing a page you already have? Keep it: skip step 2 and add blocks and components inside its sections.
+### Tokens (use these; never hard-code hex values)
+- Surfaces: `--cc-bg` (canvas), `--cc-surface` (sidebar, panels, modals), `--cc-raised` (fields, tiles, cards), `--cc-hover`, `--cc-active`.
+- Lines: `--cc-line-1` (dividers), `--cc-line-2` (default hairline), `--cc-line-3` (strong / hover).
+- Text: `--cc-text-1` / `--cc-text-2` / `--cc-text-3` / `--cc-text-4`.
+- Signal green `--cc-action` (#C5EF34) with `--cc-on-action` text. **At most one primary (green) action per view.** Green is also the focus ring (`--cc-focus`) and the current-stage marker. It is never used for borders, badges, icons or decoration.
+- Selection is neutral: `--cc-selected-line` ring plus a small green check where useful.
+- Semantic: `--cc-success` (mint), `--cc-warning` (amber), `--cc-danger` (coral), `--cc-info` (sky). Always pair with an icon or text label.
+- Materials: `.cc-glass` / `--cc-glass` only for floating controls (top bar, production bar, menus, toasts, player controls). Never on cards or content.
+- Shape: `--cc-radius-xs/sm/md/lg/xl/pill` = 6/10/14/20/28/999. Buttons are pills.
+- Type: `--cc-font-display` (Inter Tight, headings), `--cc-font-text` (Inter), `--cc-font-mono` (JetBrains Mono, timecodes and slates). Weights 400/500/600 only; 12px minimum; sentence case (no uppercase labels).
+- Motion: `--cc-dur-1..4` (120/200/320/480ms), `--cc-ease`, `--cc-ease-out`. `prefers-reduced-motion` is handled globally.
 
-RULES:
-- No <div> — components do all layout/spacing, page frame included.
-- Frame first: the template you scaffold sets the page frame. Read `astryx docs layout` before you change it — region widths, breakpoint behavior.
-- Dense data = rows (Table, List/Item), never Card-wrapped list items; Card is for standalone widgets. Status = StatusDot/Token; Badge = counts only.
-- Custom styling: component props first; else style/className with tokens — var(--color-*|--spacing-*|--radius-*). No raw hex/px. (No StyleX/Tailwind compiler here — don't use xstyle/utility classes.)
-- Tokens for every value (`astryx docs tokens`). Brand/accent belongs in the theme (`astryx theme list` / `theme add <slug>`, or `astryx theme template` for a custom one) — never override --color-* in :root.
-- SELF-CHECK before you finish: re-read the file and replace any raw <div>/<span> layout, imported .css/@apply, or hardcoded value (#hex, 16px) with the component or a token (var(--color-*|--spacing-*|…)). Confirm the page kept its template's frame, gap and padding. If unsure a component/prop exists, run `astryx component <Name>` / `astryx search "<thing>"`; don't hand-roll CSS.
+Legacy names (`--bg-*`, `--text-*`, `--border-*`, `--accent-*`, `--success`…) are aliases kept for existing code. Prefer `--cc-*` in new code.
 
-MORE CLI:
-  search "<query>"   find any component / hook / doc / template / block
-  component --list   166 components by category
-  template --list    page + block recipes
-  docs <topic>       authoring, browser-support, color, elevation, getting-started, icons, illustrations, internationalization, layout, migration, motion, principles, shape, spacing, styling-libraries, styling, theme, tokens, typography, working-with-ai
-  docs cli           commands, API reference, integration authoring (one level at a time)
-  swizzle <Name>     eject component source for deep customization
-  upgrade --from <old version> --apply   run after any Astryx or integration dependency bump
-<!-- ASTRYX:END -->
+### Shared classes
+`.cc-btn` with `--primary | --secondary | --ghost | --danger` and `--sm | --lg`; `.cc-panel`; `.cc-glass`; `.cc-production-bar` (sticky glass bar holding Back and the stage's primary action); `.cc-sticky-action`; `.cc-ghost-hover`; `.cc-hoverable`; `.cc-enter`; `.cc-keylight`. The brand mark is `src/components/v2/BrandMark.jsx`.
+
+### Rules
+- Purple, indigo, violet and the old Director gold are retired. Do not reintroduce them.
+- Don't add per-section rainbow colors or emoji icons. Use Lucide icons in `--cc-text-2` / `--cc-text-3`.
+- Shadows only on floating layers (menus, toasts, modals).
+- Visual changes must not alter handlers, props, state or copy that tests pin. Run `npm test` and `npm run build` before handing work back.

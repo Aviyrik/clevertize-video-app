@@ -37,12 +37,12 @@ import {
 } from 'lucide-react';
 
 const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg, #6366F1, #8B5CF6)',
-  'linear-gradient(135deg, #EC4899, #F43F5E)',
-  'linear-gradient(135deg, #10B981, #059669)',
-  'linear-gradient(135deg, #F59E0B, #D97706)',
-  'linear-gradient(135deg, #3B82F6, #1D4ED8)',
-  'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+  'linear-gradient(135deg, #2B2B27, #2B2B27)',
+  'linear-gradient(135deg, #2B2B27, #21211E)',
+  'linear-gradient(135deg, #2B2B27, #2B2B27)',
+  'linear-gradient(135deg, #2B2B27, #21211E)',
+  'linear-gradient(135deg, #2B2B27, #2B2B27)',
+  'linear-gradient(135deg, #2B2B27, #21211E)',
 ];
 
 function getAvatarGradient(name = '') {
@@ -286,7 +286,7 @@ export default function ScriptLibraryView({
         }}
       >
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
             My Projects
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
@@ -298,18 +298,18 @@ export default function ScriptLibraryView({
           type="button"
           onClick={handleCreate}
           style={{
-            backgroundColor: 'var(--accent-primary)',
+            backgroundColor: 'var(--cc-action)',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 999,
             padding: '10px 18px',
             fontSize: 13,
-            fontWeight: 700,
-            color: '#FFFFFF',
+            fontWeight: 600,
+            color: 'var(--cc-on-action)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            boxShadow: '0 2px 10px var(--accent-glow)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
             transition: 'all 0.15s ease',
           }}
         >
@@ -400,10 +400,10 @@ export default function ScriptLibraryView({
                     padding: '6px 12px',
                     borderRadius: 16,
                     fontSize: 12,
-                    fontWeight: isSelected ? 700 : 600,
-                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                    color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
-                    border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                    fontWeight: isSelected ? 600 : 600,
+                    backgroundColor: isSelected ? 'var(--cc-active)' : 'var(--bg-elevated)',
+                    color: isSelected ? 'var(--cc-text-1)' : 'var(--text-secondary)',
+                    border: `1px solid ${isSelected ? 'var(--cc-emphasis)' : 'var(--border-subtle)'}`,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -413,8 +413,8 @@ export default function ScriptLibraryView({
                   <span>{tab.label}</span>
                   <span
                     style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       padding: '1px 6px',
                       borderRadius: 10,
                       backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-surface)',
@@ -461,7 +461,7 @@ export default function ScriptLibraryView({
                       borderRadius: 6,
                       border: 'none',
                       fontSize: 12,
-                      fontWeight: active ? 700 : 500,
+                      fontWeight: active ? 600 : 500,
                       backgroundColor: active ? 'var(--bg-surface)' : 'transparent',
                       color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                       cursor: 'pointer',
@@ -510,9 +510,9 @@ export default function ScriptLibraryView({
                   padding: '5px 12px',
                   height: 31,
                   borderRadius: 8,
-                  border: isSelectionMode ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                  backgroundColor: isSelectionMode ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
-                  color: isSelectionMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  border: isSelectionMode ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                  backgroundColor: isSelectionMode ? 'rgba(244, 244, 236, 0.07)' : 'var(--bg-elevated)',
+                  color: isSelectionMode ? 'var(--cc-emphasis)' : 'var(--text-secondary)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -542,22 +542,22 @@ export default function ScriptLibraryView({
             fontWeight: 500,
             backgroundColor:
               bulkFeedback.type === 'error'
-                ? 'rgba(239, 68, 68, 0.12)'
+                ? 'rgba(255, 122, 107, 0.12)'
                 : bulkFeedback.type === 'warning'
-                  ? 'rgba(245, 158, 11, 0.12)'
-                  : 'rgba(16, 185, 129, 0.12)',
+                  ? 'rgba(242, 184, 75, 0.12)'
+                  : 'rgba(95, 212, 174, 0.12)',
             border:
               bulkFeedback.type === 'error'
-                ? '1px solid rgba(239, 68, 68, 0.35)'
+                ? '1px solid rgba(255, 122, 107, 0.35)'
                 : bulkFeedback.type === 'warning'
-                  ? '1px solid rgba(245, 158, 11, 0.35)'
-                  : '1px solid rgba(16, 185, 129, 0.35)',
+                  ? '1px solid rgba(242, 184, 75, 0.35)'
+                  : '1px solid rgba(95, 212, 174, 0.35)',
             color:
               bulkFeedback.type === 'error'
-                ? '#FCA5A5'
+                ? '#FFA79C'
                 : bulkFeedback.type === 'warning'
-                  ? '#FCD34D'
-                  : '#6EE7B7',
+                  ? 'var(--cc-emphasis)'
+                  : 'var(--cc-success)',
           }}
         >
           <span>{bulkFeedback.text}</span>
@@ -598,7 +598,7 @@ export default function ScriptLibraryView({
           <span
             aria-live="polite"
             data-testid="bulk-selected-count"
-            style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+            style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}
           >
             {selectedIds.length} {selectedIds.length === 1 ? 'project' : 'projects'} selected
           </span>
@@ -649,10 +649,10 @@ export default function ScriptLibraryView({
                 padding: '6px 14px',
                 borderRadius: 7,
                 border: 'none',
-                backgroundColor: '#EF4444',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--cc-danger)',
+                color: '#1A0703',
                 fontSize: 12,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: selectedIds.length === 0 || isBulkDeleting ? 'not-allowed' : 'pointer',
                 opacity: selectedIds.length === 0 || isBulkDeleting ? 0.45 : 1,
                 display: 'inline-flex',
@@ -710,7 +710,7 @@ export default function ScriptLibraryView({
           >
             <Film size={26} />
           </div>
-          <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>
             {searchTerm || statusFilter !== 'all' ? 'No matching projects found' : 'No video projects yet'}
           </h3>
           <p
@@ -752,18 +752,18 @@ export default function ScriptLibraryView({
               type="button"
               onClick={handleCreate}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 999,
                 padding: '11px 22px',
                 fontSize: 13,
-                fontWeight: 700,
-                color: '#FFFFFF',
+                fontWeight: 600,
+                color: 'var(--cc-on-action)',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                boxShadow: '0 2px 10px var(--accent-glow)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
               }}
             >
               <Sparkles size={15} />
@@ -800,12 +800,11 @@ export default function ScriptLibraryView({
           const isCompleted = group === 'completed';
           const isAttention = group === 'attention';
           const baseBorder = isSelected
-            ? '2px solid var(--accent-primary)'
-            : isCompleted
-              ? '1px solid rgba(16, 185, 129, 0.35)'
-              : isAttention
-                ? '1px solid rgba(245, 158, 11, 0.4)'
-                : '1px solid var(--border-default)';
+            ? '1.5px solid var(--cc-selected-line)'
+            : '1px solid var(--border-subtle)';
+          // Poster tone: a warm, per-project light so the library reads like footage, not forms
+          const posterHue = Array.from(projectLabel).reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7);
+          const posterGlow = ['rgba(242, 184, 75, 0.34)', 'rgba(255, 122, 107, 0.26)', 'rgba(141, 184, 255, 0.22)', 'rgba(95, 212, 174, 0.20)'][posterHue % 4];
 
           return (
             <div
@@ -821,28 +820,22 @@ export default function ScriptLibraryView({
               style={{
                 backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
                 border: baseBorder,
-                borderRadius: 12,
-                padding: '20px',
+                borderRadius: 16,
+                padding: '18px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                boxShadow: isCompleted ? '0 4px 16px rgba(16, 185, 129, 0.08)' : '0 4px 16px rgba(0, 0, 0, 0.12)',
+                transition: 'border-color 0.2s ease, transform 0.2s ease',
+                backgroundImage: 'var(--cc-sheen)',
                 position: 'relative',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = isSelected
-                  ? 'var(--accent-primary)'
-                  : isCompleted
-                    ? 'rgba(16, 185, 129, 0.35)'
-                    : isAttention
-                      ? 'rgba(245, 158, 11, 0.4)'
-                      : 'var(--border-default)';
+                e.currentTarget.style.borderColor = isSelected ? 'var(--cc-selected-line)' : 'var(--border-subtle)';
                 e.currentTarget.style.transform = 'none';
               }}
             >
@@ -868,7 +861,7 @@ export default function ScriptLibraryView({
                         style={{
                           width: 17,
                           height: 17,
-                          accentColor: 'var(--accent-primary)',
+                          accentColor: 'var(--cc-emphasis)',
                           cursor: 'pointer',
                           flexShrink: 0,
                         }}
@@ -884,7 +877,7 @@ export default function ScriptLibraryView({
                             borderRadius: 8,
                             objectFit: 'cover',
                             border: '1px solid var(--border-subtle)',
-                            backgroundColor: '#151821',
+                            backgroundColor: '#21211E',
                             flexShrink: 0,
                           }}
                         />
@@ -900,7 +893,7 @@ export default function ScriptLibraryView({
                             justifyContent: 'center',
                             color: '#FFFFFF',
                             fontSize: 12,
-                            fontWeight: 800,
+                            fontWeight: 600,
                             flexShrink: 0,
                           }}
                         >
@@ -912,7 +905,7 @@ export default function ScriptLibraryView({
                         <div
                           style={{
                             fontSize: 13,
-                            fontWeight: 700,
+                            fontWeight: 600,
                             color: 'var(--text-primary)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -924,7 +917,7 @@ export default function ScriptLibraryView({
                         {bizType && (
                           <div
                             style={{
-                              fontSize: 10,
+                              fontSize: 11.5,
                               color: 'var(--text-tertiary)',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -940,7 +933,7 @@ export default function ScriptLibraryView({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 11.5,
                           color: 'var(--text-tertiary)',
                           display: 'flex',
                           alignItems: 'center',
@@ -971,7 +964,7 @@ export default function ScriptLibraryView({
                           alignItems: 'center',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#EF4444';
+                          e.currentTarget.style.color = 'var(--cc-danger)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -986,7 +979,7 @@ export default function ScriptLibraryView({
                   <h3
                     style={{
                       fontSize: 16,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       color: 'var(--text-primary)',
                       margin: '0 0 8px',
                       lineHeight: 1.3,
@@ -1000,16 +993,15 @@ export default function ScriptLibraryView({
                     {isCompleted ? (
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          padding: '2px 8px',
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          padding: '2px 0',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10B981',
+                          backgroundColor: 'transparent',
+                          color: 'var(--cc-success)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
-                          textTransform: 'uppercase',
                         }}
                       >
                         <Film size={11} aria-hidden="true" />
@@ -1018,16 +1010,15 @@ export default function ScriptLibraryView({
                     ) : isAttention ? (
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          padding: '2px 8px',
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          padding: '2px 0',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                          color: '#F59E0B',
+                          backgroundColor: 'transparent',
+                          color: 'var(--cc-warning)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
-                          textTransform: 'uppercase',
                         }}
                       >
                         <AlertTriangle size={11} aria-hidden="true" />
@@ -1037,16 +1028,15 @@ export default function ScriptLibraryView({
                       <span
                         title={rendering ? 'Your video was still rendering — open to pick it up' : 'Open to continue where you left off'}
                         style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          padding: '2px 8px',
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          padding: '2px 0',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(245, 158, 11, 0.14)',
-                          color: '#F59E0B',
+                          backgroundColor: 'transparent',
+                          color: 'var(--cc-warning)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
-                          textTransform: 'uppercase',
                         }}
                       >
                         <Clock size={11} aria-hidden="true" />
@@ -1057,11 +1047,11 @@ export default function ScriptLibraryView({
                     {proj.creativeStyle && (
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          padding: '2px 7px',
-                          borderRadius: 4,
-                          backgroundColor: 'var(--bg-elevated)',
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
                           color: 'var(--text-secondary)',
                         }}
                       >
@@ -1072,11 +1062,11 @@ export default function ScriptLibraryView({
                     {proj.language && (
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          padding: '2px 7px',
-                          borderRadius: 4,
-                          backgroundColor: 'var(--bg-elevated)',
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
                           color: 'var(--text-tertiary)',
                         }}
                       >
@@ -1092,13 +1082,17 @@ export default function ScriptLibraryView({
                       onClick={(e) => e.stopPropagation()} // the video area plays the video; it never opens the project
                       style={{
                         margin: '12px 0',
-                        padding: '12px 14px',
-                        borderRadius: 8,
-                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        padding: '14px',
+                        minHeight: 150,
+                        borderRadius: 12,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        background: `radial-gradient(70% 90% at 72% 28%, ${posterGlow}, transparent 62%), linear-gradient(160deg, #26231F 0%, #121110 100%)`,
+                        border: '1px solid var(--border-subtle)',
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-end',
                         justifyContent: 'space-between',
+                        flexWrap: 'wrap',
                         gap: 12,
                       }}
                     >
@@ -1117,24 +1111,25 @@ export default function ScriptLibraryView({
                       >
                         <div
                           style={{
-                            width: 32,
-                            height: 32,
+                            width: 36,
+                            height: 36,
                             borderRadius: '50%',
-                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.92)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#10B981',
+                            color: '#0A0A09',
                             flexShrink: 0,
+                            boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
                           }}
                         >
-                          <Play size={15} fill="#10B981" />
+                          <Play size={15} fill="#0A0A09" style={{ marginLeft: 2 }} />
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>
                             Generated Commercial
                           </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.72)' }}>
                             {videoExpired
                               ? 'Link expired — open the project and generate the video again'
                               : unplayableIds[proj.id]
@@ -1166,22 +1161,24 @@ export default function ScriptLibraryView({
                           alignItems: 'center',
                           gap: 6,
                           padding: '7px 12px',
-                          backgroundColor: '#10B981',
+                          backgroundColor: 'rgba(18, 18, 16, 0.4)',
+                          WebkitBackdropFilter: 'blur(14px)',
+                          backdropFilter: 'blur(14px)',
                           color: '#FFFFFF',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 700,
+                          borderRadius: 999,
+                          fontSize: 12.5,
+                          fontWeight: 500,
                           textDecoration: 'none',
                           cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14)',
                           transition: 'background 0.15s ease',
                           flexShrink: 0,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#059669';
+                          e.currentTarget.style.backgroundColor = 'rgba(18, 18, 16, 0.6)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#10B981';
+                          e.currentTarget.style.backgroundColor = 'rgba(18, 18, 16, 0.4)';
                         }}
                       >
                         <Download size={13} />
@@ -1247,7 +1244,7 @@ export default function ScriptLibraryView({
                           background: 'none',
                           border: 'none',
                           color: 'var(--text-tertiary)',
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
                           display: 'flex',
@@ -1274,7 +1271,7 @@ export default function ScriptLibraryView({
                             padding: '10px 12px',
                             backgroundColor: 'var(--bg-elevated)',
                             borderRadius: 8,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: 'var(--text-secondary)',
                             lineHeight: 1.5,
                             border: '1px solid var(--border-subtle)',
@@ -1292,7 +1289,7 @@ export default function ScriptLibraryView({
                                 borderBottom: sIdx === proj.scenes.length - 1 ? 'none' : '1px dashed var(--border-subtle)',
                               }}
                             >
-                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                                 Scene {sIdx + 1}:
                               </div>
                               <div style={{ whiteSpace: 'pre-wrap' }}>{sceneText}</div>
@@ -1321,7 +1318,7 @@ export default function ScriptLibraryView({
                     const copyStyle = {
                       background: 'none',
                       border: 'none',
-                      color: copiedId === proj.id ? '#10B981' : 'var(--text-secondary)',
+                      color: copiedId === proj.id ? 'var(--cc-success)' : 'var(--text-secondary)',
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -1359,7 +1356,7 @@ export default function ScriptLibraryView({
                       </button>
                     );
                   })() : (
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                       {statusInfo.stageHint ? `Last step: ${statusInfo.stageHint}` : 'No script generated yet'}
                     </span>
                   )}
@@ -1380,8 +1377,8 @@ export default function ScriptLibraryView({
                       border: 'none',
                       padding: '4px 6px',
                       fontSize: 12,
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
+                      fontWeight: 600,
+                      color: 'var(--cc-emphasis)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
@@ -1461,15 +1458,15 @@ export default function ScriptLibraryView({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: 10,
-                                fontWeight: 800,
+                                fontSize: 11.5,
+                                fontWeight: 600,
                                 flexShrink: 0,
                               }}
                             >
                               {grp.isOther ? '—' : getInitials(grp.name)}
                             </div>
                           )}
-                          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {grp.name}
                           </span>
                           <span style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 500 }}>
@@ -1614,7 +1611,7 @@ export default function ScriptLibraryView({
           >
             <h2
               id="bulk-delete-dialog-title"
-              style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}
+              style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}
             >
               Delete {selectedIds.length} {selectedIds.length === 1 ? 'project' : 'projects'}?
             </h2>
@@ -1649,10 +1646,10 @@ export default function ScriptLibraryView({
                   padding: '9px 18px',
                   borderRadius: 8,
                   border: 'none',
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
+                  backgroundColor: 'var(--cc-danger)',
+                  color: '#1A0703',
                   fontSize: 13,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: isBulkDeleting ? 'wait' : 'pointer',
                   opacity: isBulkDeleting ? 0.7 : 1,
                 }}

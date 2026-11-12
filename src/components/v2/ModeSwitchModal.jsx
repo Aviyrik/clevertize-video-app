@@ -38,7 +38,7 @@ export default function ModeSwitchModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 12, 0.78)',
+        backgroundColor: 'rgba(10, 10, 9, 0.78)',
         backdropFilter: 'blur(6px)',
         zIndex: 9998,
         display: 'flex',
@@ -80,8 +80,8 @@ export default function ModeSwitchModal({
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                backgroundColor: switchingToDirector ? 'rgba(234, 179, 8, 0.14)' : 'rgba(99, 102, 241, 0.14)',
-                color: switchingToDirector ? '#eab308' : 'var(--accent-primary)',
+                backgroundColor: switchingToDirector ? 'rgba(244, 244, 236, 0.07)' : 'rgba(244, 244, 236, 0.07)',
+                color: switchingToDirector ? 'var(--cc-emphasis)' : 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -89,7 +89,7 @@ export default function ModeSwitchModal({
             >
               {switchingToDirector ? <Sliders size={16} /> : <Zap size={16} />}
             </div>
-            <h2 id="mode-switch-modal-title" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+            <h2 id="mode-switch-modal-title" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
               {switchingToDirector ? 'Switch to Director Mode?' : 'Switch to Simple Mode?'}
             </h2>
           </div>
@@ -127,7 +127,7 @@ export default function ModeSwitchModal({
                 padding: '11px 14px',
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--success)', marginBottom: 7 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--success)', marginBottom: 7 }}>
                 Carried over
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -145,19 +145,19 @@ export default function ModeSwitchModal({
             <div
               data-testid="mode-switch-pending-items"
               style={{
-                backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                backgroundColor: 'rgba(244, 244, 236, 0.04)',
+                border: '1px solid rgba(244, 244, 236, 0.225)',
                 borderRadius: 10,
                 padding: '11px 14px',
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-primary)', marginBottom: 7 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)', marginBottom: 7 }}>
                 Draft text preserved
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {pendingItems.map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-primary)' }}>
-                    <Edit3 size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    <Edit3 size={13} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -169,19 +169,19 @@ export default function ModeSwitchModal({
             <div
               data-testid="mode-switch-uncarried-items"
               style={{
-                backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                backgroundColor: 'rgba(242, 184, 75, 0.08)',
+                border: '1px solid rgba(242, 184, 75, 0.3)',
                 borderRadius: 10,
                 padding: '11px 14px',
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#F59E0B', marginBottom: 7 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-warning)', marginBottom: 7 }}>
                 Not carried over
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {uncarriedItems.map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    <AlertTriangle size={13} style={{ color: '#F59E0B', flexShrink: 0, marginTop: 2 }} />
+                    <AlertTriangle size={13} style={{ color: 'var(--cc-warning)', flexShrink: 0, marginTop: 2 }} />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -225,11 +225,11 @@ export default function ModeSwitchModal({
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              backgroundColor: switchingToDirector ? '#eab308' : 'var(--accent-primary)',
+              backgroundColor: switchingToDirector ? 'var(--cc-action)' : 'var(--cc-action)',
               border: 'none',
-              color: switchingToDirector ? '#0B0C0F' : '#FFFFFF',
+              color: 'var(--cc-on-action)',
               fontSize: 12.5,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',

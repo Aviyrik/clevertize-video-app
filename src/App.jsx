@@ -9,7 +9,7 @@ import {
 } from './context/studioReducer.js';
 import { videoLogoPayload } from './utils/videoLogo.js';
 import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
-import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject } from './utils/drafts.js';
+import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject, briefSnippet } from './utils/drafts.js';
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
 import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
 import { hasActiveClientEventContext } from './utils/eventContext.js';
@@ -136,13 +136,13 @@ class WorkspaceErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, backgroundColor: 'var(--bg-surface)', border: '1px solid #ef4444', borderRadius: 10, color: 'var(--text-primary)', textAlign: 'center' }}>
-          <h3 style={{ color: '#ef4444', margin: '0 0 8px' }}>Error Loading Creative Options</h3>
+        <div style={{ padding: 24, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--cc-danger)', borderRadius: 10, color: 'var(--text-primary)', textAlign: 'center' }}>
+          <h3 style={{ color: 'var(--cc-danger)', margin: '0 0 8px' }}>Error Loading Creative Options</h3>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{this.state.error?.message || 'Unexpected render error'}</p>
           <button
             type="button"
             onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: '8px 16px', backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+            style={{ padding: '8px 16px', backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', border: 'none', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
           >
             Retry Creative Stage
           </button>
@@ -3417,8 +3417,8 @@ export default function App() {
       if (hasProjectForVideo(prev, videoUrl)) return prev;
 
       const resolvedTitle = userContext.businessName
-        ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
-        : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
+        ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? briefSnippet(userContext.brief, 30) : 'Commercial Film')}`
+        : (userContext.brief ? briefSnippet(userContext.brief, 40) : 'Commercial Film');
 
       // Never the active project id: that may be the previous video's project
       const projectId = renderTargetRef.current.videoUrl === videoUrl ? renderTargetRef.current.id : newProjectId();
@@ -4308,8 +4308,8 @@ export default function App() {
 
           // Auto-save & sync video into My Projects library
           const resolvedTitle = userContext.businessName
-            ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
-            : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film');
+            ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? briefSnippet(userContext.brief, 30) : 'Commercial Film')}`
+            : (userContext.brief ? briefSnippet(userContext.brief, 40) : 'Commercial Film');
 
           const projectId = renderProjectId;
           if (live) {
@@ -4721,7 +4721,7 @@ export default function App() {
 
       setToastMessage(business
         ? `Switched active business to ${business.name || business.businessName}`
-        : '✨ Fresh film project started!');
+        : 'Fresh film project started');
       setTimeout(() => setToastMessage(''), 3500);
     } catch (err) {
       console.error('[NewFilm] Error in handleExecuteNewProject:', err);
@@ -5271,7 +5271,7 @@ export default function App() {
     <div
       style={{
         backgroundColor: 'var(--bg-elevated)',
-        border: file ? '1px solid var(--accent-primary)' : '1px dashed var(--border-default)',
+        border: file ? '1px solid var(--cc-selected-line)' : '1px dashed var(--border-default)',
         borderRadius: 8,
         padding: '12px 14px',
         transition: 'all 0.15s ease',
@@ -5285,7 +5285,7 @@ export default function App() {
               height: 34,
               borderRadius: 6,
               backgroundColor: file ? 'var(--accent-subtle)' : 'var(--bg-surface)',
-              color: file ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+              color: file ? 'var(--cc-emphasis)' : 'var(--text-tertiary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -5298,7 +5298,7 @@ export default function App() {
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {file ? file.name : label}
             </div>
-            <div style={{ fontSize: 11, color: file ? 'var(--success)' : 'var(--text-tertiary)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: file ? 'var(--success)' : 'var(--text-tertiary)', marginTop: 2 }}>
               {file ? `${Math.round((file.data?.length * 0.75) / 1024) || 0} KB · Ready` : hint}
             </div>
           </div>
@@ -5312,7 +5312,7 @@ export default function App() {
               style={{
                 padding: '5px 10px',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 color: 'var(--error)',
                 backgroundColor: 'transparent',
                 border: '1px solid var(--error-subtle)',
@@ -5359,7 +5359,7 @@ export default function App() {
             alt="Preview"
             style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-subtle)' }}
           />
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Visual asset attached for AI rendering engine</span>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Visual asset attached for AI rendering engine</span>
         </div>
       )}
     </div>
@@ -5407,14 +5407,14 @@ export default function App() {
         style={{
           minHeight: '100vh',
           width: '100vw',
-          backgroundColor: '#0B0C0F',
+          backgroundColor: '#121211',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 20,
           boxSizing: 'border-box',
-          color: '#F5F7FA',
+          color: 'var(--cc-text-1)',
           fontFamily: "'Inter', system-ui, sans-serif",
         }}
       >
@@ -5439,8 +5439,8 @@ export default function App() {
     id: renderTargetRef.current.videoUrl === videoUrl ? renderTargetRef.current.id : projectIdForVideoUrl(videoUrl),
     businessId: userContext.businessId || null,
     title: userContext.businessName
-      ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? userContext.brief.slice(0, 30) : 'Commercial Film')}`
-      : (userContext.brief ? userContext.brief.slice(0, 40) + '…' : 'Commercial Film'),
+      ? `${userContext.businessName} - ${userContext.occasion || userContext.selectedGoalId || (userContext.brief ? briefSnippet(userContext.brief, 30) : 'Commercial Film')}`
+      : (userContext.brief ? briefSnippet(userContext.brief, 40) : 'Commercial Film'),
     businessName: userContext.businessName || 'Brand',
     businessType: userContext.businessType || '',
     town: userContext.town || '',
@@ -5528,8 +5528,8 @@ export default function App() {
           {!isOnline && (
             <div
               style={{
-                backgroundColor: '#DC2626',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--cc-danger)',
+                color: '#1A0703',
                 padding: '8px 16px',
                 fontSize: 13,
                 fontWeight: 600,
@@ -5794,8 +5794,8 @@ export default function App() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Building2 size={18} style={{ color: 'var(--accent-primary)' }} />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <Building2 size={18} style={{ color: 'var(--cc-emphasis)' }} />
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   Manage Brand & Business Profile
                 </h3>
               </div>
@@ -5855,7 +5855,7 @@ export default function App() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Town / City <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                    Town / City <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -5868,7 +5868,7 @@ export default function App() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    Area / Neighborhood <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Optional)</span>
+                    Area / Neighborhood <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -5907,7 +5907,7 @@ export default function App() {
               </div>
 
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                   Brand Assets
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -5996,9 +5996,9 @@ export default function App() {
                   }}
                   style={{
                     padding: '8px 18px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
+                    borderRadius: 999,
+                    backgroundColor: 'var(--cc-action)',
+                    color: 'var(--cc-on-action)',
                     border: 'none',
                     fontSize: 12,
                     fontWeight: 600,
@@ -6057,9 +6057,9 @@ export default function App() {
                     alignItems: 'center',
                     gap: 6,
                     padding: '7px 14px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--accent-primary)',
-                    color: '#ffffff',
+                    borderRadius: 999,
+                    backgroundColor: 'var(--cc-action)',
+                    color: 'var(--cc-on-action)',
                     border: 'none',
                     fontSize: 12,
                     fontWeight: 600,
@@ -6098,7 +6098,7 @@ export default function App() {
             role="alert"
             style={{
               padding: '12px 16px',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              backgroundColor: 'rgba(255, 122, 107, 0.12)',
               border: '1px solid var(--error)',
               borderRadius: 8,
               color: 'var(--error)',
@@ -6582,12 +6582,12 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--accent-primary)',
+                    color: 'var(--cc-emphasis)',
                   }}
                 >
                   <RotateCcw size={18} />
                 </div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {pendingBusinessSwitch
                     ? `Switch to ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}?`
                     : newFilmAction === 'restart' ? 'Restart This Film?' : 'Start a New Film?'}
@@ -6617,7 +6617,7 @@ export default function App() {
                 </p>
               ) : null}
               {newFilmSaveError ? (
-                <p role="alert" style={{ margin: '12px 0 0', color: 'var(--status-error, #ef4444)' }}>{newFilmSaveError}</p>
+                <p role="alert" style={{ margin: '12px 0 0', color: 'var(--status-error, var(--cc-danger))' }}>{newFilmSaveError}</p>
               ) : null}
               {userContext.businessName && !pendingBusinessSwitch ? (
                 <div
@@ -6633,7 +6633,7 @@ export default function App() {
                     gap: 8,
                   }}
                 >
-                  <Store size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                  <Store size={14} style={{ color: 'var(--cc-emphasis)', flexShrink: 0 }} />
                   <span>
                     Your brand profile for <strong>{userContext.businessName}</strong> will stay saved.
                   </span>
@@ -6673,9 +6673,9 @@ export default function App() {
                 disabled={isSavingNewFilm}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#ffffff',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 600,
@@ -6703,7 +6703,7 @@ export default function App() {
             right: 24,
             zIndex: 9999,
             backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--accent-primary)',
+            border: '1px solid var(--cc-selected-line)',
             color: 'var(--text-primary)',
             padding: '12px 20px',
             borderRadius: 8,

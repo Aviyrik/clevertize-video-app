@@ -1,6 +1,17 @@
+
 // Unfinished videos are saved as drafts: ordinary projects with status 'in_progress' and a snapshot of the
 // creation flow in creativeDNA.draft, so My Projects can resume them where the user left off — including a
 // render that was still running (draft.render.runId), which is polled again instead of being re-rendered.
+
+// Short, readable title fragment from a brief: cuts on a word boundary and marks the cut.
+function briefSnippet(brief, max = 30) {
+  const text = String(brief || '').replace(/\s+/g, ' ').trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max + 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const base = (lastSpace > max * 0.5 ? cut.slice(0, lastSpace) : text.slice(0, max)).replace(/[\s,.;:–—-]+$/, '');
+  return `${base}…`;
+}
 
 const DRAFT_STATUS = 'in_progress';
 
@@ -97,7 +108,7 @@ function buildDraftProject({ id, businessId = null, businessName = '', businessT
 
   return {
     id,
-    title: `${businessName || 'Brand'} - ${brief ? brief.slice(0, 30) : 'New video'}`,
+    title: `${businessName || 'Brand'} - ${brief ? briefSnippet(brief, 30) : 'New video'}`,
     businessId,
     businessName,
     businessType,
@@ -130,5 +141,6 @@ if (typeof module !== 'undefined' && module.exports) {
     sortProjectsForLibrary,
     resumeTargetOf,
     buildDraftProject,
+    briefSnippet,
   };
 }

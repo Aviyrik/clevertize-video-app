@@ -1605,7 +1605,8 @@ test('V2 Application Shell: App.jsx integrates AppShell, frosted navigation, and
   assert.ok(appSrc.includes('onOpenUrlModal='), 'App.jsx must provide url modal handler');
 
   const shellSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AppShell.jsx'), 'utf8');
-  assert.ok(shellSrc.includes('backdropFilter: \'blur(20px)\''), 'AppShell must implement frosted-glass sidebar');
+  // Signal design system: glass belongs to the floating top bar (navigation layer); the sidebar is a solid surface.
+  assert.ok(shellSrc.includes('className="app-header-bar cc-glass"'), 'AppShell must render the top bar on the glass material');
   assert.ok(shellSrc.includes('New Film Project'), 'AppShell must prominently provide New Film project action');
   assert.ok(shellSrc.includes('Creation Hub'), 'AppShell must link to Creation Hub');
   assert.ok(shellSrc.includes('Creative Studio'), 'AppShell must link to Creative Studio');
@@ -1648,7 +1649,7 @@ test('V2 Entry Point 2 (Script): ExistingScriptModal validates and fast-tracks d
   assert.ok(scriptModalSrc.includes('Kirana UGC (Hindi)'), 'Must include Kirana sample');
   assert.ok(scriptModalSrc.includes('Chai Point Quick Rush (English)'), 'Must include Chai Point sample');
   assert.ok(scriptModalSrc.includes('/api/script/validate-and-import'), 'Must call validation endpoint');
-  assert.ok(scriptModalSrc.includes('Proceed to Script Studio (Stage 07)'), 'Must offer direct path to Stage 07');
+  assert.ok(scriptModalSrc.includes('Proceed to Script Studio (Stage 06)'), 'Must offer direct path to the Script stage (Stage 06)');
 
   let studioStage = 'business';
   let completedStages = [];

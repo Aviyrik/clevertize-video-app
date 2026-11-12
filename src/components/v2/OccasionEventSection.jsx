@@ -114,7 +114,7 @@ export default function OccasionEventSection({
           ) : (
             <ChevronRight size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           )}
-          <Calendar size={14} style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)', flexShrink: 0 }} />
+          <Calendar size={14} style={{ color: isActive ? 'var(--cc-emphasis)' : 'var(--text-tertiary)', flexShrink: 0 }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
             Occasion &amp; Event
           </span>
@@ -124,13 +124,13 @@ export default function OccasionEventSection({
           {isActive ? (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 padding: '2px 8px',
                 borderRadius: 12,
-                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                color: 'var(--cc-emphasis)',
+                border: '1px solid rgba(244, 244, 236, 0.225)',
                 maxWidth: 190,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -141,7 +141,7 @@ export default function OccasionEventSection({
               {hasEventName && normalized.creativeInfluence ? ` · ${normalized.creativeInfluence}` : ''}
             </span>
           ) : (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
               {isExpanded ? 'Optional · Open' : 'Optional · Not added'}
             </span>
           )}
@@ -166,7 +166,7 @@ export default function OccasionEventSection({
           {/* 1. Event Category */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Event category <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
               </label>
               {isActive && (
@@ -177,7 +177,7 @@ export default function OccasionEventSection({
                     background: 'none',
                     border: 'none',
                     color: 'var(--text-tertiary)',
-                    fontSize: 11,
+                    fontSize: 12,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -203,9 +203,9 @@ export default function OccasionEventSection({
                       borderRadius: 7,
                       fontSize: 12,
                       fontWeight: selected ? 600 : 500,
-                      backgroundColor: selected ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
-                      border: selected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      color: selected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      backgroundColor: selected ? 'rgba(244, 244, 236, 0.07)' : 'var(--bg-elevated)',
+                      border: selected ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                      color: selected ? 'var(--cc-emphasis)' : 'var(--text-secondary)',
                       cursor: 'pointer',
                     }}
                   >
@@ -221,7 +221,7 @@ export default function OccasionEventSection({
             <div style={{ position: 'relative' }}>
               <label
                 htmlFor="occasion-event-name-input"
-                style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}
+                style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}
               >
                 Event name <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(Search or enter custom)</span>
               </label>
@@ -304,7 +304,7 @@ export default function OccasionEventSection({
                       }}
                     >
                       <span>{item.name}</span>
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{item.category}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{item.category}</span>
                     </button>
                   ))}
                 </div>
@@ -314,7 +314,7 @@ export default function OccasionEventSection({
             <div>
               <label
                 htmlFor="occasion-event-timing-input"
-                style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}
+                style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}
               >
                 Event timing <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
               </label>
@@ -341,7 +341,7 @@ export default function OccasionEventSection({
 
           {/* 4. Creative Influence */}
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
               Creative influence{' '}
               <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>
                 {hasEventName ? '(How strongly it guides the story)' : '(Select an event above first)'}
@@ -360,15 +360,15 @@ export default function OccasionEventSection({
                       padding: '7px 10px',
                       borderRadius: 7,
                       textAlign: 'left',
-                      backgroundColor: selected ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
-                      border: selected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      color: !hasEventName ? 'var(--text-tertiary)' : selected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                      backgroundColor: selected ? 'rgba(244, 244, 236, 0.07)' : 'var(--bg-elevated)',
+                      border: selected ? '1px solid var(--cc-selected-line)' : '1px solid var(--border-subtle)',
+                      color: !hasEventName ? 'var(--text-tertiary)' : selected ? 'var(--cc-emphasis)' : 'var(--text-primary)',
                       cursor: hasEventName ? 'pointer' : 'not-allowed',
                       opacity: hasEventName ? 1 : 0.6,
                     }}
                   >
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{opt.label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{opt.hint}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 1 }}>{opt.hint}</div>
                   </button>
                 );
               })}
@@ -379,7 +379,7 @@ export default function OccasionEventSection({
           <div>
             <label
               htmlFor="occasion-event-context-input"
-              style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}
+              style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5 }}
             >
               Additional context <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(Optional)</span>
             </label>

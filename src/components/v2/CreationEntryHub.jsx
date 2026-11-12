@@ -30,26 +30,27 @@ export default function CreationEntryHub({
   onEditBrand,
 }) {
   return (
-    <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(20px, 4vw, 36px) clamp(14px, 3vw, 24px) 60px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: 'clamp(24px, 4vw, 44px) clamp(14px, 3vw, 24px) 60px', width: '100%', boxSizing: 'border-box' }}>
       {/* Welcome Banner */}
-      <div style={{ textAlign: 'center', marginBottom: 26 }}>
+      <div style={{ marginBottom: 18 }}>
         <h1
           style={{
-            fontSize: 30,
-            fontWeight: 800,
-            margin: '0 0 8px',
+            fontSize: 'clamp(30px, 4vw, 40px)',
+            fontWeight: 600,
+            margin: '0 0 6px',
             color: 'var(--text-primary)',
-            letterSpacing: '-0.025em',
+            letterSpacing: '-0.028em',
+            lineHeight: 1.08,
           }}
         >
           Create a New Video Ad
         </h1>
         <p
           style={{
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-secondary)',
             maxWidth: 520,
-            margin: '0 auto',
+            margin: 0,
             lineHeight: 1.5,
           }}
         >
@@ -62,27 +63,26 @@ export default function CreationEntryHub({
         <div
           data-tour="hub-brand-card"
           style={{
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 10,
-            padding: '10px 16px',
-            marginBottom: 28,
+            backgroundColor: 'transparent',
+            borderTop: '1px solid var(--border-subtle)',
+            borderBottom: '1px solid var(--border-subtle)',
+            padding: '10px 0',
+            marginBottom: 24,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 12,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
               style={{
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 borderRadius: 8,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-hover)',
+                color: 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -92,21 +92,17 @@ export default function CreationEntryHub({
               <Store size={17} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)' }}>
                 Active Brand:
               </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                 {businessName}
               </span>
               <span
                 style={{
-                  fontSize: 11,
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '2px 8px',
-                  borderRadius: 4,
+                  fontSize: 13,
                   color: 'var(--text-secondary)',
-                  fontWeight: 600,
+                  fontWeight: 400,
                 }}
               >
                 {businessType || 'Retail Store'}
@@ -120,25 +116,7 @@ export default function CreationEntryHub({
             <button
               type="button"
               onClick={onEditBrand}
-              style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 6,
-                padding: '5px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--accent-primary)';
-                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-secondary)';
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              }}
+              className="cc-btn cc-btn--ghost cc-btn--sm"
             >
               Edit Details
             </button>
@@ -148,9 +126,9 @@ export default function CreationEntryHub({
         <div
           data-tour="hub-brand-card"
           style={{
-            backgroundColor: 'rgba(99, 102, 241, 0.06)',
-            border: '1.5px dashed var(--accent-primary)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(244, 244, 236, 0.03)',
+            border: '1px dashed var(--border-strong)',
+            borderRadius: 14,
             padding: '12px 18px',
             marginBottom: 28,
             display: 'flex',
@@ -166,8 +144,8 @@ export default function CreationEntryHub({
                 width: 34,
                 height: 34,
                 borderRadius: 8,
-                backgroundColor: 'var(--accent-primary)',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--cc-hover)',
+                color: 'var(--cc-text-1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -177,7 +155,7 @@ export default function CreationEntryHub({
               <Store size={18} />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                 No Business Profile Set Up
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -189,17 +167,7 @@ export default function CreationEntryHub({
             <button
               type="button"
               onClick={onEditBrand}
-              style={{
-                backgroundColor: 'var(--accent-primary)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 7,
-                padding: '8px 16px',
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
+              className="cc-btn cc-btn--secondary cc-btn--sm"
             >
               + Set Up Business
             </button>
@@ -207,276 +175,165 @@ export default function CreationEntryHub({
         </div>
       )}
 
-      {/* The Three Creation Entry Points Grid (Exclusive Starting Points) */}
+      {/* The Three Creation Entry Points (Exclusive Starting Points) */}
+      {/* Entry Point 1: Start with a Brief (Hero / Recommended) */}
+      <div
+        data-tour="hub-entry-brief"
+        data-testid="hub-card-brief"
+        className="cc-enter"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
+          backgroundColor: 'var(--cc-surface)',
+          backgroundImage: 'var(--cc-sheen)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 20,
+          overflow: 'hidden',
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ padding: '28px 28px 26px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-tertiary)' }}>★ Recommended</span>
+          <h3 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            Start with a Brief
+          </h3>
+          <p style={{ margin: 0, fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.55, maxWidth: 380 }}>
+            Describe your offer and let AI draft hooks and scripts.
+          </p>
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={onStartBrief}
+              className="cc-btn cc-btn--primary cc-btn--lg"
+            >
+              <span>Start with Brief</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Visual: the path ahead, as a slate over warm footage light */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'relative',
+            minHeight: 210,
+            background:
+              'radial-gradient(60% 75% at 70% 30%, rgba(242, 184, 75, 0.30), transparent 62%), radial-gradient(55% 60% at 15% 90%, rgba(141, 184, 255, 0.10), transparent 60%), linear-gradient(160deg, #2A2621 0%, #121110 100%)',
+          }}
+        >
+          <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(90deg, transparent 0 63px, rgba(255,255,255,0.025) 63px 64px)' }} />
+          <div style={{ position: 'absolute', left: 20, right: 20, bottom: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {['Write brief', 'Pick mode', 'Generate scripts'].map((label, i) => (
+              <div
+                key={label}
+                className="cc-glass--flat"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 12px',
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(18, 18, 16, 0.42)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  backdropFilter: 'blur(12px)',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'rgba(255, 255, 255, 0.88)',
+                }}
+              >
+                <span style={{ fontFamily: 'var(--cc-font-mono)', fontSize: 11.5, color: 'rgba(255,255,255,0.55)' }}>0{i + 1}</span>
+                {label}
+              </div>
+            ))}
+          </div>
+          <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+            Next step: Write brief → pick mode → generate scripts.
+          </span>
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
-          gap: 18,
-          marginBottom: 36,
+          gap: 14,
+          marginBottom: 44,
         }}
       >
-        {/* Entry Point 1: Start with a Brief (Hero / Recommended) */}
-        <div
-          data-tour="hub-entry-brief"
-          data-testid="hub-card-brief"
-          style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '2px solid var(--accent-primary)',
-            borderRadius: 14,
-            padding: '22px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 6px 24px rgba(99, 102, 241, 0.18)',
-            position: 'relative',
-          }}
-        >
-          {/* Recommended Badge */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 14,
-              right: 14,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#FFFFFF',
-              fontSize: 10,
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              padding: '3px 8px',
-              borderRadius: 12,
-            }}
-          >
-            ★ Recommended
-          </div>
-
-          <div>
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 10,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 14,
-              }}
-            >
-              <Sparkles size={22} />
-            </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Start with a Brief
-            </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Describe your offer and let AI draft hooks and scripts.
-            </p>
-            <div
-              style={{
-                marginTop: 12,
-                padding: '8px 10px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 11.5,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-              }}
-            >
-              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Write brief → pick mode → generate scripts.
-            </div>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <button
-              type="button"
-              onClick={onStartBrief}
-              style={{
-                width: '100%',
-                backgroundColor: 'var(--accent-primary)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 13,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px var(--accent-glow)',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Start with Brief</span>
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-
         {/* Entry Point 2: Start with an Existing Script */}
-        <div
+        <button
+          type="button"
           data-testid="hub-card-script"
+          onClick={onOpenScriptModal}
+          className="cc-hoverable"
           style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 14,
-            padding: '22px 20px',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            alignItems: 'center',
+            gap: 14,
+            textAlign: 'left',
+            padding: '16px 18px',
+            borderRadius: 14,
+            backgroundColor: 'var(--cc-surface)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
           }}
         >
-          <div>
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 10,
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: '#10B981',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 14,
-              }}
-            >
-              <FileCode2 size={22} />
-            </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Start with an Existing Script
-            </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'var(--cc-hover)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileCode2 size={18} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 15, fontWeight: 600, letterSpacing: '-0.005em' }}>Start with an Existing Script</span>
+            <span style={{ display: 'block', fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>
               Paste a script for continuity checks and rendering.
-            </p>
-            <div
-              style={{
-                marginTop: 12,
-                padding: '8px 10px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 11.5,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-              }}
-            >
-              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Paste script → check quality → produce or edit scenes.
-            </div>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <button
-              type="button"
-              onClick={onOpenScriptModal}
-              style={{
-                width: '100%',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid #10B981',
-                color: '#34D399',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 13,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Import Script</span>
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
+            </span>
+            <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+              Next step: Paste script → check quality → produce or edit scenes.
+            </span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+            <span>Import Script</span>
+            <ArrowRight size={15} />
+          </span>
+        </button>
 
         {/* Entry Point 3: Start with a Website URL */}
-        <div
+        <button
+          type="button"
           data-testid="hub-card-url"
+          onClick={onOpenUrlModal}
+          className="cc-hoverable"
           style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 14,
-            padding: '22px 20px',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            alignItems: 'center',
+            gap: 14,
+            textAlign: 'left',
+            padding: '16px 18px',
+            borderRadius: 14,
+            backgroundColor: 'var(--cc-surface)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
           }}
         >
-          <div>
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 10,
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 14,
-              }}
-            >
-              <Globe size={22} />
-            </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Start with a Website URL
-            </h3>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'var(--cc-hover)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Globe size={18} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 15, fontWeight: 600, letterSpacing: '-0.005em' }}>Start with a Website URL</span>
+            <span style={{ display: 'block', fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>
               Pull brand details and offerings straight from your website.
-            </p>
-            <div
-              style={{
-                marginTop: 12,
-                padding: '8px 10px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 11.5,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-              }}
-            >
-              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Scan URL → review brief → pick mode.
-            </div>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <button
-              type="button"
-              onClick={onOpenUrlModal}
-              style={{
-                width: '100%',
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                border: '1px solid #38BDF8',
-                color: '#60A5FA',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 13,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Scan Website</span>
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
+            </span>
+            <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+              Next step: Scan URL → review brief → pick mode.
+            </span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+            <span>Scan Website</span>
+            <ArrowRight size={15} />
+          </span>
+        </button>
       </div>
 
       {/* Recent Projects Section */}
@@ -491,19 +348,15 @@ export default function CreationEntryHub({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={16} style={{ color: 'var(--accent-primary)' }} />
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 Recent Projects
               </h2>
               <span
                 style={{
-                  fontSize: 11,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '2px 8px',
-                  borderRadius: 10,
+                  fontSize: 12.5,
+                  fontFamily: 'var(--cc-font-mono)',
                   color: 'var(--text-tertiary)',
-                  fontWeight: 600,
+                  fontWeight: 500,
                 }}
               >
                 {recentProjects.length}
@@ -517,9 +370,9 @@ export default function CreationEntryHub({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-primary)',
+                  color: 'var(--text-secondary)',
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 500,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -545,9 +398,9 @@ export default function CreationEntryHub({
                 key={proj.id}
                 onClick={() => onOpenProject && onOpenProject(proj)}
                 style={{
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 10,
+                  backgroundColor: 'var(--cc-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 14,
                   padding: '16px 18px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -557,8 +410,8 @@ export default function CreationEntryHub({
                   gap: 12,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = 'var(--border-strong)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-default)';
@@ -569,24 +422,24 @@ export default function CreationEntryHub({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        color: proj.status === 'script_ready' ? 'var(--success)' : 'var(--accent-primary)',
-                        backgroundColor: proj.status === 'script_ready' ? 'rgba(16, 185, 129, 0.12)' : 'var(--accent-subtle)',
-                        padding: '2px 6px',
-                        borderRadius: 4,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        letterSpacing: '0.005em',
+                        color: 'var(--text-secondary)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
                       }}
                     >
+                      <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: proj.status === 'script_ready' ? 'var(--success)' : 'var(--warning)' }} />
                       {proj.status === 'script_ready' ? 'Script Ready' : 'In Progress'}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                       {proj.scenes?.length || 4} Scenes
                     </span>
                   </div>
 
-                  <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {proj.title || 'Commercial Project'}
                   </h4>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -601,9 +454,9 @@ export default function CreationEntryHub({
                     justifyContent: 'space-between',
                     paddingTop: 10,
                     borderTop: '1px solid var(--border-subtle)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: 'var(--accent-primary)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--text-secondary)',
                   }}
                 >
                   <span>Resume in Studio</span>
@@ -626,9 +479,9 @@ export default function CreationEntryHub({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
+          <CheckCircle2 size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>
               18-Point Continuity Gate
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
@@ -638,9 +491,9 @@ export default function CreationEntryHub({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
+          <CheckCircle2 size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>
               Indian Regional Dialects
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
@@ -650,9 +503,9 @@ export default function CreationEntryHub({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
+          <CheckCircle2 size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>
               Magnific GPU Rendering
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>

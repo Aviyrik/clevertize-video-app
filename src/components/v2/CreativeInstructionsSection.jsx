@@ -152,11 +152,11 @@ export default function CreativeInstructionsSection({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {icon}
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
             {title}
           </span>
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{hint}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{hint}</span>
       </div>
 
       {/* Existing Instruction Rows */}
@@ -198,7 +198,7 @@ export default function CreativeInstructionsSection({
                         flex: 1,
                         padding: '4px 8px',
                         borderRadius: 5,
-                        border: '1px solid var(--accent-primary)',
+                        border: '1px solid var(--cc-selected-line)',
                         backgroundColor: 'var(--bg-elevated)',
                         color: 'var(--text-primary)',
                         fontSize: 12,
@@ -212,7 +212,7 @@ export default function CreativeInstructionsSection({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: 'var(--success, #10b981)',
+                        color: 'var(--success, var(--cc-success))',
                         cursor: 'pointer',
                         padding: 4,
                         display: 'flex',
@@ -257,12 +257,12 @@ export default function CreativeInstructionsSection({
                       onClick={() => handleTogglePriority(type, item)}
                       title="Click to switch between Critical (enforced) and Preference (advisory)"
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         padding: '2px 7px',
                         borderRadius: 10,
-                        border: `1px solid ${item.priority === 'preference' ? 'var(--border-default)' : `${accentColor}55`}`,
-                        backgroundColor: item.priority === 'preference' ? 'transparent' : `${accentColor}15`,
+                        border: `1px solid ${item.priority === 'preference' ? 'var(--border-default)' : `color-mix(in srgb, ${accentColor} 34%, transparent)`}`,
+                        backgroundColor: item.priority === 'preference' ? 'transparent' : `color-mix(in srgb, ${accentColor} 9%, transparent)`,
                         color: item.priority === 'preference' ? 'var(--text-tertiary)' : accentColor,
                         cursor: 'pointer',
                         textTransform: 'capitalize',
@@ -303,7 +303,7 @@ export default function CreativeInstructionsSection({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: 'var(--error, #ef4444)',
+                        color: 'var(--error, var(--cc-danger))',
                         cursor: 'pointer',
                         padding: 3,
                         display: 'flex',
@@ -374,7 +374,7 @@ export default function CreativeInstructionsSection({
     <div
       style={{
         backgroundColor: 'var(--bg-surface)',
-        border: `1px solid ${total > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-subtle)'}`,
+        border: `1px solid ${total > 0 ? 'rgba(244, 244, 236, 0.2)' : 'var(--border-subtle)'}`,
         borderRadius: 10,
         overflow: 'hidden',
         transition: 'border-color 0.15s ease',
@@ -405,7 +405,7 @@ export default function CreativeInstructionsSection({
           ) : (
             <ChevronRight size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           )}
-          <Shield size={14} style={{ color: total > 0 ? 'var(--accent-primary)' : 'var(--text-tertiary)', flexShrink: 0 }} />
+          <Shield size={14} style={{ color: total > 0 ? 'var(--cc-emphasis)' : 'var(--text-tertiary)', flexShrink: 0 }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
             Creative Instructions
           </span>
@@ -416,13 +416,13 @@ export default function CreativeInstructionsSection({
           {total > 0 ? (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 padding: '2px 8px',
                 borderRadius: 12,
-                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                backgroundColor: 'rgba(244, 244, 236, 0.06)',
+                color: 'var(--cc-emphasis)',
+                border: '1px solid rgba(244, 244, 236, 0.225)',
               }}
             >
               ✓ {[
@@ -435,19 +435,19 @@ export default function CreativeInstructionsSection({
           ) : hasDraftInput ? (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 padding: '2px 8px',
                 borderRadius: 12,
-                backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                color: '#F59E0B',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
+                backgroundColor: 'rgba(242, 184, 75, 0.12)',
+                color: 'var(--cc-warning)',
+                border: '1px solid rgba(242, 184, 75, 0.25)',
               }}
             >
               Draft text · click Add
             </span>
           ) : (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
               {isExpanded ? 'Optional · Open' : 'Optional · Not added'}
             </span>
           )}
@@ -476,8 +476,8 @@ export default function CreativeInstructionsSection({
             setInputValue: setNewDoText,
             onAdd: handleAddDo,
             placeholder: 'e.g. Mention festive 20% offer or BIS Hallmark purity',
-            accentColor: '#10b981',
-            icon: <CheckCircle2 size={14} style={{ color: '#10b981' }} />,
+            accentColor: 'var(--cc-success)',
+            icon: <CheckCircle2 size={14} style={{ color: 'var(--cc-success)' }} />,
           })}
 
           {renderGroup({
@@ -489,8 +489,8 @@ export default function CreativeInstructionsSection({
             setInputValue: setNewDontText,
             onAdd: handleAddDont,
             placeholder: 'e.g. Do not mention competitor brands or say "cheapest"',
-            accentColor: '#ef4444',
-            icon: <Ban size={14} style={{ color: '#ef4444' }} />,
+            accentColor: 'var(--cc-danger)',
+            icon: <Ban size={14} style={{ color: 'var(--cc-danger)' }} />,
           })}
         </div>
       )}

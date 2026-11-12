@@ -31,7 +31,9 @@ import {
   HelpCircle,
   User,
   MapPin,
-  Lock
+  Lock,
+  Users,
+  House,
 } from 'lucide-react';
 
 /**
@@ -63,26 +65,26 @@ export function ResearchInsightsBanner({
   return (
     <div style={{
       backgroundColor: 'var(--bg-surface)',
-      border: '1px solid rgba(99, 102, 241, 0.3)',
+      border: '1px solid rgba(244, 244, 236, 0.27)',
       borderRadius: 10,
       padding: '14px 16px',
       marginBottom: 16,
-      boxShadow: '0 2px 12px rgba(99, 102, 241, 0.05)',
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
       position: 'relative'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={15} style={{ color: 'var(--accent-primary)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <Sparkles size={15} style={{ color: 'var(--cc-emphasis)' }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
             Research Complete
           </span>
           <span style={{
-            fontSize: 10,
-            fontWeight: 700,
+            fontSize: 11.5,
+            fontWeight: 600,
             padding: '2px 6px',
             borderRadius: 4,
             backgroundColor: 'var(--bg-elevated)',
-            color: 'var(--accent-primary)',
+            color: 'var(--cc-emphasis)',
             border: '1px solid var(--border-subtle)'
           }}>
             {researchData.tierLabel || `Tier ${researchData.tier ?? 0}`}
@@ -102,16 +104,16 @@ export function ResearchInsightsBanner({
       {/* Condensed 2-column cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: researchData.informationGap ? 10 : 0 }}>
         {researchData.audienceInsight && (
-          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', fontSize: 10, display: 'block', marginBottom: 2 }}>
+          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 600, color: 'var(--cc-emphasis)', fontSize: 11.5, display: 'block', marginBottom: 2 }}>
               Audience Insight
             </span>
             {researchData.audienceInsight}
           </div>
         )}
         {researchData.creativeOpportunity && (
-          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', fontSize: 10, display: 'block', marginBottom: 2 }}>
+          <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 600, color: 'var(--success)', fontSize: 11.5, display: 'block', marginBottom: 2 }}>
               Creative Opportunity
             </span>
             {researchData.creativeOpportunity}
@@ -122,7 +124,7 @@ export function ResearchInsightsBanner({
       {/* Single High-Value Gap Question */}
       {researchData.informationGap?.question && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
             {researchData.informationGap.question}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -136,10 +138,10 @@ export function ResearchInsightsBanner({
                   style={{
                     padding: '4px 10px',
                     borderRadius: 14,
-                    fontSize: 11,
-                    fontWeight: isSelected ? 700 : 500,
-                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    fontSize: 12,
+                    fontWeight: isSelected ? 600 : 500,
+                    backgroundColor: isSelected ? 'var(--cc-active)' : 'var(--bg-elevated)',
+                    color: isSelected ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                     border: '1px solid var(--border-subtle)',
                     cursor: 'pointer',
                     transition: 'all 0.1s ease'
@@ -185,7 +187,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
       gap: 10,
       flexWrap: 'wrap',
     }}>
-      <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)', display: 'flex', alignItems: 'center', gap: 4 }}>
         <Layers size={11} />
         <span>Your Creative Plan:</span>
       </span>
@@ -200,7 +202,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Dir:</span>
@@ -210,7 +212,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('direction')}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
               title="Edit Direction"
             >
               Edit
@@ -227,7 +229,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Hook:</span>
@@ -237,7 +239,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('hook')}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
               title="Edit Hook"
             >
               Edit
@@ -254,7 +256,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             borderRadius: 6,
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-subtle)',
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-primary)'
           }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Plot:</span>
@@ -264,7 +266,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('plot')}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
               title="Edit Plot"
             >
               Edit
@@ -280,17 +282,17 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
           borderRadius: 6,
           backgroundColor: 'var(--bg-elevated)',
           border: '1px solid var(--border-subtle)',
-          fontSize: 11,
+          fontSize: 12,
           color: 'var(--text-primary)'
         }}>
           <span style={{ color: 'var(--text-tertiary)' }}>Format:</span>
-          <strong style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--accent-primary)' }}>
+          <strong style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--cc-emphasis)' }}>
             {formatLabel}
           </strong>
           <button
             type="button"
             onClick={() => onEditPanel('story')}
-            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 10, fontWeight: 700 }}
+            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
             title="Edit Video Format & Story"
           >
             Edit
@@ -343,21 +345,21 @@ function CreativeProgressiveStepper({
                 gap: 6,
                 padding: '6px 12px',
                 borderRadius: 6,
-                border: isCurrent ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                border: isCurrent ? '1px solid var(--cc-selected-line)' : '1px solid transparent',
                 backgroundColor: isCurrent
                   ? 'var(--bg-active)'
                   : isCompleted
                   ? 'var(--bg-elevated)'
                   : 'transparent',
                 color: isCurrent
-                  ? 'var(--accent-primary)'
+                  ? 'var(--cc-emphasis)'
                   : isCompleted
                   ? 'var(--text-primary)'
                   : 'var(--text-tertiary)',
                 opacity: canClick ? 1 : 0.45,
                 cursor: canClick ? 'pointer' : 'not-allowed',
                 fontSize: 12,
-                fontWeight: isCurrent ? 700 : 500,
+                fontWeight: isCurrent ? 600 : 500,
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease'
               }}
@@ -367,7 +369,7 @@ function CreativeProgressiveStepper({
               ) : (
                 <span style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10,
+                  fontSize: 11.5,
                   opacity: 0.75
                 }}>
                   {st.num}
@@ -377,7 +379,7 @@ function CreativeProgressiveStepper({
             </button>
 
             {idx < STAGES.length - 1 && (
-              <span style={{ color: 'var(--border-default)', fontSize: 11, userSelect: 'none' }}>
+              <span style={{ color: 'var(--border-default)', fontSize: 12, userSelect: 'none' }}>
                 →
               </span>
             )}
@@ -590,8 +592,8 @@ export function CreativePanelsWorkspace({
       {/* Downstream Invalidation Notice */}
       {downstreamWarning && (
         <div style={{
-          backgroundColor: 'rgba(234, 179, 8, 0.1)',
-          border: '1px solid rgba(234, 179, 8, 0.4)',
+          backgroundColor: 'rgba(244, 244, 236, 0.05)',
+          border: '1px solid rgba(244, 244, 236, 0.36)',
           borderRadius: 8,
           padding: '10px 14px',
           display: 'flex',
@@ -600,7 +602,7 @@ export function CreativePanelsWorkspace({
           gap: 12,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-primary)' }}>
-            <AlertCircle size={15} style={{ color: '#eab308' }} />
+            <AlertCircle size={15} style={{ color: 'var(--cc-emphasis)' }} />
             <span>Changing this territory will update downstream hooks, plot, and story options.</span>
           </div>
           <button
@@ -612,12 +614,12 @@ export function CreativePanelsWorkspace({
             }}
             style={{
               padding: '5px 12px',
-              borderRadius: 6,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#ffffff',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
+              color: 'var(--cc-on-action)',
               border: 'none',
-              fontSize: 11,
-              fontWeight: 700,
+              fontSize: 12,
+              fontWeight: 600,
               cursor: 'pointer',
               whiteSpace: 'nowrap'
             }}
@@ -633,7 +635,7 @@ export function CreativePanelsWorkspace({
       {creativePanel === 'direction' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: '0 0 2px', color: 'var(--text-primary)' }}>
               Choose Creative Direction
             </h2>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
@@ -653,7 +655,7 @@ export function CreativePanelsWorkspace({
                     onClick={() => handleSelectDirection(dir)}
                     style={{
                       backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                       borderRadius: 10,
                       padding: 16,
                       cursor: 'pointer',
@@ -667,8 +669,8 @@ export function CreativePanelsWorkspace({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{
-                          fontSize: 10,
-                          fontWeight: 700,
+                          fontSize: 11.5,
+                          fontWeight: 600,
                           padding: '2px 6px',
                           borderRadius: 4,
                           backgroundColor: 'var(--bg-elevated)',
@@ -677,18 +679,17 @@ export function CreativePanelsWorkspace({
                         }}>
                           0{idx + 1}
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                           {dir.title}
                         </span>
                       </div>
 
                       {dir.recommended && (
                         <span style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                          color: 'var(--accent-primary)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                          color: 'var(--cc-emphasis)',
                           padding: '2px 6px',
                           borderRadius: 4
                         }}>
@@ -701,7 +702,7 @@ export function CreativePanelsWorkspace({
                       {dir.description || dir.concept}
                     </div>
 
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
                       Angle: {dir.angle}
                     </div>
                   </div>
@@ -712,7 +713,7 @@ export function CreativePanelsWorkspace({
 
           {/* Custom Direction Override */}
           <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
               + Create my own direction
             </div>
             <input
@@ -735,7 +736,7 @@ export function CreativePanelsWorkspace({
             <button
               type="button"
               onClick={handleProceedToHook}
-              style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ padding: '8px 20px', borderRadius: 999, backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <span>Continue to Hook</span>
               <ArrowRight size={14} />
@@ -750,7 +751,7 @@ export function CreativePanelsWorkspace({
       {creativePanel === 'hook' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: '0 0 2px', color: 'var(--text-primary)' }}>
               Scroll-Stopping Hook
             </h2>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
@@ -770,7 +771,7 @@ export function CreativePanelsWorkspace({
                     onClick={() => setSelectedHook(h)}
                     style={{
                       backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                       borderRadius: 10,
                       padding: 14,
                       cursor: 'pointer',
@@ -782,22 +783,21 @@ export function CreativePanelsWorkspace({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 11.5,
+                        fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
                         backgroundColor: 'var(--bg-elevated)',
-                        color: 'var(--accent-primary)',
+                        color: 'var(--cc-emphasis)',
                       }}>
                         {h.archetype || 'Viral Hook'}
                       </span>
                       {h.recommended && (
                         <span style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                          color: 'var(--accent-primary)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                          color: 'var(--cc-emphasis)',
                           padding: '2px 6px',
                           borderRadius: 4
                         }}>
@@ -806,11 +806,11 @@ export function CreativePanelsWorkspace({
                       )}
                     </div>
 
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>
                       "{h.hookLine || h.text}"
                     </div>
 
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
                       <strong>Opening Action:</strong> {h.visualAction || h.visual}
                     </div>
                   </div>
@@ -821,7 +821,7 @@ export function CreativePanelsWorkspace({
 
           {/* Custom Hook Override */}
           <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
               + Add custom hook
             </div>
             <input
@@ -844,7 +844,7 @@ export function CreativePanelsWorkspace({
             <button
               type="button"
               onClick={handleProceedToPlot}
-              style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ padding: '8px 20px', borderRadius: 999, backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <span>Continue to Plot</span>
               <ArrowRight size={14} />
@@ -859,7 +859,7 @@ export function CreativePanelsWorkspace({
       {creativePanel === 'plot' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: '0 0 2px', color: 'var(--text-primary)' }}>
               Select Narrative Plot Line
             </h2>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
@@ -879,7 +879,7 @@ export function CreativePanelsWorkspace({
                     onClick={() => setSelectedPlot(p)}
                     style={{
                       backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                       borderRadius: 10,
                       padding: 16,
                       cursor: 'pointer',
@@ -890,16 +890,15 @@ export function CreativePanelsWorkspace({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                         {p.title}
                       </span>
                       {p.recommended && (
                         <span style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                          color: 'var(--accent-primary)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                          color: 'var(--cc-emphasis)',
                           padding: '2px 6px',
                           borderRadius: 4
                         }}>
@@ -922,13 +921,13 @@ export function CreativePanelsWorkspace({
                       gap: 4,
                       border: '1px solid var(--border-subtle)'
                     }}>
-                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                        <strong style={{ color: 'var(--accent-primary)' }}>01 Hook:</strong> {p.hookBeat || 'Opening tension'}
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--cc-emphasis)' }}>01 Hook:</strong> {p.hookBeat || 'Opening tension'}
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
                         <strong style={{ color: 'var(--warning)' }}>02 Conflict:</strong> {p.conflictBeat || 'Problem deepens'}
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
                         <strong style={{ color: 'var(--success)' }}>03 Payoff:</strong> {p.payoffBeat || 'Delightful resolution'}
                       </div>
                     </div>
@@ -940,7 +939,7 @@ export function CreativePanelsWorkspace({
 
           {/* Custom Plot Override */}
           <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
               + Add custom plot
             </div>
             <input
@@ -963,7 +962,7 @@ export function CreativePanelsWorkspace({
             <button
               type="button"
               onClick={handleProceedToStory}
-              style={{ padding: '8px 20px', borderRadius: 6, backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ padding: '8px 20px', borderRadius: 999, backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <span>Continue to Story & Format</span>
               <ArrowRight size={14} />
@@ -978,7 +977,7 @@ export function CreativePanelsWorkspace({
       {creativePanel === 'story' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 2px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: '0 0 2px', color: 'var(--text-primary)' }}>
               Story & Format Architecture
             </h2>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
@@ -992,9 +991,9 @@ export function CreativePanelsWorkspace({
             <>
               {/* Decision A: Visual Format Tiles */}
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>1. Video Format</span>
-                  <span style={{ fontSize: 10, color: 'var(--accent-primary)', textTransform: 'none', fontWeight: 600 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--cc-emphasis)', textTransform: 'none', fontWeight: 600 }}>
                     Changes regenerate downstream beats
                   </span>
                 </div>
@@ -1018,7 +1017,7 @@ export function CreativePanelsWorkspace({
                         }}
                         style={{
                           backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
-                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                          border: isSelected ? '2px solid var(--cc-selected-line)' : '1px solid var(--border-default)',
                           borderRadius: 8,
                           padding: 12,
                           cursor: 'pointer',
@@ -1032,8 +1031,8 @@ export function CreativePanelsWorkspace({
                           width: 28,
                           height: 28,
                           borderRadius: 6,
-                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                          backgroundColor: isSelected ? 'var(--cc-active)' : 'var(--bg-elevated)',
+                          color: isSelected ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1042,10 +1041,10 @@ export function CreativePanelsWorkspace({
                           <Icon size={14} />
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {fmt.label}
                           </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 2 }}>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 2 }}>
                             {fmt.tagline}
                           </div>
                         </div>
@@ -1057,7 +1056,7 @@ export function CreativePanelsWorkspace({
 
               {/* Decision B: Compact World Anchors (Lead, Supporting, Setting, Product) */}
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                   2. Story World Anchors
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
@@ -1072,8 +1071,8 @@ export function CreativePanelsWorkspace({
                     gap: 6
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>👩</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <User size={14} aria-hidden="true" />
                         <span>Lead</span>
                       </span>
                       {editingCard === 'lead' ? (
@@ -1086,15 +1085,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('leadCharacter', `${newLead.name} (${newLead.role})`);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1108,7 +1107,7 @@ export function CreativePanelsWorkspace({
                             setEditLeadRole(typeof c1 === 'object' ? (c1.role || 'Host') : 'Customer');
                             setEditingCard('lead');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1121,14 +1120,14 @@ export function CreativePanelsWorkspace({
                           value={editLeadName}
                           onChange={(e) => setEditLeadName(e.target.value)}
                           placeholder="Name"
-                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                         <input
                           type="text"
                           value={editLeadRole}
                           onChange={(e) => setEditLeadRole(e.target.value)}
                           placeholder="Role (e.g. Customer, Creator)"
-                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                       </div>
                     ) : (
@@ -1151,8 +1150,8 @@ export function CreativePanelsWorkspace({
                     gap: 6
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>👨</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Users size={14} aria-hidden="true" />
                         <span>Supporting</span>
                       </span>
                       {editingCard === 'supporting' ? (
@@ -1165,15 +1164,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('supportingCharacter', `${newSupp.name} (${newSupp.role})`);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1187,7 +1186,7 @@ export function CreativePanelsWorkspace({
                             setEditSuppRole(typeof c2 === 'object' ? (c2.role || 'Customer') : 'Customer');
                             setEditingCard('supporting');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1200,14 +1199,14 @@ export function CreativePanelsWorkspace({
                           value={editSuppName}
                           onChange={(e) => setEditSuppName(e.target.value)}
                           placeholder="Name"
-                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                         <input
                           type="text"
                           value={editSuppRole}
                           onChange={(e) => setEditSuppRole(e.target.value)}
                           placeholder="Role (e.g. Partner, Friend)"
-                          style={{ padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                       </div>
                     ) : (
@@ -1230,8 +1229,8 @@ export function CreativePanelsWorkspace({
                     gap: 6
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>🏠</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <House size={14} aria-hidden="true" />
                         <span>Setting</span>
                       </span>
                       {editingCard === 'setting' ? (
@@ -1248,15 +1247,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('environment', newLoc);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1269,7 +1268,7 @@ export function CreativePanelsWorkspace({
                             setEditSettingName(curSetting);
                             setEditingCard('setting');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1282,7 +1281,7 @@ export function CreativePanelsWorkspace({
                           value={editSettingName}
                           onChange={(e) => setEditSettingName(e.target.value)}
                           placeholder="Setting (e.g. Home kitchen, Store counter)"
-                          style={{ width: '100%', padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ width: '100%', padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                       </div>
                     ) : (
@@ -1303,8 +1302,8 @@ export function CreativePanelsWorkspace({
                     gap: 6
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>📦</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Package size={14} aria-hidden="true" />
                         <span>Product</span>
                       </span>
                       {editingCard === 'product' ? (
@@ -1316,15 +1315,15 @@ export function CreativePanelsWorkspace({
                               setStoryWorldData((prev) => ({ ...prev, product: newProd }));
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 10 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1336,7 +1335,7 @@ export function CreativePanelsWorkspace({
                             setEditProductName(storyWorldData?.product || userContext.brief?.slice(0, 40) || `${userContext.businessName} items`);
                             setEditingCard('product');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1349,7 +1348,7 @@ export function CreativePanelsWorkspace({
                           value={editProductName}
                           onChange={(e) => setEditProductName(e.target.value)}
                           placeholder="Product (e.g. Festive sweet boxes)"
-                          style={{ width: '100%', padding: '3px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-default)' }}
+                          style={{ width: '100%', padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}
                         />
                       </div>
                     ) : (
@@ -1364,9 +1363,9 @@ export function CreativePanelsWorkspace({
               {/* Decision C: 4 Story Beats Preview */}
               {storyWorldData?.beats && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>3. 4 Story Beats Architecture</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'none' }}>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', textTransform: 'none' }}>
                       Target: {userContext.targetDuration || '20s'} Film
                     </span>
                   </div>
@@ -1395,30 +1394,30 @@ export function CreativePanelsWorkspace({
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{
-                              fontSize: 10,
-                              fontWeight: 800,
+                              fontSize: 11.5,
+                              fontWeight: 600,
                               padding: '2px 6px',
                               borderRadius: 4,
-                              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                              color: 'var(--accent-primary)',
+                              backgroundColor: 'rgba(244, 244, 236, 0.05)',
+                              color: 'var(--cc-emphasis)',
                               fontFamily: "'JetBrains Mono', monospace",
                               letterSpacing: '0.04em'
                             }}>
                               {b.beat || `BEAT ${idx + 1}`} ({timingLabel})
                             </span>
-                            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                               0{idx + 1}
                             </span>
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {b.title || `Scene ${idx + 1}`}
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.35 }}>
                             {b.action}
                           </div>
                           {b.dialogue && (
                             <div style={{
-                              fontSize: 10,
+                              fontSize: 11.5,
                               color: 'var(--text-tertiary)',
                               fontStyle: 'italic',
                               marginTop: 2,
@@ -1457,7 +1456,7 @@ export function CreativePanelsWorkspace({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ShieldCheck size={14} style={{ color: 'var(--accent-primary)' }} />
+                <ShieldCheck size={14} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>Customize / Creative Constraints (Optional)</span>
               </div>
               {isConstraintsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1467,7 +1466,7 @@ export function CreativePanelsWorkspace({
               <div style={{ padding: '10px 14px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Language Selector */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Spoken Dialogue Language
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -1482,9 +1481,9 @@ export function CreativePanelsWorkspace({
                         style={{
                           padding: '4px 10px',
                           borderRadius: 4,
-                          fontSize: 11,
-                          backgroundColor: userContext.language === lang ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                          color: userContext.language === lang ? '#ffffff' : 'var(--text-secondary)',
+                          fontSize: 12,
+                          backgroundColor: userContext.language === lang ? 'var(--cc-active)' : 'var(--bg-elevated)',
+                          color: userContext.language === lang ? 'var(--cc-text-1)' : 'var(--text-secondary)',
                           border: '1px solid var(--border-subtle)',
                           cursor: 'pointer'
                         }}
@@ -1497,12 +1496,12 @@ export function CreativePanelsWorkspace({
 
                 {/* Things to Include */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Things I want to include
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
                     {constraintsList.map((c, i) => (
-                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span key={i} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         {c}
                         <X size={10} style={{ cursor: 'pointer' }} onClick={() => setConstraintsList(constraintsList.filter((_, idx) => idx !== i))} />
                       </span>
@@ -1514,7 +1513,7 @@ export function CreativePanelsWorkspace({
                       value={newConstraintInput}
                       onChange={(e) => setNewConstraintInput(e.target.value)}
                       placeholder="e.g. mention festive 20% discount"
-                      style={{ flex: 1, padding: '6px 10px', fontSize: 11 }}
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newConstraintInput.trim()) {
                           setConstraintsList([...constraintsList, newConstraintInput.trim()]);
@@ -1530,7 +1529,7 @@ export function CreativePanelsWorkspace({
                           setNewConstraintInput('');
                         }
                       }}
-                      style={{ padding: '6px 12px', fontSize: 11, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+                      style={{ padding: '6px 12px', fontSize: 12, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
                     >
                       Add
                     </button>
@@ -1539,12 +1538,12 @@ export function CreativePanelsWorkspace({
 
                 {/* Things to Avoid */}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Things to avoid
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
                     {avoidList.map((a, i) => (
-                      <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span key={i} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(255, 122, 107, 0.1)', color: 'var(--cc-danger)', border: '1px solid rgba(255, 122, 107, 0.2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         {a}
                         <X size={10} style={{ cursor: 'pointer' }} onClick={() => setAvoidList(avoidList.filter((_, idx) => idx !== i))} />
                       </span>
@@ -1556,7 +1555,7 @@ export function CreativePanelsWorkspace({
                       value={newAvoidInput}
                       onChange={(e) => setNewAvoidInput(e.target.value)}
                       placeholder="e.g. do not show competitor names, no dance sequences"
-                      style={{ flex: 1, padding: '6px 10px', fontSize: 11 }}
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newAvoidInput.trim()) {
                           setAvoidList([...avoidList, newAvoidInput.trim()]);
@@ -1572,7 +1571,7 @@ export function CreativePanelsWorkspace({
                           setNewAvoidInput('');
                         }
                       }}
-                      style={{ padding: '6px 12px', fontSize: 11, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+                      style={{ padding: '6px 12px', fontSize: 12, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
                     >
                       Add
                     </button>
@@ -1596,12 +1595,12 @@ export function CreativePanelsWorkspace({
               onClick={onSynthesizeMasterScript}
               style={{
                 padding: '10px 24px',
-                borderRadius: 8,
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
+                borderRadius: 999,
+                backgroundColor: 'var(--cc-action)',
+                color: 'var(--cc-on-action)',
                 border: 'none',
                 fontSize: 13,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: isBusy ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1635,11 +1634,11 @@ export function SceneAIRewriteModal({
   if (!isOpen) return null;
 
   const PRESETS = [
-    { label: '⚡ Make this funnier', prompt: 'Make the dialogue witty and situational, with playful comedic timing.' },
-    { label: '✂️ Shorter dialogue', prompt: 'Cut the dialogue down to punchy one-liners. Let physical action drive the moment.' },
-    { label: '🗣️ Use Hinglish', prompt: 'Adapt spoken lines into natural conversational urban Hinglish.' },
-    { label: '📦 Feature product earlier', prompt: 'Introduce the product interaction right away in the first action beat.' },
-    { label: '🎭 More tension', prompt: 'Raise the stakes and urgency of the customer problem.' },
+    { label: 'Make this funnier', prompt: 'Make the dialogue witty and situational, with playful comedic timing.' },
+    { label: 'Shorter dialogue', prompt: 'Cut the dialogue down to punchy one-liners. Let physical action drive the moment.' },
+    { label: 'Use Hinglish', prompt: 'Adapt spoken lines into natural conversational urban Hinglish.' },
+    { label: 'Feature product earlier', prompt: 'Introduce the product interaction right away in the first action beat.' },
+    { label: 'More tension', prompt: 'Raise the stakes and urgency of the customer problem.' },
   ];
 
   return (
@@ -1671,8 +1670,8 @@ export function SceneAIRewriteModal({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={18} style={{ color: 'var(--accent-primary)' }} />
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <Sparkles size={18} style={{ color: 'var(--cc-emphasis)' }} />
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
               AI Scene Rewriter · Scene 0{sceneIndex + 1}
             </h3>
           </div>
@@ -1697,7 +1696,7 @@ export function SceneAIRewriteModal({
               type="button"
               onClick={() => setInstruction(p.prompt)}
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 padding: '4px 8px',
                 borderRadius: 4,
                 backgroundColor: 'var(--bg-elevated)',
@@ -1746,9 +1745,9 @@ export function SceneAIRewriteModal({
                 onClick={() => onApplyRewrite(instruction)}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#ffffff',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
                   fontSize: 12,
                   fontWeight: 600,
@@ -1785,8 +1784,8 @@ export function ProductionShotSpecView({ shotSpec, scenes }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Static World Lock Card */}
       <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 10, padding: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-primary)', marginBottom: 6 }}>
-          🔒 Static World Constraints (Rule M13)
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)', marginBottom: 6 }}>
+          <Lock size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Static World Constraints (Rule M13)
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           <strong>Setting:</strong> {shotSpec.staticWorld?.setting || 'Locked Single Room'}<br />
@@ -1799,14 +1798,14 @@ export function ProductionShotSpecView({ shotSpec, scenes }) {
         {shotSpec.shots.map((sh, idx) => (
           <div key={idx} style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Shot 0{idx + 1} Specification
               </span>
               <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: 11.5, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--cc-emphasis)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {sh.shotSize || 'Medium'}
                 </span>
-                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: 11.5, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {sh.cameraMotion || 'Slow push'}
                 </span>
               </div>

@@ -23,28 +23,28 @@ const CATEGORIES = [
     label: 'Report a Bug',
     icon: Bug,
     description: 'Something is broken or not working as expected',
-    color: '#EF4444',
+    color: 'var(--cc-text-2)',
   },
   {
     id: 'AI Output Feedback',
     label: 'AI Output Feedback',
     icon: Sparkles,
     description: 'Issues with script, hook, or video quality',
-    color: '#8B5CF6',
+    color: 'var(--cc-text-2)',
   },
   {
     id: 'Feature Request',
     label: 'Feature Request',
     icon: Lightbulb,
     description: 'An idea or tool you would love to see added',
-    color: '#F59E0B',
+    color: 'var(--cc-text-2)',
   },
   {
     id: 'General Feedback',
     label: 'General Feedback',
     icon: MessageCircle,
     description: 'Thoughts, praise, or general suggestions',
-    color: '#10B981',
+    color: 'var(--cc-text-2)',
   },
 ];
 
@@ -336,7 +336,7 @@ export default function FeedbackModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
               }}
             >
               <MessageSquare size={19} />
@@ -346,7 +346,7 @@ export default function FeedbackModal({
                 style={{
                   margin: 0,
                   fontSize: 16,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: 'var(--text-primary)',
                 }}
               >
@@ -419,7 +419,7 @@ export default function FeedbackModal({
                   width: 56,
                   height: 56,
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  backgroundColor: 'rgba(95, 212, 174, 0.15)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -432,7 +432,7 @@ export default function FeedbackModal({
                 style={{
                   margin: 0,
                   fontSize: 17,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: 'var(--text-primary)',
                 }}
               >
@@ -455,18 +455,18 @@ export default function FeedbackModal({
                 style={{
                   marginTop: 12,
                   padding: '9px 24px',
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#FFFFFF',
+                  backgroundColor: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 999,
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'background 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cc-action-hover)')}
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')
+                  (e.currentTarget.style.backgroundColor = 'var(--cc-action)')
                 }
               >
                 Close
@@ -479,15 +479,15 @@ export default function FeedbackModal({
               {errorMessage && (
                 <div
                   style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    backgroundColor: 'rgba(255, 122, 107, 0.12)',
+                    border: '1px solid rgba(255, 122, 107, 0.3)',
                     borderRadius: 8,
                     padding: '10px 14px',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 10,
                     fontSize: 13,
-                    color: '#FCA5A5',
+                    color: '#FFA79C',
                   }}
                 >
                   <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1, color: 'var(--error)' }} />
@@ -501,10 +501,9 @@ export default function FeedbackModal({
                   style={{
                     display: 'block',
                     fontSize: 12,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
+                    letterSpacing: '0.005em',
                     marginBottom: 8,
                   }}
                 >
@@ -530,7 +529,7 @@ export default function FeedbackModal({
                           padding: '10px 12px',
                           borderRadius: 8,
                           backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                          border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                          border: `1.5px solid ${isSelected ? 'var(--cc-emphasis)' : 'var(--border-subtle)'}`,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -555,7 +554,7 @@ export default function FeedbackModal({
                             width: 28,
                             height: 28,
                             borderRadius: 6,
-                            backgroundColor: `${cat.color}20`,
+                            backgroundColor: 'var(--cc-hover)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -569,7 +568,7 @@ export default function FeedbackModal({
                           <div
                             style={{
                               fontSize: 12,
-                              fontWeight: isSelected ? 700 : 600,
+                              fontWeight: isSelected ? 600 : 600,
                               color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -599,17 +598,16 @@ export default function FeedbackModal({
                     htmlFor="feedback-message"
                     style={{
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       color: 'var(--text-secondary)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.005em',
                     }}
                   >
-                    Your Message <span style={{ color: 'var(--accent-primary)' }}>*</span>
+                    Your Message <span style={{ color: 'var(--cc-emphasis)' }}>*</span>
                   </label>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color:
                         message.length > MAX_MESSAGE_LENGTH
                           ? 'var(--error)'
@@ -639,7 +637,7 @@ export default function FeedbackModal({
                     outline: 'none',
                     transition: 'border-color 0.15s ease',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--accent-primary)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--cc-selected-line)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border-default)')}
                 />
               </div>
@@ -657,15 +655,14 @@ export default function FeedbackModal({
                   <label
                     style={{
                       fontSize: 12,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       color: 'var(--text-secondary)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.005em',
                     }}
                   >
                     Screenshots (Optional)
                   </label>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {attachments.length} / {MAX_ATTACHMENTS} attached (max 5MB each, 10MB total)
                   </span>
                 </div>
@@ -678,7 +675,7 @@ export default function FeedbackModal({
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
                     style={{
-                      border: `1.5px dashed ${isDragging ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                      border: `1.5px dashed ${isDragging ? 'var(--cc-emphasis)' : 'var(--border-default)'}`,
                       backgroundColor: isDragging ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
                       borderRadius: 8,
                       padding: '14px',
@@ -690,7 +687,7 @@ export default function FeedbackModal({
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <Upload size={16} style={{ color: 'var(--accent-primary)' }} />
+                    <Upload size={16} style={{ color: 'var(--cc-emphasis)' }} />
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                       Click to attach screenshots or drag & drop (PNG, JPG, JPEG)
                     </span>
@@ -755,7 +752,7 @@ export default function FeedbackModal({
                             >
                               {att.name}
                             </div>
-                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
                               {(att.size / 1024).toFixed(0)} KB
                             </div>
                           </div>
@@ -803,12 +800,12 @@ export default function FeedbackModal({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--text-tertiary)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Info size={13} style={{ color: 'var(--accent-primary)' }} />
+                    <Info size={13} style={{ color: 'var(--cc-emphasis)' }} />
                     <span>
                       Automatic context included: <strong>{gatheredContext.brandName}</strong> ·{' '}
                       <strong>{gatheredContext.appMode}</strong>
@@ -823,7 +820,7 @@ export default function FeedbackModal({
                       marginTop: 8,
                       paddingTop: 8,
                       borderTop: '1px solid var(--border-subtle)',
-                      fontSize: 11,
+                      fontSize: 12,
                       color: 'var(--text-secondary)',
                       display: 'grid',
                       gridTemplateColumns: 'repeat(2, 1fr)',
@@ -899,13 +896,13 @@ export default function FeedbackModal({
                 padding: '8px 20px',
                 backgroundColor:
                   isSubmitting || !message.trim()
-                    ? 'rgba(99, 102, 241, 0.4)'
-                    : 'var(--accent-primary)',
+                    ? 'rgba(244, 244, 236, 0.1)'
+                    : 'var(--cc-action)',
                 border: 'none',
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#FFFFFF',
+                color: 'var(--cc-on-action)',
                 cursor: isSubmitting || !message.trim() ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -914,12 +911,12 @@ export default function FeedbackModal({
               }}
               onMouseEnter={(e) => {
                 if (!isSubmitting && message.trim()) {
-                  e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+                  e.currentTarget.style.backgroundColor = 'var(--cc-action-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSubmitting && message.trim()) {
-                  e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--cc-action)';
                 }
               }}
             >

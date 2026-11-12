@@ -16,7 +16,13 @@ function config() {
  */
 async function callClaude({ system, content, maxTokens = 16000, thinking = true, tools }) {
   const { key, model, thinkingBudget } = config();
-  if (!key) throw new Error("ANTHROPIC_API_KEY is missing in .env");
+  if (!key) {
+    // Log the operator detail; show users a plain message (never config/env names).
+    console.error("[config] ANTHROPIC_API_KEY is missing in .env");
+    const err = new Error("CleverCut's script writer isn't available right now. Please try again in a few minutes.");
+    err.configMissing = "ANTHROPIC_API_KEY";
+    throw err;
+  }
 
   const body = {
     model,

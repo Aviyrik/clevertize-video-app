@@ -215,7 +215,7 @@ export default function UrlResearchModal({
                 height: 36,
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -224,7 +224,7 @@ export default function UrlResearchModal({
               <Globe size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Start with a Website URL
               </h3>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -267,7 +267,7 @@ export default function UrlResearchModal({
                     border: '1px solid var(--border-default)',
                     borderRadius: 6,
                     padding: '5px 10px',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: 'var(--text-primary)',
                     cursor: 'pointer',
@@ -276,7 +276,7 @@ export default function UrlResearchModal({
                     gap: 6,
                   }}
                 >
-                  <Sparkles size={12} style={{ color: 'var(--accent-primary)' }} />
+                  <Sparkles size={12} style={{ color: 'var(--cc-emphasis)' }} />
                   {p.name}
                 </button>
               ))}
@@ -315,13 +315,13 @@ export default function UrlResearchModal({
                 onClick={handleAnalyzeUrl}
                 disabled={isScanning || !urlInput.trim()}
                 style={{
-                  backgroundColor: 'var(--accent-primary)',
+                  backgroundColor: 'var(--cc-action)',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 999,
                   padding: '0 20px',
                   fontSize: 13,
                   fontWeight: 600,
-                  color: '#FFFFFF',
+                  color: 'var(--cc-on-action)',
                   cursor: isScanning || !urlInput.trim() ? 'not-allowed' : 'pointer',
                   opacity: isScanning || !urlInput.trim() ? 0.6 : 1,
                   display: 'flex',
@@ -389,14 +389,14 @@ export default function UrlResearchModal({
                 {scanResult.fetchSucceeded ? (
                   <>
                     <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--success)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)' }}>
                       Successfully Extracted from Website
                     </span>
                   </>
                 ) : (
                   <>
                     <AlertTriangle size={16} style={{ color: 'var(--warning)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--warning)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>
                       {scanResult.message || 'Direct fetch unavailable — review extracted inputs below'}
                     </span>
                   </>
@@ -406,7 +406,7 @@ export default function UrlResearchModal({
               {/* Editable Fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Brand Name
                   </label>
                   <input
@@ -425,7 +425,7 @@ export default function UrlResearchModal({
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Business Category
                   </label>
                   <select
@@ -478,18 +478,18 @@ export default function UrlResearchModal({
                         borderRadius: 6,
                         objectFit: 'cover',
                         border: '1px solid var(--border-subtle)',
-                        backgroundColor: '#0F1117',
+                        backgroundColor: '#121211',
                         flexShrink: 0,
                       }}
                     />
                     <div style={{ overflow: 'hidden' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span>Detected Product Photo</span>
-                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
+                        <span style={{ fontSize: 11.5, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(95, 212, 174, 0.15)', color: 'var(--success)' }}>
                           Scraped from URL
                         </span>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         Attached automatically to your brief.
                       </div>
                     </div>
@@ -502,7 +502,7 @@ export default function UrlResearchModal({
                       border: 'none',
                       color: 'var(--text-tertiary)',
                       cursor: 'pointer',
-                      fontSize: 11,
+                      fontSize: 12,
                       textDecoration: 'underline',
                       flexShrink: 0,
                     }}
@@ -513,7 +513,7 @@ export default function UrlResearchModal({
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                   Drafted Brief
                 </label>
                 <textarea
@@ -571,19 +571,19 @@ export default function UrlResearchModal({
             onClick={handleProceed}
             disabled={!draftBrand.trim() && !draftBrief.trim()}
             style={{
-              backgroundColor: 'var(--accent-primary)',
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              borderRadius: 6,
+              borderRadius: 999,
               padding: '9px 20px',
               fontSize: 13,
-              fontWeight: 700,
-              color: '#FFFFFF',
+              fontWeight: 600,
+              color: 'var(--cc-on-action)',
               cursor: !draftBrand.trim() && !draftBrief.trim() ? 'not-allowed' : 'pointer',
               opacity: !draftBrand.trim() && !draftBrief.trim() ? 0.6 : 1,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 2px 10px var(--accent-glow)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
             }}
           >
             <span>Proceed to Studio with Brief</span>

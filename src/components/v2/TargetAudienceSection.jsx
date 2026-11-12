@@ -91,11 +91,11 @@ export default function TargetAudienceSection({
                 style={{
                   padding: '5px 11px',
                   borderRadius: 18,
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 500,
-                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
-                  border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                  color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  backgroundColor: isSelected ? 'rgba(244, 244, 236, 0.07)' : 'var(--bg-elevated)',
+                  border: `1px solid ${isSelected ? 'var(--cc-emphasis)' : 'var(--border-subtle)'}`,
+                  color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}

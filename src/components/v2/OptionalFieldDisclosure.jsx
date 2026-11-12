@@ -71,7 +71,7 @@ export default function OptionalFieldDisclosure({
           {Icon && (
             <Icon
               size={14}
-              style={{ color: isPopulated ? 'var(--accent-primary)' : 'var(--text-tertiary)', flexShrink: 0 }}
+              style={{ color: isPopulated ? 'var(--cc-emphasis)' : 'var(--text-tertiary)', flexShrink: 0 }}
               aria-hidden="true"
             />
           )}
@@ -80,7 +80,7 @@ export default function OptionalFieldDisclosure({
               {title}
             </span>
             {description && (
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                 {description}
               </span>
             )}
@@ -89,13 +89,13 @@ export default function OptionalFieldDisclosure({
 
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: isPopulated ? 600 : 500,
             padding: isPopulated ? '2px 8px' : '2px 6px',
             borderRadius: 12,
-            backgroundColor: isPopulated ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
-            color: isPopulated ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-            border: isPopulated ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid transparent',
+            backgroundColor: isPopulated ? 'rgba(244, 244, 236, 0.06)' : 'transparent',
+            color: isPopulated ? 'var(--cc-emphasis)' : 'var(--text-tertiary)',
+            border: isPopulated ? '1px solid rgba(244, 244, 236, 0.225)' : '1px solid transparent',
             flexShrink: 0,
             whiteSpace: 'nowrap',
           }}

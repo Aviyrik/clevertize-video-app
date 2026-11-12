@@ -126,29 +126,29 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
     padding: '11px 12px',
     borderRadius: 8,
     border: '1px solid rgba(255, 255, 255, 0.12)',
-    backgroundColor: '#0F1117',
-    color: '#F5F7FA',
+    backgroundColor: '#121211',
+    color: 'var(--cc-text-1)',
     fontSize: 14,
     boxSizing: 'border-box',
   };
   const primaryButton = {
     width: '100%',
     padding: '12px',
-    borderRadius: 8,
+    borderRadius: 999,
     border: 'none',
-    backgroundColor: '#6366F1',
-    color: '#FFFFFF',
+    backgroundColor: 'var(--cc-action)',
+    color: 'var(--cc-on-action)',
     fontSize: 14,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: 'pointer',
   };
-  const linkButton = { background: 'none', border: 'none', color: '#818CF8', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginTop: 16 };
+  const linkButton = { background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginTop: 16 };
 
   const linkProblem = {
-    expired: { icon: <Clock size={32} color="#F59E0B" />, title: 'Reset link expired', text: 'Password reset links are valid for 30 minutes. Enter your email to get a new one.' },
-    used: { icon: <ShieldAlert size={32} color="#F59E0B" />, title: 'Reset link already used', text: 'Each reset link works once. If you still need to change your password, request a new link.' },
-    invalid: { icon: <ShieldAlert size={32} color="#F87171" />, title: 'Invalid reset link', text: 'This password reset link is not valid. Request a new link below.' },
-    error: { icon: <ShieldAlert size={32} color="#F87171" />, title: 'Something went wrong', text: 'We could not check your reset link. Please try again, or request a new link.' },
+    expired: { icon: <Clock size={32} color="var(--cc-warning)" />, title: 'Reset link expired', text: 'Password reset links are valid for 30 minutes. Enter your email to get a new one.' },
+    used: { icon: <ShieldAlert size={32} color="var(--cc-warning)" />, title: 'Reset link already used', text: 'Each reset link works once. If you still need to change your password, request a new link.' },
+    invalid: { icon: <ShieldAlert size={32} color="#FFA79C" />, title: 'Invalid reset link', text: 'This password reset link is not valid. Request a new link below.' },
+    error: { icon: <ShieldAlert size={32} color="#FFA79C" />, title: 'Something went wrong', text: 'We could not check your reset link. Please try again, or request a new link.' },
   }[status];
 
   return (
@@ -156,15 +156,15 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
       style={{
         minHeight: '100vh',
         width: '100vw',
-        backgroundColor: '#0B0C0F',
-        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(79, 70, 229, 0.15), transparent)',
+        backgroundColor: '#121211',
+        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(244, 244, 236, 0.15), transparent)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
-        color: '#F5F7FA',
+        color: 'var(--cc-text-1)',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
@@ -174,7 +174,7 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+            background: 'var(--cc-hover)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -182,14 +182,14 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
         >
           <Film size={22} color="#FFFFFF" />
         </div>
-        <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#FFFFFF' }}>CleverCut</span>
+        <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', color: '#FFFFFF' }}>CleverCut</span>
       </div>
 
       <div
         style={{
           width: '100%',
           maxWidth: 420,
-          backgroundColor: '#13151C',
+          backgroundColor: '#191917',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: 16,
           padding: '32px 28px',
@@ -199,19 +199,19 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
       >
         {status === 'checking' && (
           <div>
-            <Loader2 size={28} color="#818CF8" style={{ animation: 'spin 1s linear infinite' }} />
-            <p style={{ fontSize: 14, color: '#9CA3AF', marginTop: 14 }}>Checking your reset link…</p>
+            <Loader2 size={28} color="var(--cc-emphasis)" style={{ animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', marginTop: 14 }}>Checking your reset link…</p>
           </div>
         )}
 
         {(status === 'form' || status === 'saving') && (
           <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <KeyRound size={30} color="#818CF8" />
-              <h2 style={{ fontSize: 20, fontWeight: 700, margin: '10px 0 6px', color: '#FFFFFF' }}>Choose a new password</h2>
-              <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>You'll be signed out on every other device.</p>
+              <KeyRound size={30} color="var(--cc-emphasis)" />
+              <h2 style={{ fontSize: 20, fontWeight: 600, margin: '10px 0 6px', color: '#FFFFFF' }}>Choose a new password</h2>
+              <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: 0 }}>You'll be signed out on every other device.</p>
             </div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#D1D5DB', marginBottom: 6 }}>New password</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--cc-text-1)', marginBottom: 6 }}>New password</label>
             <div style={{ position: 'relative', marginBottom: 14 }}>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -227,12 +227,12 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--cc-text-2)', cursor: 'pointer', padding: 0 }}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#D1D5DB', marginBottom: 6 }}>Confirm new password</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--cc-text-1)', marginBottom: 6 }}>Confirm new password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               name="confirm-password"
@@ -242,7 +242,7 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
               placeholder="Type it again"
               style={{ ...inputStyle, marginBottom: 14 }}
             />
-            {formError && <p style={{ fontSize: 13, color: '#F87171', margin: '0 0 12px' }}>{formError}</p>}
+            {formError && <p style={{ fontSize: 13, color: '#FFA79C', margin: '0 0 12px' }}>{formError}</p>}
             <button type="submit" disabled={status === 'saving'} style={{ ...primaryButton, opacity: status === 'saving' ? 0.7 : 1 }}>
               {status === 'saving' ? 'Saving…' : 'Set new password'}
             </button>
@@ -251,17 +251,17 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
 
         {status === 'done' && (
           <div>
-            <CheckCircle2 size={32} color="#34D399" />
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '10px 0 6px', color: '#FFFFFF' }}>Password updated</h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: 0 }}>Signing you in…</p>
+            <CheckCircle2 size={32} color="var(--cc-success)" />
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '10px 0 6px', color: '#FFFFFF' }}>Password updated</h2>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: 0 }}>Signing you in…</p>
           </div>
         )}
 
         {linkProblem && (
           <div>
             {linkProblem.icon}
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '10px 0 8px', color: '#FFFFFF' }}>{linkProblem.title}</h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 20px', lineHeight: 1.6 }}>{linkProblem.text}</p>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '10px 0 8px', color: '#FFFFFF' }}>{linkProblem.title}</h2>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: '0 0 20px', lineHeight: 1.6 }}>{linkProblem.text}</p>
             <form onSubmit={handleSendNewLink} style={{ textAlign: 'left' }}>
               <input
                 type="email"
@@ -276,7 +276,7 @@ export default function ResetPasswordScreen({ onResetSuccess, onReturnToLogin })
                 {isSendingLink ? 'Sending…' : 'Send me a new link'}
               </button>
             </form>
-            {newLinkMessage && <p style={{ fontSize: 13, color: '#9CA3AF', margin: '12px 0 0', lineHeight: 1.5 }}>{newLinkMessage}</p>}
+            {newLinkMessage && <p style={{ fontSize: 13, color: 'var(--cc-text-2)', margin: '12px 0 0', lineHeight: 1.5 }}>{newLinkMessage}</p>}
           </div>
         )}
 

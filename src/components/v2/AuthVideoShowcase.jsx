@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clapperboard } from 'lucide-react';
+import BrandMark from './BrandMark.jsx';
 
 /**
  * AuthVideoShowcase - Cinematic full-screen AI commercial video background
@@ -58,7 +59,7 @@ export default function AuthVideoShowcase({
         height: '100%',
         zIndex: 0,
         overflow: 'hidden',
-        backgroundColor: '#05060A',
+        backgroundColor: '#0A0A09',
         pointerEvents: 'none',
         ...style,
       }}
@@ -107,7 +108,7 @@ export default function AuthVideoShowcase({
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundColor: 'rgba(5, 6, 11, 0.52)',
+          backgroundColor: 'rgba(10, 10, 9, 0.52)',
           pointerEvents: 'none',
         }}
       />
@@ -119,7 +120,7 @@ export default function AuthVideoShowcase({
           position: 'absolute',
           inset: 0,
           background:
-            'linear-gradient(90deg, rgba(6, 7, 12, 0.35) 0%, rgba(6, 7, 12, 0.58) 45%, rgba(7, 8, 14, 0.88) 100%)',
+            'linear-gradient(90deg, rgba(10, 10, 9, 0.35) 0%, rgba(10, 10, 9, 0.58) 45%, rgba(10, 10, 9, 0.88) 100%)',
           pointerEvents: 'none',
         }}
       />
@@ -132,7 +133,7 @@ export default function AuthVideoShowcase({
           left: 0,
           right: 0,
           height: 160,
-          background: 'linear-gradient(180deg, rgba(5, 6, 10, 0.65) 0%, transparent 100%)',
+          background: 'linear-gradient(180deg, rgba(10, 10, 9, 0.65) 0%, transparent 100%)',
           pointerEvents: 'none',
         }}
       />
@@ -145,7 +146,7 @@ export default function AuthVideoShowcase({
           left: 0,
           right: 0,
           height: 140,
-          background: 'linear-gradient(0deg, rgba(5, 6, 10, 0.65) 0%, transparent 100%)',
+          background: 'linear-gradient(0deg, rgba(10, 10, 9, 0.65) 0%, transparent 100%)',
           pointerEvents: 'none',
         }}
       />
@@ -164,27 +165,11 @@ export default function AuthVideoShowcase({
             pointerEvents: 'auto',
           }}
         >
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #312E81 100%)',
-              border: '1px solid rgba(199, 210, 254, 0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow:
-                '0 8px 24px -2px rgba(99, 102, 241, 0.6), 0 0 16px rgba(99, 102, 241, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4)',
-            }}
-          >
-            <Clapperboard size={22} color="#FFFFFF" strokeWidth={2.2} />
-          </div>
+          <BrandMark size={42} style={{ boxShadow: '0 8px 24px -2px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(244, 244, 236, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.06)' }} />
           <span
             style={{
               fontSize: 22,
-              fontWeight: 800,
+              fontWeight: 600,
               letterSpacing: '-0.02em',
               color: '#FFFFFF',
               textShadow: '0 2px 10px rgba(0, 0, 0, 0.7)',

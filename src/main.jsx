@@ -1,8 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import '@astryxdesign/core/reset.css';
-import '@astryxdesign/core/astryx.css';
-import '@astryxdesign/theme-neutral/theme.css';
 import './index.css';
 import App from './App.jsx';
 
@@ -35,25 +32,25 @@ class GlobalErrorBoundary extends React.Component {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0b0c0f',
-          color: '#f5f7fa',
+          backgroundColor: 'var(--cc-bg)',
+          color: 'var(--cc-text-1)',
           padding: 24,
-          fontFamily: 'Inter, system-ui, sans-serif'
+          fontFamily: 'var(--cc-font-text)'
         }}>
           <div style={{
             maxWidth: 480,
             width: '100%',
-            backgroundColor: '#161922',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: 12,
+            backgroundColor: 'var(--cc-surface)',
+            border: '1px solid var(--cc-line-2)',
+            borderRadius: 20,
             padding: 28,
             textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+            boxShadow: 'var(--cc-shadow-modal)'
           }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: '#f87171' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: 'var(--cc-text-1)', fontFamily: 'var(--cc-font-display)', letterSpacing: '-0.015em' }}>
               Creative Workspace Error
             </h2>
-            <p style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.5, margin: '0 0 18px' }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', lineHeight: 1.5, margin: '0 0 18px' }}>
               {this.state.error?.message || 'An unexpected error occurred while rendering the workspace.'}
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
@@ -61,12 +58,12 @@ class GlobalErrorBoundary extends React.Component {
                 type="button"
                 onClick={() => window.location.reload()}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  backgroundColor: '#4f46e5',
-                  color: '#ffffff',
+                  padding: '10px 18px',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
-                  fontSize: 12,
+                  fontSize: 13.5,
                   fontWeight: 600,
                   cursor: 'pointer'
                 }}
@@ -77,12 +74,12 @@ class GlobalErrorBoundary extends React.Component {
                 type="button"
                 onClick={this.handleReset}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  backgroundColor: '#262a36',
-                  color: '#d1d5db',
-                  border: '1px solid #374151',
-                  fontSize: 12,
+                  padding: '10px 18px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  color: 'var(--cc-text-1)',
+                  border: '1px solid var(--cc-line-2)',
+                  fontSize: 13.5,
                   fontWeight: 600,
                   cursor: 'pointer'
                 }}

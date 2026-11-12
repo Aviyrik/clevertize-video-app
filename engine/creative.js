@@ -2966,11 +2966,25 @@ function fallbackNormalizeScript({ rawScript, form, brand, bType, lang, style, t
   const audioMode = detectScriptAudioMode(trimmed);
   const isVo = audioMode === "voiceover";
 
+  // Structured scripts (Annex-A style) carry section labels such as "Visual:" or
+  // "Editing Notes:". Those labels and their production notes are not spoken lines.
+  const SECTION_LABEL = /^(?:[•\-*]\s*)?(?:visual|animation elements|camera(?: movement)?|text overlay|ui element|transition|motion graphics|audio\s*\/\s*dialogue\s*\/\s*voiceover|audio\s*\/\s*sfx|sound design|editing notes|scene duration|duration|output|setting|character\s*\d*)\s*:/i;
+  const isStructured = /(?:^|\n)\s*(?:Visual|Audio\s*\/\s*Dialogue\s*\/\s*Voiceover|Editing Notes)\s*:/i.test(trimmed);
+  const quotedDialogue = trimmed
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter((l) => !SECTION_LABEL.test(l) && /^[^:"“]{1,40}:\s*["“]/.test(l))
+    .map((l) => l.replace(/^[^:]{1,40}:\s*/, "").replace(/^["“']|["”']$/g, "").trim())
+    .filter(Boolean);
+
   // Extract user's sentences or clean lines, stripping any raw block tags and VO tags
-  const userUnits = trimmed
-    .split(/(?<=[.!?])\s+|\n+/)
-    .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/^(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/i, "").replace(/^["']|["']$/g, ""))
-    .filter((s) => s.length > 0 && !/^SCENE\s*\d+/i.test(s) && !/^ANNEX\s*A/i.test(s));
+  const userUnits = (isStructured && quotedDialogue.length >= 2)
+    ? quotedDialogue
+    : trimmed
+      .split(/(?<=[.!?])\s+|\n+/)
+      .filter((s) => !(isStructured && SECTION_LABEL.test(s.trim())))
+      .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/^(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/i, "").replace(/^["']|["']$/g, ""))
+      .filter((s) => s.length > 0 && !/^SCENE\s*\d+/i.test(s) && !/^ANNEX\s*A/i.test(s) && !(isStructured && SECTION_LABEL.test(s)));
 
   if (userUnits.length === 0) {
     throw new Error("Could not extract meaningful dialogue or claims from the provided script.");

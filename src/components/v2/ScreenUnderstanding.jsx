@@ -98,8 +98,8 @@ export default function ScreenUnderstanding({
               width: 52,
               height: 52,
               borderRadius: 12,
-              backgroundColor: error && !isRegenerating ? 'rgba(239, 68, 68, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-              color: error && !isRegenerating ? 'var(--error, #ef4444)' : 'var(--accent-primary)',
+              backgroundColor: error && !isRegenerating ? 'rgba(255, 122, 107, 0.12)' : 'rgba(244, 244, 236, 0.06)',
+              color: error && !isRegenerating ? 'var(--error, var(--cc-danger))' : 'var(--cc-emphasis)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -107,7 +107,7 @@ export default function ScreenUnderstanding({
           >
             {error && !isRegenerating ? <AlertCircle size={28} /> : <Sparkles size={28} />}
           </div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--text-primary)' }}>
             {error
               ? 'Could Not Analyze Brief'
               : 'Ready to Analyze Brief'}
@@ -138,10 +138,10 @@ export default function ScreenUnderstanding({
               type="button"
               onClick={() => onRegenerate && onRegenerate(error ? undefined : '')}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                color: '#fff',
-                borderRadius: 8,
+                color: 'var(--cc-on-action)',
+                borderRadius: 999,
                 padding: '8px 18px',
                 fontSize: 13,
                 fontWeight: 600,
@@ -198,8 +198,8 @@ export default function ScreenUnderstanding({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--accent-primary)',
+                backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -209,7 +209,7 @@ export default function ScreenUnderstanding({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                   <span>AI Understanding</span>
                   <HelpTooltip
                     title={HELP_TOOLTIPS.understanding_review.title}
@@ -219,22 +219,21 @@ export default function ScreenUnderstanding({
                 </h1>
                 <span
                   style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: '0.005em',
                     padding: '3px 8px',
                     borderRadius: 12,
                     backgroundColor: isOutdated
-                      ? 'rgba(239, 68, 68, 0.15)'
+                      ? 'rgba(255, 122, 107, 0.15)'
                       : isApproved
-                      ? 'rgba(16, 185, 129, 0.15)'
-                      : 'rgba(99, 102, 241, 0.15)',
+                      ? 'rgba(95, 212, 174, 0.15)'
+                      : 'rgba(244, 244, 236, 0.075)',
                     color: isOutdated
-                      ? 'var(--error, #ef4444)'
+                      ? 'var(--error, var(--cc-danger))'
                       : isApproved
-                      ? 'var(--success, #10b981)'
-                      : 'var(--accent-primary, #6366f1)',
+                      ? 'var(--success, var(--cc-success))'
+                      : 'var(--accent-primary, var(--cc-text-2))',
                   }}
                 >
                   {isOutdated ? 'Outdated Context' : isApproved ? 'Approved' : 'Pending Review'}
@@ -242,13 +241,12 @@ export default function ScreenUnderstanding({
                 {draftData.is_mock && (
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
+                      fontSize: 11.5,
+                      fontWeight: 600,
                       padding: '2px 6px',
                       borderRadius: 4,
-                      backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                      color: 'var(--warning, #f59e0b)',
+                      backgroundColor: 'rgba(242, 184, 75, 0.15)',
+                      color: 'var(--warning, var(--cc-warning))',
                     }}
                     title="Spine running in structured offline/test mode"
                   >
@@ -320,8 +318,8 @@ export default function ScreenUnderstanding({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Store size={14} style={{ color: 'var(--accent-primary)' }} />
-            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{businessName || 'Brand'}</span>
+            <Store size={14} style={{ color: 'var(--text-tertiary)' }} />
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{businessName || 'Brand'}</span>
             <span>·</span>
             <span>{businessType || 'Business'}</span>
             {town && (
@@ -355,7 +353,7 @@ export default function ScreenUnderstanding({
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--accent-primary)',
+                color: 'var(--cc-emphasis)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -376,7 +374,7 @@ export default function ScreenUnderstanding({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-primary)',
+                  color: 'var(--cc-emphasis)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -417,9 +415,9 @@ export default function ScreenUnderstanding({
               marginTop: 12,
               padding: '10px 14px',
               borderRadius: 8,
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: 'var(--error, #ef4444)',
+              backgroundColor: 'rgba(255, 122, 107, 0.1)',
+              border: '1px solid rgba(255, 122, 107, 0.3)',
+              color: 'var(--error, var(--cc-danger))',
               fontSize: 13,
               display: 'flex',
               alignItems: 'center',
@@ -437,13 +435,13 @@ export default function ScreenUnderstanding({
               type="button"
               onClick={() => onRegenerate && onRegenerate('')}
               style={{
-                backgroundColor: 'var(--error, #ef4444)',
+                backgroundColor: 'var(--error, var(--cc-danger))',
                 border: 'none',
-                color: '#fff',
+                color: '#1A0703',
                 borderRadius: 6,
                 padding: '4px 10px',
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -460,9 +458,9 @@ export default function ScreenUnderstanding({
               marginTop: 12,
               padding: '10px 14px',
               borderRadius: 8,
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: 'var(--error, #ef4444)',
+              backgroundColor: 'rgba(255, 122, 107, 0.1)',
+              border: '1px solid rgba(255, 122, 107, 0.3)',
+              color: 'var(--error, var(--cc-danger))',
               fontSize: 13,
               display: 'flex',
               alignItems: 'center',
@@ -476,13 +474,13 @@ export default function ScreenUnderstanding({
               type="button"
               onClick={() => onRegenerate && onRegenerate(undefined, true)}
               style={{
-                backgroundColor: 'var(--error, #ef4444)',
+                backgroundColor: 'var(--error, var(--cc-danger))',
                 border: 'none',
-                color: '#fff',
+                color: '#1A0703',
                 borderRadius: 6,
                 padding: '4px 10px',
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -498,7 +496,7 @@ export default function ScreenUnderstanding({
         <SectionCard
           id="business_understanding"
           title="A. Business Understanding"
-          icon={<Store size={16} style={{ color: 'var(--accent-primary)' }} />}
+          icon={<Store size={16} style={{ color: 'var(--text-tertiary)' }} />}
           content={draftData.business_understanding}
           isEditing={editingSection === 'business_understanding'}
           onStartEdit={() => setEditingSection('business_understanding')}
@@ -510,7 +508,7 @@ export default function ScreenUnderstanding({
         <SectionCard
           id="campaign_objective"
           title="B. Campaign Objective"
-          icon={<Target size={16} style={{ color: '#10B981' }} />}
+          icon={<Target size={16} style={{ color: 'var(--text-tertiary)' }} />}
           content={draftData.campaign_objective}
           isEditing={editingSection === 'campaign_objective'}
           onStartEdit={() => setEditingSection('campaign_objective')}
@@ -522,7 +520,7 @@ export default function ScreenUnderstanding({
         <SectionCard
           id="target_audience"
           title="C. Target Audience"
-          icon={<Users size={16} style={{ color: '#38BDF8' }} />}
+          icon={<Users size={16} style={{ color: 'var(--text-tertiary)' }} />}
           content={draftData.target_audience}
           isEditing={editingSection === 'target_audience'}
           onStartEdit={() => setEditingSection('target_audience')}
@@ -534,7 +532,7 @@ export default function ScreenUnderstanding({
         <SectionCard
           id="core_communication"
           title="D. Core Communication"
-          icon={<MessageSquare size={16} style={{ color: '#F59E0B' }} />}
+          icon={<MessageSquare size={16} style={{ color: 'var(--text-tertiary)' }} />}
           content={draftData.core_communication}
           isEditing={editingSection === 'core_communication'}
           onStartEdit={() => setEditingSection('core_communication')}
@@ -547,7 +545,7 @@ export default function ScreenUnderstanding({
           <SectionCard
             id="occasion_context"
             title="E. Occasion & Context"
-            icon={<Calendar size={16} style={{ color: '#EC4899' }} />}
+            icon={<Calendar size={16} style={{ color: 'var(--text-tertiary)' }} />}
             content={draftData.occasion_context}
             isEditing={editingSection === 'occasion_context'}
             onStartEdit={() => setEditingSection('occasion_context')}
@@ -569,12 +567,12 @@ export default function ScreenUnderstanding({
                 gap: 8,
               }}
             >
-              <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', fontSize: 11 }}>User Event Input:</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', fontSize: 12 }}>User Event Input:</span>
               {userEventContext.name && <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{userEventContext.name}</span>}
               {userEventContext.category && <span>· {userEventContext.category}</span>}
               {userEventContext.timing && <span>· {userEventContext.timing}</span>}
               {userEventContext.creativeInfluence && (
-                <span style={{ padding: '1px 7px', borderRadius: 10, backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                <span style={{ padding: '1px 7px', borderRadius: 10, backgroundColor: 'rgba(244, 244, 236, 0.06)', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600 }}>
                   Influence: {userEventContext.creativeInfluence}
                 </span>
               )}
@@ -597,7 +595,7 @@ export default function ScreenUnderstanding({
         <SectionCard
           id="creative_opportunity"
           title="G. Creative Opportunity"
-          icon={<Lightbulb size={16} style={{ color: '#FACC15' }} />}
+          icon={<Lightbulb size={16} style={{ color: 'var(--text-tertiary)' }} />}
           content={draftData.creative_opportunity}
           isEditing={editingSection === 'creative_opportunity'}
           onStartEdit={() => setEditingSection('creative_opportunity')}
@@ -642,8 +640,8 @@ export default function ScreenUnderstanding({
               width: 32,
               height: 32,
               borderRadius: 8,
-              backgroundColor: isApproved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)',
-              color: isApproved ? 'var(--success)' : 'var(--accent-primary)',
+              backgroundColor: isApproved ? 'rgba(95, 212, 174, 0.15)' : 'rgba(244, 244, 236, 0.075)',
+              color: isApproved ? 'var(--success)' : 'var(--cc-emphasis)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -652,14 +650,14 @@ export default function ScreenUnderstanding({
             {isApproved ? <CheckCircle2 size={18} /> : <ShieldCheck size={18} />}
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
               {isOutdated
                 ? 'Inputs changed — update before continuing'
                 : isApproved
                 ? 'Approved'
                 : 'Ready for Creative Ideas?'}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {isOutdated
                 ? 'Brief, instructions, or settings changed since approval.'
                 : isApproved
@@ -693,19 +691,19 @@ export default function ScreenUnderstanding({
             disabled={isSaving || isRegenerating || isOutdated}
             title={isOutdated ? 'Click Update Analysis above before approving changed inputs' : ''}
             style={{
-              backgroundColor: 'var(--accent-primary)',
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              color: '#FFFFFF',
-              borderRadius: 8,
+              color: 'var(--cc-on-action)',
+              borderRadius: 999,
               padding: '9px 20px',
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: isSaving || isOutdated ? 'not-allowed' : 'pointer',
               opacity: isOutdated ? 0.55 : 1,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 2px 10px var(--accent-glow)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
             }}
           >
             {isSaving ? (
@@ -751,8 +749,8 @@ export default function ScreenUnderstanding({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <RotateCcw size={18} style={{ color: 'var(--accent-primary)' }} />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <RotateCcw size={18} style={{ color: 'var(--cc-emphasis)' }} />
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   Regenerate AI Understanding
                 </h3>
               </div>
@@ -810,10 +808,10 @@ export default function ScreenUnderstanding({
                 type="button"
                 onClick={handleConfirmRegenerate}
                 style={{
-                  backgroundColor: 'var(--accent-primary)',
+                  backgroundColor: 'var(--cc-action)',
                   border: 'none',
-                  color: '#fff',
-                  borderRadius: 6,
+                  color: 'var(--cc-on-action)',
+                  borderRadius: 999,
                   padding: '7px 16px',
                   fontSize: 13,
                   fontWeight: 600,
@@ -857,7 +855,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {icon}
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h3>
         </div>
         {!isEditing && (
           <button
@@ -877,7 +875,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
               borderRadius: 4,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--accent-primary)';
+              e.currentTarget.style.color = 'var(--cc-emphasis)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -890,7 +888,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
       </div>
 
       {helper && !isEditing && (
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>
           {helper}
         </div>
       )}
@@ -904,7 +902,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
             style={{
               width: '100%',
               backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--accent-primary)',
+              border: '1px solid var(--cc-selected-line)',
               borderRadius: 8,
               padding: '10px 12px',
               color: 'var(--text-primary)',
@@ -936,10 +934,10 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
               type="button"
               onClick={() => onSave(val)}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                color: '#fff',
-                borderRadius: 6,
+                color: 'var(--cc-on-action)',
+                borderRadius: 999,
                 padding: '5px 14px',
                 fontSize: 12,
                 fontWeight: 600,
@@ -993,8 +991,8 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <ShieldCheck size={16} style={{ color: 'var(--accent-primary)' }} />
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <ShieldCheck size={16} style={{ color: 'var(--text-tertiary)' }} />
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
             F. Creative Guardrails — Creative Instructions Understanding
           </h3>
         </div>
@@ -1045,7 +1043,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
               style={{
                 borderRadius: 8,
                 border: '1px solid var(--border-subtle)',
-                backgroundColor: 'rgba(139, 92, 246, 0.04)',
+                backgroundColor: 'rgba(244, 244, 236, 0.02)',
                 padding: '8px 12px',
               }}
             >
@@ -1067,7 +1065,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 }}
               >
                 <span>AI Interpretation — Brief-Derived Guidelines (Not user-entered)</span>
-                <span style={{ fontSize: 11, color: 'var(--accent-primary)' }}>
+                <span style={{ fontSize: 12, color: 'var(--cc-emphasis)' }}>
                   {showAiFallback ? 'Hide' : 'View'}
                 </span>
               </button>
@@ -1075,7 +1073,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
                   {aiDos.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
                         AI-Derived Focus Areas
                       </div>
                       <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -1087,7 +1085,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                   )}
                   {aiDonts.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
                         AI-Derived Safeguards
                       </div>
                       <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -1104,7 +1102,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
 
           {hasIssues && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: 0 }}>
                 Conflicts or Clarification Needed
               </div>
               {conflicts.map((c, idx) => (
@@ -1113,10 +1111,10 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                   style={{
                     padding: '8px 12px',
                     borderRadius: 7,
-                    backgroundColor: 'rgba(239, 68, 68, 0.09)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    backgroundColor: 'rgba(255, 122, 107, 0.09)',
+                    border: '1px solid rgba(255, 122, 107, 0.25)',
                     fontSize: 12,
-                    color: '#ef4444',
+                    color: 'var(--cc-danger)',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 6,
@@ -1135,10 +1133,10 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                   style={{
                     padding: '8px 12px',
                     borderRadius: 7,
-                    backgroundColor: 'rgba(245, 158, 11, 0.09)',
-                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    backgroundColor: 'rgba(242, 184, 75, 0.09)',
+                    border: '1px solid rgba(242, 184, 75, 0.25)',
                     fontSize: 12,
-                    color: '#f59e0b',
+                    color: 'var(--cc-warning)',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 6,
@@ -1165,17 +1163,17 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                 1. User-Provided Instructions (Original Brief Instructions)
               </span>
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 999,
-                  backgroundColor: 'rgba(59, 130, 246, 0.14)',
-                  color: '#60a5fa',
+                  backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                  color: 'var(--cc-text-2)',
                 }}
               >
                 Entered by You
@@ -1184,13 +1182,13 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
               <div
                 style={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  backgroundColor: 'rgba(95, 212, 174, 0.05)',
+                  border: '1px solid rgba(95, 212, 174, 0.2)',
                   borderRadius: 7,
                   padding: '10px 12px',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success, #10b981)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--success, var(--cc-success))', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                   <CheckCircle2 size={13} />
                   <span>MUST FOLLOW (DO&apos;S)</span>
                 </div>
@@ -1207,13 +1205,13 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
 
               <div
                 style={{
-                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  backgroundColor: 'rgba(255, 122, 107, 0.05)',
+                  border: '1px solid rgba(255, 122, 107, 0.2)',
                   borderRadius: 7,
                   padding: '10px 12px',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--error, #ef4444)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--error, var(--cc-danger))', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                   <AlertCircle size={13} />
                   <span>MUST AVOID (DON&apos;TS)</span>
                 </div>
@@ -1235,22 +1233,22 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
             style={{
               padding: '12px 14px',
               borderRadius: 8,
-              backgroundColor: 'rgba(139, 92, 246, 0.05)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
+              backgroundColor: 'rgba(244, 244, 236, 0.025)',
+              border: '1px solid rgba(244, 244, 236, 0.18)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                 2. AI Interpretation — How CleverCut Will Apply These
               </span>
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 999,
-                  backgroundColor: 'rgba(139, 92, 246, 0.14)',
-                  color: 'var(--accent-primary)',
+                  backgroundColor: 'rgba(244, 244, 236, 0.07)',
+                  color: 'var(--cc-emphasis)',
                 }}
               >
                 AI Interpreted
@@ -1277,7 +1275,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
                 {aiDos.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
                       Applied Creative Requirements
                     </div>
                     <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -1289,7 +1287,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 )}
                 {aiDonts.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
                       Enforced Exclusions
                     </div>
                     <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -1308,16 +1306,16 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
             style={{
               padding: '10px 14px',
               borderRadius: 8,
-              backgroundColor: hasIssues ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-elevated)',
-              border: hasIssues ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--border-subtle)',
+              backgroundColor: hasIssues ? 'rgba(255, 122, 107, 0.05)' : 'var(--bg-elevated)',
+              border: hasIssues ? '1px solid rgba(255, 122, 107, 0.25)' : '1px solid var(--border-subtle)',
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
               3. Conflicts or Clarification Needed
             </div>
             {!hasIssues ? (
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={13} style={{ color: 'var(--success, #10b981)', flexShrink: 0 }} />
+                <CheckCircle2 size={13} style={{ color: 'var(--success, var(--cc-success))', flexShrink: 0 }} />
                 <span>No conflicts or clarifications needed. Your instructions are clear and consistent.</span>
               </div>
             ) : (
@@ -1328,10 +1326,10 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                     style={{
                       padding: '8px 10px',
                       borderRadius: 6,
-                      backgroundColor: 'rgba(239, 68, 68, 0.09)',
-                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      backgroundColor: 'rgba(255, 122, 107, 0.09)',
+                      border: '1px solid rgba(255, 122, 107, 0.25)',
                       fontSize: 12,
-                      color: '#ef4444',
+                      color: 'var(--cc-danger)',
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 6,
@@ -1351,10 +1349,10 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                     style={{
                       padding: '8px 10px',
                       borderRadius: 6,
-                      backgroundColor: 'rgba(245, 158, 11, 0.09)',
-                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      backgroundColor: 'rgba(242, 184, 75, 0.09)',
+                      border: '1px solid rgba(242, 184, 75, 0.25)',
                       fontSize: 12,
-                      color: '#f59e0b',
+                      color: 'var(--cc-warning)',
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 6,
@@ -1405,8 +1403,8 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <HelpCircle size={16} style={{ color: 'var(--warning, #f59e0b)' }} />
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <HelpCircle size={16} style={{ color: 'var(--text-tertiary)' }} />
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
             H. Assumptions & Missing Information
           </h3>
         </div>
@@ -1432,7 +1430,7 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
         )}
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
         Confirmed user inputs are shown separately from AI inferences and missing details.
       </div>
 
@@ -1440,13 +1438,13 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
         <div
           style={{
             marginBottom: 14,
-            backgroundColor: 'rgba(16, 185, 129, 0.05)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
+            backgroundColor: 'rgba(95, 212, 174, 0.05)',
+            border: '1px solid rgba(95, 212, 174, 0.2)',
             borderRadius: 8,
             padding: '10px 14px',
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success, #10b981)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--success, var(--cc-success))', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
             <CheckCircle2 size={13} />
             <span>VERIFIED USER INPUTS (CONFIRMED)</span>
           </div>
@@ -1461,7 +1459,7 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
       {isEditing ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning, #f59e0b)', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning, var(--cc-warning))', marginBottom: 4 }}>
               AI Inferred Assumptions (One per line):
             </div>
             <textarea
@@ -1522,10 +1520,10 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
               type="button"
               onClick={handleSave}
               style={{
-                backgroundColor: 'var(--accent-primary)',
+                backgroundColor: 'var(--cc-action)',
                 border: 'none',
-                color: '#fff',
-                borderRadius: 6,
+                color: 'var(--cc-on-action)',
+                borderRadius: 999,
                 padding: '5px 14px',
                 fontSize: 12,
                 fontWeight: 600,
@@ -1541,13 +1539,13 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
           {/* Assumptions */}
           <div
             style={{
-              backgroundColor: 'rgba(245, 158, 11, 0.05)',
-              border: '1px solid rgba(245, 158, 11, 0.25)',
+              backgroundColor: 'rgba(242, 184, 75, 0.05)',
+              border: '1px solid rgba(242, 184, 75, 0.25)',
               borderRadius: 8,
               padding: '12px 14px',
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--warning, #f59e0b)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning, var(--cc-warning))', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Info size={14} />
               <span>INFERRED ASSUMPTIONS</span>
             </div>
@@ -1571,7 +1569,7 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
               padding: '12px 14px',
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
               <HelpCircle size={14} />
               <span>MISSING INFORMATION</span>
             </div>

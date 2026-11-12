@@ -197,7 +197,13 @@ function receivedSummary(values) {
 }
 
 async function startRun(values) {
-  if (!key()) throw new Error("MAGNIFIC_API_KEY is missing in .env");
+  if (!key()) {
+    // Log the operator detail; show users a plain message (never config/env names).
+    console.error("[config] MAGNIFIC_API_KEY is missing in .env");
+    const err = new Error("Video rendering isn't available right now. Your script is saved. Please try again in a few minutes.");
+    err.configMissing = "MAGNIFIC_API_KEY";
+    throw err;
+  }
 
   // Pre-flight check before API call
   validateMagnificRequest(values);

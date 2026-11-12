@@ -32,7 +32,7 @@ export default function WelcomeOnboardingModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 12, 0.72)',
+        backgroundColor: 'rgba(10, 10, 9, 0.72)',
         backdropFilter: 'blur(6px)',
         zIndex: 9990,
         display: 'flex',
@@ -62,9 +62,9 @@ export default function WelcomeOnboardingModal({
             width: 52,
             height: 52,
             borderRadius: 14,
-            backgroundColor: 'rgba(99, 102, 241, 0.16)',
-            border: '1px solid rgba(99, 102, 241, 0.35)',
-            color: 'var(--accent-primary)',
+            backgroundColor: 'rgba(244, 244, 236, 0.08)',
+            border: '1px solid rgba(244, 244, 236, 0.315)',
+            color: 'var(--cc-emphasis)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -74,7 +74,7 @@ export default function WelcomeOnboardingModal({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <h2 id="welcome-clevercut-title" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          <h2 id="welcome-clevercut-title" style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             Welcome to CleverCut
           </h2>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -90,18 +90,18 @@ export default function WelcomeOnboardingModal({
             style={{
               width: '100%',
               padding: '12px 18px',
-              borderRadius: 10,
-              backgroundColor: 'var(--accent-primary)',
+              borderRadius: 999,
+              backgroundColor: 'var(--cc-action)',
               border: 'none',
-              color: '#FFFFFF',
+              color: 'var(--cc-on-action)',
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 4px 16px var(--accent-glow)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
             }}
           >
             <Sparkles size={15} />

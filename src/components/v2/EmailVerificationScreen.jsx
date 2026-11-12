@@ -163,15 +163,15 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
       style={{
         minHeight: '100vh',
         width: '100vw',
-        backgroundColor: '#0B0C0F',
-        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(79, 70, 229, 0.15), transparent)',
+        backgroundColor: '#121211',
+        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(244, 244, 236, 0.15), transparent)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
-        color: '#F5F7FA',
+        color: 'var(--cc-text-1)',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
@@ -182,11 +182,11 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+            background: 'var(--cc-hover)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(79, 70, 229, 0.35)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
           }}
         >
           <Film size={22} color="#FFFFFF" />
@@ -194,7 +194,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
         <span
           style={{
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 600,
             letterSpacing: '-0.03em',
             color: '#FFFFFF',
           }}
@@ -208,7 +208,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
         style={{
           width: '100%',
           maxWidth: 460,
-          backgroundColor: '#13151D',
+          backgroundColor: '#191917',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: 16,
           padding: '36px 32px',
@@ -226,19 +226,19 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: 'rgba(99, 102, 241, 0.12)',
+                background: 'rgba(244, 244, 236, 0.06)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
               }}
             >
-              <Loader2 size={32} color="#818CF8" className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={32} color="var(--cc-emphasis)" className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: '#FFFFFF' }}>
               Verifying your email address...
             </h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: 0, lineHeight: 1.6 }}>
               Please wait while we confirm your credentials and activate your CleverCut account.
             </p>
           </div>
@@ -252,20 +252,20 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
+                background: 'rgba(95, 212, 174, 0.12)',
+                border: '1px solid rgba(95, 212, 174, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
               }}
             >
-              <CheckCircle2 size={34} color="#10B981" />
+              <CheckCircle2 size={34} color="var(--cc-success)" />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: '#FFFFFF' }}>
               Your email has been verified successfully!
             </h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>
               {verifiedEmail ? (
                 <>Your email <strong>{verifiedEmail}</strong> is now verified.</>
               ) : (
@@ -280,10 +280,10 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
               style={{
                 width: '100%',
                 padding: '12px 20px',
-                background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                color: '#FFFFFF',
+                background: 'var(--cc-action)',
+                color: 'var(--cc-on-action)',
                 border: 'none',
-                borderRadius: 10,
+                borderRadius: 999,
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -291,7 +291,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
                 transition: 'opacity 0.2s',
               }}
             >
@@ -309,24 +309,24 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
+                background: 'rgba(242, 184, 75, 0.12)',
+                border: '1px solid rgba(242, 184, 75, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
               }}
             >
-              <Clock size={32} color="#F59E0B" />
+              <Clock size={32} color="var(--cc-warning)" />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: '#FFFFFF' }}>
               Verification link expired
             </h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>
               This verification link has expired. Verification links are valid for 30 minutes. Please sign in or request a new verification link.
             </p>
             {newLinkMessage && (
-              <p style={{ fontSize: 13, color: newLinkStatus === 'error' ? '#F87171' : '#34D399', margin: '0 0 16px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: newLinkStatus === 'error' ? '#FFA79C' : 'var(--cc-success)', margin: '0 0 16px', lineHeight: 1.5 }}>
                 {newLinkMessage}
               </p>
             )}
@@ -334,7 +334,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
               <button
                 onClick={handleRequestNewLink}
                 disabled={newLinkStatus === 'sending'}
-                style={{ width: '100%', padding: '12px', marginBottom: 10, borderRadius: 8, border: 'none', backgroundColor: '#6366F1', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: newLinkStatus === 'sending' ? 'wait' : 'pointer', opacity: newLinkStatus === 'sending' ? 0.7 : 1 }}
+                style={{ width: '100%', padding: '12px', marginBottom: 10, borderRadius: 999, border: 'none', backgroundColor: 'var(--cc-action)', color: 'var(--cc-on-action)', fontSize: 14, fontWeight: 600, cursor: newLinkStatus === 'sending' ? 'wait' : 'pointer', opacity: newLinkStatus === 'sending' ? 0.7 : 1 }}
               >
                 {newLinkStatus === 'sending' ? 'Sending…' : 'Send me a new link'}
               </button>
@@ -344,7 +344,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
               style={{
                 width: '100%',
                 padding: '12px 20px',
-                background: '#1F2937',
+                background: 'var(--cc-hover)',
                 color: '#FFFFFF',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: 10,
@@ -366,20 +366,20 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: 'rgba(255, 122, 107, 0.12)',
+                border: '1px solid rgba(255, 122, 107, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
               }}
             >
-              <ShieldAlert size={32} color="#EF4444" />
+              <ShieldAlert size={32} color="var(--cc-danger)" />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: '#FFFFFF' }}>
               Invalid or Used Link
             </h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>
               {errorMessage || 'This verification link is invalid or has already been used.'}
             </p>
             <button
@@ -387,7 +387,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
               style={{
                 width: '100%',
                 padding: '12px 20px',
-                background: '#1F2937',
+                background: 'var(--cc-hover)',
                 color: '#FFFFFF',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: 10,
@@ -409,20 +409,20 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: 'rgba(255, 122, 107, 0.12)',
+                border: '1px solid rgba(255, 122, 107, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
               }}
             >
-              <AlertCircle size={32} color="#EF4444" />
+              <AlertCircle size={32} color="var(--cc-danger)" />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: '0 0 10px', color: '#FFFFFF' }}>
               Verification Failed
             </h2>
-            <p style={{ fontSize: 14, color: '#9CA3AF', margin: '0 0 24px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: 'var(--cc-text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>
               {errorMessage || 'Unable to verify email at this moment. Please check your connection and try again.'}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -432,10 +432,10 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                 style={{
                   width: '100%',
                   padding: '12px 20px',
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                  color: '#FFFFFF',
+                  background: 'var(--cc-action)',
+                  color: 'var(--cc-on-action)',
                   border: 'none',
-                  borderRadius: 10,
+                  borderRadius: 999,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: isRetrying ? 'not-allowed' : 'pointer',
@@ -455,7 +455,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
                   width: '100%',
                   padding: '11px 20px',
                   background: 'transparent',
-                  color: '#9CA3AF',
+                  color: 'var(--cc-text-2)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: 10,
                   fontSize: 13,
@@ -471,7 +471,7 @@ export default function EmailVerificationScreen({ onReturnToLogin, onVerificatio
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: 24, fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
+      <div style={{ marginTop: 24, fontSize: 12, color: 'var(--cc-text-3)', textAlign: 'center' }}>
         &copy; {new Date().getFullYear()} CleverCut Video Intelligence Platform
       </div>
     </div>
