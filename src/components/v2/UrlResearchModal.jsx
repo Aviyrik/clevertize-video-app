@@ -228,7 +228,7 @@ export default function UrlResearchModal({
                 Start with a Website URL
               </h3>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-                Scan your website, store page, or catalog to extract offerings and generate a video brief.
+                Extract brand details and a draft brief from your website.
               </p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function UrlResearchModal({
           {/* Preset Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Or test with sample store:
+              Sample store:
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               {URL_PRESETS.map((p, idx) => (
@@ -490,7 +490,7 @@ export default function UrlResearchModal({
                         </span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        Directly attached — will appear automatically in your commercial story world.
+                        Attached automatically to your brief.
                       </div>
                     </div>
                   </div>
@@ -514,7 +514,7 @@ export default function UrlResearchModal({
 
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  Drafted Creative Brief (Extracted from Offerings)
+                  Drafted Brief
                 </label>
                 <textarea
                   value={draftBrief}

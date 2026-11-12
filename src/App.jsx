@@ -5,11 +5,29 @@ import {
   createInitialStudioState,
   StudioActionTypes,
   isStaleResponse,
+  resolveIdeaSelection,
 } from './context/studioReducer.js';
 import { videoLogoPayload } from './utils/videoLogo.js';
 import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
 import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject } from './utils/drafts.js';
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
+import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
+import { hasActiveClientEventContext } from './utils/eventContext.js';
+import {
+  createDefaultOnboardingState,
+  normalizeOnboardingState,
+  mergeOnboardingState,
+  recordBehaviorSignal,
+  shouldAutoTriggerWelcome,
+  hasResumableTourProgress,
+  loadLocalOnboardingState,
+  saveLocalOnboardingState,
+} from './utils/onboarding.js';
+import {
+  transferSimpleToDirector,
+  transferDirectorToSimple,
+} from './utils/modeTransfer.js';
+import { TOUR_STEPS } from './data/tourSteps.js';
 import {
   StudioStateContext,
   StudioDispatchContext,
@@ -19,6 +37,7 @@ import {
 import AppShell from './components/v2/AppShell.jsx';
 import CreationEntryHub from './components/v2/CreationEntryHub.jsx';
 import SimpleBusinessStudio from './components/v2/SimpleBusinessStudio.jsx';
+import ScreenUnderstanding from './components/v2/ScreenUnderstanding.jsx';
 import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
 import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
@@ -30,6 +49,10 @@ import ScriptLibraryView from './components/v2/ScriptLibraryView.jsx';
 import BusinessProfileView from './components/v2/BusinessProfileView.jsx';
 import AccountModal from './components/v2/AccountModal.jsx';
 import FeedbackModal from './components/v2/FeedbackModal.jsx';
+import ModeSelectionScreen from './components/v2/ModeSelectionScreen.jsx';
+import ModeSwitchModal from './components/v2/ModeSwitchModal.jsx';
+import WelcomeOnboardingModal from './components/v2/WelcomeOnboardingModal.jsx';
+import ProductTourEngine from './components/v2/ProductTourEngine.jsx';
 import {
   Mic,
   MicOff,
@@ -566,6 +589,8 @@ export default function App() {
     productPhoto: null,
     logo: null,
     brandFile: null,
+    creativeGuardrails: null,
+    eventContext: null,
   });
 
   // Persistent User Context (Conceptually userContext: preserves all inputs across stages)
@@ -668,6 +693,24 @@ export default function App() {
   };
 
   const handleNavigateStage = (targetStage) => {
+    if (['idea', 'opening', 'story', 'script', 'video'].includes(targetStage) && aiUnderstanding) {
+      const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+      const dim = userContext.aspectRatio || userContext.dimension || '9:16';
+      const staleOrUnapproved =
+        aiUnderstanding.approval_status !== 'approved' ||
+        isUnderstandingOutdatedClient(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, {
+          language: userContext.language || 'English',
+          creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+          dimension: dim,
+          duration: userContext.targetDuration || userContext.duration || '20s',
+          hasLogo: Boolean(userContext.videoLogo !== undefined ? userContext.videoLogo : userContext.logo),
+        }, hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null);
+      if (staleOrUnapproved) {
+        setStudioStage('understanding');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
     setStudioStage(targetStage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -880,6 +923,14 @@ export default function App() {
   const [renderStatusText, setRenderStatusText] = useState('Initializing video render pipeline…');
   const [shareStatus, setShareStatus] = useState('');
   const [isNewFilmConfirmOpen, setIsNewFilmConfirmOpen] = useState(false);
+  const [isSavingNewFilm, setIsSavingNewFilm] = useState(false);
+  const [newFilmSaveError, setNewFilmSaveError] = useState('');
+  const [newFilmAction, setNewFilmAction] = useState('new');
+  const [selectedCreationEntry, setSelectedCreationEntry] = useState(null);
+  const [aiUnderstanding, setAiUnderstanding] = useState(null);
+  const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
+  const [understandingError, setUnderstandingError] = useState('');
+  const [scriptGuardrailReport, setScriptGuardrailReport] = useState(null);
   // A business the user picked while a film was in progress: the confirm modal asks before switching to it
   const [pendingBusinessSwitch, setPendingBusinessSwitch] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -933,6 +984,181 @@ export default function App() {
     }
   };
 
+  // Onboarding, tour & behavior-responsive contextual guidance state
+  const [onboardingState, setOnboardingState] = useState(() => createDefaultOnboardingState());
+  const onboardingStateRef = useRef(onboardingState);
+  onboardingStateRef.current = onboardingState;
+  const [businessesLoaded, setBusinessesLoaded] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [scriptSaveError, setScriptSaveError] = useState('');
+  const [briefOptionalExpanded, setBriefOptionalExpanded] = useState({
+    inspiration: false,
+    audience: false,
+    instructions: false,
+    occasion: false,
+    productPhoto: false,
+  });
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+
+  // Brief -> Mode Selection -> Workflow state & mid-project mode switch modal
+  const [modeSelectionContext, setModeSelectionContext] = useState(null);
+  const [hasSelectedModeForProject, setHasSelectedModeForProject] = useState(false);
+  const [pendingModeSwitch, setPendingModeSwitch] = useState(null);
+  const [guardrailDraftInputs, setGuardrailDraftInputs] = useState({ doText: '', dontText: '' });
+  const [draftStatus, setDraftStatus] = useState({ state: 'idle', isNewDraft: false, detail: '' });
+  const draftTriggerDetailRef = useRef('');
+  const persistedDraftIdsRef = useRef(new Set());
+  const draftEpochRef = useRef(0);
+  const draftRetryTimerRef = useRef(null);
+  const draftRetryCountRef = useRef(0);
+  const isAnalyzingBriefRef = useRef(false);
+  const aiUnderstandingAbortRef = useRef(null);
+  const aiUnderstandingSeqRef = useRef(0);
+  const lastUnderstandingCorrectionsRef = useRef('');
+  const [analysisAttempt, setAnalysisAttempt] = useState(0);
+
+  const persistOnboardingPatch = (patchOrNext) => {
+    const prev = onboardingStateRef.current || createDefaultOnboardingState();
+    const next = typeof patchOrNext === 'function'
+      ? normalizeOnboardingState(patchOrNext(prev))
+      : mergeOnboardingState(prev, patchOrNext);
+    onboardingStateRef.current = next;
+    setOnboardingState(next);
+
+    const uid = currentUser?.id;
+    if (uid) saveLocalOnboardingState(uid, next);
+    const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
+    if (token) {
+      fetch('/api/auth/onboarding', {
+        method: 'PATCH',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(next),
+      }).catch(() => {});
+    }
+  };
+
+  const handleBehaviorEvent = (signalName) => {
+    persistOnboardingPatch((prev) => recordBehaviorSignal(prev, signalName, 1));
+  };
+
+  const handleDismissTip = (tipId) => {
+    if (!tipId) return;
+    persistOnboardingPatch((prev) => mergeOnboardingState(prev, { dismissedTips: [tipId] }));
+  };
+
+  const handleWelcomeStartTour = () => {
+    setIsWelcomeOpen(false);
+    setActiveAppViewState('hub');
+    setTourStepIndex(0);
+    setIsTourOpen(true);
+    persistOnboardingPatch({ welcomeSeen: true });
+  };
+
+  const handleWelcomeSkip = () => {
+    setIsWelcomeOpen(false);
+    persistOnboardingPatch({ welcomeSeen: true, tourSkipped: true });
+  };
+
+  const handleTourComplete = () => {
+    setIsTourOpen(false);
+    persistOnboardingPatch({
+      welcomeSeen: true,
+      tourCompleted: true,
+      tourPaused: false,
+      lastTourStep: 0,
+    });
+  };
+
+  const handleTourPause = (stepIdx) => {
+    const safeStep = typeof stepIdx === 'number'
+      ? Math.max(0, Math.min(stepIdx, TOUR_STEPS.length - 1))
+      : Math.max(0, Math.min(tourStepIndex, TOUR_STEPS.length - 1));
+    setIsTourOpen(false);
+    persistOnboardingPatch({
+      welcomeSeen: true,
+      tourSkipped: true,
+      tourPaused: true,
+      lastTourStep: safeStep,
+    });
+  };
+
+  const handleTourSkip = handleTourPause;
+
+  const handleResumeTour = () => {
+    const rawStep = onboardingStateRef.current?.lastTourStep ?? onboardingState?.lastTourStep ?? 0;
+    const targetStep = Math.max(0, Math.min(Number(rawStep) || 0, TOUR_STEPS.length - 1));
+    setIsWelcomeOpen(false);
+    if (targetStep <= 1) {
+      setActiveAppViewState('hub');
+    }
+    setTourStepIndex(targetStep);
+    setIsTourOpen(true);
+  };
+
+  const handleReplayTour = () => {
+    setIsWelcomeOpen(false);
+    setActiveAppViewState('hub');
+    setTourStepIndex(0);
+    setIsTourOpen(true);
+  };
+
+  const handleTourStepAction = (action, stepIdx) => {
+    if (!action || !action.type) return;
+    handleTourPause(stepIdx);
+
+    if (action.type === 'go_brief') {
+      if (userBusinesses.length === 0 || !userContext.businessName) {
+        setIsOnboardingModalOpen(true);
+        return;
+      }
+      setModeSelectionContext(null);
+      setHasSelectedModeForProject(studioMode === 'simple');
+      setStudioStage('brief');
+      setActiveAppView('studio');
+      if (studioMode === 'simple' && simpleDraftRef.current && simpleDraftRef.current.step !== 1) {
+        setSimpleResumeDraft((prev) => ({ ...(simpleDraftRef.current || prev || {}), step: 1 }));
+        setSimpleStudioKey((k) => k + 1);
+      }
+      return;
+    }
+
+    if (action.type === 'go_businesses') {
+      setActiveAppView('businesses');
+      return;
+    }
+
+    if (action.type === 'go_settings') {
+      if (userBusinesses.length === 0 || !userContext.businessName) {
+        setIsOnboardingModalOpen(true);
+        return;
+      }
+      setModeSelectionContext(null);
+      if (studioMode !== 'simple') {
+        setHasSelectedModeForProject(true);
+        setStudioStage('settings');
+      } else {
+        setHasSelectedModeForProject(true);
+      }
+      setActiveAppView('studio');
+      return;
+    }
+
+    if (action.type === 'go_projects') {
+      setActiveAppView('projects');
+      return;
+    }
+
+    if (action.type === 'go_account') {
+      setIsAccountModalOpen(true);
+    }
+  };
+
   const [activeAppView, setActiveAppViewState] = useState('hub');
   const setActiveAppView = (viewOrUpdater) => {
     setActiveAppViewState((prev) => {
@@ -947,43 +1173,109 @@ export default function App() {
   const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
 
-  const handleImportExistingScript = ({
-    scenes: importedScenes,
-    generatedScript: importedScript,
-    character1: c1,
-    character2: c2,
-    setting: st,
-    language: lang,
-    creativeStyle: stl,
-    targetDuration: dur,
-    aspectRatio: ratio,
-    platform: plt,
-    shotSpec: sp,
-    productPhoto: pPhoto,
-  }) => {
+  const applyImportedScriptPayload = (payload, targetMode = 'advanced') => {
+    if (!payload) return;
+    const {
+      scenes: importedScenes,
+      generatedScript: importedScript,
+      character1: c1,
+      character2: c2,
+      setting: st,
+      language: lang,
+      creativeStyle: stl,
+      targetDuration: dur,
+      aspectRatio: ratio,
+      platform: plt,
+      shotSpec: sp,
+      productPhoto: pPhoto,
+    } = payload;
+
+    const nextCtx = {
+      ...userContext,
+      ...(pPhoto ? { productPhoto: pPhoto } : {}),
+      ...(lang ? { language: lang } : {}),
+      ...(dur ? { targetDuration: dur, duration: dur } : {}),
+      ...(ratio ? { aspectRatio: ratio, dimension: ratio } : {}),
+      ...(plt ? { platform: plt } : {}),
+      ...(stl ? { creativeStyle: stl } : {}),
+    };
+
     if (c1) setCharacter1(c1);
     if (c2) setCharacter2(c2);
     if (st) setSetting(st);
-    if (pPhoto) updateUserContext('productPhoto', pPhoto);
-    if (lang) updateUserContext('language', lang);
-    if (dur) updateUserContext('targetDuration', dur);
-    if (ratio) updateUserContext('aspectRatio', ratio);
-    if (plt) updateUserContext('platform', plt);
+    setUserContext(nextCtx);
     if (stl) {
-      updateUserContext('creativeStyle', stl);
       setCreativeDNA((prev) => ({ ...prev, format: stl }));
     }
     if (sp) setShotSpec(sp);
 
-    setScenes(importedScenes);
-    setGeneratedScript(importedScript);
+    setScenes(importedScenes || []);
+    setGeneratedScript(importedScript || null);
+    setSelectedCreationEntry('script');
+    setHasSelectedModeForProject(true);
+    setModeSelectionContext(null);
 
-    // Fast-track past stages 1-6 straight into Stage 7 (Script Studio)
-    setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story']);
-    setStudioStage('script');
-    setActiveAppView('studio');
-    setToastMessage(pPhoto ? 'Script & product image attached into Stage 07!' : 'Script validated and imported into Stage 07!');
+    if (targetMode === 'simple') {
+      const compiledText = Array.isArray(importedScenes)
+        ? importedScenes.map((s, i) => `=== SCENE ${i + 1} ===\n${s}`).join('\n\n')
+        : '';
+      const importedPackage = {
+        id: `imported_${Date.now()}`,
+        badge: 'Imported Script',
+        angle: 'Verified Script',
+        title: `${nextCtx.businessName || 'Brand'} · Verified Script`,
+        hookHeadline: importedScenes?.[0] ? String(importedScenes[0]).slice(0, 120) : 'Custom Script Opening',
+        narrativeSummary: `Verified ${Array.isArray(importedScenes) ? importedScenes.length : 4}-scene script imported for fast video production.`,
+        duration: dur || nextCtx.targetDuration || '20s',
+        aspectRatio: ratio || nextCtx.aspectRatio || '9:16',
+        setting: st || '',
+        character1: c1 || '',
+        character2: c2 || '',
+        fullScriptText: compiledText,
+        scenes: (importedScenes || []).map((raw, idx) => ({
+          sceneNumber: idx + 1,
+          beat: `Scene ${idx + 1}`,
+          timing: `${idx * 5}-${(idx + 1) * 5}s`,
+          visual: String(raw),
+          dialogue: '',
+        })),
+      };
+      const transferred = transferDirectorToSimple({
+        userContext: nextCtx,
+        aiUnderstanding,
+        importedPackage,
+      });
+      setSimpleResumeDraft(transferred.simpleDraft);
+      setSimpleStudioKey((k) => k + 1);
+      handleSetStudioMode('simple');
+      setActiveAppView('studio');
+      setToastMessage('Script loaded into Simple Studio — review and click Produce Video!');
+    } else {
+      handleSetStudioMode('advanced');
+      setCompletedStages(['business', 'brief', 'settings', 'understanding', 'idea', 'opening', 'story']);
+      setStudioStage('script');
+      setActiveAppView('studio');
+      setToastMessage(pPhoto ? 'Script & product image attached into Stage 06!' : 'Script validated and imported into Stage 06!');
+    }
     setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  const handleImportExistingScript = (payload) => {
+    // If replacing scenes while already working inside Director Script Studio, import directly
+    if (
+      activeAppView === 'studio' &&
+      studioMode === 'advanced' &&
+      studioStage === 'script' &&
+      hasSelectedModeForProject
+    ) {
+      applyImportedScriptPayload(payload, 'advanced');
+      return;
+    }
+    // Otherwise route through Mode Selection so the user picks Quick Produce (Simple) or Director Script Studio
+    setSelectedCreationEntry('script');
+    setHasSelectedModeForProject(false);
+    setModeSelectionContext({ source: 'script', scriptPayload: payload });
+    setActiveAppView('studio');
   };
 
 
@@ -1051,8 +1343,8 @@ export default function App() {
   const draftIdRef = useRef(null); // this film's draft project id
   const draftRenderRef = useRef(null); // { runId, projectId, startedAt } while a render runs
   const draftSaveTimerRef = useRef(null);
-  const draftSaveInFlightRef = useRef(false);
   const draftSavePendingRef = useRef(false);
+  const draftSavePromiseRef = useRef(null);
   const suppressAutosaveUntilRef = useRef(0); // quiet period while a resumed draft's state is being restored
   const simpleDraftRef = useRef(null); // Simple Studio's latest reported state
   // Simple Studio reloads only when this changes (a project opened, a new film), not on activeProjectId
@@ -1261,11 +1553,23 @@ export default function App() {
     setScenes([]);
     setVideoUrl('');
 
-    // Advance directly to Stage 02 (Creative Brief) in Studio mode
+    // Sync Simple Studio draft at Step 1 so Simple mode renders the canonical Step 1 Brief pre-filled from URL
+    setSimpleResumeDraft((prev) => ({
+      ...(simpleDraftRef.current || prev || {}),
+      step: 1,
+      brief: br || simpleDraftRef.current?.brief || '',
+      ...(pPhoto ? { productPhoto: pPhoto } : {}),
+    }));
+    setSimpleStudioKey((k) => k + 1);
+
+    // Advance directly to Brief entry (Simple Studio Step 1 in Simple mode; unified Brief -> Mode Selection otherwise)
     markStageComplete('business');
     setCompletedStages((prev) => Array.from(new Set([...(prev || []), 'business'])));
+    setHasSelectedModeForProject(false);
+    setModeSelectionContext(null);
     setStudioStage('brief');
     setActiveAppView('studio');
+    setSelectedCreationEntry('url');
     setTimeout(() => setToastMessage(''), 4500);
   };
 
@@ -1299,6 +1603,7 @@ export default function App() {
         } else {
           setUserContext(createEmptyUserContext());
         }
+        setBusinessesLoaded(true);
       }
       if (projRes.ok) {
         const pData = await projRes.json();
@@ -1322,6 +1627,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load user projects/businesses:', err);
+    } finally {
+      setProjectsLoaded(true);
     }
   };
 
@@ -1344,6 +1651,12 @@ export default function App() {
         .then((data) => {
           if (data.user) {
             setCurrentUser(data.user);
+            const hydratedOnboarding = mergeOnboardingState(
+              loadLocalOnboardingState(data.user.id),
+              data.user.onboardingState
+            );
+            setOnboardingState(hydratedOnboarding);
+            saveLocalOnboardingState(data.user.id, hydratedOnboarding);
             setAuthToken(token);
             fetchUserData(token, true);
           } else {
@@ -1375,9 +1688,13 @@ export default function App() {
     setShotSpec(null);
     setSessionId(null);
     setActiveProjectId(null);
+    persistedDraftIdsRef.current.clear();
     currentSavingProjectIdRef.current = null;
     isSavingProjectRef.current = false;
     setIsCurrentProjectSaved(false);
+    setScriptSaveError('');
+    setGuardrailDraftInputs({ doText: '', dontText: '' });
+    setBriefOptionalExpanded({ inspiration: false, audience: false, instructions: false, occasion: false, productPhoto: false });
     forgetDraft();
 
     setDirectionsList([]);
@@ -1429,6 +1746,12 @@ export default function App() {
     const token = possibleToken || userDataOrUser?.token;
     if (user) {
       setCurrentUser(user);
+      const hydratedOnboarding = mergeOnboardingState(
+        loadLocalOnboardingState(user.id),
+        user.onboardingState
+      );
+      setOnboardingState(hydratedOnboarding);
+      saveLocalOnboardingState(user.id, hydratedOnboarding);
       try {
         const userSaved = localStorage.getItem(`clevertize_local_projects_${user.id}`);
         if (userSaved) {
@@ -1482,9 +1805,18 @@ export default function App() {
     } catch {}
     setAuthToken(null);
     setCurrentUser(null);
+    setBusinessesLoaded(false);
+    setProjectsLoaded(false);
+    setIsWelcomeOpen(false);
+    setIsTourOpen(false);
+    setOnboardingState(createDefaultOnboardingState());
+    setModeSelectionContext(null);
+    setHasSelectedModeForProject(false);
+    setPendingModeSwitch(null);
     setUserProjects([]);
     setUserBusinesses([]);
     setActiveProjectId(null);
+    persistedDraftIdsRef.current.clear();
     currentSavingProjectIdRef.current = null;
     renderTargetRef.current = { id: null, videoUrl: null };
     setIsCurrentProjectSaved(false);
@@ -1522,9 +1854,18 @@ export default function App() {
 
     setAuthToken(null);
     setCurrentUser(null);
+    setBusinessesLoaded(false);
+    setProjectsLoaded(false);
+    setIsWelcomeOpen(false);
+    setIsTourOpen(false);
+    setOnboardingState(createDefaultOnboardingState());
+    setModeSelectionContext(null);
+    setHasSelectedModeForProject(false);
+    setPendingModeSwitch(null);
     setUserProjects([]);
     setUserBusinesses([]);
     setActiveProjectId(null);
+    persistedDraftIdsRef.current.clear();
     currentSavingProjectIdRef.current = null;
     renderTargetRef.current = { id: null, videoUrl: null };
     setIsCurrentProjectSaved(false);
@@ -1569,6 +1910,7 @@ export default function App() {
     }
     isSavingProjectRef.current = true;
     setIsSavingProject(true);
+    setScriptSaveError('');
 
     if (!currentUser || !authToken) {
       isSavingProjectRef.current = false;
@@ -1602,6 +1944,15 @@ export default function App() {
         status: videoUrl ? 'video_ready' : (scenes && scenes.length > 0 ? 'script_ready' : 'draft'),
         videoUrl: videoUrl || null,
         brief: userContext.brief || '',
+        productionSettings: {
+          language: userContext.language || 'English',
+          creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+          dimension: userContext.aspectRatio || userContext.dimension || '9:16',
+          duration: userContext.targetDuration || userContext.duration || '20s',
+          hasLogo: Boolean(userContext.videoLogo !== undefined ? userContext.videoLogo : userContext.logo),
+        },
+        creativeGuardrails: userContext.creativeGuardrails || null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         scenes: scenes || [],
         setting: setting || '',
         character1: character1 || '',
@@ -1610,6 +1961,7 @@ export default function App() {
         stages: {
           directionsList: directionsList || [],
           selectedDirection: selectedDirection || null,
+          customDirection: customDirection || '',
           selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
           hooksList: hooksList || [],
           selectedHook: selectedHook || null,
@@ -1659,12 +2011,16 @@ export default function App() {
         setToastMessage('Script and project saved to your library!');
         setTimeout(() => setToastMessage(''), 4000);
       } else {
-        setToastMessage(`Failed to save: ${data.error || 'Server error'}`);
+        const msg = `Failed to save: ${data?.error || 'Server error'}`;
+        setScriptSaveError(msg);
+        setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
     } catch (err) {
       console.error('Error saving project:', err);
-      setToastMessage('Failed to save project. Check your connection.');
+      const msg = 'Failed to save project. Check your connection.';
+      setScriptSaveError(msg);
+      setToastMessage(msg);
       setTimeout(() => setToastMessage(''), 4000);
     } finally {
       isSavingProjectRef.current = false;
@@ -1687,6 +2043,17 @@ export default function App() {
       ? { ...draft.simple, step: resume.runId ? 3 : resume.simpleStep }
       : null);
     setSimpleStudioKey((k) => k + 1);
+    const restoredDraftInputs = (draft && draft.simple && draft.simple.guardrailDraftInputs)
+      || (draft && draft.guided && draft.guided.guardrailDraftInputs)
+      || { doText: '', dontText: '' };
+    setGuardrailDraftInputs(restoredDraftInputs);
+    if (resume && proj.id) persistedDraftIdsRef.current.add(proj.id);
+    draftEpochRef.current += 1;
+    clearTimeout(draftRetryTimerRef.current);
+    draftRetryTimerRef.current = null;
+    draftRetryCountRef.current = 0;
+    draftTriggerDetailRef.current = '';
+    setDraftStatus(resume ? { state: 'saved', isNewDraft: false, detail: 'Draft loaded' } : { state: 'idle', isNewDraft: false, detail: '' });
 
     setActiveProjectId(proj.id);
     currentSavingProjectIdRef.current = proj.id;
@@ -1731,6 +2098,7 @@ export default function App() {
     if (proj.stages) {
       if (proj.stages.directionsList) setDirectionsList(proj.stages.directionsList);
       if (proj.stages.selectedDirection) setSelectedDirection(proj.stages.selectedDirection);
+      if (typeof proj.stages.customDirection === 'string') setCustomDirection(proj.stages.customDirection);
       if (typeof proj.stages.selectedDirectionIndex === 'number') {
         setSelectedDirectionIdx(proj.stages.selectedDirectionIndex);
       }
@@ -1748,12 +2116,13 @@ export default function App() {
       if (proj.stages.generatedScript) setGeneratedScript(proj.stages.generatedScript);
       if (proj.stages.completedStages) setCompletedStages(proj.stages.completedStages);
     } else {
-      setCompletedStages(['business', 'brief', 'settings', 'idea', 'opening', 'story', 'script']);
+      setCompletedStages(['business', 'brief', 'settings', 'understanding', 'idea', 'opening', 'story', 'script']);
     }
 
     if (proj.videoUrl) {
       setVideoUrl(proj.videoUrl);
       setStudioStage('video');
+      handleSetStudioMode((proj.studio === 'simple' || proj.creativeDNA?.studio === 'simple') ? 'simple' : 'advanced');
     } else if (resume) {
       setVideoUrl('');
       const guided = draft.guided;
@@ -1769,7 +2138,23 @@ export default function App() {
     } else {
       setVideoUrl('');
       setStudioStage('script');
+      handleSetStudioMode('advanced');
     }
+    const restoredProductPhoto = resume
+      ? (resume.studio === 'simple'
+          ? (draft?.simple?.productPhoto || null)
+          : (draft?.guided?.context?.productPhoto || null))
+      : (proj.productPhoto || proj.creativeDNA?.productPhoto || null);
+    updateUserContext('productPhoto', restoredProductPhoto);
+    setHasSelectedModeForProject(true);
+    setModeSelectionContext(null);
+    const restoredUnderstanding = proj.aiUnderstanding || proj.stages?.aiUnderstanding || proj.creativeDNA?.aiUnderstanding || (draft && draft.guided && draft.guided.aiUnderstanding) || null;
+    setAiUnderstanding(restoredUnderstanding);
+    const restoredGuardrails = proj.creativeGuardrails || proj.creativeDNA?.creativeGuardrails || proj.stages?.creativeGuardrails || (draft && draft.guided && draft.guided.creativeGuardrails) || null;
+    updateUserContext('creativeGuardrails', restoredGuardrails);
+    const restoredEventContext = proj.eventContext || proj.creativeDNA?.eventContext || proj.stages?.eventContext || (draft && draft.guided && draft.guided.eventContext) || null;
+    updateUserContext('eventContext', restoredEventContext);
+    setScriptGuardrailReport(null);
     setActiveAppView('studio');
     setToastMessage(resume ? `Resumed "${proj.title || 'your video'}" where you left off.` : `Loaded "${proj.title || 'Project'}" into Studio.`);
     setTimeout(() => setToastMessage(''), 3500);
@@ -1806,6 +2191,76 @@ export default function App() {
     }
     setToastMessage('Project removed from library.');
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleBulkDeleteProjects = async (projectIds = []) => {
+    const cleanIds = Array.from(new Set((projectIds || []).filter(Boolean)));
+    if (cleanIds.length === 0) {
+      return { deletedIds: [], notDeletedIds: [] };
+    }
+
+    let deletedIds = cleanIds;
+    let notDeletedIds = [];
+    let errorMessage = '';
+
+    if (authToken) {
+      try {
+        const res = await fetch('/api/projects/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ projectIds: cleanIds }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return {
+            deletedIds: Array.isArray(data.deletedIds) ? data.deletedIds : [],
+            notDeletedIds: Array.isArray(data.notDeletedIds) ? data.notDeletedIds : cleanIds,
+            error: data.error || 'Could not delete selected projects.',
+          };
+        }
+        deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds : cleanIds;
+        notDeletedIds = Array.isArray(data.notDeletedIds) ? data.notDeletedIds : [];
+      } catch (err) {
+        console.error('Error bulk deleting projects from server:', err);
+        return {
+          deletedIds: [],
+          notDeletedIds: cleanIds,
+          error: 'Network error while deleting projects. Please try again.',
+        };
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      const deletedSet = new Set(deletedIds);
+      setUserProjects((prev) => {
+        const next = prev.filter((p) => !deletedSet.has(p.id));
+        try {
+          localStorage.setItem('clevertize_local_projects', JSON.stringify(next));
+          if (currentUser?.id) {
+            localStorage.setItem(`clevertize_local_projects_${currentUser.id}`, JSON.stringify(next));
+          }
+        } catch {}
+        return next;
+      });
+      if (deletedSet.has(activeProjectId) || deletedSet.has(draftIdRef.current)) {
+        forgetDraft();
+        setActiveProjectId(null);
+        currentSavingProjectIdRef.current = null;
+        setIsCurrentProjectSaved(false);
+        setVideoUrl('');
+      }
+      setToastMessage(
+        notDeletedIds.length > 0
+          ? `Deleted ${deletedIds.length} projects; ${notDeletedIds.length} could not be deleted.`
+          : `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? 'project' : 'projects'}.`
+      );
+      setTimeout(() => setToastMessage(''), 3500);
+    }
+
+    return { deletedIds, notDeletedIds, error: errorMessage };
   };
 
   const handleSaveBusiness = async (bizData) => {
@@ -1850,9 +2305,36 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (!businessesLoaded) return;
+    const shouldShow = shouldAutoTriggerWelcome(onboardingState, {
+      isAuthenticated: Boolean(currentUser && authToken),
+      isAuthChecking,
+      isOnboardingModalOpen,
+      isAuthModalOpen,
+      businessCount: userBusinesses.length,
+      isTourActive: isTourOpen,
+    });
+    if (shouldShow && !isWelcomeOpen) {
+      setIsWelcomeOpen(true);
+    }
+  }, [
+    businessesLoaded,
+    onboardingState,
+    currentUser,
+    authToken,
+    isAuthChecking,
+    isOnboardingModalOpen,
+    isAuthModalOpen,
+    userBusinesses.length,
+    isTourOpen,
+    isWelcomeOpen,
+  ]);
+
   const handleOnboardingComplete = async (onboardingData) => {
     setIsOnboardingModalOpen(false);
     setEditingBusiness(null);
+    setBusinessesLoaded(true);
     const resolvedName = onboardingData.businessName || 'My Business';
     const resolvedType = onboardingData.businessType || 'Retail Store';
 
@@ -1967,6 +2449,7 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [micSupported, setMicSupported] = useState(false);
   const [micHint, setMicHint] = useState('');
+  const [dictatedBriefSync, setDictatedBriefSync] = useState({ text: '', seq: 0 });
   const recognitionRef = useRef(null);
   const baseSpeechTextRef = useRef('');
 
@@ -2004,6 +2487,7 @@ export default function App() {
         }
         const updated = (baseSpeechTextRef.current + (interimText ? ' ' + interimText : '')).trim();
         updateUserContext('brief', updated);
+        setDictatedBriefSync((prev) => ({ text: updated, seq: prev.seq + 1 }));
         setValidationError('');
       };
 
@@ -2022,13 +2506,15 @@ export default function App() {
     }
   }, []);
 
-  const toggleVoiceInput = () => {
+  const toggleVoiceInput = (initialSeed) => {
     if (!recognitionRef.current) return;
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      baseSpeechTextRef.current = userContext.brief.trim();
+      baseSpeechTextRef.current = typeof initialSeed === 'string'
+        ? initialSeed.trim()
+        : (userContext.brief || '').trim();
       try {
         recognitionRef.current.start();
       } catch (err) {
@@ -2192,6 +2678,7 @@ export default function App() {
       shopPhoto: userContext.shopPhoto ? { mime: userContext.shopPhoto.mime, data: userContext.shopPhoto.data } : null,
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
       logo: videoLogoPayload(userContext),
+      creativeGuardrails: userContext.creativeGuardrails || null,
     };
   };
 
@@ -2250,6 +2737,193 @@ export default function App() {
     setResearchDismissed(true);
   };
 
+  // 1b. AI Understanding / Polished Brief Generation & Approval
+  const getCurrentProductionSettings = () => {
+    const dim = userContext.aspectRatio || userContext.dimension || (
+      userContext.platform && userContext.platform.includes('16:9')
+        ? '16:9'
+        : userContext.platform && userContext.platform.includes('1:1')
+        ? '1:1'
+        : '9:16'
+    );
+    return {
+      language: userContext.language || 'English',
+      creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+      dimension: dim,
+      aspectRatio: dim,
+      duration: userContext.targetDuration || userContext.duration || '20s',
+      targetDuration: userContext.targetDuration || userContext.duration || '20s',
+      platform: userContext.platform || '',
+      hasLogo: Boolean(userContext.videoLogo !== undefined ? userContext.videoLogo : userContext.logo),
+      hasProductPhoto: Boolean(userContext.productPhoto),
+    };
+  };
+
+  const handleCancelAiUnderstanding = () => {
+    if (aiUnderstandingAbortRef.current) {
+      aiUnderstandingAbortRef.current.abort();
+      aiUnderstandingAbortRef.current = null;
+    }
+    aiUnderstandingSeqRef.current += 1;
+    isAnalyzingBriefRef.current = false;
+    setIsAnalyzingBrief(false);
+    setUnderstandingError('');
+    setStudioStage(hasSelectedModeForProject ? 'settings' : 'brief');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleGenerateAiUnderstanding = async (userCorrections = '', forceRetry = false) => {
+    if (isAnalyzingBriefRef.current && !forceRetry) return;
+    if (aiUnderstandingAbortRef.current) {
+      aiUnderstandingAbortRef.current.abort();
+    }
+    const effectiveCorrections =
+      userCorrections === undefined || (forceRetry && userCorrections === '')
+        ? (lastUnderstandingCorrectionsRef.current || '')
+        : (typeof userCorrections === 'string' ? userCorrections : '');
+    lastUnderstandingCorrectionsRef.current = effectiveCorrections;
+    setAnalysisAttempt((c) => c + 1);
+
+    const seq = ++aiUnderstandingSeqRef.current;
+    const controller = new AbortController();
+    aiUnderstandingAbortRef.current = controller;
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 65000);
+
+    isAnalyzingBriefRef.current = true;
+    setIsAnalyzingBrief(true);
+    setUnderstandingError('');
+    setStudioStage('understanding');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    try {
+      const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+      const prodSettings = getCurrentProductionSettings();
+      const targetProjId = activeProjectId || currentSavingProjectIdRef.current || draftIdRef.current || null;
+      const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
+      const res = await fetch('/api/creative/ai-understanding', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          businessName: userContext.businessName,
+          businessType: userContext.businessType,
+          town: userContext.town,
+          brief: cleanBrief.trim(),
+          language: prodSettings.language,
+          creativeStyle: prodSettings.creativeStyle,
+          dimension: prodSettings.dimension,
+          aspectRatio: prodSettings.aspectRatio,
+          duration: prodSettings.duration,
+          targetDuration: prodSettings.targetDuration,
+          platform: prodSettings.platform,
+          hasLogo: prodSettings.hasLogo,
+          hasProductPhoto: prodSettings.hasProductPhoto,
+          settings: prodSettings,
+          brandTone: userContext.brandTone,
+          occasion: userContext.occasion,
+          websiteUrl: userContext.websiteUrl,
+          projectId: targetProjId,
+          userCorrections: effectiveCorrections,
+          previousUnderstanding: aiUnderstanding,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (seq !== aiUnderstandingSeqRef.current) return;
+      if (!res.ok || !data || !data.understanding) {
+        throw new Error(data?.error || 'Failed to analyze brief.');
+      }
+
+      if (data.creativeGuardrails) {
+        updateUserContext('creativeGuardrails', data.creativeGuardrails);
+      }
+      setAiUnderstanding(data.understanding);
+      setCreativeDNA((prev) => ({
+        ...prev,
+        aiUnderstanding: data.understanding,
+        productionSettings: prodSettings,
+      }));
+      scheduleDraftSave(true);
+    } catch (err) {
+      if (seq !== aiUnderstandingSeqRef.current) return;
+      if (err?.name === 'AbortError' && !timedOut) return;
+      console.error('[AIUnderstanding] generation error:', err);
+      setUnderstandingError(
+        timedOut
+          ? 'AI Understanding timed out after 65s while reviewing your brief. Your brief and settings are intact — click Retry or go back.'
+          : (err.message || 'Failed to analyze brief. You can try again or edit manually.')
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      if (aiUnderstandingAbortRef.current === controller) {
+        aiUnderstandingAbortRef.current = null;
+      }
+      if (seq === aiUnderstandingSeqRef.current) {
+        isAnalyzingBriefRef.current = false;
+        setIsAnalyzingBrief(false);
+      }
+    }
+  };
+
+  const handleApproveUnderstanding = async (approvedData) => {
+    try {
+      const updated = {
+        ...approvedData,
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+      };
+      setAiUnderstanding(updated);
+      setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
+
+      let targetProjId = activeProjectId || currentSavingProjectIdRef.current || draftIdRef.current;
+      if (!targetProjId && authToken) {
+        await persistDraft(true);
+        targetProjId = activeProjectId || currentSavingProjectIdRef.current || draftIdRef.current;
+      }
+      if (targetProjId) {
+        const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
+        await fetch(`/api/creative/ai-understanding/${encodeURIComponent(targetProjId)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ understanding: updated, approvalStatus: 'approved' }),
+        }).catch((err) => console.warn('[AIUnderstanding] backend save warning:', err));
+      }
+
+      handleBehaviorEvent('aiUnderstandingApprovedCount');
+      markStageComplete('understanding');
+      scheduleDraftSave(true);
+      setStudioStage('idea');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      const currentFormat = userContext.creativeStyle || 'UGC / Creator-style';
+      const currentLang = userContext.language || 'English';
+      const activeKey = `${currentFormat}_${currentLang}`;
+      if (!directionsList.length || loadedDirectionsFormatRef.current !== activeKey) {
+        await loadCreativeDirections(true, currentFormat, currentLang);
+      }
+    } catch (err) {
+      console.error('[AIUnderstanding] approval error:', err);
+    }
+  };
+
+  const handleUpdateUnderstanding = (updated) => {
+    setAiUnderstanding(updated);
+    setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
+    scheduleDraftSave(false);
+  };
+
   // 2. Fetching Creative Direction Territories
   const loadCreativeDirections = async (force = false, overrideFormat = null, overrideLang = null) => {
     const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
@@ -2264,6 +2938,7 @@ export default function App() {
 
     setIsLoadingDirections(true);
     try {
+      const prodSettings = getCurrentProductionSettings();
       const res = await fetch('/api/creative/directions', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -2272,12 +2947,22 @@ export default function App() {
           businessType: bType,
           town: userContext.town || '',
           brief: userContext.brief || '',
-          targetAudience: userContext.targetAudience || '',
+          targetAudience: userContext.targetAudience || (aiUnderstanding?.target_audience) || '',
           language: activeLang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
           research: researchData,
           format: activeFormat,
           creativeStyle: activeFormat,
+          dimension: prodSettings.dimension,
+          aspectRatio: prodSettings.aspectRatio,
+          duration: prodSettings.duration,
+          targetDuration: prodSettings.targetDuration,
+          hasLogo: prodSettings.hasLogo,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          aiUnderstanding: aiUnderstanding && aiUnderstanding.approval_status === 'approved' ? aiUnderstanding : null,
         }),
       });
       if (res.ok) {
@@ -2287,6 +2972,13 @@ export default function App() {
         setSelectedDirection(rec);
         setCreativeDNA((prev) => ({ ...prev, direction: rec, format: activeFormat, language: activeLang }));
         loadedDirectionsFormatRef.current = activeKey;
+      } else if (res.status === 409) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.code === 'UNDERSTANDING_OUTDATED' || errData?.code === 'UNDERSTANDING_NOT_APPROVED') {
+          setErrorMessage(errData.error || 'Please review and approve AI Understanding first.');
+          setStudioStage('understanding');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     } catch (e) {
       console.warn('[directions] load error:', e);
@@ -2357,7 +3049,12 @@ export default function App() {
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
     const activeFormat = overrideFormat || userContext.creativeStyle || 'UGC / Creator-style';
-    const activeDir = overrideDirection || selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' });
+    const ideaSel = resolveIdeaSelection(
+      overrideDirection || selectedDirection,
+      overrideDirection ? '' : customDirection,
+      directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' }
+    );
+    const activeDir = ideaSel.direction;
     const activeKey = `${activeDir?.id || activeDir?.title || ''}_${activeFormat}_${lang}`;
 
     if (hooksList.length && !force) {
@@ -2378,6 +3075,10 @@ export default function App() {
           brandTone: userContext.brandTone || 'Warm & Authentic',
           format: activeFormat,
           creativeStyle: activeFormat,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
       if (res.ok) {
@@ -2424,6 +3125,10 @@ export default function App() {
           format: userContext.creativeStyle || 'Storytelling',
           language: lang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
       if (res.ok) {
@@ -2449,7 +3154,12 @@ export default function App() {
       : userContext.businessType;
     const lang = overrideLang || userContext.language || 'English';
     const activeFormat = overrideFormat || userContext.creativeStyle || creativeDNA?.format || 'UGC / Creator-style';
-    const activeDir = overrideDirection || selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' });
+    const ideaSel = resolveIdeaSelection(
+      overrideDirection || selectedDirection,
+      overrideDirection ? '' : customDirection,
+      directionsList.find((d) => d.recommended) || directionsList[0] || { title: 'Everyday Relatable' }
+    );
+    const activeDir = ideaSel.direction;
     const activeHk = overrideHook || selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended) || hooksList[0] || { hookLine: '' });
 
     setIsLoadingStory(true);
@@ -2468,6 +3178,10 @@ export default function App() {
           format: activeFormat,
           language: lang,
           brandTone: userContext.brandTone || 'Warm & Authentic',
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
       if (res.ok) {
@@ -2561,8 +3275,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const form = buildSessionPayload();
+    const ideaSel = resolveIdeaSelection(
+      selectedDirection,
+      customDirection,
+      directionsList.find((d) => d.recommended)
+    );
     const activeDNA = {
-      direction: selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended)),
+      direction: ideaSel.direction,
+      ideaSource: ideaSel.ideaSource,
+      selectedAiDirection: ideaSel.selectedAiDirection,
+      customDirection: ideaSel.customDirection,
       hook: selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended)),
       plot: selectedPlot || (customPlot ? { title: customPlot } : plotsList.find((p) => p.recommended)),
       story: storyWorldData || { format: userContext.creativeStyle || 'Storytelling' },
@@ -2581,6 +3303,10 @@ export default function App() {
           creativeDNA: activeDNA,
           constraints: constraintsList,
           avoid: avoidList,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
       const data = await res.json();
@@ -2594,6 +3320,7 @@ export default function App() {
 
       setScriptPayloadData(data);
       setGeneratedScript(data);
+      setScriptGuardrailReport(data.guardrailReport || null);
       setCharacter1(data.character1 || '');
       setCharacter2(data.character2 || '');
       setSetting(data.setting || '');
@@ -2633,6 +3360,10 @@ export default function App() {
           form: buildSessionPayload(),
           characters: `${character1} | ${character2}`,
           setting,
+          projectId: activeProjectId,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
       const data = await res.json();
@@ -2643,6 +3374,9 @@ export default function App() {
         const updated = [...scenes];
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
+        if (data.guardrailReport !== undefined) {
+          setScriptGuardrailReport(data.guardrailReport);
+        }
         if (shotSpec && Array.isArray(shotSpec.shots)) {
           setShotSpec((prev) => {
             if (!prev || !Array.isArray(prev.shots)) return prev;
@@ -2707,6 +3441,7 @@ export default function App() {
         stages: {
           directionsList: directionsList || [],
           selectedDirection: selectedDirection || null,
+          customDirection: customDirection || '',
           selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
           hooksList: hooksList || [],
           selectedHook: selectedHook || null,
@@ -3134,6 +3869,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: pipeData.shotSpec || null,
         aspectRatio: aspectRatioOf(userContext),
       };
@@ -3200,6 +3937,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3241,8 +3980,8 @@ export default function App() {
 
   // Rebuilt every render, so a debounced save always sends the latest state. Null = nothing to save.
   const buildCurrentDraftRef = useRef(null);
-  buildCurrentDraftRef.current = () => {
-    if (!currentUser || !authToken || activeAppView !== 'studio') return null;
+  buildCurrentDraftRef.current = (allowOutsideStudio = false) => {
+    if (!currentUser || !authToken || (!allowOutsideStudio && activeAppView !== 'studio')) return null;
     if (videoUrl && !draftRenderRef.current) return null; // a finished video is a project, not a draft
     const base = {
       id: draftProjectId(),
@@ -3280,10 +4019,13 @@ export default function App() {
           targetDuration: userContext.targetDuration,
           productPhoto: userContext.productPhoto,
           videoLogo: userContext.videoLogo,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         },
         stages: {
           directionsList: directionsList || [],
           selectedDirection: selectedDirection || null,
+          customDirection: customDirection || '',
           selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
           hooksList: hooksList || [],
           selectedHook: selectedHook || null,
@@ -3291,9 +4033,24 @@ export default function App() {
           generatedScript: generatedScript || null,
           completedStages: completedStages || [],
           shotSpec: shotSpec || null,
+          aiUnderstanding: aiUnderstanding || null,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         },
         explicitChoices,
-        appCreativeDNA: creativeDNA,
+        appCreativeDNA: {
+          ...creativeDNA,
+          aiUnderstanding: aiUnderstanding || null,
+          creativeGuardrails: userContext.creativeGuardrails || null,
+          eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        },
+        aiUnderstanding: aiUnderstanding || null,
+        creativeGuardrails: userContext.creativeGuardrails || null,
+        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+        guardrailDraftInputs: {
+          doText: String(guardrailDraftInputs?.doText || ''),
+          dontText: String(guardrailDraftInputs?.dontText || ''),
+        },
         scenes: scenes || [],
         character1,
         character2,
@@ -3304,14 +4061,37 @@ export default function App() {
   };
 
   // Save the draft now. Saves never overlap: one arriving mid-save runs again once that save finishes.
-  const persistDraft = async () => {
-    const payload = buildCurrentDraftRef.current && buildCurrentDraftRef.current();
-    if (!payload) return;
-    if (draftSaveInFlightRef.current) {
+  const persistDraft = async (allowOutsideStudio = false) => {
+    if (draftSavePromiseRef.current) {
       draftSavePendingRef.current = true;
-      return;
+      const currentResult = await draftSavePromiseRef.current;
+      if (!draftSavePendingRef.current) return currentResult;
+      draftSavePendingRef.current = false;
+      return persistDraft(allowOutsideStudio);
     }
-    draftSaveInFlightRef.current = true;
+    const payload = buildCurrentDraftRef.current && buildCurrentDraftRef.current(allowOutsideStudio);
+    if (!payload) {
+      if (!(videoUrl && !draftRenderRef.current)) {
+        setDraftStatus({ state: 'idle', isNewDraft: false, detail: '' });
+      }
+      return !allowOutsideStudio || Boolean(videoUrl && !draftRenderRef.current);
+    }
+    const isNewDraft = !persistedDraftIdsRef.current.has(payload.id);
+    const epoch = draftEpochRef.current;
+    clearTimeout(draftRetryTimerRef.current);
+    draftRetryTimerRef.current = null;
+    const inferTriggerDetail = () => {
+      if (draftTriggerDetailRef.current) return draftTriggerDetailRef.current;
+      if (studioMode === 'simple') {
+        return (simpleDraftRef.current?.packages || []).length > 0
+          ? 'Scripts generated'
+          : 'Brief entered';
+      }
+      return (scenes || []).length > 0 ? 'Script imported' : 'Brief entered';
+    };
+    const triggerDetail = isNewDraft ? inferTriggerDetail() : '';
+    setDraftStatus({ state: 'saving', isNewDraft, detail: triggerDetail });
+
     // This draft is the project being worked on: manual saves and the next render reuse its id
     setActiveProjectId(payload.id);
     currentSavingProjectIdRef.current = payload.id;
@@ -3322,24 +4102,80 @@ export default function App() {
       return idx >= 0 ? prev.map((p, i) => (i === idx ? { ...p, ...item } : p)) : [{ ...item, createdAt: item.updatedAt }, ...prev];
     };
     setUserProjects((prev) => upsert(prev, local));
-    try {
-      const res = await fetch('/api/projects', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data && data.project) setUserProjects((prev) => upsert(prev, data.project));
-    } catch (err) {
-      console.warn('[draft] autosave failed — will retry on the next change:', err.message);
-    } finally {
-      draftSaveInFlightRef.current = false;
-      if (draftSavePendingRef.current) {
-        draftSavePendingRef.current = false;
-        persistDraft();
+    const savePromise = (async () => {
+      let succeeded = false;
+      try {
+        const res = await fetch('/api/projects', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.project) throw new Error(data?.error || 'Project save failed. Please try again.');
+        if (draftEpochRef.current !== epoch) return false;
+        persistedDraftIdsRef.current.add(payload.id);
+        if (data.project.id) persistedDraftIdsRef.current.add(data.project.id);
+        setUserProjects((prev) => upsert(prev, data.project));
+        succeeded = true;
+        draftRetryCountRef.current = 0;
+        draftTriggerDetailRef.current = '';
+        setDraftStatus({
+          state: 'saved',
+          isNewDraft,
+          detail: isNewDraft ? `${triggerDetail} — new draft created` : '',
+        });
+      } catch (err) {
+        if (draftEpochRef.current !== epoch) return false;
+        console.warn('[draft] autosave failed:', err.message);
+        const canAutoRetry = draftRetryCountRef.current < 2 && (typeof navigator === 'undefined' || navigator.onLine !== false);
+        if (canAutoRetry) {
+          draftRetryCountRef.current += 1;
+          const retryDelayMs = 4000 * draftRetryCountRef.current;
+          setDraftStatus({ state: 'error', isNewDraft, detail: 'retrying' });
+          draftRetryTimerRef.current = setTimeout(() => {
+            draftRetryTimerRef.current = null;
+            if (draftEpochRef.current === epoch) persistDraft(allowOutsideStudio);
+          }, retryDelayMs);
+        } else {
+          setDraftStatus({ state: 'error', isNewDraft, detail: 'manual' });
+        }
+      } finally {
+        draftSavePromiseRef.current = null;
       }
-    }
+      return succeeded;
+    })();
+    draftSavePromiseRef.current = savePromise;
+    return savePromise;
+  };
+
+  const handleRetryDraftSave = () => {
+    clearTimeout(draftRetryTimerRef.current);
+    draftRetryTimerRef.current = null;
+    draftRetryCountRef.current = 0;
+    persistDraft(false);
   };
 
   // Debounced autosave for edits; flush=true saves at once (a stage was completed)
   const scheduleDraftSave = (flush = false) => {
     if (Date.now() < suppressAutosaveUntilRef.current) return;
+    clearTimeout(draftRetryTimerRef.current);
+    draftRetryTimerRef.current = null;
+    draftRetryCountRef.current = 0;
+    const hasDraftContent = Boolean(
+      studioMode === 'simple'
+        ? (simpleDraftRef.current && (String(simpleDraftRef.current.brief || '').trim() || (simpleDraftRef.current.packages || []).length))
+        : (String(userContext.brief || '').trim() || (scenes || []).length)
+    );
+    if (currentUser && authToken && activeAppView === 'studio' && !(videoUrl && !draftRenderRef.current)) {
+      if (hasDraftContent) {
+        const currentId = (draftRenderRef.current && draftRenderRef.current.projectId) || activeProjectId || draftIdRef.current;
+        const isPendingNew = !currentId || !persistedDraftIdsRef.current.has(currentId);
+        const pendingDetail = draftTriggerDetailRef.current || (isPendingNew
+          ? (studioMode === 'simple'
+              ? ((simpleDraftRef.current?.packages || []).length > 0 ? 'Scripts generated' : 'Brief entered')
+              : ((scenes || []).length > 0 ? 'Script imported' : 'Brief entered'))
+          : '');
+        setDraftStatus({ state: 'saving', isNewDraft: isPendingNew, detail: pendingDetail });
+      } else if (!activeProjectId || !persistedDraftIdsRef.current.has(activeProjectId)) {
+        setDraftStatus({ state: 'idle', isNewDraft: false, detail: '' });
+      }
+    }
     clearTimeout(draftSaveTimerRef.current);
     draftSaveTimerRef.current = setTimeout(() => {
       draftSaveTimerRef.current = null;
@@ -3359,9 +4195,16 @@ export default function App() {
   const forgetDraft = () => {
     clearTimeout(draftSaveTimerRef.current);
     draftSaveTimerRef.current = null;
+    clearTimeout(draftRetryTimerRef.current);
+    draftRetryTimerRef.current = null;
+    draftRetryCountRef.current = 0;
+    draftEpochRef.current += 1;
     draftIdRef.current = null;
     draftRenderRef.current = null;
     simpleDraftRef.current = null;
+    draftTriggerDetailRef.current = '';
+    lastUnderstandingCorrectionsRef.current = '';
+    setDraftStatus({ state: 'idle', isNewDraft: false, detail: '' });
     setSimpleResumeDraft(null);
     setSimpleStudioKey((k) => k + 1);
   };
@@ -3380,7 +4223,7 @@ export default function App() {
     const stageChanged = lastDraftStageRef.current !== studioStage;
     lastDraftStageRef.current = studioStage;
     scheduleDraftSave(stageChanged);
-  }, [studioMode, activeAppView, studioStage, completedStages, userContext.brief, directionsList, selectedDirection, hooksList, selectedHook, storyWorldData, generatedScript, scenes, character1, character2, setting, shotSpec]);
+  }, [studioMode, activeAppView, studioStage, completedStages, userContext.brief, userContext.creativeGuardrails, userContext.eventContext, userContext.productPhoto, guardrailDraftInputs, userContext.language, userContext.creativeStyle, userContext.aspectRatio, userContext.dimension, userContext.targetDuration, userContext.duration, userContext.videoLogo, aiUnderstanding, directionsList, selectedDirection, hooksList, selectedHook, storyWorldData, generatedScript, scenes, character1, character2, setting, shotSpec]);
 
   // Closing the tab: send a pending edit if it fits in a keepalive request (product photos usually don't)
   useEffect(() => {
@@ -3489,6 +4332,11 @@ export default function App() {
             status: 'video_ready',
             videoUrl: data.videoUrl,
             brief: userContext.brief || '',
+            productionSettings: getCurrentProductionSettings(),
+            creativeGuardrails: userContext.creativeGuardrails || null,
+            eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+            aiUnderstanding: aiUnderstanding || null,
+            parentProjectId: activeProjectId && activeProjectId !== projectId ? activeProjectId : (creativeDNA?.parentProjectId || null),
             scenes: scenes || [],
             setting: setting || '',
             character1: character1 || '',
@@ -3496,14 +4344,15 @@ export default function App() {
             stages: {
               directionsList: directionsList || [],
               selectedDirection: selectedDirection || null,
+              customDirection: customDirection || '',
               selectedDirectionIndex: typeof selectedDirectionIdx === 'number' ? selectedDirectionIdx : 0,
               hooksList: hooksList || [],
               selectedHook: selectedHook || null,
               storyWorldData: storyWorldData || null,
               generatedScript: generatedScript || null,
-              completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+              completedStages: ['brief', 'settings', 'understanding', 'idea', 'opening', 'script', 'video'],
             },
-            completedStages: ['brief', 'settings', 'idea', 'opening', 'story', 'script', 'video'],
+            completedStages: ['brief', 'settings', 'understanding', 'idea', 'opening', 'script', 'video'],
             brandContext: typeof extractBrandProfile === 'function' ? extractBrandProfile(userContext) : {},
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -3656,7 +4505,8 @@ export default function App() {
       isRendering ||
       isBusy ||
       (userContext.brief && userContext.brief.trim().length > 0) ||
-      (simple && (String(simple.brief || '').trim() || (simple.packages || []).length)) ||
+      ((userContext.creativeGuardrails?.dos?.length || 0) > 0 || (userContext.creativeGuardrails?.donts?.length || 0) > 0) ||
+      (simple && (String(simple.brief || '').trim() || (simple.packages || []).length || (simple.creativeGuardrails?.dos?.length || 0) > 0 || (simple.creativeGuardrails?.donts?.length || 0) > 0)) ||
       (studioStage !== 'brief' && studioStage !== 'entry' && completedStages && completedStages.length > 0)
     );
   };
@@ -3664,6 +4514,8 @@ export default function App() {
   // Trigger New Film Flow: Open in-app confirmation modal (or execute if bypassed)
   const handleStartNewProject = (bypassConfirm = false) => {
     setPendingBusinessSwitch(null);
+    setNewFilmAction('new');
+    setNewFilmSaveError('');
     if (bypassConfirm === true || !hasActiveFilmWork()) {
       handleExecuteNewProject(false);
       return;
@@ -3676,6 +4528,7 @@ export default function App() {
     if (!biz) return;
     if (biz.id && biz.id === userContext.businessId) return; // already the active business
     if (hasActiveFilmWork()) {
+      setNewFilmAction('new');
       setPendingBusinessSwitch(biz);
       setIsNewFilmConfirmOpen(true);
       return;
@@ -3683,25 +4536,56 @@ export default function App() {
     handleExecuteNewProject(false, { business: biz });
   };
 
+  const handleRestartFilm = () => {
+    setPendingBusinessSwitch(null);
+    setNewFilmAction('restart');
+    setNewFilmSaveError('');
+    if (!hasActiveFilmWork()) {
+      handleExecuteNewProject(false, { destination: 'restart' });
+      return;
+    }
+    setIsNewFilmConfirmOpen(true);
+  };
+
   const handleCancelNewFilm = () => {
+    if (isSavingNewFilm) return;
     setIsNewFilmConfirmOpen(false);
     setPendingBusinessSwitch(null);
   };
 
+  const handleConfirmNewFilm = async () => {
+    if (isSavingNewFilm) return;
+    setIsSavingNewFilm(true);
+    setNewFilmSaveError('');
+    try {
+      const activeWork = hasActiveFilmWork();
+      const alreadyFinished = Boolean(videoUrl && !draftRenderRef.current);
+      if (activeWork && !alreadyFinished) {
+        if (draftSaveTimerRef.current) {
+          clearTimeout(draftSaveTimerRef.current);
+          draftSaveTimerRef.current = null;
+        }
+        const saved = await persistDraft(true);
+        if (!saved) throw new Error('Your project could not be saved. Please sign in and try again.');
+      }
+      if (pendingBusinessSwitch) handleExecuteNewProject(false, { business: pendingBusinessSwitch });
+      else handleExecuteNewProject(false, { destination: newFilmAction === 'restart' ? 'restart' : 'hub' });
+    } catch (err) {
+      setNewFilmSaveError(err?.message || 'Your project could not be saved. Please try again.');
+    } finally {
+      setIsSavingNewFilm(false);
+    }
+  };
+
   // Start a fresh film. With `business`, the fresh film is for that business (a business switch).
-  const handleExecuteNewProject = (clearBrand = false, { business = null } = {}) => {
+  const handleExecuteNewProject = (clearBrand = false, { business = null, destination = 'hub' } = {}) => {
     try {
       setIsNewFilmConfirmOpen(false);
       setPendingBusinessSwitch(null);
       setBrandResetKey((prev) => prev + 1);
 
       // Anything still running (a render, a script request) belongs to the film being left: detach it so it
-      // finishes into its own project instead of this new one. Save a pending draft edit first.
-      if (draftSaveTimerRef.current) {
-        clearTimeout(draftSaveTimerRef.current);
-        draftSaveTimerRef.current = null;
-        persistDraft();
-      }
+      // finishes into its own project instead of this new one.
       studioSessionRef.current += 1;
       activeRunIdRef.current = null;
       activeVideoUrlRef.current = '';
@@ -3738,6 +4622,10 @@ export default function App() {
       setAvoidList([]);
       setGeneratedScript(null);
       setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
+      setAiUnderstanding(null);
+      setIsAnalyzingBrief(false);
+      setUnderstandingError('');
+      setScriptGuardrailReport(null);
 
       setSessionId(null);
       setActiveProjectId(null);
@@ -3782,6 +4670,8 @@ export default function App() {
           duration: '15s',
           specialty: '',
           offer: '',
+          creativeGuardrails: null,
+          eventContext: null,
         };
         try {
           localStorage.setItem('clevertize_user_context', JSON.stringify(clearBrand ? {} : brand));
@@ -3792,8 +4682,35 @@ export default function App() {
       });
 
       setCompletedStages([]);
-      setStudioStage('brief');
-      if (!business) setActiveAppView('studio'); // switching business keeps the user where they are
+      setIsScriptModalOpen(false);
+      setIsUrlModalOpen(false);
+      setModeSelectionContext(null);
+      setPendingModeSwitch(null);
+      setGuardrailDraftInputs({ doText: '', dontText: '' });
+      setBriefOptionalExpanded({ inspiration: false, audience: false, instructions: false, occasion: false, productPhoto: false });
+      setScriptSaveError('');
+      setHasSelectedModeForProject(studioMode === 'simple' && !business && (destination === 'brief' || destination === 'restart'));
+      if (!business && destination === 'brief') {
+        setSelectedCreationEntry('brief');
+        setStudioStage('brief');
+        setActiveAppView('studio');
+      } else if (!business && destination === 'restart') {
+        setSelectedCreationEntry((entry) => entry || 'brief');
+        const restartEntry = selectedCreationEntry || 'brief';
+        if (restartEntry === 'brief') {
+          setStudioStage('brief');
+          setActiveAppView('studio');
+        } else {
+          setStudioStage('entry');
+          setActiveAppView('hub');
+          if (restartEntry === 'script') setIsScriptModalOpen(true);
+          if (restartEntry === 'url') setIsUrlModalOpen(true);
+        }
+      } else {
+        setSelectedCreationEntry(null);
+        setStudioStage('entry');
+        if (!business) setActiveAppView('hub'); // New Film Project always opens the three-option entry hub
+      }
       setCurrentStep('input');
       setCreationStep(1);
       try {
@@ -3818,6 +4735,275 @@ export default function App() {
     }
   };
 
+  // Tertiary post-generation action: start a genuinely fresh project with an empty brief
+  const handleStartNewBrief = () => {
+    handleExecuteNewProject(false, { destination: 'brief' });
+  };
+
+  // Mode selection completion (Brief / URL / Existing Script -> Simple or Director Mode)
+  const handleCompleteModeSelection = (chosenMode) => {
+    const targetMode = chosenMode === 'simple' ? 'simple' : 'advanced';
+    const ctx = modeSelectionContext || { source: 'brief' };
+
+    persistOnboardingPatch((prev) => ({
+      ...prev,
+      preferredMode: targetMode,
+      modeChosenCount: (prev.modeChosenCount || 0) + 1,
+    }));
+
+    if (ctx.source === 'script' && ctx.scriptPayload) {
+      applyImportedScriptPayload(ctx.scriptPayload, targetMode);
+      return;
+    }
+
+    setModeSelectionContext(null);
+    setHasSelectedModeForProject(true);
+    handleSetStudioMode(targetMode);
+
+    if (targetMode === 'simple') {
+      const transferred = transferDirectorToSimple({
+        userContext,
+        aiUnderstanding,
+        existingSimpleDraft: simpleDraftRef.current,
+        guardrailDraftInputs,
+      });
+      if (transferred.guardrailDraftInputs) setGuardrailDraftInputs(transferred.guardrailDraftInputs);
+      setSimpleResumeDraft(transferred.simpleDraft);
+      setSimpleStudioKey((k) => k + 1);
+      setActiveAppView('studio');
+      handleBehaviorEvent('simpleRunsCount');
+    } else {
+      markStageComplete('brief');
+      setStudioStage('settings');
+      setActiveAppView('studio');
+      handleBehaviorEvent('directorRunsCount');
+    }
+
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {}
+  };
+
+  // Bidirectional persistent mode switching (Desktop topbar & Mobile header/drawer)
+  const executeModeSwitch = (targetMode) => {
+    const cleanTarget = targetMode === 'simple' ? 'simple' : 'advanced';
+    if (cleanTarget === studioMode) return;
+
+    if (activeAppView !== 'studio') {
+      handleSetStudioMode(cleanTarget);
+      persistOnboardingPatch({ preferredMode: cleanTarget });
+      return;
+    }
+
+    const hasDirectorDirectionOrHook = Boolean(
+      selectedDirection || customDirection || selectedHook || customHook || (directionsList || []).length || (hooksList || []).length
+    );
+    const hasDirectorScenes = Boolean((scenes || []).length || generatedScript);
+
+    if (cleanTarget === 'advanced') {
+      const transferred = transferSimpleToDirector({
+        simpleState: simpleDraftRef.current,
+        currentUserContext: userContext,
+        currentExplicitChoices: explicitChoices,
+        currentAiUnderstanding: aiUnderstanding,
+        guardrailDraftInputs,
+      });
+      setUserContext(transferred.userContext);
+      setExplicitChoices(transferred.explicitChoices);
+      if (transferred.guardrailDraftInputs) setGuardrailDraftInputs(transferred.guardrailDraftInputs);
+      if (transferred.aiUnderstanding) setAiUnderstanding(transferred.aiUnderstanding);
+      setCompletedStages(transferred.completedStages);
+      setStudioStage(transferred.targetStage);
+      setHasSelectedModeForProject(true);
+      setModeSelectionContext(null);
+      handleSetStudioMode('advanced');
+      handleBehaviorEvent('modeSwitchCount');
+      handleBehaviorEvent('directorRunsCount');
+      setToastMessage('Switched to Director Mode — your brief, settings, and draft instructions are preserved.');
+    } else {
+      const transferred = transferDirectorToSimple({
+        userContext,
+        aiUnderstanding,
+        existingSimpleDraft: simpleDraftRef.current,
+        guardrailDraftInputs,
+        hasDirectorDirectionOrHook,
+        hasDirectorScenes,
+      });
+      if (transferred.guardrailDraftInputs) setGuardrailDraftInputs(transferred.guardrailDraftInputs);
+      setSimpleResumeDraft(transferred.simpleDraft);
+      setSimpleStudioKey((k) => k + 1);
+      setHasSelectedModeForProject(true);
+      setModeSelectionContext(null);
+      handleSetStudioMode('simple');
+      handleBehaviorEvent('modeSwitchCount');
+      handleBehaviorEvent('simpleRunsCount');
+      setToastMessage('Switched to Simple Studio — your brief, format choices, and draft instructions are preserved.');
+    }
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const requestModeSwitch = (targetMode) => {
+    const cleanTarget = targetMode === 'simple' ? 'simple' : 'advanced';
+    if (cleanTarget === studioMode) return;
+
+    if (activeAppView !== 'studio' || modeSelectionContext || (!hasSelectedModeForProject && studioMode !== 'simple')) {
+      if (modeSelectionContext) {
+        handleCompleteModeSelection(cleanTarget);
+        return;
+      }
+      executeModeSwitch(cleanTarget);
+      return;
+    }
+
+    const hasDirectorDirectionOrHook = Boolean(
+      selectedDirection || customDirection || selectedHook || customHook || (directionsList || []).length || (hooksList || []).length
+    );
+    const hasDirectorScenes = Boolean((scenes || []).length || generatedScript);
+
+    const preview = cleanTarget === 'advanced'
+      ? transferSimpleToDirector({
+          simpleState: simpleDraftRef.current,
+          currentUserContext: userContext,
+          currentExplicitChoices: explicitChoices,
+          currentAiUnderstanding: aiUnderstanding,
+          guardrailDraftInputs,
+        })
+      : transferDirectorToSimple({
+          userContext,
+          aiUnderstanding,
+          existingSimpleDraft: simpleDraftRef.current,
+          guardrailDraftInputs,
+          hasDirectorDirectionOrHook,
+          hasDirectorScenes,
+        });
+
+    if (!hasActiveFilmWork() && preview.preservedItems.length === 0) {
+      executeModeSwitch(cleanTarget);
+      return;
+    }
+
+    setPendingModeSwitch({
+      targetMode: cleanTarget,
+      savedItems: preview.savedItems || preview.preservedItems || [],
+      pendingItems: preview.pendingItems || [],
+      uncarriedItems: preview.uncarriedItems || [],
+      preservedItems: preview.preservedItems || [],
+    });
+  };
+
+  const handleConfirmModeSwitch = () => {
+    if (!pendingModeSwitch) return;
+    const target = pendingModeSwitch.targetMode;
+    setPendingModeSwitch(null);
+    executeModeSwitch(target);
+  };
+
+  const handleCancelModeSwitch = () => {
+    setPendingModeSwitch(null);
+  };
+
+  // Primary post-generation action: explore another creative direction using the same brief
+  // without overwriting the previously generated script or video.
+  const handleCreateAnotherFromBrief = async () => {
+    handleBehaviorEvent('createdAnotherCount');
+    setHasSelectedModeForProject(true);
+    setModeSelectionContext(null);
+    setErrorMessage('');
+    setQualityFailures([]);
+    setValidationError('');
+    setHasStaleWarning(false);
+
+    // Detach any earlier completed render target and isolate future draft saves from the completed project
+    studioSessionRef.current += 1;
+    activeRunIdRef.current = null;
+    activeVideoUrlRef.current = '';
+    renderTargetRef.current = { id: null, videoUrl: null };
+    draftRenderRef.current = null;
+    draftIdRef.current = newProjectId();
+    currentSavingProjectIdRef.current = null;
+    draftTriggerDetailRef.current = 'New project started from same brief';
+    setDraftStatus({ state: 'idle', isNewDraft: false, detail: 'New project started from same brief' });
+    setIsCurrentProjectSaved(false);
+    setIsRendering(false);
+    stopTimer();
+
+    // Clear creative run choices & generated output while keeping brief, business, settings, guardrails, event & understanding
+    setVideoUrl('');
+    setGeneratedScript(null);
+    setScenes([]);
+    setSetting('');
+    setCharacter1('');
+    setCharacter2('');
+    setShotSpec(null);
+    setScriptPayloadData(null);
+    setScriptGuardrailReport(null);
+    setDirectionData(null);
+    setPlotData(null);
+    setStoryData(null);
+    setDirectionsList([]);
+    setSelectedDirection(null);
+    setCustomDirection('');
+    if (loadedDirectionsFormatRef) loadedDirectionsFormatRef.current = '';
+    setHooksList([]);
+    if (loadedHooksDirectionKeyRef) loadedHooksDirectionKeyRef.current = '';
+    setSelectedHook(null);
+    setCustomHook('');
+    setPlotsList([]);
+    setSelectedPlot(null);
+    setCustomPlot('');
+    setStoryWorldData(null);
+
+    const prodSettings = getCurrentProductionSettings();
+    const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+    const eventCtx = hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null;
+    const understandingIsCurrent = Boolean(
+      aiUnderstanding &&
+      aiUnderstanding.approval_status === 'approved' &&
+      !isUnderstandingOutdatedClient(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, prodSettings, eventCtx)
+    );
+
+    setCreativeDNA((prev) => ({
+      ...(prev || {}),
+      parentProjectId: activeProjectId || prev?.parentProjectId || null,
+      direction: null,
+      selectedAiDirection: null,
+      customDirection: '',
+      ideaSource: null,
+      hook: null,
+      plot: null,
+      story: null,
+      aiUnderstanding: understandingIsCurrent ? aiUnderstanding : aiUnderstanding || null,
+      productionSettings: prodSettings,
+    }));
+
+    setExplicitChoices((prev) => {
+      const next = { ...prev };
+      delete next.idea;
+      delete next.opening;
+      return next;
+    });
+
+    if (understandingIsCurrent) {
+      setCompletedStages(['brief', 'settings', 'understanding']);
+      setStudioStage('idea');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await loadCreativeDirections(true, prodSettings.creativeStyle, prodSettings.language);
+    } else {
+      setCompletedStages(['brief', 'settings']);
+      await handleGenerateAiUnderstanding();
+    }
+  };
+
+  // Secondary post-generation action: regenerate video for the currently completed script without
+  // clearing the script or starting a new creative direction.
+  const handleRegenerateCurrentVideo = async () => {
+    setErrorMessage('');
+    setQualityFailures([]);
+    activeVideoUrlRef.current = '';
+    setVideoUrl('');
+    await handleRunVideoProduction();
+  };
+
   // Safe Back Navigation to Previous Stage
   const handleGoBack = () => {
     setErrorMessage('');
@@ -3827,7 +5013,8 @@ export default function App() {
     if (studioStage === 'video') setStudioStage('script');
     else if (studioStage === 'script') setStudioStage('opening');
     else if (studioStage === 'opening') setStudioStage('idea');
-    else if (studioStage === 'idea') setStudioStage('settings');
+    else if (studioStage === 'idea') setStudioStage('understanding');
+    else if (studioStage === 'understanding') setStudioStage('settings');
     else if (studioStage === 'settings') setStudioStage('brief');
     else if (studioStage === 'brief') {
       setActiveAppView('home');
@@ -3897,6 +5084,8 @@ export default function App() {
         productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
         // the logo chosen for this video (prefilled from the profile) — decides logo vs no-logo flow
         logo: videoLogoPayload(userContext),
+        projectId: activeProjectId,
+        creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3965,8 +5154,9 @@ export default function App() {
       setGeneratedScript(packageData.fullScriptText || null);
       if (packageData.brief) updateUserContext('brief', packageData.brief);
       if (packageData.language) updateUserContext('language', packageData.language);
+      const resolvedPhoto = packageData.productPhoto !== undefined ? packageData.productPhoto : userContext.productPhoto;
       if (packageData.creativeStyle) updateUserContext('creativeStyle', packageData.creativeStyle);
-      if (packageData.productPhoto) updateUserContext('productPhoto', packageData.productPhoto);
+      updateUserContext('productPhoto', resolvedPhoto || null);
       if (packageData.duration) {
         updateUserContext('duration', packageData.duration);
         updateUserContext('targetDuration', packageData.duration);
@@ -3982,7 +5172,7 @@ export default function App() {
         character1: packageChar1,
         character2: packageChar2,
         brief: packageData.brief || userContext.brief,
-        productPhoto: packageData.productPhoto || userContext.productPhoto,
+        productPhoto: resolvedPhoto || null,
         duration: packageData.duration || userContext.duration || userContext.targetDuration || '30s',
         platform: packageData.platform || (packageData.aspectRatio === '16:9' ? 'YouTube / 16:9' : packageData.aspectRatio === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16'),
         aspectRatio: packageData.aspectRatio || packageData.dimension || '9:16',
@@ -4289,21 +5479,18 @@ export default function App() {
           activeView={activeAppView}
           onSelectView={setActiveAppView}
           studioMode={studioMode}
-          onToggleStudioMode={() => handleSetStudioMode(studioMode === 'simple' ? 'advanced' : 'simple')}
-          onSetStudioMode={handleSetStudioMode}
+          onToggleStudioMode={() => requestModeSwitch(studioMode === 'simple' ? 'advanced' : 'simple')}
+          onSetStudioMode={requestModeSwitch}
+          onReplayTour={handleReplayTour}
+          onResumeTour={handleResumeTour}
+          hasPausedTour={hasResumableTourProgress(onboardingState, TOUR_STEPS.length)}
+          pausedTourStep={onboardingState?.lastTourStep || 0}
+          totalTourSteps={TOUR_STEPS.length}
           currentStage={studioStage}
           completedStages={completedStages}
           onNavigateStage={handleNavigateStage}
-          onStartNewFilm={() => {
-            if (userBusinesses.length === 0 || !userContext.businessName) {
-              setIsOnboardingModalOpen(true);
-              return;
-            }
-            handleStartNewProject(false);
-          }}
-          onRestartFilm={() => {
-            handleStartNewProject(false);
-          }}
+          onStartNewFilm={() => handleStartNewProject(false)}
+          onRestartFilm={handleRestartFilm}
           businessName={userContext.businessName}
           businessType={userContext.businessType}
           town={userContext.town}
@@ -4334,6 +5521,8 @@ export default function App() {
             setIsOnboardingModalOpen(true);
           }}
           projectCount={displayProjects.length}
+          draftStatus={draftStatus}
+          onRetryDraftSave={handleRetryDraftSave}
         >
           {/* Offline Connectivity Notification Banner */}
           {!isOnline && (
@@ -4358,14 +5547,22 @@ export default function App() {
           {(activeAppView === 'home' || activeAppView === 'hub' || (activeAppView === 'studio' && studioStage === 'entry')) ? (
             <CreationEntryHub
               onStartBrief={() => {
+                setSelectedCreationEntry('brief');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
                 }
+                setHasSelectedModeForProject(studioMode === 'simple');
+                setModeSelectionContext(null);
                 setActiveAppView('studio');
                 setStudioStage('brief');
+                if (studioMode === 'simple' && simpleDraftRef.current && simpleDraftRef.current.step !== 1) {
+                  setSimpleResumeDraft((prev) => ({ ...(simpleDraftRef.current || prev || {}), step: 1 }));
+                  setSimpleStudioKey((k) => k + 1);
+                }
               }}
               onOpenScriptModal={() => {
+                setSelectedCreationEntry('script');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
@@ -4373,6 +5570,7 @@ export default function App() {
                 setIsScriptModalOpen(true);
               }}
               onOpenUrlModal={() => {
+                setSelectedCreationEntry('url');
                 if (userBusinesses.length === 0 || !userContext.businessName) {
                   setIsOnboardingModalOpen(true);
                   return;
@@ -4407,12 +5605,13 @@ export default function App() {
               currentProjectId={activeProjectId}
               onOpenProject={handleOpenProject}
               onDeleteProject={handleDeleteProject}
+              onBulkDeleteProjects={handleBulkDeleteProjects}
               onNewProject={() => {
                 handleStartNewProject(false);
-                setActiveAppView('studio');
               }}
               onSignIn={() => setIsAuthModalOpen(true)}
               currentUser={currentUser}
+              isLoadingProjects={Boolean(authToken && !projectsLoaded)}
             />
           ) : (activeAppView === 'businesses' || activeAppView === 'business') ? (
             <BusinessProfileView
@@ -4431,6 +5630,24 @@ export default function App() {
               currentUser={currentUser}
               onSignIn={() => setIsAuthModalOpen(true)}
             />
+          ) : modeSelectionContext ? (
+            <ModeSelectionScreen
+              entrySource={modeSelectionContext.source}
+              briefText={userContext.brief}
+              businessName={userContext.businessName}
+              preferredMode={onboardingState.preferredMode}
+              onSelectMode={handleCompleteModeSelection}
+              onBack={() => {
+                if (modeSelectionContext.source === 'script') {
+                  setModeSelectionContext(null);
+                  setActiveAppView('hub');
+                  setIsScriptModalOpen(true);
+                } else {
+                  setModeSelectionContext(null);
+                  setStudioStage('brief');
+                }
+              }}
+            />
           ) : studioMode === 'simple' ? (
             <SimpleBusinessStudio
               key={`simple-studio-${brandResetKey}-${simpleStudioKey}`}
@@ -4440,13 +5657,22 @@ export default function App() {
               businessType={userContext.businessType}
               town={userContext.town}
               initialBrief={userContext.brief}
+              initialTargetAudience={userContext.targetAudience || ''}
               initialLanguage={creativeDNA.language || userContext.language || 'English'}
               initialStyle={creativeDNA.creativeStyle || userContext.creativeStyle || 'UGC / Creator-style'}
               initialDuration={userContext.duration || userContext.targetDuration || '20s'}
               initialAspectRatio={userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16'}
               brandTone={userContext.brandTone || 'Warm & Authentic'}
               brandLogo={userContext.brandLogo || userContext.logo}
-              onSwitchToDirectorMode={() => handleSetStudioMode('advanced')}
+              productPhoto={userContext.productPhoto}
+              onUploadProductPhoto={(file) => handleFileUpload(file, 'productPhoto')}
+              onRemoveProductPhoto={() => updateUserContext('productPhoto', null)}
+              onOpenScriptModal={() => setIsScriptModalOpen(true)}
+              onOpenUrlModal={() => setIsUrlModalOpen(true)}
+              isRecording={isListening}
+              onToggleRecording={micSupported ? toggleVoiceInput : null}
+              dictatedBriefSync={dictatedBriefSync}
+              onSwitchToDirectorMode={() => requestModeSwitch('advanced')}
               onProduceVideo={handleSimpleProduceVideo}
               onSaveProject={handleSaveCurrentProject}
               isSavingProject={isSavingProject}
@@ -4456,11 +5682,62 @@ export default function App() {
               videoRunError={errorMessage}
               projectId={activeProjectId}
               userId={currentUser?.id}
+              onboardingState={onboardingState}
+              onDismissTip={handleDismissTip}
+              onBehaviorEvent={handleBehaviorEvent}
               onEditBrand={() => {
                 setEditingBusiness(userContext);
                 setIsOnboardingModalOpen(true);
               }}
+              onStartNewBrief={handleStartNewBrief}
             />
+          ) : (activeAppView === 'studio' && !hasSelectedModeForProject && studioStage === 'brief') ? (
+            <div style={{ maxWidth: 860, margin: '24px auto 0', width: '100%', padding: '0 20px 80px' }}>
+              <Screen02Brief
+                userContext={userContext}
+                updateUserContext={updateUserContext}
+                handleFileUpload={handleFileUpload}
+                onOpenScriptModal={() => setIsScriptModalOpen(true)}
+                onOpenUrlModal={() => setIsUrlModalOpen(true)}
+                onEditBrand={() => {
+                  setEditingBusiness(userContext);
+                  setIsOnboardingModalOpen(true);
+                }}
+                onContinue={async () => {
+                  const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+                  if (!cleanBrief.trim()) {
+                    setValidationError('Please tell us what you want this video to say.');
+                    return;
+                  }
+                  setValidationError('');
+                  handleBehaviorEvent('briefSubmittedCount');
+                  markStageComplete('brief');
+                  setModeSelectionContext({ source: selectedCreationEntry === 'url' ? 'url' : 'brief' });
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onBack={() => {
+                  setModeSelectionContext(null);
+                  setActiveAppView('hub');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                isRecording={isListening}
+                toggleRecording={toggleVoiceInput}
+                briefSuggestions={(() => {
+                  try {
+                    const res = getBriefSuggestions(userContext.businessType, userContext.businessName, userContext.town);
+                    return (res && Array.isArray(res.suggestions)) ? res.suggestions : [];
+                  } catch {
+                    return [];
+                  }
+                })()}
+                researchData={researchData}
+                isResearching={isResearching}
+                guardrailDraftInputs={guardrailDraftInputs}
+                onGuardrailDraftChange={setGuardrailDraftInputs}
+                optionalExpanded={briefOptionalExpanded}
+                onOptionalExpandedChange={setBriefOptionalExpanded}
+              />
+            </div>
           ) : (
             <>
       {/* V4 GUIDED STUDIO PROGRESS HEADER & YOUR CHOICES */}
@@ -4471,6 +5748,7 @@ export default function App() {
           onNavigateStage={handleNavigateStage}
         />
         <StudioChoicesBar
+          currentStage={studioStage}
           explicitChoices={explicitChoices}
           onNavigateStage={handleNavigateStage}
           hasStaleWarning={Boolean(
@@ -4857,8 +6135,9 @@ export default function App() {
               setEditingBusiness(userContext);
               setIsOnboardingModalOpen(true);
             }}
-            onContinue={() => {
-              if (!userContext.brief.trim() && !userContext.specialty.trim() && !userContext.offer.trim()) {
+            onContinue={async () => {
+              const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+              if (!cleanBrief.trim()) {
                 setValidationError('Please tell us what you want this video to say.');
                 return;
               }
@@ -4884,13 +6163,22 @@ export default function App() {
             })()}
             researchData={researchData}
             isResearching={isResearching}
+            guardrailDraftInputs={guardrailDraftInputs}
+            onGuardrailDraftChange={setGuardrailDraftInputs}
+            optionalExpanded={briefOptionalExpanded}
+            onOptionalExpandedChange={setBriefOptionalExpanded}
           />
         )}
 
         {studioStage === 'settings' && (
           <Screen03Settings
             userContext={userContext}
-            updateUserContext={updateUserContext}
+            updateUserContext={(field, value) => {
+              updateUserContext(field, value);
+              if (field === 'videoLogo') {
+                setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
+              }
+            }}
             handleFileUpload={handleFileUpload}
             onLanguageChange={(lang) => {
               setExplicitChoices((prev) => ({ ...prev, language: lang }));
@@ -4908,6 +6196,7 @@ export default function App() {
               updateUserContext('dimension', dimId);
               const platFallback = dimId === '16:9' ? 'YouTube / 16:9' : dimId === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16';
               updateUserContext('platform', platFallback);
+              setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
             }}
             onPlatformChange={(platLabel, platId) => {
               setExplicitChoices((prev) => ({ ...prev, platform: platLabel, dimension: platLabel }));
@@ -4915,27 +6204,76 @@ export default function App() {
               const ar = platId.includes('16:9') ? '16:9' : platId.includes('1:1') ? '1:1' : '9:16';
               updateUserContext('aspectRatio', ar);
               updateUserContext('dimension', ar);
+              setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
             }}
             onDurationChange={(dur) => {
               setExplicitChoices((prev) => ({ ...prev, duration: dur }));
               updateUserContext('targetDuration', dur);
               updateUserContext('duration', dur);
+              setCompletedStages((prev) => prev.filter((s) => ['business', 'brief', 'settings'].includes(s)));
             }}
             onContinue={async () => {
               markStageComplete('settings');
-              setStudioStage('idea');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-              const currentFormat = userContext.creativeStyle || 'UGC / Creator-style';
-              const currentLang = userContext.language || 'English';
-              const activeKey = `${currentFormat}_${currentLang}`;
-              if (!directionsList.length || loadedDirectionsFormatRef.current !== activeKey) {
-                await loadCreativeDirections(true, currentFormat, currentLang);
+              const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
+              const prodSettings = getCurrentProductionSettings();
+              const isOutdated = isUnderstandingOutdatedClient(
+                aiUnderstanding,
+                cleanBrief,
+                userContext.creativeGuardrails,
+                prodSettings,
+                hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null
+              );
+              scheduleDraftSave(true);
+
+              if (!aiUnderstanding || isOutdated) {
+                await handleGenerateAiUnderstanding();
+              } else {
+                setStudioStage('understanding');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
             onBack={() => {
               setStudioStage('brief');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+          />
+        )}
+
+        {studioStage === 'understanding' && (
+          <ScreenUnderstanding
+            understanding={aiUnderstanding}
+            onUpdateUnderstanding={handleUpdateUnderstanding}
+            onApproveAndContinue={handleApproveUnderstanding}
+            onBackToBrief={() => {
+              setStudioStage('brief');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onEditSettings={() => {
+              setStudioStage('settings');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            settingsContext={getCurrentProductionSettings()}
+            onRegenerate={handleGenerateAiUnderstanding}
+            isRegenerating={isAnalyzingBrief}
+            isSaving={isSavingProject}
+            originalBrief={userContext.brief || userContext.specialty || userContext.offer || ''}
+            businessName={userContext.businessName}
+            businessType={userContext.businessType}
+            town={userContext.town}
+            isOutdated={isUnderstandingOutdatedClient(
+              aiUnderstanding,
+              userContext.brief || userContext.specialty || userContext.offer || '',
+              userContext.creativeGuardrails,
+              getCurrentProductionSettings(),
+              hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null
+            )}
+            userGuardrails={userContext.creativeGuardrails}
+            userEventContext={userContext.eventContext}
+            onboardingState={onboardingState}
+            onDismissTip={handleDismissTip}
+            error={understandingError}
+            onCancelAnalysis={handleCancelAiUnderstanding}
+            attemptKey={analysisAttempt}
           />
         )}
 
@@ -4951,7 +6289,14 @@ export default function App() {
               const newKey = d?.id || d?.title || '';
               const isDifferent = prevKey !== newKey;
               setSelectedDirection(d);
-              setCreativeDNA((prev) => ({ ...prev, direction: d }));
+              const ideaSel = resolveIdeaSelection(d, customDirection);
+              setCreativeDNA((prev) => ({
+                ...prev,
+                direction: ideaSel.direction,
+                ideaSource: ideaSel.ideaSource,
+                selectedAiDirection: ideaSel.selectedAiDirection,
+                customDirection: ideaSel.customDirection,
+              }));
               if (d?.title) {
                 setExplicitChoices((prev) => {
                   const next = { ...prev, idea: d.title };
@@ -4972,6 +6317,14 @@ export default function App() {
             customDirection={customDirection}
             setCustomDirection={(cd) => {
               setCustomDirection(cd);
+              const ideaSel = resolveIdeaSelection(selectedDirection, cd);
+              setCreativeDNA((prev) => ({
+                ...prev,
+                direction: ideaSel.direction,
+                ideaSource: ideaSel.ideaSource,
+                selectedAiDirection: ideaSel.selectedAiDirection,
+                customDirection: ideaSel.customDirection,
+              }));
               if (cd && cd.trim()) {
                 setExplicitChoices((prev) => {
                   const next = { ...prev, idea: cd.trim() };
@@ -4983,13 +6336,26 @@ export default function App() {
             }}
             isLoadingDirections={isLoadingDirections}
             onContinue={async () => {
-              const activeD = selectedDirection || (customDirection ? { title: customDirection } : directionsList.find((d) => d.recommended) || directionsList[0]);
+              const ideaSel = resolveIdeaSelection(
+                selectedDirection,
+                customDirection,
+                directionsList.find((d) => d.recommended) || directionsList[0]
+              );
+              const activeD = ideaSel.direction;
               if (activeD) {
-                if (!selectedDirection) {
-                  setSelectedDirection(activeD);
-                  setCreativeDNA((prev) => ({ ...prev, direction: activeD }));
+                // Only backfill selectedDirection when falling back to recommended AI idea;
+                // never collapse a custom user idea into selectedDirection.
+                if (!selectedDirection && ideaSel.ideaSource === 'ai') {
+                  setSelectedDirection(ideaSel.selectedAiDirection);
                 }
-                setExplicitChoices((prev) => ({ ...prev, idea: activeD.title || customDirection }));
+                setCreativeDNA((prev) => ({
+                  ...prev,
+                  direction: ideaSel.direction,
+                  ideaSource: ideaSel.ideaSource,
+                  selectedAiDirection: ideaSel.selectedAiDirection,
+                  customDirection: ideaSel.customDirection,
+                }));
+                setExplicitChoices((prev) => ({ ...prev, idea: ideaSel.label }));
               }
 
               const currentIdeaKey = activeD?.id || activeD?.title || '';
@@ -5021,7 +6387,7 @@ export default function App() {
               }
             }}
             onBack={() => {
-              setStudioStage('settings');
+              setStudioStage('understanding');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           />
@@ -5124,6 +6490,17 @@ export default function App() {
             isProjectSaved={isCurrentProjectSaved}
             isSavingProject={isSavingProject}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
+            guardrailReport={scriptGuardrailReport}
+            onboardingState={onboardingState}
+            onDismissTip={handleDismissTip}
+            onBehaviorEvent={handleBehaviorEvent}
+            draftStatus={draftStatus}
+            scriptSaveError={scriptSaveError}
+            onRetrySave={handleSaveCurrentProject}
+            onMarkUnsaved={() => {
+              setIsCurrentProjectSaved(false);
+              setScriptSaveError('');
+            }}
           />
         )}
 
@@ -5143,7 +6520,11 @@ export default function App() {
             videoUrl={videoUrl}
             projectId={activeProjectId}
             userId={currentUser?.id}
-            onCreateAnother={handleStartNewProject}
+            onboardingState={onboardingState}
+            onDismissTip={handleDismissTip}
+            onCreateAnother={handleCreateAnotherFromBrief}
+            onRegenerateVideo={handleRegenerateCurrentVideo}
+            onStartNewBrief={handleStartNewBrief}
             errorMessage={errorMessage}
           />
         )}
@@ -5176,7 +6557,7 @@ export default function App() {
             zIndex: 1000,
             padding: 20,
           }}
-          onClick={handleCancelNewFilm}
+          onClick={() => { if (!isSavingNewFilm) handleCancelNewFilm(); }}
         >
           <div
             style={{
@@ -5209,12 +6590,13 @@ export default function App() {
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
                   {pendingBusinessSwitch
                     ? `Switch to ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}?`
-                    : 'Start a New Film?'}
+                    : newFilmAction === 'restart' ? 'Restart This Film?' : 'Start a New Film?'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={handleCancelNewFilm}
+                disabled={isSavingNewFilm}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
               >
                 <X size={18} />
@@ -5224,13 +6606,18 @@ export default function App() {
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               <p style={{ margin: '0 0 10px 0' }}>
                 {pendingBusinessSwitch
-                  ? `Switching business starts a fresh film for ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}. The brief, ideas, script and video you're working on now will be cleared from the studio.`
-                  : 'This will restart your creative flow from the beginning so you can create a fresh film with new ideas, hooks, and script.'}
+                  ? `Your current project will be saved under My Projects, then a fresh film will start for ${pendingBusinessSwitch.name || pendingBusinessSwitch.businessName}.`
+                  : newFilmAction === 'restart'
+                    ? 'Your progress will be saved under My Projects, then this film will restart from the starting point you chose.'
+                  : 'Your progress will be saved under My Projects, where you can return to it later. Then you’ll start a new film from the page with the three starting options.'}
               </p>
               {pendingBusinessSwitch && isRendering ? (
                 <p style={{ margin: '0 0 10px 0' }}>
                   The video that's rendering keeps going and will be saved to {userContext.businessName ? <strong>{userContext.businessName}</strong> : 'its project'} in My Projects.
                 </p>
+              ) : null}
+              {newFilmSaveError ? (
+                <p role="alert" style={{ margin: '12px 0 0', color: 'var(--status-error, #ef4444)' }}>{newFilmSaveError}</p>
               ) : null}
               {userContext.businessName && !pendingBusinessSwitch ? (
                 <div
@@ -5262,6 +6649,7 @@ export default function App() {
                   e.stopPropagation();
                   handleCancelNewFilm();
                 }}
+                disabled={isSavingNewFilm}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 6,
@@ -5270,7 +6658,7 @@ export default function App() {
                   color: 'var(--text-secondary)',
                   fontSize: 13,
                   fontWeight: 500,
-                  cursor: 'pointer',
+                  cursor: isSavingNewFilm ? 'wait' : 'pointer',
                 }}
               >
                 Cancel
@@ -5280,9 +6668,9 @@ export default function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (pendingBusinessSwitch) handleExecuteNewProject(false, { business: pendingBusinessSwitch });
-                  else handleExecuteNewProject(false);
+                  handleConfirmNewFilm();
                 }}
+                disabled={isSavingNewFilm}
                 style={{
                   padding: '8px 18px',
                   borderRadius: 6,
@@ -5291,7 +6679,7 @@ export default function App() {
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isSavingNewFilm ? 'wait' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -5299,7 +6687,7 @@ export default function App() {
                 }}
               >
                 <RotateCcw size={14} style={{ pointerEvents: 'none' }} />
-                <span style={{ pointerEvents: 'none' }}>{pendingBusinessSwitch ? 'Switch Business' : 'Start New Film'}</span>
+                <span style={{ pointerEvents: 'none' }}>{isSavingNewFilm ? 'Saving…' : pendingBusinessSwitch ? 'Save & Switch Business' : newFilmAction === 'restart' ? 'Save & Restart Film' : 'Save & Start New Film'}</span>
               </button>
             </div>
           </div>
@@ -5384,8 +6772,45 @@ export default function App() {
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
         onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+        onReplayTour={handleReplayTour}
+        onResumeTour={handleResumeTour}
+        hasPausedTour={hasResumableTourProgress(onboardingState, TOUR_STEPS.length)}
+        pausedTourStep={onboardingState?.lastTourStep || 0}
+        totalTourSteps={TOUR_STEPS.length}
         projectCount={displayProjects.length}
         businessCount={userBusinesses.length}
+      />
+
+      {/* Mid-Project Mode Switch Explanation & Confirmation Modal */}
+      <ModeSwitchModal
+        isOpen={Boolean(pendingModeSwitch)}
+        targetMode={pendingModeSwitch?.targetMode || 'advanced'}
+        savedItems={pendingModeSwitch?.savedItems || []}
+        pendingItems={pendingModeSwitch?.pendingItems || []}
+        uncarriedItems={pendingModeSwitch?.uncarriedItems || []}
+        preservedItems={pendingModeSwitch?.preservedItems || []}
+        onConfirm={handleConfirmModeSwitch}
+        onCancel={handleCancelModeSwitch}
+      />
+
+      {/* First-Time Welcome Modal (never overlaps BusinessOnboardingModal) */}
+      <WelcomeOnboardingModal
+        isOpen={Boolean(isWelcomeOpen && !isOnboardingModalOpen && !isAuthModalOpen)}
+        onStartTour={handleWelcomeStartTour}
+        onSkip={handleWelcomeSkip}
+      />
+
+      {/* Config-Driven Interactive Product Tour */}
+      <ProductTourEngine
+        isOpen={isTourOpen}
+        steps={TOUR_STEPS}
+        currentIndex={tourStepIndex}
+        onStepChange={setTourStepIndex}
+        onComplete={handleTourComplete}
+        onSkip={handleTourSkip}
+        onPause={handleTourPause}
+        onRestart={handleReplayTour}
+        onStepAction={handleTourStepAction}
       />
 
       {/* Feedback & Issue Reporting Modal */}

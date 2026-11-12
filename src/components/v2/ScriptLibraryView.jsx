@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import { isVideoLinkExpired } from '../../utils/videoLink.js';
 import { isDraft, isRenderingDraft } from '../../utils/drafts.js';
+import {
+  PROJECTS_PAGE_SIZE,
+  classifyProjectStatus,
+  computeProjectFilterCounts,
+  formatProjectUpdatedAt,
+  sortProjects,
+  groupProjectsByBusiness,
+} from '../../utils/projectLibrary.js';
 import { ProjectRatingBar } from './VideoRatingControls.jsx';
 import {
   FileText,
@@ -15,14 +23,17 @@ import {
   Store,
   Film,
   CheckCircle2,
+  AlertTriangle,
   Search,
   Download,
   Play,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Video,
   Languages,
   Sparkle,
+  X,
 } from 'lucide-react';
 
 const AVATAR_GRADIENTS = [
@@ -68,43 +79,177 @@ export default function ScriptLibraryView({
   onStartNewProject,
   onNewProject,
   onDeleteProject,
+  onBulkDeleteProjects = null,
   currentUser,
   onSignIn,
+  isLoadingProjects = false,
 }) {
   const handleCreate = onNewProject || onStartNewProject;
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'in_progress' | 'completed' | 'attention'
+  const [viewMode, setViewMode] = useState('all'); // 'all' | 'business'
+  const [sortBy, setSortBy] = useState('updated'); // 'updated' | 'created'
+  const [visibleLimit, setVisibleLimit] = useState(PROJECTS_PAGE_SIZE);
+  const [groupLimits, setGroupLimits] = useState({});
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkFeedback, setBulkFeedback] = useState(null);
+
   const [copiedId, setCopiedId] = useState(null);
   const [expandedScriptIds, setExpandedScriptIds] = useState({});
   // the card whose video is playing inline, and videos that failed to load
   const [playingVideoId, setPlayingVideoId] = useState(null);
   const [unplayableIds, setUnplayableIds] = useState({});
 
+  // Clear selection state when switching user sessions
+  useEffect(() => {
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+    setShowBulkConfirm(false);
+    setBulkFeedback(null);
+  }, [currentUser?.id]);
+
+  // Reset pagination when search/filter/sort/view changes
+  useEffect(() => {
+    setVisibleLimit(PROJECTS_PAGE_SIZE);
+    setGroupLimits({});
+  }, [searchTerm, statusFilter, sortBy, viewMode]);
+
+  // Close confirmation dialog on Escape when not deleting
+  useEffect(() => {
+    if (!showBulkConfirm) return undefined;
+    const handleKey = (e) => {
+      if (e.key === 'Escape' && !isBulkDeleting) {
+        setShowBulkConfirm(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [showBulkConfirm, isBulkDeleting]);
+
   const toggleExpandScript = (e, id) => {
     e.stopPropagation();
     setExpandedScriptIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredProjects = (projects || []).filter((p) => {
-    if (!p) return false;
-    if (!searchTerm || !searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase().trim();
-    const title = (p.title || '').toLowerCase();
-    const biz = (p.businessName || '').toLowerCase();
-    const brief = (p.brief || '').toLowerCase();
-    const style = (p.creativeStyle || '').toLowerCase();
-    const town = (p.town || '').toLowerCase();
-    const lang = (p.language || '').toLowerCase();
-    const url = (p.videoUrl || '').toLowerCase();
-    return (
-      title.includes(q) ||
-      biz.includes(q) ||
-      brief.includes(q) ||
-      style.includes(q) ||
-      town.includes(q) ||
-      lang.includes(q) ||
-      url.includes(q)
+  const filterCounts = computeProjectFilterCounts(projects, unplayableIds);
+
+  const filteredProjects = useMemo(() => {
+    const filtered = (projects || []).filter((p) => {
+      if (!p) return false;
+      const statusInfo = classifyProjectStatus(p, unplayableIds);
+      if (statusFilter !== 'all' && statusInfo.group !== statusFilter) return false;
+      if (!searchTerm || !searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase().trim();
+      const title = (p.title || '').toLowerCase();
+      const biz = (p.businessName || '').toLowerCase();
+      const brief = (p.brief || '').toLowerCase();
+      const style = (p.creativeStyle || '').toLowerCase();
+      const town = (p.town || '').toLowerCase();
+      const lang = (p.language || '').toLowerCase();
+      const url = (p.videoUrl || '').toLowerCase();
+      const statusLabel = statusInfo.label.toLowerCase();
+      return (
+        title.includes(q) ||
+        biz.includes(q) ||
+        brief.includes(q) ||
+        style.includes(q) ||
+        town.includes(q) ||
+        lang.includes(q) ||
+        url.includes(q) ||
+        statusLabel.includes(q)
+      );
+    });
+    return sortProjects(filtered, sortBy);
+  }, [projects, unplayableIds, statusFilter, searchTerm, sortBy]);
+
+  // Prune selections that are no longer in the active filtered result set
+  useEffect(() => {
+    const validSet = new Set(filteredProjects.map((p) => p.id));
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => validSet.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [filteredProjects]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allFilteredSelected = filteredProjects.length > 0 && selectedIds.length === filteredProjects.length;
+
+  const businessGroups = useMemo(
+    () => (viewMode === 'business' ? groupProjectsByBusiness(filteredProjects, businesses) : []),
+    [viewMode, filteredProjects, businesses]
+  );
+
+  const visibleProjects = useMemo(
+    () => filteredProjects.slice(0, visibleLimit),
+    [filteredProjects, visibleLimit]
+  );
+
+  const toggleProjectSelection = (projId) => {
+    setSelectedIds((prev) =>
+      prev.includes(projId) ? prev.filter((id) => id !== projId) : [...prev, projId]
     );
-  });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredProjects.map((p) => p.id));
+    }
+  };
+
+  const handleExitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+    setShowBulkConfirm(false);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedIds.length === 0 || isBulkDeleting) return;
+    setIsBulkDeleting(true);
+    setBulkFeedback(null);
+    const targetIds = [...selectedIds];
+    try {
+      let result = null;
+      if (typeof onBulkDeleteProjects === 'function') {
+        result = await onBulkDeleteProjects(targetIds);
+      } else if (typeof onDeleteProject === 'function') {
+        for (const id of targetIds) {
+          await onDeleteProject(id);
+        }
+        result = { deletedIds: targetIds, notDeletedIds: [] };
+      }
+
+      const deletedIds = Array.isArray(result?.deletedIds) ? result.deletedIds : [];
+      const notDeletedIds = Array.isArray(result?.notDeletedIds) ? result.notDeletedIds : [];
+      const errMsg = result?.error || '';
+
+      setShowBulkConfirm(false);
+      if (errMsg && deletedIds.length === 0) {
+        setBulkFeedback({ type: 'error', text: errMsg });
+      } else if (notDeletedIds.length > 0) {
+        setSelectedIds(notDeletedIds);
+        setBulkFeedback({
+          type: 'warning',
+          text: `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? 'project' : 'projects'}. ${notDeletedIds.length} could not be deleted.`,
+        });
+      } else {
+        setIsSelectionMode(false);
+        setSelectedIds([]);
+        setBulkFeedback({
+          type: 'success',
+          text: `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? 'project' : 'projects'}.`,
+        });
+      }
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const handleCopyScript = async (e, proj) => {
     e.stopPropagation();
@@ -141,27 +286,11 @@ export default function ScriptLibraryView({
         }}
       >
         <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: 'var(--accent-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              marginBottom: 6,
-            }}
-          >
-            <Video size={13} />
-            <span>Video Commercials & Campaigns</span>
-          </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
             My Projects
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-            Video Commercials & Script Library — review past projects, download generated videos, or copy scenes.
+            Script Library &amp; finished videos — resume drafts, copy scenes, or download.
           </p>
         </div>
 
@@ -189,32 +318,374 @@ export default function ScriptLibraryView({
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: 28, position: 'relative' }}>
-        <Search
-          size={16}
-          style={{ position: 'absolute', left: 14, top: 12, color: 'var(--text-tertiary)' }}
-        />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by project title, business, or keywords…"
+      {/* Search & Status Filters Bar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={16}
+            style={{ position: 'absolute', left: 14, top: 12, color: 'var(--text-tertiary)' }}
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            aria-label="Search projects"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search projects by title, business, or status…"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: searchTerm ? '10px 38px 10px 40px' : '10px 14px 10px 40px',
+              fontSize: 13,
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 8,
+              color: 'var(--text-primary)',
+            }}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setSearchTerm('')}
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: 9,
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                padding: 4,
+                display: 'inline-flex',
+              }}
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        <div
           style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '10px 14px 10px 40px',
-            fontSize: 13,
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 8,
-            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
           }}
-        />
+        >
+          <div
+            role="group"
+            aria-label="Filter projects by status"
+            data-testid="project-status-filters"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+          >
+            {[
+              { id: 'all', label: 'All Projects', count: filterCounts.all },
+              { id: 'in_progress', label: 'In Progress', count: filterCounts.in_progress },
+              { id: 'completed', label: 'Completed', count: filterCounts.completed },
+              ...(filterCounts.attention > 0
+                ? [{ id: 'attention', label: 'Needs Attention', count: filterCounts.attention }]
+                : []),
+            ].map((tab) => {
+              const isSelected = statusFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  data-testid={`project-filter-${tab.id}`}
+                  onClick={() => setStatusFilter(tab.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 16,
+                    fontSize: 12,
+                    fontWeight: isSelected ? 700 : 600,
+                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                    color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                    border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: 10,
+                      backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-surface)',
+                      color: isSelected ? '#FFFFFF' : 'var(--text-tertiary)',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* View Switch, Sort & Subtle Select Trigger */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div
+              role="group"
+              aria-label="Project view"
+              data-testid="projects-view-switch"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: 2,
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                gap: 2,
+              }}
+            >
+              {[
+                { id: 'all', label: 'All Projects' },
+                { id: 'business', label: 'By Business' },
+              ].map((opt) => {
+                const active = viewMode === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={active}
+                    data-testid={`projects-view-${opt.id}`}
+                    onClick={() => setViewMode(opt.id)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 6,
+                      border: 'none',
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      backgroundColor: active ? 'var(--bg-surface)' : 'transparent',
+                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <select
+              aria-label="Sort projects"
+              data-testid="projects-sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                height: 31,
+                padding: '0 10px',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                backgroundColor: 'var(--bg-elevated)',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              <option value="updated">Recently Updated</option>
+              <option value="created">Recently Created</option>
+            </select>
+
+            {filteredProjects.length > 0 && (
+              <button
+                type="button"
+                aria-pressed={isSelectionMode}
+                data-testid="projects-select-mode-btn"
+                onClick={() => {
+                  if (isSelectionMode) handleExitSelectionMode();
+                  else {
+                    setIsSelectionMode(true);
+                    setBulkFeedback(null);
+                  }
+                }}
+                style={{
+                  padding: '5px 12px',
+                  height: 31,
+                  borderRadius: 8,
+                  border: isSelectionMode ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  backgroundColor: isSelectionMode ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-elevated)',
+                  color: isSelectionMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {isSelectionMode ? 'Done' : 'Select'}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Project Cards Grid */}
-      {filteredProjects.length === 0 ? (
+      {/* Bulk Operation Result / Partial Failure Banner */}
+      {bulkFeedback && (
+        <div
+          role={bulkFeedback.type === 'error' ? 'alert' : 'status'}
+          data-testid="bulk-delete-feedback"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            padding: '10px 14px',
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12.5,
+            fontWeight: 500,
+            backgroundColor:
+              bulkFeedback.type === 'error'
+                ? 'rgba(239, 68, 68, 0.12)'
+                : bulkFeedback.type === 'warning'
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(16, 185, 129, 0.12)',
+            border:
+              bulkFeedback.type === 'error'
+                ? '1px solid rgba(239, 68, 68, 0.35)'
+                : bulkFeedback.type === 'warning'
+                  ? '1px solid rgba(245, 158, 11, 0.35)'
+                  : '1px solid rgba(16, 185, 129, 0.35)',
+            color:
+              bulkFeedback.type === 'error'
+                ? '#FCA5A5'
+                : bulkFeedback.type === 'warning'
+                  ? '#FCD34D'
+                  : '#6EE7B7',
+          }}
+        >
+          <span>{bulkFeedback.text}</span>
+          <button
+            type="button"
+            aria-label="Dismiss message"
+            onClick={() => setBulkFeedback(null)}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 2 }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Sticky Bulk Action Bar */}
+      {isSelectionMode && (
+        <div
+          role="region"
+          aria-label="Bulk project actions"
+          data-testid="bulk-action-bar"
+          style={{
+            position: 'sticky',
+            top: 12,
+            zIndex: 40,
+            marginBottom: 18,
+            padding: '10px 16px',
+            borderRadius: 10,
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <span
+            aria-live="polite"
+            data-testid="bulk-selected-count"
+            style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+          >
+            {selectedIds.length} {selectedIds.length === 1 ? 'project' : 'projects'} selected
+          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              data-testid="bulk-select-all-btn"
+              onClick={handleToggleSelectAll}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 7,
+                border: '1px solid var(--border-default)',
+                backgroundColor: 'var(--bg-elevated)',
+                color: 'var(--text-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {allFilteredSelected ? 'Deselect All' : 'Select All'}
+            </button>
+
+            <button
+              type="button"
+              data-testid="bulk-cancel-btn"
+              onClick={handleExitSelectionMode}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 7,
+                border: '1px solid var(--border-subtle)',
+                backgroundColor: 'transparent',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={selectedIds.length === 0 || isBulkDeleting}
+              data-testid="bulk-delete-open-btn"
+              onClick={() => setShowBulkConfirm(true)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 7,
+                border: 'none',
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: selectedIds.length === 0 || isBulkDeleting ? 'not-allowed' : 'pointer',
+                opacity: selectedIds.length === 0 || isBulkDeleting ? 0.45 : 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <Trash2 size={13} aria-hidden="true" />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State / Empty State / Project Cards Grid */}
+      {isLoadingProjects && projects.length === 0 ? (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="projects-loading-state"
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 14,
+            padding: '44px 24px',
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+            fontSize: 13,
+          }}
+        >
+          Loading your saved projects and drafts…
+        </div>
+      ) : filteredProjects.length === 0 ? (
         <div
           style={{
             backgroundColor: 'var(--bg-surface)',
@@ -240,7 +711,7 @@ export default function ScriptLibraryView({
             <Film size={26} />
           </div>
           <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {searchTerm ? 'No projects matching your search' : 'No video projects yet'}
+            {searchTerm || statusFilter !== 'all' ? 'No matching projects found' : 'No video projects yet'}
           </h3>
           <p
             style={{
@@ -252,115 +723,158 @@ export default function ScriptLibraryView({
               lineHeight: 1.5,
             }}
           >
-            {searchTerm
-              ? 'Try searching with different keywords or clear the search input.'
-              : 'Start generating your first AI video commercial in Creative Studio to build your collection.'}
+            {searchTerm || statusFilter !== 'all'
+              ? 'Try clearing your search or filters.'
+              : 'Create your first video project to build your library.'}
           </p>
-          <button
-            type="button"
-            onClick={handleCreate}
-            style={{
-              backgroundColor: 'var(--accent-primary)',
-              border: 'none',
-              borderRadius: 8,
-              padding: '11px 22px',
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#FFFFFF',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 2px 10px var(--accent-glow)',
-            }}
-          >
-            <Sparkles size={15} />
-            <span>Create Video Project</span>
-          </button>
+          {(searchTerm || statusFilter !== 'all') ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+              }}
+              style={{
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 8,
+                padding: '10px 20px',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              Reset filters
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCreate}
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                border: 'none',
+                borderRadius: 8,
+                padding: '11px 22px',
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 2px 10px var(--accent-glow)',
+              }}
+            >
+              <Sparkles size={15} />
+              <span>Create Video Project</span>
+            </button>
+          )}
         </div>
-      ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
-            gap: 20,
-          }}
-        >
-          {filteredProjects.map((proj) => {
-            const hasScenes = proj.scenes && proj.scenes.length >= 4;
-            const hasVideo = Boolean(proj.videoUrl);
-            // an unfinished video saved as it was being made — opening it resumes where it was left
-            const inProgress = isDraft(proj);
-            const rendering = isRenderingDraft(proj);
-            // projects saved before videos were copied to permanent storage may hold an expired Magnific link
-            const videoExpired = hasVideo && isVideoLinkExpired(proj.videoUrl);
-            const canPlay = hasVideo && !videoExpired && !unplayableIds[proj.id];
-            const isPlaying = canPlay && playingVideoId === proj.id;
-            const togglePlay = (e) => {
-              e.stopPropagation();
+      ) : (() => {
+        const renderProjectCard = (proj) => {
+          const statusInfo = classifyProjectStatus(proj, unplayableIds);
+          const { hasScenes, hasVideo, videoExpired, inProgress, rendering, group } = statusInfo;
+          const canPlay = hasVideo && !videoExpired && !unplayableIds[proj.id];
+          const isPlaying = canPlay && playingVideoId === proj.id;
+          const togglePlay = (e) => {
+            e.stopPropagation();
               if (canPlay) setPlayingVideoId(isPlaying ? null : proj.id);
-            };
-            const isExpanded = Boolean(expandedScriptIds[proj.id]);
+          };
+          const isExpanded = Boolean(expandedScriptIds[proj.id]);
+          const isSelected = isSelectionMode && selectedSet.has(proj.id);
 
-            // Match business logo
-            const matchedBiz = (businesses || []).find(
-              (b) =>
-                (proj.businessId && b.id === proj.businessId) ||
-                (b.businessName && proj.businessName && b.businessName.trim().toLowerCase() === proj.businessName.trim().toLowerCase()) ||
-                (b.name && proj.businessName && b.name.trim().toLowerCase() === proj.businessName.trim().toLowerCase())
-            );
-            const bizLogo = resolveLogoUrl(proj.brandLogo || proj.logo || matchedBiz?.brandLogo || matchedBiz?.logo);
-            const bizName = proj.businessName || matchedBiz?.businessName || matchedBiz?.name || 'Brand';
-            const bizType = proj.businessType || matchedBiz?.businessType || matchedBiz?.category || '';
+          // Match business logo
+          const matchedBiz = (businesses || []).find(
+            (b) =>
+              (proj.businessId && b.id === proj.businessId) ||
+              (b.businessName && proj.businessName && b.businessName.trim().toLowerCase() === proj.businessName.trim().toLowerCase()) ||
+              (b.name && proj.businessName && b.name.trim().toLowerCase() === proj.businessName.trim().toLowerCase())
+          );
+          const bizLogo = resolveLogoUrl(proj.brandLogo || proj.logo || matchedBiz?.brandLogo || matchedBiz?.logo);
+          const bizName = proj.businessName || matchedBiz?.businessName || matchedBiz?.name || 'Brand';
+          const bizType = proj.businessType || matchedBiz?.businessType || matchedBiz?.category || '';
+          const projectLabel = proj.title || `${bizName} Commercial Video`;
+          const formattedDate = formatProjectUpdatedAt(proj.updatedAt || proj.createdAt);
 
-            const rawDate = proj.updatedAt || proj.createdAt;
-            const dateObj = rawDate ? new Date(rawDate) : new Date();
-            const formattedDate = !isNaN(dateObj.getTime())
-              ? dateObj.toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              : 'Recently';
+          const isCompleted = group === 'completed';
+          const isAttention = group === 'attention';
+          const baseBorder = isSelected
+            ? '2px solid var(--accent-primary)'
+            : isCompleted
+              ? '1px solid rgba(16, 185, 129, 0.35)'
+              : isAttention
+                ? '1px solid rgba(245, 158, 11, 0.4)'
+                : '1px solid var(--border-default)';
 
-            return (
-              <div
-                key={proj.id}
-                onClick={() => onOpenProject(proj)}
-                style={{
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 12,
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border-default)';
-                  e.currentTarget.style.transform = 'none';
-                }}
-              >
-                <div>
-                  {/* Business Badge & Date & Actions Row */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-                      {bizLogo ? (
+          return (
+            <div
+              key={proj.id}
+              data-testid={`project-card-${proj.id}`}
+              onClick={() => {
+                if (isSelectionMode) {
+                  toggleProjectSelection(proj.id);
+                } else {
+                  onOpenProject(proj);
+                }
+              }}
+              style={{
+                backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-surface)',
+                border: baseBorder,
+                borderRadius: 12,
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: isCompleted ? '0 4px 16px rgba(16, 185, 129, 0.08)' : '0 4px 16px rgba(0, 0, 0, 0.12)',
+                position: 'relative',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = isSelected
+                  ? 'var(--accent-primary)'
+                  : isCompleted
+                    ? 'rgba(16, 185, 129, 0.35)'
+                    : isAttention
+                      ? 'rgba(245, 158, 11, 0.4)'
+                      : 'var(--border-default)';
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              <div>
+                {/* Business Badge & Date & Actions Row */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 14,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                    {isSelectionMode && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        data-testid={`project-select-checkbox-${proj.id}`}
+                        aria-label={`Select ${projectLabel}`}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => toggleProjectSelection(proj.id)}
+                        style={{
+                          width: 17,
+                          height: 17,
+                          accentColor: 'var(--accent-primary)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    {bizLogo ? (
                         <img
                           src={bizLogo}
                           alt={bizName}
@@ -468,7 +982,7 @@ export default function ScriptLibraryView({
                     </div>
                   </div>
 
-                  {/* Project Title */}
+                  {/* Project Title & Brief Snippet */}
                   <h3
                     style={{
                       fontSize: 16,
@@ -478,32 +992,31 @@ export default function ScriptLibraryView({
                       lineHeight: 1.3,
                     }}
                   >
-                    {proj.title || `${bizName} Commercial Video`}
+                    {projectLabel}
                   </h3>
 
-                  {/* Status & Attributes Tags */}
+                  {/* Status & Attributes Tags (non-color icon + explicit text label) */}
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                    {hasVideo ? (
+                    {isCompleted ? (
                       <span
                         style={{
                           fontSize: 10,
                           fontWeight: 800,
                           padding: '2px 8px',
                           borderRadius: 4,
-                          backgroundColor: videoExpired ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                          color: videoExpired ? '#F59E0B' : '#10B981',
+                          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10B981',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
                           textTransform: 'uppercase',
                         }}
                       >
-                        <Film size={11} />
-                        {videoExpired ? 'Video Link Expired' : 'Video Ready'}
+                        <Film size={11} aria-hidden="true" />
+                        <span>{statusInfo.label}</span>
                       </span>
-                    ) : inProgress ? (
+                    ) : isAttention ? (
                       <span
-                        title={rendering ? 'Your video was still rendering — open to pick it up' : 'Open to continue where you left off'}
                         style={{
                           fontSize: 10,
                           fontWeight: 800,
@@ -517,40 +1030,27 @@ export default function ScriptLibraryView({
                           textTransform: 'uppercase',
                         }}
                       >
-                        <Clock size={11} />
-                        {rendering ? 'In progress · Rendering' : 'In progress'}
+                        <AlertTriangle size={11} aria-hidden="true" />
+                        <span>{statusInfo.label}</span>
                       </span>
-                    ) : hasScenes ? (
+                    ) : (
                       <span
+                        title={rendering ? 'Your video was still rendering — open to pick it up' : 'Open to continue where you left off'}
                         style={{
                           fontSize: 10,
                           fontWeight: 800,
                           padding: '2px 8px',
                           borderRadius: 4,
-                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                          color: 'var(--accent-primary)',
+                          backgroundColor: 'rgba(245, 158, 11, 0.14)',
+                          color: '#F59E0B',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
                           textTransform: 'uppercase',
                         }}
                       >
-                        <CheckCircle2 size={11} />
-                        Script Ready
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: 4,
-                          backgroundColor: 'var(--bg-elevated)',
-                          color: 'var(--text-tertiary)',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        Draft
+                        <Clock size={11} aria-hidden="true" />
+                        <span>{statusInfo.label}</span>
                       </span>
                     )}
 
@@ -718,29 +1218,30 @@ export default function ScriptLibraryView({
                     />
                   )}
 
-                  {/* Brief / Objective Snippet */}
-                  {proj.brief && (
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--text-secondary)',
-                        margin: '0 0 12px',
-                        lineHeight: 1.5,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {proj.brief}
-                    </p>
-                  )}
+                  {/* Brief / Campaign Description */}
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: proj.brief ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                      fontStyle: proj.brief ? 'normal' : 'italic',
+                      margin: '0 0 12px',
+                      lineHeight: 1.5,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {proj.brief || 'No brief summary saved yet'}
+                  </p>
 
                   {/* Expandable Script Scenes Drawer */}
                   {hasScenes && (
                     <div style={{ marginTop: 8 }}>
                       <button
                         type="button"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Hide' : 'View'} script (${proj.scenes.length} scenes) for ${projectLabel}`}
                         onClick={(e) => toggleExpandScript(e, proj.id)}
                         style={{
                           background: 'none',
@@ -812,60 +1313,354 @@ export default function ScriptLibraryView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 10,
                   }}
                 >
-                  {hasScenes ? (
-                    <button
-                      type="button"
-                      onClick={(e) => handleCopyScript(e, proj)}
-                      aria-label={`Copy 4-scene script for ${proj.title || 'project'}`}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: copiedId === proj.id ? '#10B981' : 'var(--text-secondary)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        padding: 0,
-                      }}
-                    >
-                      {copiedId === proj.id ? (
-                        <>
-                          <Check size={13} />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={13} />
-                          <span>Copy 4 Scenes</span>
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Draft</div>
-                  )}
-
-                  <div
-                    style={{
+                  {hasScenes ? (() => {
+                    const copyStyle = {
+                      background: 'none',
+                      border: 'none',
+                      color: copiedId === proj.id ? '#10B981' : 'var(--text-secondary)',
                       fontSize: 12,
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
+                      padding: 0,
+                    };
+                    const copyLabel = copiedId === proj.id
+                      ? 'Copied'
+                      : (proj.scenes.length === 4 ? 'Copy 4 Scenes' : `Copy ${proj.scenes.length} Scenes`);
+                    const copyInner = (
+                      <>
+                        {copiedId === proj.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                        <span>{copyLabel}</span>
+                      </>
+                    );
+                    return proj.scenes.length === 4 ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyScript(e, proj)}
+                        aria-label={`Copy 4-scene script for ${projectLabel}`}
+                        style={copyStyle}
+                      >
+                        {copyInner}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyScript(e, proj)}
+                        aria-label={`Copy ${proj.scenes.length}-scene script for ${projectLabel}`}
+                        style={copyStyle}
+                      >
+                        {copyInner}
+                      </button>
+                    );
+                  })() : (
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      {statusInfo.stageHint ? `Last step: ${statusInfo.stageHint}` : 'No script generated yet'}
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    aria-label={`${inProgress ? 'Resume' : 'Open'} ${projectLabel} in Studio`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isSelectionMode) {
+                        toggleProjectSelection(proj.id);
+                      } else {
+                        onOpenProject(proj);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px 6px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent-primary)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                       marginLeft: 'auto',
+                      cursor: 'pointer',
                     }}
                   >
-                    <span>Open in Studio</span>
-                    <ArrowRight size={13} />
-                  </div>
+                    <span>{inProgress && !rendering ? 'Resume in Studio' : 'Open in Studio'}</span>
+                    <ArrowRight size={13} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             );
-          })}
+          };
+
+          if (viewMode === 'business') {
+            return (
+              <div data-testid="projects-by-business-view" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+                {businessGroups.map((grp) => {
+                  const isCollapsed = Boolean(collapsedGroups[grp.key]);
+                  const grpLimit = groupLimits[grp.key] || PROJECTS_PAGE_SIZE;
+                  const visibleGroupProjects = grp.projects.slice(0, grpLimit);
+                  const hasMoreInGroup = visibleGroupProjects.length < grp.projects.length;
+                  const grpLogo = resolveLogoUrl(grp.business?.brandLogo || grp.business?.logo);
+
+                  return (
+                    <section
+                      key={grp.key}
+                      data-testid={`business-group-${grp.key}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 14,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        aria-expanded={!isCollapsed}
+                        data-testid={`business-group-toggle-${grp.key}`}
+                        onClick={() =>
+                          setCollapsedGroups((prev) => ({ ...prev, [grp.key]: !prev[grp.key] }))
+                        }
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          backgroundColor: 'var(--bg-surface)',
+                          border: '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          {isCollapsed ? (
+                            <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} aria-hidden="true" />
+                          ) : (
+                            <ChevronDown size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} aria-hidden="true" />
+                          )}
+                          {grpLogo ? (
+                            <img
+                              src={grpLogo}
+                              alt=""
+                              style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div
+                              aria-hidden="true"
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 6,
+                                background: grp.isOther ? 'var(--bg-elevated)' : getAvatarGradient(grp.name),
+                                color: grp.isOther ? 'var(--text-secondary)' : '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {grp.isOther ? '—' : getInitials(grp.name)}
+                            </div>
+                          )}
+                          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {grp.name}
+                          </span>
+                          <span style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                            — {grp.projects.length} {grp.projects.length === 1 ? 'project' : 'projects'}
+                          </span>
+                        </div>
+                      </button>
+
+                      {!isCollapsed && (
+                        <>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))',
+                              gap: 20,
+                            }}
+                          >
+                            {visibleGroupProjects.map(renderProjectCard)}
+                          </div>
+
+                          {hasMoreInGroup && (
+                            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 4 }}>
+                              <button
+                                type="button"
+                                data-testid={`business-group-load-more-${grp.key}`}
+                                onClick={() =>
+                                  setGroupLimits((prev) => ({
+                                    ...prev,
+                                    [grp.key]: grpLimit + PROJECTS_PAGE_SIZE,
+                                  }))
+                                }
+                                style={{
+                                  padding: '8px 18px',
+                                  borderRadius: 8,
+                                  border: '1px solid var(--border-default)',
+                                  backgroundColor: 'var(--bg-elevated)',
+                                  color: 'var(--text-primary)',
+                                  fontSize: 12.5,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Show more in {grp.name} ({grp.projects.length - visibleGroupProjects.length} remaining)
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+              <div
+                data-testid="projects-all-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))',
+                  gap: 20,
+                }}
+              >
+                {visibleProjects.map(renderProjectCard)}
+              </div>
+
+              {(filteredProjects.length > PROJECTS_PAGE_SIZE || visibleProjects.length < filteredProjects.length) && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                    paddingTop: 6,
+                  }}
+                >
+                  <span data-testid="projects-pagination-summary" style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>
+                    Showing {visibleProjects.length} of {filteredProjects.length} projects
+                  </span>
+
+                  {visibleProjects.length < filteredProjects.length && (
+                    <button
+                      type="button"
+                      data-testid="projects-load-more-btn"
+                      onClick={() => setVisibleLimit((prev) => prev + PROJECTS_PAGE_SIZE)}
+                      style={{
+                        padding: '9px 20px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border-default)',
+                        backgroundColor: 'var(--bg-elevated)',
+                        color: 'var(--text-primary)',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Load More ({Math.min(PROJECTS_PAGE_SIZE, filteredProjects.length - visibleProjects.length)} more)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+      })()}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulk-delete-dialog-title"
+          data-testid="bulk-delete-modal"
+          onClick={() => {
+            if (!isBulkDeleting) setShowBulkConfirm(false);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 14,
+              maxWidth: 440,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <h2
+              id="bulk-delete-dialog-title"
+              style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}
+            >
+              Delete {selectedIds.length} {selectedIds.length === 1 ? 'project' : 'projects'}?
+            </h2>
+            <p style={{ margin: '0 0 22px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+              This will permanently delete the selected projects and their associated generated content. Business profiles will not be affected.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                disabled={isBulkDeleting}
+                data-testid="bulk-delete-cancel-btn"
+                onClick={() => setShowBulkConfirm(false)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border-default)',
+                  backgroundColor: 'var(--bg-elevated)',
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: isBulkDeleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isBulkDeleting}
+                data-testid="bulk-delete-confirm-btn"
+                onClick={handleConfirmBulkDelete}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isBulkDeleting ? 'wait' : 'pointer',
+                  opacity: isBulkDeleting ? 0.7 : 1,
+                }}
+              >
+                {isBulkDeleting ? 'Deleting…' : 'Delete Projects'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

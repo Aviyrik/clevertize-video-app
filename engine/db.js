@@ -5,6 +5,24 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const {
+  normalizeCreativeGuardrails,
+  hashGuardrails,
+  hasActiveGuardrails,
+} = require('./guardrails');
+const {
+  isUnderstandingOutdated,
+  normalizeUnderstandingSettings,
+} = require('./understandingSpine');
+const {
+  normalizeEventContext,
+  hasActiveEventContext,
+} = require('./eventContext');
+const {
+  createDefaultOnboardingState,
+  normalizeOnboardingState,
+  mergeOnboardingState,
+} = require('../src/utils/onboarding');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
@@ -52,12 +70,14 @@ async function ensurePgTables() {
         salt TEXT NOT NULL,
         email_verified BOOLEAN DEFAULT FALSE,
         email_verified_at TIMESTAMPTZ,
+        onboarding_state JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_state JSONB DEFAULT '{}'::jsonb;
       UPDATE users SET email_verified = FALSE WHERE email_verified IS NULL;
 
       CREATE TABLE IF NOT EXISTS sessions (
@@ -103,9 +123,12 @@ async function ensurePgTables() {
         quality_gate_passed BOOLEAN DEFAULT FALSE,
         status TEXT,
         video_url TEXT,
+        creative_guardrails JSONB DEFAULT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS creative_guardrails JSONB DEFAULT NULL;
 
       CREATE TABLE IF NOT EXISTS email_verification_tokens (
         id VARCHAR(255) PRIMARY KEY,
@@ -276,6 +299,10 @@ function mapBusinessRow(row) {
 // Helper to map DB row to project object
 function mapProjectRow(row) {
   if (!row) return null;
+  const cDNA = typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {});
+  const rawGuardrails = row.creative_guardrails
+    ? (typeof row.creative_guardrails === 'string' ? JSON.parse(row.creative_guardrails) : row.creative_guardrails)
+    : (cDNA.creativeGuardrails || null);
   return {
     id: row.id,
     userId: row.user_id,
@@ -289,9 +316,12 @@ function mapProjectRow(row) {
     currentStage: row.current_stage,
     completedStages: typeof row.completed_stages === 'string' ? JSON.parse(row.completed_stages) : (row.completed_stages || []),
     explicitChoices: typeof row.explicit_choices === 'string' ? JSON.parse(row.explicit_choices) : (row.explicit_choices || {}),
-    creativeDNA: typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : (row.creative_dna || {}),
-    shotSpec: row.shot_spec || (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).shotSpec) || null,
-    stages: (row.creative_dna && (typeof row.creative_dna === 'string' ? JSON.parse(row.creative_dna) : row.creative_dna).stages) || null,
+    creativeDNA: cDNA,
+    shotSpec: row.shot_spec || cDNA.shotSpec || null,
+    stages: cDNA.stages || null,
+    aiUnderstanding: cDNA.aiUnderstanding || null,
+    creativeGuardrails: rawGuardrails || null,
+    eventContext: cDNA.eventContext && hasActiveEventContext(cDNA.eventContext) ? cDNA.eventContext : null,
     scenes: typeof row.scenes === 'string' ? JSON.parse(row.scenes) : (row.scenes || []),
     character1: row.character1 || '',
     character2: row.character2 || '',
@@ -316,7 +346,7 @@ async function findUserByEmail(email) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE LOWER(email) = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at FROM users WHERE LOWER(email) = $1',
       [cleanEmail]
     );
     if (!res.rows.length) return null;
@@ -330,6 +360,7 @@ async function findUserByEmail(email) {
       salt: r.salt,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -342,6 +373,7 @@ async function findUserByEmail(email) {
     avatar: u.avatar || null,
     emailVerified: Boolean(u.emailVerified),
     emailVerifiedAt: u.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
   };
 }
 
@@ -352,7 +384,7 @@ async function findUserById(userId) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at FROM users WHERE id = $1',
       [userId]
     );
     if (!res.rows.length) return null;
@@ -366,6 +398,7 @@ async function findUserById(userId) {
       salt: r.salt,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -378,6 +411,7 @@ async function findUserById(userId) {
     avatar: u.avatar || null,
     emailVerified: Boolean(u.emailVerified),
     emailVerifiedAt: u.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
   };
 }
 
@@ -399,15 +433,16 @@ async function createUser({ email, password, name = '', avatar = null }) {
   const id = `usr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const userName = String(name || cleanEmail.split('@')[0]).trim();
   const createdAt = new Date().toISOString();
+  const initialOnboarding = createDefaultOnboardingState();
 
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
     await pool.query(
-      'INSERT INTO users (id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [id, cleanEmail, userName, avatar || null, hash, salt, false, null, createdAt]
+      'INSERT INTO users (id, email, name, avatar, password_hash, salt, email_verified, email_verified_at, onboarding_state, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      [id, cleanEmail, userName, avatar || null, hash, salt, false, null, JSON.stringify(initialOnboarding), createdAt]
     );
-    return { id, email: cleanEmail, name: userName, avatar: avatar || null, emailVerified: false, emailVerifiedAt: null, createdAt };
+    return { id, email: cleanEmail, name: userName, avatar: avatar || null, emailVerified: false, emailVerifiedAt: null, onboardingState: initialOnboarding, createdAt };
   }
 
   const user = {
@@ -419,6 +454,7 @@ async function createUser({ email, password, name = '', avatar = null }) {
     salt,
     emailVerified: false,
     emailVerifiedAt: null,
+    onboardingState: initialOnboarding,
     createdAt,
   };
 
@@ -433,6 +469,7 @@ async function createUser({ email, password, name = '', avatar = null }) {
     avatar: user.avatar || null,
     emailVerified: false,
     emailVerifiedAt: null,
+    onboardingState: initialOnboarding,
     createdAt: user.createdAt,
   };
 }
@@ -456,6 +493,7 @@ async function authenticateUser({ email, password }) {
     avatar: user.avatar || null,
     emailVerified: Boolean(user.emailVerified),
     emailVerifiedAt: user.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(user.onboardingState),
     createdAt: user.createdAt,
   };
 }
@@ -526,8 +564,34 @@ async function updateUserProfile(userId, { name, avatar }) {
     email: u.email,
     name: u.name,
     avatar: u.avatar || null,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
     createdAt: u.createdAt,
   };
+}
+
+async function updateUserOnboarding(userId, onboardingPatch) {
+  if (!userId) throw new Error('User ID is required.');
+  const existing = await findUserById(userId);
+  if (!existing) throw new Error('User not found.');
+  const merged = mergeOnboardingState(existing.onboardingState, onboardingPatch);
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query(
+      `UPDATE users SET onboarding_state = $2::jsonb WHERE id = $1`,
+      [userId, JSON.stringify(merged)]
+    );
+    const refreshed = await findUserById(userId);
+    return refreshed ? refreshed.onboardingState : merged;
+  }
+
+  const users = readJsonFile('users.json', []);
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw new Error('User not found.');
+  users[idx].onboardingState = merged;
+  writeJsonFile('users.json', users);
+  return merged;
 }
 
 // ----------------------------------------------------
@@ -573,7 +637,7 @@ async function getUserBySessionToken(token) {
   if (pool) {
     await ensurePgTables();
     const res = await pool.query(
-      `SELECT u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at
+      `SELECT u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -588,6 +652,7 @@ async function getUserBySessionToken(token) {
       avatar: r.avatar || null,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at ? (r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at) : null,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -607,6 +672,7 @@ async function getUserBySessionToken(token) {
     avatar: user.avatar || null,
     emailVerified: Boolean(user.emailVerified),
     emailVerifiedAt: user.emailVerifiedAt || null,
+    onboardingState: normalizeOnboardingState(user.onboardingState),
     createdAt: user.createdAt,
   };
 }
@@ -817,6 +883,63 @@ async function getProjectById(projectId, userId) {
   return projects.find((p) => p.id === projectId && p.userId === userId) || null;
 }
 
+async function projectExists(projectId) {
+  if (!projectId) return false;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query('SELECT 1 FROM projects WHERE id = $1 LIMIT 1', [projectId]);
+    return res.rows.length > 0;
+  }
+  const projects = readJsonFile('projects.json', []);
+  return projects.some((p) => p.id === projectId || (p.idempotencyKey && p.idempotencyKey === projectId));
+}
+
+function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails, currentBrief = null, currentSettings = null, currentEventContext = undefined) {
+  if (!aiUnder || typeof aiUnder !== 'object') return aiUnder;
+  if (aiUnder.approval_status !== 'approved') return aiUnder;
+  const gVersion = normalizedGuardrails ? Number(normalizedGuardrails.version || 0) : 0;
+  const gHash = normalizedGuardrails ? hashGuardrails(normalizedGuardrails) : null;
+  const recordedVer = typeof aiUnder.source_guardrails_version === 'number' ? aiUnder.source_guardrails_version : null;
+
+  const versionMismatch = recordedVer !== null
+    ? gVersion !== recordedVer
+    : hasActiveGuardrails(normalizedGuardrails);
+  const hashMismatch = Boolean(aiUnder.source_guardrails_hash && gHash && aiUnder.source_guardrails_hash !== gHash);
+  const briefOrSettingsMismatch = Boolean(
+    (currentBrief && String(currentBrief).trim() && isUnderstandingOutdated(aiUnder, String(currentBrief).trim(), normalizedGuardrails, currentSettings, currentEventContext)) ||
+    (!currentBrief && (currentSettings || currentEventContext !== undefined) && isUnderstandingOutdated(aiUnder, aiUnder.source_brief || '', normalizedGuardrails, currentSettings, currentEventContext))
+  );
+
+  if (versionMismatch || hashMismatch || briefOrSettingsMismatch) {
+    return {
+      ...aiUnder,
+      approval_status: 'outdated',
+    };
+  }
+  return aiUnder;
+}
+
+function extractProjectSettingsForSave(projectData, cDNA, existingSettings = null) {
+  const explicit = (projectData && projectData.productionSettings) || (cDNA && cDNA.productionSettings);
+  const guidedCtx = cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.context;
+  if (explicit && typeof explicit === 'object') {
+    return normalizeUnderstandingSettings(explicit);
+  }
+  if (guidedCtx && typeof guidedCtx === 'object') {
+    return normalizeUnderstandingSettings(guidedCtx);
+  }
+  if (existingSettings && typeof existingSettings === 'object') {
+    const merged = {
+      ...existingSettings,
+      ...(projectData && projectData.language ? { language: projectData.language } : {}),
+      ...(projectData && projectData.creativeStyle ? { creativeStyle: projectData.creativeStyle } : {}),
+    };
+    return normalizeUnderstandingSettings(merged);
+  }
+  return null;
+}
+
 async function saveProject(projectData, userId) {
   if (!userId) throw new Error('Authentication required to save project.');
   const {
@@ -841,6 +964,9 @@ async function saveProject(projectData, userId) {
     videoUrl,
     shotSpec,
     stages,
+    aiUnderstanding,
+    creativeGuardrails: incomingGuardrails,
+    eventContext: incomingEventContext,
   } = projectData || {};
 
   const now = new Date().toISOString();
@@ -852,26 +978,105 @@ async function saveProject(projectData, userId) {
   const cDNA = Object.assign({}, creativeDNA || {});
   if (shotSpec) cDNA.shotSpec = shotSpec;
   if (stages) cDNA.stages = stages;
+  let aiUnder =
+    aiUnderstanding ||
+    (stages && stages.aiUnderstanding) ||
+    (creativeDNA && creativeDNA.aiUnderstanding) ||
+    (cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.aiUnderstanding) ||
+    null;
+  const hasExplicitGuardrails = Boolean(
+    projectData && (
+      Object.prototype.hasOwnProperty.call(projectData, 'creativeGuardrails') ||
+      (cDNA && Object.prototype.hasOwnProperty.call(cDNA, 'creativeGuardrails')) ||
+      (stages && Object.prototype.hasOwnProperty.call(stages, 'creativeGuardrails'))
+    )
+  );
+  const rawIncomingGuardrails = incomingGuardrails !== undefined
+    ? incomingGuardrails
+    : (stages && stages.creativeGuardrails !== undefined
+      ? stages.creativeGuardrails
+      : (cDNA && cDNA.creativeGuardrails !== undefined ? cDNA.creativeGuardrails : undefined));
+
+  const hasExplicitEventContext = Boolean(
+    projectData && (
+      Object.prototype.hasOwnProperty.call(projectData, 'eventContext') ||
+      (cDNA && Object.prototype.hasOwnProperty.call(cDNA, 'eventContext')) ||
+      (stages && Object.prototype.hasOwnProperty.call(stages, 'eventContext')) ||
+      (cDNA && cDNA.draft && cDNA.draft.guided && Object.prototype.hasOwnProperty.call(cDNA.draft.guided, 'eventContext'))
+    )
+  );
+  const rawIncomingEventContext = incomingEventContext !== undefined
+    ? incomingEventContext
+    : (stages && stages.eventContext !== undefined
+      ? stages.eventContext
+      : (cDNA && cDNA.eventContext !== undefined
+        ? cDNA.eventContext
+        : (cDNA && cDNA.draft && cDNA.draft.guided && cDNA.draft.guided.eventContext !== undefined
+          ? cDNA.draft.guided.eventContext
+          : undefined)));
+
   const scList = Array.isArray(scenes) ? scenes : [];
   const pStatus = status || (scList.length >= 4 ? 'script_ready' : 'in_progress');
 
   const pool = getPgPool();
   if (pool) {
     await ensurePgTables();
+    let existingPgGuardrails = null;
+    let existingPgUnderstanding = null;
     if (targetId) {
-      const ownerCheck = await pool.query('SELECT user_id FROM projects WHERE id = $1', [targetId]);
-      if (ownerCheck.rows.length && ownerCheck.rows[0].user_id !== userId) {
-        throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+      const ownerCheck = await pool.query('SELECT user_id, creative_guardrails, creative_dna FROM projects WHERE id = $1', [targetId]);
+      if (ownerCheck.rows.length) {
+        if (ownerCheck.rows[0].user_id !== userId) {
+          throw Object.assign(new Error('Project ID belongs to another user.'), { status: 403 });
+        }
+        const rowDNA = typeof ownerCheck.rows[0].creative_dna === 'string'
+          ? JSON.parse(ownerCheck.rows[0].creative_dna)
+          : (ownerCheck.rows[0].creative_dna || {});
+        existingPgGuardrails = ownerCheck.rows[0].creative_guardrails || rowDNA.creativeGuardrails || null;
+        existingPgUnderstanding = rowDNA.aiUnderstanding || null;
       }
     }
+    const resolvedGuardrails = hasExplicitGuardrails
+      ? normalizeCreativeGuardrails(rawIncomingGuardrails, existingPgGuardrails)
+      : (existingPgGuardrails ? normalizeCreativeGuardrails(existingPgGuardrails) : null);
+
+    if (resolvedGuardrails) {
+      cDNA.creativeGuardrails = resolvedGuardrails;
+    }
+    const existingPgEvent = cDNA.eventContext || null;
+    const resolvedPgEvent = hasExplicitEventContext
+      ? (rawIncomingEventContext === null ? null : normalizeEventContext(rawIncomingEventContext, existingPgEvent))
+      : (existingPgEvent ? normalizeEventContext(existingPgEvent) : null);
+    const activePgEvent = resolvedPgEvent && hasActiveEventContext(resolvedPgEvent) ? resolvedPgEvent : null;
+    if (activePgEvent) {
+      cDNA.eventContext = activePgEvent;
+    } else if (hasExplicitEventContext) {
+      delete cDNA.eventContext;
+    }
+    const existingPgSettings = cDNA.productionSettings || existingPgUnderstanding?.source_settings || null;
+    const resolvedPgSettings = extractProjectSettingsForSave(projectData, cDNA, existingPgSettings);
+    if (resolvedPgSettings) {
+      cDNA.productionSettings = resolvedPgSettings;
+    }
+    aiUnder = invalidateStaleUnderstanding(
+      aiUnder || existingPgUnderstanding,
+      resolvedGuardrails,
+      brief ? String(brief).trim() : null,
+      resolvedPgSettings,
+      hasExplicitEventContext ? activePgEvent : undefined
+    );
+    if (aiUnder) {
+      cDNA.aiUnderstanding = aiUnder;
+    }
+
     const res = await pool.query(
       `INSERT INTO projects (
         id, user_id, business_id, title, business_name, business_type, town, brief,
         entry_point, current_stage, completed_stages, explicit_choices, creative_dna,
         scenes, character1, character2, setting, quality_gate_passed, status, video_url,
-        created_at, updated_at
+        creative_guardrails, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $21
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $22
       )
       ON CONFLICT (id) DO UPDATE SET
         business_id = EXCLUDED.business_id,
@@ -893,6 +1098,7 @@ async function saveProject(projectData, userId) {
         -- a save without a video (e.g. a late draft autosave) never takes a finished video away
         status = CASE WHEN EXCLUDED.video_url IS NULL AND projects.video_url IS NOT NULL THEN projects.status ELSE EXCLUDED.status END,
         video_url = COALESCE(EXCLUDED.video_url, projects.video_url),
+        creative_guardrails = COALESCE(EXCLUDED.creative_guardrails, projects.creative_guardrails),
         updated_at = EXCLUDED.updated_at
       WHERE projects.user_id = EXCLUDED.user_id
       RETURNING *`,
@@ -917,6 +1123,7 @@ async function saveProject(projectData, userId) {
         Boolean(qualityGatePassed),
         pStatus,
         videoUrl || null,
+        resolvedGuardrails ? JSON.stringify(resolvedGuardrails) : null,
         now,
       ]
     );
@@ -940,6 +1147,41 @@ async function saveProject(projectData, userId) {
     }
   }
 
+  const existingRecord = existingIndex >= 0 ? projects[existingIndex] : null;
+  const existingFileGuardrails = existingRecord ? (existingRecord.creativeGuardrails || existingRecord.creativeDNA?.creativeGuardrails || null) : null;
+  const resolvedGuardrails = hasExplicitGuardrails
+    ? normalizeCreativeGuardrails(rawIncomingGuardrails, existingFileGuardrails)
+    : (existingFileGuardrails ? normalizeCreativeGuardrails(existingFileGuardrails) : null);
+
+  if (resolvedGuardrails) {
+    cDNA.creativeGuardrails = resolvedGuardrails;
+  }
+  const existingFileEvent = existingRecord ? (existingRecord.eventContext || existingRecord.creativeDNA?.eventContext || null) : null;
+  const resolvedFileEvent = hasExplicitEventContext
+    ? (rawIncomingEventContext === null ? null : normalizeEventContext(rawIncomingEventContext, existingFileEvent))
+    : (existingFileEvent ? normalizeEventContext(existingFileEvent) : null);
+  const activeFileEvent = resolvedFileEvent && hasActiveEventContext(resolvedFileEvent) ? resolvedFileEvent : null;
+  if (activeFileEvent) {
+    cDNA.eventContext = activeFileEvent;
+  } else if (hasExplicitEventContext) {
+    delete cDNA.eventContext;
+  }
+  const existingFileSettings = existingRecord?.creativeDNA?.productionSettings || existingRecord?.aiUnderstanding?.source_settings || null;
+  const resolvedFileSettings = extractProjectSettingsForSave(projectData, cDNA, existingFileSettings);
+  if (resolvedFileSettings) {
+    cDNA.productionSettings = resolvedFileSettings;
+  }
+  aiUnder = invalidateStaleUnderstanding(
+    aiUnder || (existingRecord && existingRecord.aiUnderstanding) || null,
+    resolvedGuardrails,
+    brief ? String(brief).trim() : null,
+    resolvedFileSettings,
+    hasExplicitEventContext ? activeFileEvent : undefined
+  );
+  if (aiUnder) {
+    cDNA.aiUnderstanding = aiUnder;
+  }
+
   const record = {
     id: existingIndex >= 0 ? projects[existingIndex].id : projectId,
     idempotencyKey: (projectData && projectData.idempotencyKey) || (existingIndex >= 0 ? projects[existingIndex].idempotencyKey : undefined),
@@ -957,6 +1199,9 @@ async function saveProject(projectData, userId) {
     creativeDNA: cDNA,
     shotSpec: shotSpec || cDNA.shotSpec || (existingIndex >= 0 ? projects[existingIndex].shotSpec : null),
     stages: stages || cDNA.stages || (existingIndex >= 0 ? projects[existingIndex].stages : null),
+    aiUnderstanding: aiUnder || null,
+    creativeGuardrails: resolvedGuardrails || null,
+    eventContext: activeFileEvent || null,
     scenes: scList,
     character1: character1 || '',
     character2: character2 || '',
@@ -999,6 +1244,43 @@ async function deleteProject(projectId, userId) {
     writeJsonFile('projects.json', filtered);
   }
   return changed;
+}
+
+async function deleteProjects(projectIds, userId) {
+  if (!Array.isArray(projectIds) || !userId) {
+    return { deletedIds: [], notDeletedIds: Array.isArray(projectIds) ? projectIds : [] };
+  }
+  const cleanIds = Array.from(
+    new Set(projectIds.map((id) => String(id || '').trim()).filter(Boolean))
+  );
+  if (cleanIds.length === 0) return { deletedIds: [], notDeletedIds: [] };
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query(
+      'DELETE FROM projects WHERE user_id = $1 AND id = ANY($2::text[]) RETURNING id',
+      [userId, cleanIds]
+    );
+    const deletedSet = new Set((res.rows || []).map((r) => r.id));
+    return {
+      deletedIds: cleanIds.filter((id) => deletedSet.has(id)),
+      notDeletedIds: cleanIds.filter((id) => !deletedSet.has(id)),
+    };
+  }
+
+  const projects = readJsonFile('projects.json', []);
+  const ownedMatchSet = new Set(
+    projects.filter((p) => p.userId === userId && cleanIds.includes(p.id)).map((p) => p.id)
+  );
+  if (ownedMatchSet.size > 0) {
+    const remaining = projects.filter((p) => !(p.userId === userId && ownedMatchSet.has(p.id)));
+    writeJsonFile('projects.json', remaining);
+  }
+  return {
+    deletedIds: cleanIds.filter((id) => ownedMatchSet.has(id)),
+    notDeletedIds: cleanIds.filter((id) => !ownedMatchSet.has(id)),
+  };
 }
 
 async function saveVideoRun(runId, userId, initialData = {}) {
@@ -1340,7 +1622,7 @@ async function markEmailAsVerified(arg1, arg2) {
        SET email_verified = TRUE, email_verified_at = NOW()
        FROM consumed_token ct
        WHERE u.id = ct.user_id
-       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at`,
       [trimmedToken, hashedCandidate, userId]
     );
 
@@ -1353,6 +1635,7 @@ async function markEmailAsVerified(arg1, arg2) {
         avatar: r.avatar || null,
         emailVerified: Boolean(r.email_verified),
         emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+        onboardingState: normalizeOnboardingState(r.onboarding_state),
         createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
       };
     }
@@ -1421,6 +1704,7 @@ async function markEmailAsVerified(arg1, arg2) {
     avatar: u.avatar || null,
     emailVerified: true,
     emailVerifiedAt: u.emailVerifiedAt,
+    onboardingState: normalizeOnboardingState(u.onboardingState),
     createdAt: u.createdAt,
   };
 }
@@ -1544,7 +1828,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
        SET password_hash = $2, salt = $3, email_verified = TRUE, email_verified_at = COALESCE(u.email_verified_at, NOW())
        FROM consumed_token ct
        WHERE u.id = ct.user_id
-       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.created_at`,
+       RETURNING u.id, u.email, u.name, u.avatar, u.email_verified, u.email_verified_at, u.onboarding_state, u.created_at`,
       [tokenHash, hash, salt]
     );
     if (!res.rows.length) {
@@ -1562,6 +1846,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
       avatar: r.avatar || null,
       emailVerified: Boolean(r.email_verified),
       emailVerifiedAt: r.email_verified_at instanceof Date ? r.email_verified_at.toISOString() : r.email_verified_at,
+      onboardingState: normalizeOnboardingState(r.onboarding_state),
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -1582,7 +1867,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
   writeJsonFile('users.json', users);
   writeJsonFile('sessions.json', readJsonFile('sessions.json', []).filter((x) => x.userId !== tok.userId));
   const u = users[idx];
-  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt };
+  return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, onboardingState: normalizeOnboardingState(u.onboardingState), createdAt: u.createdAt };
 }
 
 module.exports = {
@@ -1602,9 +1887,12 @@ module.exports = {
   saveBusiness,
   getProjectsForUser,
   getProjectById,
+  projectExists,
   saveProject,
   deleteProject,
+  deleteProjects,
   updateUserProfile,
+  updateUserOnboarding,
   userOwnsVideoUrl,
   isVideoUrlRegistered,
   saveVideoRun,

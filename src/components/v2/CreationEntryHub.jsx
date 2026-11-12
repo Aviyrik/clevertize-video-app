@@ -30,7 +30,7 @@ export default function CreationEntryHub({
   onEditBrand,
 }) {
   return (
-    <div style={{ maxWidth: 1040, margin: '0 auto', padding: '36px 24px 60px' }}>
+    <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(20px, 4vw, 36px) clamp(14px, 3vw, 24px) 60px', width: '100%', boxSizing: 'border-box' }}>
       {/* Welcome Banner */}
       <div style={{ textAlign: 'center', marginBottom: 26 }}>
         <h1
@@ -53,13 +53,14 @@ export default function CreationEntryHub({
             lineHeight: 1.5,
           }}
         >
-          Choose how you'd like to create your video ad.
+          Pick a starting point.
         </p>
       </div>
 
       {/* Active Brand Context Banner OR Setup Prompt */}
       {businessName ? (
         <div
+          data-tour="hub-brand-card"
           style={{
             backgroundColor: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
@@ -145,6 +146,7 @@ export default function CreationEntryHub({
         </div>
       ) : (
         <div
+          data-tour="hub-brand-card"
           style={{
             backgroundColor: 'rgba(99, 102, 241, 0.06)',
             border: '1.5px dashed var(--accent-primary)',
@@ -179,7 +181,7 @@ export default function CreationEntryHub({
                 No Business Profile Set Up
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                Set up your business profile first to generate tailored ads with your brand context and offerings.
+                Add your business details to tailor ads to your brand.
               </div>
             </div>
           </div>
@@ -209,14 +211,15 @@ export default function CreationEntryHub({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 20,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
+          gap: 18,
           marginBottom: 36,
         }}
       >
         {/* Entry Point 1: Start with a Brief (Hero / Recommended) */}
         <div
-          onClick={onStartBrief}
+          data-tour="hub-entry-brief"
+          data-testid="hub-card-brief"
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '2px solid var(--accent-primary)',
@@ -225,18 +228,9 @@ export default function CreationEntryHub({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            cursor: 'pointer',
             transition: 'all 0.2s ease',
             boxShadow: '0 6px 24px rgba(99, 102, 241, 0.18)',
             position: 'relative',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-3px)';
-            e.currentTarget.style.boxShadow = '0 10px 30px rgba(99, 102, 241, 0.28)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = '0 6px 24px rgba(99, 102, 241, 0.18)';
           }}
         >
           {/* Recommended Badge */}
@@ -274,40 +268,37 @@ export default function CreationEntryHub({
             >
               <Sparkles size={22} />
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--accent-primary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                marginBottom: 4,
-              }}
-            >
-              Guided Creation
-            </div>
             <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Brief
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Describe what you want to promote. Our AI drafts high-converting hooks and a complete video script.
+              Describe your offer and let AI draft hooks and scripts.
             </p>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-              <span style={{ fontSize: 11, backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                ✨ No script needed
-              </span>
-              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                ⚡ ~2 mins
-              </span>
+            <div
+              style={{
+                marginTop: 12,
+                padding: '8px 10px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 11.5,
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
+              }}
+            >
+              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Write brief → pick mode → generate scripts.
             </div>
           </div>
 
-          <div style={{ marginTop: 22 }}>
-            <div
+          <div style={{ marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={onStartBrief}
               style={{
                 width: '100%',
                 backgroundColor: 'var(--accent-primary)',
                 color: '#FFFFFF',
+                border: 'none',
                 borderRadius: 8,
                 padding: '10px 16px',
                 fontSize: 13,
@@ -316,19 +307,20 @@ export default function CreationEntryHub({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                cursor: 'pointer',
                 boxShadow: '0 2px 10px var(--accent-glow)',
                 transition: 'all 0.15s ease',
               }}
             >
               <span>Start with Brief</span>
               <ArrowRight size={15} />
-            </div>
+            </button>
           </div>
         </div>
 
         {/* Entry Point 2: Start with an Existing Script */}
         <div
-          onClick={onOpenScriptModal}
+          data-testid="hub-card-script"
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
@@ -337,19 +329,8 @@ export default function CreationEntryHub({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            cursor: 'pointer',
             transition: 'all 0.2s ease',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#10B981';
-            e.currentTarget.style.transform = 'translateY(-3px)';
-            e.currentTarget.style.boxShadow = '0 8px 26px rgba(16, 185, 129, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
           }}
         >
           <div>
@@ -368,36 +349,32 @@ export default function CreationEntryHub({
             >
               <FileCode2 size={22} />
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#10B981',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                marginBottom: 4,
-              }}
-            >
-              Fast Track
-            </div>
             <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with an Existing Script
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Have your script written? Paste your text to run quality checks and jump straight to video rendering.
+              Paste a script for continuity checks and rendering.
             </p>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-              <span style={{ fontSize: 11, backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#34D399', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                ⚡ Direct to Stage 7
-              </span>
-              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                📋 Paste script
-              </span>
+            <div
+              style={{
+                marginTop: 12,
+                padding: '8px 10px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 11.5,
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
+              }}
+            >
+              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Paste script → check quality → produce or edit scenes.
             </div>
           </div>
 
-          <div style={{ marginTop: 22 }}>
-            <div
+          <div style={{ marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={onOpenScriptModal}
               style={{
                 width: '100%',
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -411,18 +388,19 @@ export default function CreationEntryHub({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
               <span>Import Script</span>
               <ArrowRight size={15} />
-            </div>
+            </button>
           </div>
         </div>
 
         {/* Entry Point 3: Start with a Website URL */}
         <div
-          onClick={onOpenUrlModal}
+          data-testid="hub-card-url"
           style={{
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
@@ -431,19 +409,8 @@ export default function CreationEntryHub({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            cursor: 'pointer',
             transition: 'all 0.2s ease',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#38BDF8';
-            e.currentTarget.style.transform = 'translateY(-3px)';
-            e.currentTarget.style.boxShadow = '0 8px 26px rgba(56, 189, 248, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
           }}
         >
           <div>
@@ -462,36 +429,32 @@ export default function CreationEntryHub({
             >
               <Globe size={22} />
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#38BDF8',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                marginBottom: 4,
-              }}
-            >
-              Automated Intelligence
-            </div>
             <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
               Start with a Website URL
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Enter your store website or product page. We'll automatically pull your brand details and offerings.
+              Pull brand details and offerings straight from your website.
             </p>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-              <span style={{ fontSize: 11, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38BDF8', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                🌐 Store & catalog links
-              </span>
-              <span style={{ fontSize: 11, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-tertiary)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                🔍 Auto-extract
-              </span>
+            <div
+              style={{
+                marginTop: 12,
+                padding: '8px 10px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 11.5,
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
+              }}
+            >
+              <strong style={{ color: 'var(--text-primary)' }}>Next step:</strong> Scan URL → review brief → pick mode.
             </div>
           </div>
 
-          <div style={{ marginTop: 22 }}>
-            <div
+          <div style={{ marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={onOpenUrlModal}
               style={{
                 width: '100%',
                 backgroundColor: 'rgba(56, 189, 248, 0.15)',
@@ -505,12 +468,13 @@ export default function CreationEntryHub({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
               <span>Scan Website</span>
               <ArrowRight size={15} />
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -668,7 +632,7 @@ export default function CreationEntryHub({
               18-Point Continuity Gate
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Single location & dialogue pacing verification.
+              Setting and dialogue consistency checks
             </div>
           </div>
         </div>
@@ -680,7 +644,7 @@ export default function CreationEntryHub({
               Indian Regional Dialects
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Devanagari script support & natural spoken phrasing.
+              Devanagari script support
             </div>
           </div>
         </div>
@@ -692,7 +656,7 @@ export default function CreationEntryHub({
               Magnific GPU Rendering
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Photorealistic character anchoring & video generation.
+              Character-consistent video output
             </div>
           </div>
         </div>

@@ -27,6 +27,9 @@ import {
   Zap,
   Sliders,
   MessageSquare,
+  Compass,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { resolveLogoUrl, getInitials, getAvatarGradient } from './BusinessProfileView.jsx';
 
@@ -73,6 +76,13 @@ export default function AppShell({
   studioMode = 'simple',
   onToggleStudioMode,
   onSetStudioMode,
+  onReplayTour,
+  onResumeTour = null,
+  hasPausedTour = false,
+  pausedTourStep = 0,
+  totalTourSteps = 5,
+  draftStatus = null, // { state: 'idle'|'saving'|'saved'|'error', isNewDraft?: boolean, detail?: string }
+  onRetryDraftSave = null,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [businessDropdownOpen, setBusinessDropdownOpen] = useState(false);
@@ -652,12 +662,13 @@ export default function AppShell({
                   fontWeight: 600,
                 }}
               >
-                7 Stages
+                {studioMode === 'simple' ? '3 Steps' : '7 Stages'}
               </span>
             </div>
 
             {/* My Projects Link */}
             <div
+              data-tour="nav-projects"
               onClick={() => {
                 onSelectView('projects');
                 setMobileMenuOpen(false);
@@ -733,6 +744,97 @@ export default function AppShell({
               >
                 {businesses.length > 0 ? `${businesses.length}` : '0 Profiles'}
               </span>
+            </div>
+          </div>
+
+          {/* Sidebar Mobile Mode Switcher (Accessible inside drawer on mobile & tablet) */}
+          <div
+            className="mobile-mode-switcher"
+            style={{
+              padding: '0 16px 14px',
+              display: 'none',
+              flexDirection: 'column',
+              gap: 6,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: 'var(--text-tertiary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              Creation Mode
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 8,
+                padding: 3,
+                gap: 3,
+              }}
+            >
+              <button
+                type="button"
+                data-testid="drawer-mode-simple-btn"
+                onClick={() => {
+                  if (studioMode !== 'simple') {
+                    if (onSetStudioMode) onSetStudioMode('simple');
+                    else if (onToggleStudioMode) onToggleStudioMode();
+                  }
+                  setMobileMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '7px 8px',
+                  borderRadius: 6,
+                  fontSize: 11.5,
+                  fontWeight: studioMode === 'simple' ? 700 : 500,
+                  backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
+                  color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: studioMode === 'simple' ? 'default' : 'pointer',
+                }}
+              >
+                <Zap size={12} />
+                <span>Simple</span>
+              </button>
+              <button
+                type="button"
+                data-testid="drawer-mode-director-btn"
+                onClick={() => {
+                  if (studioMode === 'simple') {
+                    if (onSetStudioMode) onSetStudioMode('advanced');
+                    else if (onToggleStudioMode) onToggleStudioMode();
+                  }
+                  setMobileMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '7px 8px',
+                  borderRadius: 6,
+                  fontSize: 11.5,
+                  fontWeight: studioMode !== 'simple' ? 700 : 500,
+                  backgroundColor: studioMode !== 'simple' ? '#eab308' : 'transparent',
+                  color: studioMode !== 'simple' ? '#0B0C0F' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: studioMode !== 'simple' ? 'default' : 'pointer',
+                }}
+              >
+                <Sliders size={12} />
+                <span>Director</span>
+              </button>
             </div>
           </div>
 
@@ -848,42 +950,109 @@ export default function AppShell({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              gap: 8,
             }}
           >
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenFeedbackModal) onOpenFeedbackModal();
-                setMobileMenuOpen(false);
-              }}
-              title="Share feedback or report an issue"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                color: 'var(--text-tertiary)',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'color 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-              }}
-            >
-              <MessageSquare size={12} style={{ opacity: 0.8 }} />
-              <span>Feedback</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenFeedbackModal) onOpenFeedbackModal();
+                  setMobileMenuOpen(false);
+                }}
+                title="Share feedback or report an issue"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  margin: 0,
+                  color: 'var(--text-tertiary)',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-tertiary)';
+                }}
+              >
+                <MessageSquare size={12} style={{ opacity: 0.8 }} />
+                <span>Feedback</span>
+              </button>
+
+              {hasPausedTour && onResumeTour && (
+                <button
+                  type="button"
+                  data-testid="sidebar-resume-tour-btn"
+                  onClick={() => {
+                    onResumeTour();
+                    setMobileMenuOpen(false);
+                  }}
+                  title={`Resume tour from Step ${pausedTourStep + 1} of ${totalTourSteps}`}
+                  aria-label={`Resume tour from Step ${pausedTourStep + 1} of ${totalTourSteps}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: 'rgba(99, 102, 241, 0.14)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: 10,
+                    padding: '2px 7px',
+                    color: 'var(--accent-primary)',
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>Resume {pausedTourStep + 1}/{totalTourSteps}</span>
+                </button>
+              )}
+
+              {onReplayTour && (
+                <button
+                  type="button"
+                  data-tour="tour-replay-trigger"
+                  onClick={() => {
+                    onReplayTour();
+                    setMobileMenuOpen(false);
+                  }}
+                  title="Replay guided tour from Step 1"
+                  aria-label="Replay guided tour from Step 1"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    color: 'var(--text-tertiary)',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--accent-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                  }}
+                >
+                  <Compass size={12} style={{ opacity: 0.85 }} />
+                  <span>Tour</span>
+                </button>
+              )}
+            </div>
 
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
-              v2.0-script-mvp
+              v2.0
             </span>
           </div>
         </div>
@@ -893,8 +1062,9 @@ export default function AppShell({
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         {/* Top Header Bar */}
         <header
+          className="app-header-bar"
           style={{
-            height: 60,
+            minHeight: 60,
             flexShrink: 0,
             borderBottom: '1px solid var(--border-subtle)',
             backgroundColor: 'rgba(16, 18, 24, 0.75)',
@@ -902,13 +1072,15 @@ export default function AppShell({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 28px',
+            flexWrap: 'wrap',
+            gap: 8,
+            padding: '8px 20px',
             position: 'sticky',
             top: 0,
             zIndex: 90,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="app-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0, flex: '1 1 auto' }}>
             <button
               type="button"
               className="mobile-menu-btn"
@@ -975,6 +1147,87 @@ export default function AppShell({
               </span>
             )}
 
+            {/* Accessible Draft & Autosave Feedback Pill (never implies saved before persistence completes) */}
+            {activeView === 'studio' && draftStatus && draftStatus.state && draftStatus.state !== 'idle' && (
+              <span
+                role="status"
+                aria-live="polite"
+                data-testid="draft-autosave-status"
+                title={draftStatus.detail || 'Drafts autosave to My Projects after persistence confirms'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 9px',
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor:
+                    draftStatus.state === 'error'
+                      ? 'rgba(239, 68, 68, 0.12)'
+                      : draftStatus.state === 'saved'
+                        ? 'rgba(16, 185, 129, 0.12)'
+                        : 'var(--bg-elevated)',
+                  color:
+                    draftStatus.state === 'error'
+                      ? '#EF4444'
+                      : draftStatus.state === 'saved'
+                        ? 'var(--success)'
+                        : 'var(--text-secondary)',
+                  border:
+                    '1px solid ' +
+                    (draftStatus.state === 'error'
+                      ? 'rgba(239, 68, 68, 0.35)'
+                      : draftStatus.state === 'saved'
+                        ? 'rgba(16, 185, 129, 0.3)'
+                        : 'var(--border-subtle)'),
+                }}
+              >
+                {draftStatus.state === 'saving' ? (
+                  <>
+                    <RefreshCw size={11} className="icon-spinner" aria-hidden="true" />
+                    <span>
+                      {draftStatus.isNewDraft
+                        ? (draftStatus.detail ? `Creating draft (${draftStatus.detail})…` : 'Creating draft…')
+                        : 'Saving…'}
+                    </span>
+                  </>
+                ) : draftStatus.state === 'error' ? (
+                  <>
+                    <AlertCircle size={11} aria-hidden="true" />
+                    <span>{draftStatus.detail === 'retrying' ? 'Save failed — retrying' : 'Save failed'}</span>
+                    {onRetryDraftSave && (
+                      <button
+                        type="button"
+                        data-testid="draft-retry-btn"
+                        onClick={onRetryDraftSave}
+                        style={{
+                          marginLeft: 4,
+                          padding: '1px 6px',
+                          borderRadius: 6,
+                          border: '1px solid rgba(239, 68, 68, 0.45)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                          color: '#FCA5A5',
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Check size={11} aria-hidden="true" />
+                    <span>
+                      {draftStatus.detail ? `Draft saved · ${draftStatus.detail}` : 'Draft saved'}
+                    </span>
+                  </>
+                )}
+              </span>
+            )}
+
             {hasStaleWarning && (
               <span
                 style={{
@@ -993,125 +1246,168 @@ export default function AppShell({
             )}
           </div>
 
-          {activeView === 'studio' && (
-            <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {/* Box 2 Mode Switcher Toggle Pill (Fixed on Navbar Top Right) */}
+          {(activeView === 'studio' || activeView === 'hub' || activeView === 'home') && (
+            <>
+              {/* Compact Mobile Topbar Mode Switcher Pill (visible <= 768px) */}
               <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 8,
-                  padding: 3,
-                  gap: 2,
-                }}
+                className="mobile-mode-switcher"
+                data-testid="mobile-header-mode-switcher"
+                style={{ display: 'none', alignItems: 'center', gap: 6 }}
               >
                 <button
                   type="button"
                   onClick={() => {
-                    if (studioMode !== 'simple') {
-                      if (onSetStudioMode) onSetStudioMode('simple');
-                      else if (onToggleStudioMode) onToggleStudioMode();
-                    }
+                    const nextMode = studioMode === 'simple' ? 'advanced' : 'simple';
+                    if (onSetStudioMode) onSetStudioMode(nextMode);
+                    else if (onToggleStudioMode) onToggleStudioMode();
                   }}
-                  title="Switch to Simple Studio (3-Step Fast Video Ad Creation)"
+                  title={studioMode === 'simple' ? 'Switch to Director Mode' : 'Switch to Simple Studio'}
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: 5,
-                    padding: '5px 11px',
-                    borderRadius: 6,
+                    padding: '5px 10px',
+                    borderRadius: 16,
                     fontSize: 11,
-                    fontWeight: studioMode === 'simple' ? 700 : 500,
-                    backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
-                    color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
-                    border: 'none',
-                    cursor: studioMode === 'simple' ? 'default' : 'pointer',
-                    boxShadow: studioMode === 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
-                    transition: 'all 0.15s ease',
+                    fontWeight: 700,
+                    backgroundColor: studioMode === 'simple' ? 'rgba(99, 102, 241, 0.16)' : 'rgba(234, 179, 8, 0.16)',
+                    color: studioMode === 'simple' ? 'var(--accent-primary)' : '#eab308',
+                    border: '1px solid ' + (studioMode === 'simple' ? 'rgba(99, 102, 241, 0.35)' : 'rgba(234, 179, 8, 0.4)'),
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <Zap size={12} />
-                  <span>Simple Studio</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (studioMode === 'simple') {
-                      if (onSetStudioMode) onSetStudioMode('advanced');
-                      else if (onToggleStudioMode) onToggleStudioMode();
-                    }
-                  }}
-                  title="Switch to Director Mode (7-Stage Full Film Control)"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '5px 11px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: studioMode !== 'simple' ? 700 : 500,
-                    backgroundColor: studioMode !== 'simple' ? 'var(--accent-primary)' : 'transparent',
-                    color: studioMode !== 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
-                    border: 'none',
-                    cursor: studioMode !== 'simple' ? 'default' : 'pointer',
-                    boxShadow: studioMode !== 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <Sliders size={12} />
-                  <span>Director Mode</span>
+                  {studioMode === 'simple' ? <Zap size={11} /> : <Sliders size={11} />}
+                  <span>{studioMode === 'simple' ? 'Simple' : 'Director'}</span>
+                  <span style={{ opacity: 0.65, fontSize: 10 }}>⇄</span>
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={onRestartFilm || onStartNewFilm}
-                style={{
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 6,
-                  padding: '6px 12px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Restart from Stage 1 to make a new film"
-              >
-                <RotateCcw size={13} />
-                <span>Restart Film</span>
-              </button>
+              <div className="desktop-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Box 2 Mode Switcher Toggle Pill (Fixed on Navbar Top Right) */}
+                <div
+                  data-tour="mode-switcher"
+                  data-testid="desktop-mode-switcher"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 8,
+                    padding: 3,
+                    gap: 2,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (studioMode !== 'simple') {
+                        if (onSetStudioMode) onSetStudioMode('simple');
+                        else if (onToggleStudioMode) onToggleStudioMode();
+                      }
+                    }}
+                    title="Switch to Simple Studio (3-Step Fast Video Ad Creation)"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '5px 11px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: studioMode === 'simple' ? 700 : 500,
+                      backgroundColor: studioMode === 'simple' ? 'var(--accent-primary)' : 'transparent',
+                      color: studioMode === 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                      border: 'none',
+                      cursor: studioMode === 'simple' ? 'default' : 'pointer',
+                      boxShadow: studioMode === 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Zap size={12} />
+                    <span>Simple Studio</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={onOpenFeedbackModal}
-                style={{
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 6,
-                  padding: '6px 12px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Send Feedback or Report an Issue"
-              >
-                <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
-                <span>Feedback</span>
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (studioMode === 'simple') {
+                        if (onSetStudioMode) onSetStudioMode('advanced');
+                        else if (onToggleStudioMode) onToggleStudioMode();
+                      }
+                    }}
+                    title="Switch to Director Mode (7-Stage Full Film Control)"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '5px 11px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: studioMode !== 'simple' ? 700 : 500,
+                      backgroundColor: studioMode !== 'simple' ? 'var(--accent-primary)' : 'transparent',
+                      color: studioMode !== 'simple' ? '#FFFFFF' : 'var(--text-secondary)',
+                      border: 'none',
+                      cursor: studioMode !== 'simple' ? 'default' : 'pointer',
+                      boxShadow: studioMode !== 'simple' ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Sliders size={12} />
+                    <span>Director Mode</span>
+                  </button>
+                </div>
+
+                {activeView === 'studio' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onRestartFilm}
+                      style={{
+                        backgroundColor: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Restart from the starting point you chose"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Restart Film</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onOpenFeedbackModal}
+                      style={{
+                        backgroundColor: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Send Feedback or Report an Issue"
+                    >
+                      <MessageSquare size={13} style={{ color: 'var(--accent-primary)' }} />
+                      <span>Feedback</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </header>
 

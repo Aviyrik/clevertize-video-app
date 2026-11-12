@@ -112,6 +112,9 @@ function buildDraftProject({ id, businessId = null, businessName = '', businessT
     setting: (isSimple ? selectedPackage && selectedPackage.setting : guided && guided.setting) || '',
     shotSpec: (!isSimple && guided && guided.shotSpec) || null,
     stages: (!isSimple && guided && guided.stages) || null,
+    aiUnderstanding: (!isSimple && guided && guided.aiUnderstanding) || null,
+    creativeGuardrails: isSimple ? ((simple && simple.creativeGuardrails) || null) : ((guided && guided.creativeGuardrails) || null),
+    eventContext: isSimple ? ((simple && simple.eventContext) || null) : ((guided && guided.eventContext) || null),
     creativeDNA: { draft },
     brandContext,
   };

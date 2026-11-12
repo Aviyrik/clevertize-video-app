@@ -28,12 +28,15 @@ export default function WorkflowLoadingScreen({
   tipPrefix = 'Strategy Insight',
   elapsedTime = null, // If null, counts up automatically
   estimatedDuration = '~5–10s',
+  expectedRangeSec = null, // Optional [minSec, maxSec] to detect when operation exceeds initial estimate
+  stallRecoveryAfterSec = 40, // Show non-blocking retry/return actions when exceeded
   metadata = [], // Array of { label, value, icon }
   nextStep = '',
   compact = false,
   error = null,
   onRetry = null,
   onCancel = null,
+  cancelLabel = 'Go Back',
   style = {},
 }) {
   const [localSeconds, setLocalSeconds] = useState(0);
@@ -42,6 +45,7 @@ export default function WorkflowLoadingScreen({
   // Auto stopwatch if external elapsedTime is not provided
   useEffect(() => {
     if (elapsedTime !== null) return;
+    setLocalSeconds(0);
     const interval = setInterval(() => {
       setLocalSeconds((s) => s + 1);
     }, 1000);
@@ -56,6 +60,15 @@ export default function WorkflowLoadingScreen({
   };
 
   const displayTime = elapsedTime || formatTime(localSeconds);
+  const hasExceededEstimate = Boolean(
+    Array.isArray(expectedRangeSec) &&
+    expectedRangeSec[1] > 0 &&
+    localSeconds > expectedRangeSec[1]
+  );
+  const isPotentiallyStalled = Boolean(
+    (onRetry || onCancel) &&
+    localSeconds >= (Array.isArray(expectedRangeSec) && expectedRangeSec[1] ? Math.max(stallRecoveryAfterSec, expectedRangeSec[1] + 10) : stallRecoveryAfterSec)
+  );
 
   // Compute active stage index dynamically if not explicitly passed
   let resolvedStageIdx = activeStageIndex;
@@ -118,37 +131,66 @@ export default function WorkflowLoadingScreen({
             {error}
           </p>
         </div>
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            style={{
-              padding: '9px 20px',
-              borderRadius: 8,
-              backgroundColor: 'var(--accent-primary)',
-              color: '#FFFFFF',
-              border: 'none',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 2px 10px var(--accent-glow)',
-            }}
-          >
-            <RefreshCw size={14} />
-            <span>Try Again</span>
-          </button>
+        {(onRetry || onCancel) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10 }}>
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 8,
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-default)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {cancelLabel}
+              </button>
+            )}
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  boxShadow: '0 2px 10px var(--accent-glow)',
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Try Again</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     );
   }
 
+  const currentStageObj = stages && stages.length > 0 ? stages[resolvedStageIdx] : null;
+  const politeAnnouncement = isPotentiallyStalled
+    ? `${title} Taking longer than expected. You can wait, retry, or go back.`
+    : hasExceededEstimate
+      ? `${title} Taking longer than usual — still working.`
+      : currentStageObj
+        ? `${title} ${currentStageObj.title}`
+        : title;
+
   return (
     <div
-      role="status"
-      aria-live="polite"
       style={{
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-default)',
@@ -167,6 +209,25 @@ export default function WorkflowLoadingScreen({
         ...style,
       }}
     >
+      {/* Polite screen-reader summary only on stage/threshold transitions (never on 1s timer ticks) */}
+      <span
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {politeAnnouncement}
+      </span>
       {/* Animated Pulsing Icon Avatar */}
       <div
         style={{
@@ -264,23 +325,95 @@ export default function WorkflowLoadingScreen({
 
         {estimatedDuration && (
           <div
+            data-testid="workflow-estimate-badge"
             style={{
               fontSize: 11,
-              color: 'var(--text-tertiary)',
-              backgroundColor: 'var(--bg-elevated)',
+              color: hasExceededEstimate ? '#F59E0B' : 'var(--text-tertiary)',
+              backgroundColor: hasExceededEstimate ? 'rgba(245, 158, 11, 0.1)' : 'var(--bg-elevated)',
               padding: '4px 11px',
               borderRadius: 20,
-              border: '1px solid var(--border-subtle)',
+              border: `1px solid ${hasExceededEstimate ? 'rgba(245, 158, 11, 0.35)' : 'var(--border-subtle)'}`,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
             }}
           >
             <Clock size={11} />
-            <span>Estimated: {estimatedDuration}</span>
+            <span>
+              {hasExceededEstimate
+                ? 'Taking longer than usual — still working…'
+                : `Estimated: ${estimatedDuration}`}
+            </span>
           </div>
         )}
       </div>
+
+      {/* Recovery Controls when an operation takes noticeably longer than expected */}
+      {isPotentiallyStalled && (onRetry || onCancel) && (
+        <div
+          data-testid="workflow-stall-recovery"
+          style={{
+            width: '100%',
+            maxWidth: 500,
+            padding: '10px 14px',
+            borderRadius: 10,
+            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+            Taking longer than expected. You can wait, retry, or go back.
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  backgroundColor: 'transparent',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {cancelLabel}
+              </button>
+            )}
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--accent-primary)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <RefreshCw size={11} />
+                <span>Retry</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Multi-Step Pipeline Indicator */}
       {stages && stages.length > 0 && (
@@ -496,27 +629,25 @@ export function BrandResearchLoader({ businessName, category, compact = false, s
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Brand Intelligence"
-      title="Researching your brand & market context…"
-      subtitle={`Analyzing ${businessName || 'your business'} category dynamics, audience triggers, and creative opportunities.`}
+      badgeLabel=""
+      title="Researching your brand…"
+      subtitle={`Analyzing ${businessName || 'your business'} category and audience cues.`}
       stages={[
-        { title: 'Business Profile & Category Context', desc: 'Scanning category dynamics and consumer expectations' },
-        { title: 'Audience Drivers & Pain Points', desc: 'Synthesizing customer dilemmas and emotional triggers' },
-        { title: 'Strategic Recommendations', desc: 'Formulating commercial brief insights and hook angles' },
+        { title: 'Business & Category Context', desc: 'Scanning category expectations' },
+        { title: 'Audience Drivers', desc: 'Identifying key buyer hooks' },
+        { title: 'Strategy Insights', desc: 'Drafting brief recommendations' },
       ]}
       tips={[
-        'Category Drivers: High-converting video ads address an explicit dilemma the customer faces every day.',
-        'Tone Match: Aligning your video voice with the category expectation builds immediate customer trust.',
-        'Audience Nuance: Understanding your core consumer age and motivation doubles viewer retention.',
-        'Pattern Interrupt: The strongest commercials flip an everyday category expectation within 3 seconds.',
+        'Ads that address an everyday customer dilemma retain viewers longer.',
+        'Matching brand tone to your category builds immediate trust.',
       ]}
-      tipPrefix="Research Insight"
+      tipPrefix="Tip"
       estimatedDuration="~5–8s"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
         category ? { label: 'Category', value: category, isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Refining your brief and unlocking creative concepts"
+      nextStep="Refine brief and unlock creative concepts"
       compact={compact}
       style={style}
     />
@@ -530,27 +661,25 @@ export function IdeaGenerationLoader({ businessName, category, objective, compac
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Creative Strategy Engine"
-      title="Finding strong creative concepts…"
-      subtitle={`Developing distinct narrative angles, character premises, and visual hooks for ${businessName || 'your brand'}.`}
+      badgeLabel=""
+      title="Generating creative ideas…"
+      subtitle={`Building distinct story angles for ${businessName || 'your brand'}.`}
       stages={[
-        { title: 'Dilemma Framing', desc: 'Identifying everyday consumer tensions and relatable moments' },
-        { title: 'Territory Blueprints', desc: 'Synthesizing 3 distinct creative concepts tailored to your brief' },
-        { title: 'Hook & Tone Calibration', desc: 'Aligning visual premise with your campaign objective' },
+        { title: 'Framing Buyer Hooks', desc: 'Identifying relatable everyday moments' },
+        { title: 'Drafting 3 Concepts', desc: 'Tailoring distinct directions to your brief' },
+        { title: 'Aligning Tone & Goal', desc: 'Matching premise to campaign goal' },
       ]}
       tips={[
-        'Dilemma Framing: Commercials that open with a relatable friction point outperform direct feature ads by 3.2x.',
-        'Multi-Angle Testing: Exploring distinct story territories lets you test what resonates best with your audience.',
-        'Core Hook: The best concepts state the human benefit within the first 5 seconds.',
-        'Tone Consistency: Consistent tone between visual styling and spoken dialogue elevates brand credibility.',
+        'Starting with a relatable problem grabs attention faster than feature lists.',
+        'State the key customer benefit within the first 5 seconds.',
       ]}
-      tipPrefix="Strategy Insight"
+      tipPrefix="Tip"
       estimatedDuration="~6–10s"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
         objective ? { label: 'Goal', value: objective, isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Pick your favorite concept and select an opening hook"
+      nextStep="Pick a concept or write your own"
       compact={compact}
       style={style}
     />
@@ -564,27 +693,25 @@ export function HookGenerationLoader({ businessName, ideaTitle, compact = false,
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Social Retention Engine"
-      title="Engineering high-converting opening hooks…"
-      subtitle={`Generating scroll-stopping 0–3s visual patterns and dialogue openers for ${businessName || 'your brand'}.`}
+      badgeLabel=""
+      title="Creating opening hooks…"
+      subtitle={`Drafting 0–3s visual openers for ${businessName || 'your brand'}.`}
       stages={[
-        { title: '0–3s Pattern Interrupt', desc: 'Framing unexpected visual action to stop the social feed scroll' },
-        { title: 'Multi-Archetype Synthesis', desc: 'Generating relatable questions, bold statements, and curiosity gaps' },
-        { title: 'Pacing & Dialogue Tuning', desc: 'Calibrating speech cadence for instant retention' },
+        { title: '0–3s Pattern Interrupts', desc: 'Framing scroll-stopping visual openings' },
+        { title: 'Multiple Hook Styles', desc: 'Questions, bold claims, and curiosity gaps' },
+        { title: 'Pacing Calibration', desc: 'Tuning speech rhythm for quick retention' },
       ]}
       tips={[
-        'The 3-Second Rule: Over 65% of viewers drop off before 3 seconds if there is no immediate pattern interrupt.',
-        'Curiosity Gap: Openings that create an unanswered question hold attention through the commercial.',
-        'Audio Cue: Combining an intriguing visual action with crisp spoken dialogue yields maximum watch time.',
-        'Relatability: Opening with a recognizable everyday habit creates instant viewer buy-in.',
+        'The first 3 seconds determine whether viewers keep watching.',
+        'Opening with a familiar habit earns instant viewer buy-in.',
       ]}
-      tipPrefix="Retention Insight"
+      tipPrefix="Tip"
       estimatedDuration="~5–9s"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
         ideaTitle ? { label: 'Concept', value: ideaTitle, isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Choose your opening and preview the 4-part visual story"
+      nextStep="Choose an opening hook"
       compact={compact}
       style={style}
     />
@@ -598,26 +725,23 @@ export function StoryGenerationLoader({ businessName, hookText, compact = false,
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Narrative Arc Builder"
-      title="Building your 4-part visual story…"
-      subtitle={`Designing scene progression, character continuity, and payoff for ${businessName || 'your brand'}.`}
+      badgeLabel=""
+      title="Building story structure…"
+      subtitle={`Designing setting, cast, and 4-scene flow for ${businessName || 'your brand'}.`}
       stages={[
-        { title: 'Room & Setting Blueprint', desc: 'Designing consistent visual environment and character profiles' },
-        { title: '4-Beat Dramatic Arc', desc: 'Structuring Start → Show → Moment → End narrative progression' },
-        { title: 'Payoff & CTA Alignment', desc: 'Connecting the climax smoothly with your brand resolution' },
+        { title: 'Setting & Cast', desc: 'Defining consistent environment and characters' },
+        { title: '4-Beat Story Arc', desc: 'Structuring Start → Show → Moment → End' },
+        { title: 'Payoff & CTA', desc: 'Connecting story resolution to your offer' },
       ]}
       tips={[
-        'Four-Beat Structure: Clear progression from hook to dilemma to resolution keeps viewers engaged to the end.',
-        'Visual Continuity: Anchoring the story in a single recognizable setting grounds the video commercial.',
-        'Emotional Climax: The moment of discovery must feel earned, making the call to action feel natural.',
-        'Pacing: Scene transitions should maintain dynamic rhythm without jarring the viewer.',
+        'One continuous setting prevents distracting background jumps between shots.',
       ]}
-      tipPrefix="Filmmaking Insight"
+      tipPrefix="Tip"
       estimatedDuration="~6–10s"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Review scene flow and customize spoken dialogue in the script editor"
+      nextStep="Review story and edit dialogue"
       compact={compact}
       style={style}
     />
@@ -631,29 +755,26 @@ export function ScriptGenerationLoader({ businessName, elapsedTime, compact = fa
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Broadcast Scriptwriter & Quality Gate"
+      badgeLabel=""
       title="Writing and polishing your script…"
-      subtitle={`Directing 4 broadcast-ready scenes with spoken dialogue and camera setups for ${businessName || 'your brand'}.`}
+      subtitle={`Drafting 4 scenes with spoken dialogue and camera shots for ${businessName || 'your brand'}.`}
       stages={[
-        { title: 'Natural Dialogue Synthesis', desc: 'Drafting conversational speech with authentic phrasing' },
-        { title: 'Cinematic Camera Direction', desc: 'Specifying framing, camera movement, and character action' },
-        { title: 'Cadence & Timing Calibration', desc: 'Balancing spoken word count for natural 30–45s pacing' },
-        { title: 'Brand Clarity Quality Gate', desc: 'Verifying offer clarity, CTA punch, and character continuity' },
+        { title: 'Dialogue Synthesis', desc: 'Writing natural spoken lines' },
+        { title: 'Camera Direction', desc: 'Specifying framing and character action' },
+        { title: 'Pacing & Continuity Check', desc: 'Balancing timing and offer clarity' },
       ]}
       tips={[
-        'Dialogue Cadence: Spoken lines sound best when kept under 18 words per scene for natural breath and pacing.',
-        'Camera Direction: Wide shots establish geography, medium close-ups create empathy, close-ups highlight the product.',
-        'Clear CTA: The final 5 seconds should give one direct, unambiguous action for the customer to take.',
-        'Visual Storytelling: Actions speak louder than adjectives—show the relief rather than just claiming it.',
+        'Short spoken lines sound most natural and pace cleanly inside each shot.',
+        'Keep the final 5 seconds focused on one clear call to action.',
       ]}
-      tipPrefix="Scriptwriting Tip"
+      tipPrefix="Tip"
       elapsedTime={elapsedTime}
       estimatedDuration="~8–14s"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
-        { label: 'Format', value: '4 Broadcast Scenes', isPill: true },
+        { label: 'Format', value: '4 Scenes', isPill: true },
       ].filter(Boolean)}
-      nextStep="Review scene dialogue, edit lines, or generate your commercial video"
+      nextStep="Review or edit scenes before generating video"
       compact={compact}
       style={style}
     />
@@ -667,25 +788,23 @@ export function UrlScannerLoader({ url, compact = true, style = {} }) {
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Brand Extractor"
-      title="Scanning website & extracting brand assets…"
-      subtitle={`Connecting to ${url || 'website'} to gather images, color palette, and business positioning.`}
+      badgeLabel=""
+      title="Scanning website…"
+      subtitle={`Extracting brand details and images from ${url || 'your website'}.`}
       stages={[
-        { title: 'Parsing Webpage Content', desc: 'Extracting headlines, product descriptions, and value propositions' },
-        { title: 'Media & Asset Discovery', desc: 'Identifying high-res product photos, logo, and brand color palette' },
-        { title: 'Commercial Brief Formulation', desc: 'Structuring brand strengths and category opportunities' },
+        { title: 'Reading Page Content', desc: 'Extracting headlines and offerings' },
+        { title: 'Finding Product Photos', desc: 'Detecting product images and brand cues' },
+        { title: 'Drafting Brief', desc: 'Building your editable campaign summary' },
       ]}
       tips={[
-        'Automated Extraction: Pulling high-resolution visuals directly from your website saves manual upload time.',
-        'Color Harmony: Matching brand colors ensures the generated commercial feels authentic to your landing page.',
-        'Value Clarity: Extracting real customer testimonials provides great hook material for video scripts.',
+        'Review and refine any extracted text or photo before continuing.',
       ]}
-      tipPrefix="Extractor Insight"
+      tipPrefix="Tip"
       estimatedDuration="~6–12s"
       metadata={[
-        url ? { label: 'Target URL', value: url.replace(/^https?:\/\//, '').slice(0, 32), isPill: true } : null,
+        url ? { label: 'URL', value: url.replace(/^https?:\/\//, '').slice(0, 32), isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Review extracted brand assets and proceed with commercial brief"
+      nextStep="Review extracted details and edit brief"
       compact={compact}
       style={style}
     />
@@ -699,26 +818,24 @@ export function SimpleAdPackagesLoader({ businessName, category, compact = false
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="Ad Package Generator"
-      title="Writing 3 ready-to-run video ad packages…"
-      subtitle={`Crafting UGC, Story, and Direct Offer commercial scripts for ${businessName || 'your business'}.`}
+      badgeLabel=""
+      title="Writing 3 script options…"
+      subtitle={`Creating UGC, Story, and Direct Offer scripts for ${businessName || 'your business'}.`}
       stages={[
-        { title: 'Value Proposition Analysis', desc: 'Isolating key customer benefits, pricing, and social proof' },
-        { title: '3-Format Script Synthesis', desc: 'Writing full UGC, Narrative Story, and Direct Offer commercial scripts' },
-        { title: 'Visual Direction & Action Prompts', desc: 'Calibrating camera setups, dialogue lines, and call-to-actions' },
+        { title: 'Analyzing Brief', desc: 'Extracting offer, audience, and tone' },
+        { title: 'Writing 3 Concepts', desc: 'Generating distinct hooks and scenes' },
+        { title: 'Polishing Prompts', desc: 'Preparing dialogue and camera direction' },
       ]}
       tips={[
-        'Format Diversity: Testing UGC vs Story vs Direct Offer reveals which format delivers your lowest customer acquisition cost.',
-        'UGC Authenticity: User-generated style builds trust quickly through authentic, unpolished phone-camera angles.',
-        'Direct Offer Punch: Limited-time promotions and clear pricing drive immediate buying decisions.',
+        'You can preview all scenes in each option before starting video rendering.',
       ]}
-      tipPrefix="Creative Strategy"
+      tipPrefix="Tip"
       estimatedDuration="~8–15s"
       metadata={[
         businessName ? { label: 'Business', value: businessName, isPill: true } : null,
         category ? { label: 'Category', value: category, isPill: true } : null,
       ].filter(Boolean)}
-      nextStep="Choose your favorite ad package and produce your video with one click"
+      nextStep="Pick a script option to generate your video"
       compact={compact}
       style={style}
     />
@@ -738,34 +855,30 @@ export function SimpleVideoProductionLoader({
   return (
     <WorkflowLoadingScreen
       icon={Film}
-      badgeLabel="Neural Video Engine"
-      title="Producing your commercial video…"
+      badgeLabel=""
+      title="Producing your video…"
       subtitle={
         renderStatusText ||
-        `Generating cinematic scenes, motion interpolation, and broadcast audio for ${businessName || 'your brand'}.`
+        `Rendering scenes and audio for ${businessName || 'your brand'}.`
       }
       stages={[
-        { title: 'Scene & Brand Calibration', desc: 'Locking characters, store setting, and brand anchors', timeRange: '0–35s' },
-        { title: 'Neural Keyframe Synthesis', desc: 'Generating visual anchors and camera framing for all 4 broadcast scenes', timeRange: '35–95s' },
-        { title: 'Motion & Temporal Interpolation', desc: 'Synthesizing cinematic camera moves, eye contact, and character continuity', timeRange: '95–165s' },
-        { title: 'Audio Mastering & Broadcast Assembly', desc: 'Synchronizing dialogue cadence, sound mix, and high-definition MP4 encoding', timeRange: '165s+' },
+        { title: 'Scene & Cast Setup', desc: 'Locking characters, setting, and brand assets', timeRange: '0–35s' },
+        { title: 'Keyframe Generation', desc: 'Creating visual frames for all scenes', timeRange: '35–95s' },
+        { title: 'Motion Synthesis', desc: 'Rendering camera movement and continuity', timeRange: '95–165s' },
+        { title: 'Audio & Final Assembly', desc: 'Syncing audio and encoding MP4', timeRange: '165s+' },
       ]}
       tips={[
-        'Character Continuity: Neural seed locks ensure actor faces, clothing, and shop details stay identical across every scene.',
-        'First 3-Second Retention: Fast visual hooks and immediate context stop users from swiping past your ad on social feeds.',
-        'Colloquial Realism: Conversational dialogue and eye contact make AI-generated commercials feel warm and natural.',
-        'Mobile Audio Mastering: Spoken frequencies are enhanced to remain crystal clear even on noisy smartphone speakers.',
-        'Continuous Setting: Using one consistent, well-lit store environment builds familiarity and long-term customer trust.',
-        'Broadcast Bitrate: Frames are encoded for maximum resolution with ultra-fast streaming playback on WhatsApp & Instagram.',
+        'Keep this tab open — playback starts automatically once rendering finishes.',
+        'Finished videos also save automatically under My Projects.',
       ]}
-      tipPrefix="Filmmaking Insight"
+      tipPrefix="Note"
       elapsedTime={elapsedTime}
       estimatedDuration="~2–3 mins"
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
-        { label: 'Quality', value: '1080p Broadcast MP4', isPill: true },
+        { label: 'Quality', value: '1080p MP4', isPill: true },
       ].filter(Boolean)}
-      nextStep="Download MP4, share directly, or access under My Projects"
+      nextStep="Watch, share, or download MP4"
       compact={compact}
       style={style}
     />
@@ -779,21 +892,20 @@ export function SceneRewriteLoader({ sceneIndex = 1, compact = true, style = {} 
   return (
     <WorkflowLoadingScreen
       icon={Sparkles}
-      badgeLabel="AI Scene Director"
-      title={`Rewriting Scene ${sceneIndex} with AI…`}
-      subtitle="Applying creative prompt instructions while maintaining storyline continuity."
+      badgeLabel=""
+      title={`Improving Scene ${sceneIndex}…`}
+      subtitle="Applying your instructions while keeping story continuity."
       stages={[
-        { title: 'Analyzing Scene Context', desc: 'Checking character actions and preceding scene beat' },
-        { title: 'Applying Creative Instructions', desc: 'Modifying dialogue cadence, camera angle, and tone' },
-        { title: 'Continuity Verification', desc: 'Confirming seamless transition into following scene' },
+        { title: 'Checking Context', desc: 'Reading surrounding scenes and cast' },
+        { title: 'Rewriting Scene', desc: 'Updating dialogue and camera action' },
+        { title: 'Continuity Check', desc: 'Matching setting and character transitions' },
       ]}
       tips={[
-        'Scene Flow: Keeping dialogue concise allows the visual action to breathe and captivates the viewer.',
-        'Camera Polish: Changing camera shot angles between scenes keeps visual engagement high.',
+        'Varying shot framing between scenes keeps viewer attention high.',
       ]}
-      tipPrefix="Director Note"
+      tipPrefix="Tip"
       estimatedDuration="~4–7s"
-      nextStep="Review revised scene script and accept changes"
+      nextStep="Review updated scene and accept or cancel"
       compact={compact}
       style={style}
     />
@@ -896,33 +1008,89 @@ export function AuthSessionLoader({ style = {} }) {
 /**
  * 11. Script Verification & Quality Gate Loader
  */
-export function ScriptVerificationLoader({ businessName, compact = true, style = {} }) {
+export function ScriptVerificationLoader({
+  businessName,
+  compact = true,
+  onRetry = null,
+  onCancel = null,
+  error = null,
+  style = {},
+}) {
   return (
     <WorkflowLoadingScreen
       icon={Film}
-      badgeLabel="Script Quality Gate & AI Normalizer"
-      title="Verifying Script & Checking Quality Gate…"
-      subtitle={`Analyzing 4-scene narrative structure and formatting camera prompts for ${businessName || 'video production'}.`}
+      badgeLabel=""
+      title="Verifying Script…"
+      subtitle={`Checking continuity and camera formatting for ${businessName || 'your video'}.`}
       stages={[
-        { title: 'Deconstructing 4 Story Beats', desc: 'Parsing Hook, Problem, Realization, and Resolution beats' },
-        { title: 'Section 8 Quality Gate Check', desc: 'Verifying single setting, character continuity, and mobile framing rules' },
-        { title: 'Structuring Video Prompts', desc: 'Separating visual action from dialogue and compiling camera movements' },
+        { title: 'Parsing Scene Beats', desc: 'Reading Hook, Build, Turn, and Resolution beats', timeRange: '0–8s' },
+        { title: 'Section 8 Quality Gate', desc: 'Checking single setting, cast continuity, and framing', timeRange: '8–22s' },
+        { title: 'Structuring Video Shots', desc: 'Separating dialogue and camera motion', timeRange: '22s+' },
       ]}
       tips={[
-        'Section 8 Quality Gate ensures characters and setting stay 100% consistent across all 4 shots in the video.',
-        'Visual Separation: Text overlays are cleanly separated from visual scenes to prevent distorted text rendering.',
-        'Single Setting Continuity: Holding one continuous environment prevents background morphing in AI video generation.',
-        'Spoken Dialogue Timing: Each scene is paced to fit 3–5 seconds of natural speech cadence.',
+        'Keeping one consistent setting prevents background shifts between shots.',
+        'Section 8 Quality Gate keeps cast and dialogue pacing consistent.',
       ]}
-      tipPrefix="Quality Gate Insight"
-      estimatedDuration="~4–8s"
+      tipPrefix="Tip"
+      estimatedDuration="~15–35s"
+      expectedRangeSec={[15, 35]}
+      stallRecoveryAfterSec={45}
       metadata={[
         businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
-        { label: 'Quality Gate', value: '18 Automated Checks', isPill: true },
-        { label: 'Target Structure', value: '4 Camera Beats', isPill: true },
+        { label: 'Checks', value: '18 Rules', isPill: true },
       ].filter(Boolean)}
-      nextStep="Review extracted cast continuity and customized production shots"
+      nextStep="Review extracted cast, setting, and shots"
       compact={compact}
+      error={error}
+      onRetry={onRetry}
+      onCancel={onCancel}
+      cancelLabel="Back to Script Input"
+      style={style}
+    />
+  );
+}
+
+/**
+ * 12. AI Understanding / Strategy Analysis Loader
+ */
+export function AiUnderstandingLoader({
+  businessName,
+  category,
+  onRetry = null,
+  onCancel = null,
+  cancelLabel = 'Back to Settings',
+  error = null,
+  compact = false,
+  style = {},
+}) {
+  return (
+    <WorkflowLoadingScreen
+      icon={Sparkles}
+      badgeLabel=""
+      title="Analyzing Brief & Settings…"
+      subtitle={`Reviewing offer, audience, format, and rules for ${businessName || 'your business'}.`}
+      stages={[
+        { title: 'Reading Brief & Brand', desc: 'Extracting offer, buyer focus, and occasion context', timeRange: '0–6s' },
+        { title: 'Checking Settings & Rules', desc: 'Aligning language, format, and Creative Instructions', timeRange: '6–16s' },
+        { title: 'Preparing Strategy Summary', desc: 'Formatting editable points for approval', timeRange: '16s+' },
+      ]}
+      tips={[
+        'Edits on the next screen immediately guide Creative Ideas and Scripts.',
+      ]}
+      tipPrefix="Tip"
+      estimatedDuration="~10–25s"
+      expectedRangeSec={[10, 25]}
+      stallRecoveryAfterSec={35}
+      metadata={[
+        businessName ? { label: 'Brand', value: businessName, isPill: true } : null,
+        category ? { label: 'Category', value: category, isPill: true } : null,
+      ].filter(Boolean)}
+      nextStep="Review and approve before generating ideas"
+      compact={compact}
+      error={error}
+      onRetry={onRetry}
+      onCancel={onCancel}
+      cancelLabel={cancelLabel}
       style={style}
     />
   );

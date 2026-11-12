@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { downloadVideoWithTicket } from '../utils/downloadVideo.js';
 import { PostGenerationFeedbackPrompt } from './v2/VideoRatingControls.jsx';
 import {
@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ArrowRight,
   ArrowLeft,
   Edit3,
@@ -51,6 +52,12 @@ import {
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
 import { isVideoLinkExpired } from '../utils/videoLink.js';
+import VideoFormatFields from './v2/VideoFormatFields.jsx';
+import OptionalFieldDisclosure from './v2/OptionalFieldDisclosure.jsx';
+import HelpTooltip from './v2/HelpTooltip.jsx';
+import ContextualTipBanner from './v2/ContextualTipBanner.jsx';
+import { HELP_TOOLTIPS, CONTEXTUAL_TIPS } from '../data/tourSteps.js';
+import { shouldShowContextualTip } from '../utils/onboarding.js';
 import {
   BrandResearchLoader,
   IdeaGenerationLoader,
@@ -58,6 +65,10 @@ import {
   StoryGenerationLoader,
   ScriptGenerationLoader,
 } from './v2/WorkflowLoadingScreen.jsx';
+import CreativeInstructionsSection from './v2/CreativeInstructionsSection.jsx';
+import OccasionEventSection from './v2/OccasionEventSection.jsx';
+import ProductPhotoSection from './v2/ProductPhotoSection.jsx';
+import TargetAudienceSection from './v2/TargetAudienceSection.jsx';
 
 /**
  * 6 STREAMLINED STAGES FOR GUIDED CREATIVE STUDIO
@@ -65,10 +76,11 @@ import {
 export const STUDIO_STAGES = [
   { id: 'brief', num: '01', label: 'Brief' },
   { id: 'settings', num: '02', label: 'Settings' },
-  { id: 'idea', num: '03', label: 'Idea' },
-  { id: 'opening', num: '04', label: 'Opening' },
-  { id: 'script', num: '05', label: 'Script' },
-  { id: 'video', num: '06', label: 'Video' },
+  { id: 'understanding', num: '03', label: 'Understanding' },
+  { id: 'idea', num: '04', label: 'Ideas' },
+  { id: 'opening', num: '05', label: 'Opening' },
+  { id: 'script', num: '06', label: 'Script' },
+  { id: 'video', num: '07', label: 'Video' },
 ];
 
 /**
@@ -166,6 +178,7 @@ export function StudioProgressHeader({
  */
 export function StudioChoicesBar({
   explicitChoices = {},
+  currentStage = null,
   onNavigateStage,
   hasStaleWarning,
   onApplyUpdate,
@@ -189,16 +202,17 @@ export function StudioChoicesBar({
   if (idea) activeChoices.push({ type: 'idea', label: idea, prefix: 'Idea', stage: 'idea' });
   if (opening) activeChoices.push({ type: 'opening', label: opening, prefix: 'Opening', stage: 'opening' });
 
-  // STRICT RULE: If zero explicit choices, hide the entire strip!
-  if (activeChoices.length === 0) return null;
+  // On Settings stage, avoid echoing back settings already visible in the controls unless stale update banner is active
+  const visibleChoices = currentStage === 'settings' && !hasStaleWarning
+    ? activeChoices.filter((c) => c.stage !== 'settings')
+    : activeChoices;
+
+  // STRICT RULE: If zero explicit choices to display, hide the entire strip!
+  if (visibleChoices.length === 0) return null;
 
   return (
     <div style={{
-      backgroundColor: 'var(--bg-surface)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 8,
-      padding: '8px 12px',
-      marginBottom: 18,
+      padding: '4px 4px 12px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -206,12 +220,11 @@ export function StudioChoicesBar({
       flexWrap: 'wrap',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Layers size={12} />
-          <span>Your Choices:</span>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)' }}>
+          Choices:
         </span>
 
-        {activeChoices.map((item, idx) => (
+        {visibleChoices.map((item, idx) => (
           <React.Fragment key={item.type}>
             <button
               type="button"
@@ -220,39 +233,38 @@ export function StudioChoicesBar({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                padding: '2px 8px',
-                borderRadius: 6,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 11,
-                color: 'var(--text-primary)',
+                padding: '2px 4px',
+                borderRadius: 4,
+                background: 'none',
+                border: 'none',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
               }}
-              title={`Click to edit ${item.prefix || item.type}`}
+              title={`Edit ${item.prefix || item.type}`}
             >
               {item.prefix && <span style={{ color: 'var(--text-tertiary)' }}>{item.prefix}:</span>}
-              <strong style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <strong style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {item.label}
               </strong>
             </button>
-            {idx < activeChoices.length - 1 && (
-              <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>·</span>
+            {idx < visibleChoices.length - 1 && (
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>·</span>
             )}
           </React.Fragment>
         ))}
       </div>
 
       {hasStaleWarning && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#eab308' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#eab308' }}>
           <AlertCircle size={13} />
-          <span>Changing this will update the video.</span>
+          <span>Update script to apply changes</span>
           <button
             type="button"
             onClick={onApplyUpdate}
             style={{
-              padding: '3px 8px',
-              borderRadius: 4,
+              padding: '3px 9px',
+              borderRadius: 5,
               backgroundColor: 'var(--accent-primary)',
               color: '#ffffff',
               border: 'none',
@@ -315,8 +327,8 @@ export function Screen01Business({
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
             {userContext.businessName?.trim()
-              ? 'Your brand identity is configured. You can edit details below or proceed directly to your video brief.'
-              : "We'll use this to understand your market and craft relevant commercial ideas."}
+              ? 'Edit your brand profile below or continue to your brief.'
+              : 'Used to tailor scripts and video ideas to your brand.'}
           </p>
         </div>
 
@@ -685,8 +697,28 @@ export function Screen02Brief({
   onOpenScriptModal,
   onOpenUrlModal,
   onEditBrand,
+  guardrailDraftInputs = null,
+  onGuardrailDraftChange = null,
+  optionalExpanded = null,
+  onOptionalExpandedChange = null,
 }) {
   const [errorMsg, setErrorMsg] = useState('');
+  const [localOptionalExpanded, setLocalOptionalExpanded] = useState({
+    inspiration: false,
+    audience: false,
+    instructions: false,
+    occasion: false,
+    productPhoto: false,
+  });
+  const optExpanded = optionalExpanded || localOptionalExpanded;
+  const setOptSectionExpanded = (key, next) => {
+    const updated = { ...optExpanded, [key]: next };
+    if (typeof onOptionalExpandedChange === 'function') {
+      onOptionalExpandedChange(updated);
+    } else {
+      setLocalOptionalExpanded(updated);
+    }
+  };
 
   const SUGGESTION_CHIPS = [
     { label: '🎁 Offer', starter: 'Announce a special limited-time festive discount: ' },
@@ -802,11 +834,16 @@ export function Screen02Brief({
       {/* Title & Short Explanation with Contextual Actions */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            What do you want this video to say?
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Your Video Brief</span>
+            <HelpTooltip
+              title={HELP_TOOLTIPS.brief_input.title}
+              body={HELP_TOOLTIPS.brief_input.body}
+              ariaLabel="Tips for writing your brief"
+            />
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Tell us what you want to promote, explain, announce or show. Write it in your own words.
+            Describe what you want to promote or show in your own words.
           </p>
         </div>
 
@@ -936,327 +973,141 @@ export function Screen02Brief({
           <span>{charCount} characters</span>
         </div>
 
-        {/* Small Visual Suggestion Cards */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-            Need inspiration? Try starting with:
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {SUGGESTION_CHIPS.map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleApplySuggestion(chip.starter)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 20,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
+        {/* Small Collapsible Inspiration Starters (Optional) */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+          <button
+            type="button"
+            aria-expanded={Boolean(optExpanded.inspiration)}
+            aria-controls="director-brief-inspiration-panel"
+            onClick={() => setOptSectionExpanded('inspiration', !optExpanded.inspiration)}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '2px 0',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            {optExpanded.inspiration ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronRight size={13} aria-hidden="true" />}
+            <Lightbulb size={12} style={{ color: 'var(--accent-primary)' }} aria-hidden="true" />
+            <span>Need inspiration? Sample starters &amp; category ideas</span>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>(Optional)</span>
+          </button>
 
-          {/* Dynamic Category Suggestions if available */}
-          {Array.isArray(briefSuggestions) && briefSuggestions.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
-                Ideas for your business category:
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {briefSuggestions.slice(0, 3).map((sug, sIdx) => (
+          {optExpanded.inspiration && (
+            <div id="director-brief-inspiration-panel" style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {SUGGESTION_CHIPS.map((chip, idx) => (
                   <button
-                    key={sIdx}
+                    key={idx}
                     type="button"
-                    onClick={() => {
-                      updateUserContext('brief', sug);
-                      if (errorMsg) setErrorMsg('');
-                    }}
+                    onClick={() => handleApplySuggestion(chip.starter)}
                     style={{
-                      textAlign: 'left',
-                      padding: '7px 12px',
-                      borderRadius: 6,
-                      fontSize: 12,
+                      padding: '6px 12px',
+                      borderRadius: 20,
+                      fontSize: 11,
+                      fontWeight: 600,
                       backgroundColor: 'var(--bg-elevated)',
                       border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-primary)',
+                      color: 'var(--text-secondary)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    💡 {sug}
+                    {chip.label}
                   </button>
                 ))}
               </div>
+
+              {/* Dynamic Category Suggestions if available */}
+              {Array.isArray(briefSuggestions) && briefSuggestions.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                    Ideas for your business category:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {briefSuggestions.slice(0, 3).map((sug, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => {
+                          updateUserContext('brief', sug);
+                          if (errorMsg) setErrorMsg('');
+                        }}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        💡 {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Target Audience for this Video (Campaign-Specific) */}
-      <div style={{
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 12,
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Users size={15} style={{ color: 'var(--accent-primary)' }} />
-              <span>Who is this video for? (Target Audience)</span>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-              Specify the audience or buyers for this specific video. You can change this for each video you make.
-            </p>
-          </div>
-        </div>
+      {/* Optional Details Grouping (Collapsed by default) */}
+      <div data-testid="brief-optional-details" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', padding: '2px 2px 0' }}>
+          Optional Details
+        </span>
 
-        <input
-          type="text"
-          value={userContext.targetAudience || ''}
-          onChange={(e) => updateUserContext('targetAudience', e.target.value)}
-          placeholder="e.g. Festival gift buyers, bridal shoppers, young professionals, neighborhood families..."
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '11px 14px',
-            fontSize: 13,
-            borderRadius: 8,
-            border: '1px solid var(--border-default)',
-            backgroundColor: 'var(--bg-elevated)',
-            color: 'var(--text-primary)',
-            outline: 'none',
-          }}
+        {/* Target Audience (Optional · Collapsed by default) */}
+        <TargetAudienceSection
+          id="director-target-audience"
+          testId="target-audience-section"
+          targetAudience={userContext.targetAudience || ''}
+          businessType={userContext.businessType}
+          onChange={(val) => updateUserContext('targetAudience', val)}
+          expanded={Boolean(optExpanded.audience)}
+          onToggleExpand={(next) => setOptSectionExpanded('audience', next)}
         />
 
-        {/* Suggestion Chips for Campaign Audience */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-            Click to apply or combine audience ideas:
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {getSuggestedAudiences(userContext.businessType).map((aud, aIdx) => {
-              const currentAudience = (userContext.targetAudience || '').trim();
-              const currentItems = currentAudience
-                ? currentAudience.split(' · ').map((s) => s.trim()).filter(Boolean)
-                : [];
-              const isSelected = currentItems.some((s) => s.toLowerCase() === aud.toLowerCase());
-
-              return (
-                <button
-                  key={aIdx}
-                  type="button"
-                  onClick={() => {
-                    if (isSelected) {
-                      const next = currentItems.filter((s) => s.toLowerCase() !== aud.toLowerCase());
-                      updateUserContext('targetAudience', next.join(' · '));
-                    } else {
-                      updateUserContext('targetAudience', [...currentItems, aud].join(' · '));
-                    }
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 20,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-elevated)',
-                    border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {isSelected ? `✓ ${aud}` : `+ ${aud}`}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Product Image Upload (Optional) */}
-      <div style={{
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 12,
-        padding: 18,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Package size={15} style={{ color: 'var(--accent-primary)' }} />
-              <span>Product Image (Optional)</span>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-              Upload a clear photo of your product or packaging so the video features your exact item.
-            </p>
-          </div>
-          {userContext.productPhoto && (
-            <span style={{
-              fontSize: 11,
-              fontWeight: 700,
-              padding: '3px 8px',
-              borderRadius: 12,
-              backgroundColor: 'rgba(34, 197, 94, 0.15)',
-              color: 'var(--success)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4
-            }}>
-              <CheckCircle2 size={12} />
-              Attached
-            </span>
-          )}
-        </div>
-
-        {userContext.productPhoto ? (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 14,
-            padding: '10px 14px',
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {(userContext.productPhoto.previewUrl || userContext.productPhoto.data) && (
-                <img
-                  src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
-                  alt="Product preview"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 6,
-                    objectFit: 'cover',
-                    border: '1px solid var(--border-subtle)'
-                  }}
-                />
-              )}
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {userContext.productPhoto.name || 'Product photo'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  Ready for video production
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{
-                padding: '6px 12px',
-                borderRadius: 6,
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5
-              }}>
-                <Upload size={12} />
-                <span>Change</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-                  }}
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => updateUserContext('productPhoto', null)}
-                aria-label="Remove product photo"
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: 'var(--error)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                <Trash2 size={12} />
-                <span>Remove</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <label style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            padding: '18px 16px',
-            borderRadius: 8,
-            border: '2px dashed var(--border-default)',
-            backgroundColor: 'var(--bg-elevated)',
-            cursor: 'pointer',
-            transition: 'border-color 0.15s ease',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: 'var(--bg-surface)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-primary)',
-              border: '1px solid var(--border-subtle)'
-            }}>
-              <Upload size={14} />
-            </div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Click to upload product photo (Optional)
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                PNG, JPG or WEBP · up to 10MB
-              </div>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-              }}
+            {/* Creative Instructions (Optional · Collapsed by default) */}
+            <CreativeInstructionsSection
+              creativeGuardrails={userContext.creativeGuardrails}
+              onChange={(next) => updateUserContext('creativeGuardrails', next)}
+              draftInputs={guardrailDraftInputs}
+              onDraftChange={onGuardrailDraftChange}
+              expanded={Boolean(optExpanded.instructions)}
+              onToggleExpand={(next) => setOptSectionExpanded('instructions', next)}
             />
-          </label>
-        )}
-      </div>
+
+            {/* Occasion & Event (Optional · Collapsed by default) */}
+            <OccasionEventSection
+              eventContext={userContext.eventContext}
+              onChange={(next) => updateUserContext('eventContext', next)}
+              expanded={Boolean(optExpanded.occasion)}
+              onToggleExpand={(next) => setOptSectionExpanded('occasion', next)}
+            />
+
+            {/* Product Photo (Optional · Collapsed by default) */}
+            <ProductPhotoSection
+              id="director-product-photo"
+              testId="product-photo-section"
+              productPhoto={userContext.productPhoto}
+              onUploadFile={(file) => handleFileUpload && handleFileUpload(file, 'productPhoto')}
+              onRemove={() => updateUserContext('productPhoto', null)}
+              expanded={Boolean(optExpanded.productPhoto)}
+              onToggleExpand={(next) => setOptSectionExpanded('productPhoto', next)}
+            />
+          </div>
 
       {/* Dynamic Background Research Status */}
       {isResearching && (
@@ -1289,6 +1140,28 @@ export function Screen02Brief({
               <div><strong>Opportunity:</strong> {researchData.creativeOpportunity}</div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Inline Validation Message near Continue Bar */}
+      {errorMsg && (
+        <div
+          role="alert"
+          style={{
+            padding: '10px 14px',
+            borderRadius: 8,
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            color: 'var(--error, #ef4444)',
+            fontSize: 12,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <AlertCircle size={14} />
+          <span>{errorMsg}</span>
         </div>
       )}
 
@@ -1358,50 +1231,22 @@ export function Screen03Settings({
   ];
 
   const DIMENSION_OPTIONS = [
-    { id: '9:16', label: '9:16 Vertical', desc: 'Reels / Shorts / TikTok', icon: '📱' },
-    { id: '16:9', label: '16:9 Landscape', desc: 'YouTube / TV / Desktop', icon: '🖥️' },
-    { id: '1:1', label: '1:1 Square', desc: 'Social Feed / Posts', icon: '⏹️' },
+    { id: '9:16', label: '9:16 Vertical', frameWidth: 11, frameHeight: 17 },
+    { id: '16:9', label: '16:9 Landscape', frameWidth: 17, frameHeight: 11 },
+    { id: '1:1', label: '1:1 Square', frameWidth: 14, frameHeight: 14 },
   ];
 
   const DURATION_OPTIONS = [
-    { id: '15s', label: '15s Hook', desc: 'Fast punchy ad' },
-    { id: '20s', label: '20s Standard', desc: 'Commercial pacing', recommended: true },
-    { id: '30s', label: '30s Extended', desc: 'Full product story' },
+    { id: '15s', label: '15s' },
+    { id: '20s', label: '20s', popular: true },
+    { id: '30s', label: '30s' },
   ];
 
   const STYLES = [
-    {
-      id: 'Conversational / Dialogue',
-      label: 'Conversational',
-      icon: '💬',
-      tagline: 'Two people in dialogue.',
-      detail: 'Relatable back-and-forth chat, customer & merchant banter',
-      recommended: false,
-    },
-    {
-      id: 'UGC / Creator-style',
-      label: 'UGC',
-      icon: '📱',
-      tagline: 'Feels like a real person made it.',
-      detail: 'Direct-to-camera, creator rhythm & natural mobile energy',
-      recommended: true,
-    },
-    {
-      id: 'Product Demo',
-      label: 'Product Demo',
-      icon: '📦',
-      tagline: 'Show the product in action.',
-      detail: 'Hands-on tactile textures & clear visual proof',
-      recommended: false,
-    },
-    {
-      id: 'Storytelling',
-      label: 'Story',
-      icon: '🎬',
-      tagline: 'A short story with people.',
-      detail: '2-character relatable dilemma & emotional payoff',
-      recommended: false,
-    },
+    { id: 'Conversational / Dialogue', label: 'Conversational' },
+    { id: 'UGC / Creator-style', label: 'UGC' },
+    { id: 'Product Demo', label: 'Product Demo' },
+    { id: 'Storytelling', label: 'Story' },
   ];
 
   const currentLang = userContext.language || 'English';
@@ -1409,136 +1254,94 @@ export function Screen03Settings({
   const currentStyle = userContext.creativeStyle || 'UGC / Creator-style';
   const currentDimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      {/* Title & Short Explanation */}
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          How should we make the video?
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Set your language, video dimension, video length, and the creative feeling for the film.
-        </p>
-      </div>
+  const bType = String(userContext.businessType || '').toLowerCase();
+  const isService = bType.includes('gym') || bType.includes('fitness') || bType.includes('salon') || bType.includes('beauty') || bType.includes('spa') || bType.includes('clinic') || bType.includes('dental') || bType.includes('health') || bType.includes('coaching') || bType.includes('tuition') || bType.includes('consult') || bType.includes('service') || bType.includes('agency') || bType.includes('interior') || bType.includes('repair');
 
-      {/* Settings Container */}
+  return (
+    <div data-testid="director-settings-screen" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+        Video Settings
+      </h1>
+
+      {/* Compact Primary Settings Container */}
       <div style={{
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-default)',
         borderRadius: 12,
-        padding: 24,
+        padding: '18px 20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 22,
+        gap: 18,
       }}>
-        {/* 1. Language */}
-        <div>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-            1. Language
-          </label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {LANGUAGES.map((lang) => {
-              const isSelected = currentLang === lang;
-              return (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => {
-                    if (onLanguageChange) onLanguageChange(lang);
-                    else updateUserContext('language', lang);
-                  }}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontWeight: isSelected ? 700 : 500,
-                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
+        {/* 1. Language Dropdown & 3. Video Length Segmented Control */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 16, alignItems: 'end' }}>
+          <div>
+            <label
+              htmlFor="director-ad-language"
+              style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}
+            >
+              Language
+            </label>
+            <select
+              id="director-ad-language"
+              aria-label="Language"
+              data-testid="director-language-select"
+              value={currentLang}
+              onChange={(e) => {
+                const lang = e.target.value;
+                if (onLanguageChange) onLanguageChange(lang);
+                else updateUserContext('language', lang);
+              }}
+              style={{
+                width: '100%',
+                height: 38,
+                padding: '0 12px',
+                borderRadius: 8,
+                border: '1px solid var(--border-default)',
+                backgroundColor: 'var(--bg-elevated)',
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              {(LANGUAGES.includes(currentLang) ? LANGUAGES : [currentLang, ...LANGUAGES]).map((lang) => (
+                <option key={lang} value={lang}>
                   {lang}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 2. Video Dimension & 3. Video Length */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-          {/* Video Dimension */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
-                2. Video Dimension
-              </label>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                {currentDimension === '16:9' ? 'Landscape (YouTube)' : currentDimension === '1:1' ? 'Square (Feed)' : 'Vertical (Reels/Shorts)'}
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {DIMENSION_OPTIONS.map((dim) => {
-                const isSelected = currentDimension === dim.id;
-                return (
-                  <button
-                    key={dim.id}
-                    type="button"
-                    onClick={() => {
-                      if (onDimensionChange) onDimensionChange(dim.id, dim.label);
-                      if (onPlatformChange) onPlatformChange(dim.label, dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
-                      if (updateUserContext) {
-                        updateUserContext('aspectRatio', dim.id);
-                        updateUserContext('dimension', dim.id);
-                        updateUserContext('platform', dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
-                      padding: '10px 6px',
-                      borderRadius: 8,
-                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <span style={{ fontSize: 16 }}>{dim.icon}</span>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                      {dim.label}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                      {dim.desc}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Video Length / Duration */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
-                3. Video Length
-              </label>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>
-                Target run-time
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+              Video Length
+            </span>
+            <div
+              role="group"
+              aria-label="Video Length"
+              data-testid="director-duration-segmented"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                padding: 3,
+                height: 38,
+                boxSizing: 'border-box',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                gap: 3,
+              }}
+            >
               {DURATION_OPTIONS.map((dur) => {
                 const isSelected = currentDuration === dur.id;
                 return (
                   <button
                     key={dur.id}
                     type="button"
+                    aria-pressed={isSelected}
+                    data-testid={`director-duration-option-${dur.id}`}
                     onClick={() => {
                       if (onDurationChange) onDurationChange(dur.id);
                       if (updateUserContext) {
@@ -1547,47 +1350,33 @@ export function Screen03Settings({
                       }
                     }}
                     style={{
-                      display: 'flex',
-                      flexDirection: 'column',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 12.5,
+                      fontWeight: isSelected ? 700 : 500,
+                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: 4,
-                      padding: '10px 6px',
-                      borderRadius: 8,
-                      backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                      border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
+                      gap: 5,
                       transition: 'all 0.15s ease',
-                      position: 'relative',
                     }}
                   >
-                    {dur.recommended && (
+                    <span>{dur.label}</span>
+                    {dur.popular && (
                       <span
                         style={{
-                          position: 'absolute',
-                          top: -7,
-                          right: 6,
-                          fontSize: 9,
+                          fontSize: 9.5,
                           fontWeight: 700,
-                          padding: '1px 5px',
-                          borderRadius: 4,
-                          backgroundColor: 'var(--accent-primary)',
-                          color: '#FFFFFF',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
+                          opacity: isSelected ? 0.9 : 0.75,
+                          color: isSelected ? '#ffffff' : 'var(--accent-primary)',
                         }}
                       >
                         Popular
                       </span>
                     )}
-                    <span style={{ fontSize: 16 }}>⏱️</span>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                      {dur.label}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                      {dur.desc}
-                    </div>
                   </button>
                 );
               })}
@@ -1595,142 +1384,211 @@ export function Screen03Settings({
           </div>
         </div>
 
-        {/* 3. Style ("How should it feel?") */}
+        {/* 2. Video Dimension (3 compact options with aspect-ratio icon + label only) */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
-              4. How should it feel?
-            </label>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Sets the story architecture and pacing
-            </span>
+          <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+            Video Dimension
+          </span>
+          <div
+            role="group"
+            aria-label="Video Dimension"
+            data-testid="director-dimension-group"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
+              gap: 8,
+            }}
+          >
+            {DIMENSION_OPTIONS.map((dim) => {
+              const isSelected = currentDimension === dim.id;
+              return (
+                <button
+                  key={dim.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  data-testid={`director-dimension-option-${dim.id}`}
+                  onClick={() => {
+                    if (onDimensionChange) onDimensionChange(dim.id, dim.label);
+                    if (onPlatformChange) onPlatformChange(dim.label, dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
+                    if (updateUserContext) {
+                      updateUserContext('aspectRatio', dim.id);
+                      updateUserContext('dimension', dim.id);
+                      updateUserContext('platform', dim.id === '16:9' ? 'YouTube / 16:9' : dim.id === '1:1' ? 'Social Feed / 1:1' : 'Instagram Reels / 9:16');
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
+                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                    boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: dim.frameWidth,
+                        height: dim.frameHeight,
+                        borderRadius: 2,
+                        border: isSelected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
+                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span>{dim.label}</span>
+                  </span>
+                  {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+        {/* 4. Creative Style (4 compact tiles, style names only) */}
+        <div>
+          <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 7 }}>
+            Creative Style
+          </span>
+
+          <div
+            role="group"
+            aria-label="Creative Style"
+            data-testid="director-style-group"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))',
+              gap: 8,
+            }}
+          >
             {STYLES.map((st) => {
               const isSelected = currentStyle === st.id ||
                 (st.id.includes('UGC') && currentStyle.includes('UGC')) ||
                 (st.id.includes('Comedy') && currentStyle.includes('Comedy'));
 
               return (
-                <div
+                <button
                   key={st.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  data-testid={`director-style-option-${st.label.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={() => {
                     if (onStyleChange) onStyleChange(st.id, st.label);
                     else updateUserContext('creativeStyle', st.id);
                   }}
                   style={{
                     backgroundColor: isSelected ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                    borderRadius: 10,
-                    padding: 14,
+                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                    boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                    borderRadius: 8,
+                    padding: '10px 12px',
                     cursor: 'pointer',
                     display: 'flex',
-                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     gap: 6,
-                    position: 'relative',
-                    transition: 'all 0.15s ease'
+                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? 700 : 500,
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 18 }}>{st.icon}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {st.label}
-                      </span>
-                    </div>
-                    {st.recommended && (
-                      <span style={{
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        color: 'var(--accent-primary)',
-                        letterSpacing: '0.04em'
-                      }}>
-                        RECOMMENDED
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    "{st.tagline}"
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.3 }}>
-                    {st.detail}
-                  </div>
-                </div>
+                  <span>{st.label}</span>
+                  {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* 5. Product Image Asset (Optional - only for physical product businesses) */}
-        {(() => {
-          const bType = String(userContext.businessType || '').toLowerCase();
-          const isService = bType.includes('gym') || bType.includes('fitness') || bType.includes('salon') || bType.includes('beauty') || bType.includes('spa') || bType.includes('clinic') || bType.includes('dental') || bType.includes('health') || bType.includes('coaching') || bType.includes('tuition') || bType.includes('consult') || bType.includes('service') || bType.includes('agency') || bType.includes('interior') || bType.includes('repair');
-          if (isService) return null;
-          return (
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Package size={13} style={{ color: 'var(--accent-primary)' }} />
-                <span>5. Product Asset (Optional)</span>
-              </label>
-              {userContext.productPhoto && (
-                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <CheckCircle2 size={12} />
-                  Attached
+        {/* 5. Compact Two-Column Optional Assets: Product Photo & Logo Image */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 10 }}>
+            Optional Assets
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
+            {/* Product Photo (only for physical product businesses) */}
+            {!isService && (
+              <div data-testid="director-settings-product-asset" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <Package size={12} aria-hidden="true" />
+                  <span>Product Photo</span>
                 </span>
-              )}
-            </div>
-  
-            {userContext.productPhoto ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                backgroundColor: 'var(--bg-elevated)',
-                borderRadius: 8,
-                border: '1px solid var(--border-subtle)',
-                flexWrap: 'wrap',
-                gap: 10
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {(userContext.productPhoto.previewUrl || userContext.productPhoto.data) && (
-                    <img
-                      src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
-                      alt="Product"
-                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
-                    />
-                  )}
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {userContext.productPhoto.name || 'Product photo'}
+
+                {userContext.productPhoto ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '6px 10px',
+                    backgroundColor: 'var(--bg-elevated)',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-subtle)',
+                    gap: 8,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      {(userContext.productPhoto.previewUrl || userContext.productPhoto.data) && (
+                        <img
+                          src={userContext.productPhoto.previewUrl || `data:${userContext.productPhoto.mime || 'image/jpeg'};base64,${userContext.productPhoto.data}`}
+                          alt="Product"
+                          style={{ width: 28, height: 28, borderRadius: 5, objectFit: 'cover', flexShrink: 0 }}
+                        />
+                      )}
+                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {userContext.productPhoto.name || 'Product photo'}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                      {userContext.productPhoto?.fromWebsite ? '✓ Attached from website' : 'Attached for video production'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Replace
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => updateUserContext('productPhoto', null)}
+                        aria-label="Remove product photo"
+                        style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
-                </div>
-  
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                ) : (
                   <label style={{
-                    padding: '4px 10px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 4
+                    gap: 6,
+                    padding: '7px 11px',
+                    borderRadius: 8,
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px dashed var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    alignSelf: 'flex-start',
                   }}>
-                    <Upload size={11} />
-                    <span>Change</span>
+                    <Upload size={12} aria-hidden="true" />
+                    <span>Upload product photo</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1741,201 +1599,104 @@ export function Screen03Settings({
                       }}
                     />
                   </label>
-  
-                  <button
-                    type="button"
-                    onClick={() => updateUserContext('productPhoto', null)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      color: 'var(--error)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3
-                    }}
-                  >
-                    <Trash2 size={11} />
-                    <span>Remove</span>
-                  </button>
-                </div>
+                )}
               </div>
-            ) : (
-              <label style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 14px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px dashed var(--border-default)',
-                color: 'var(--accent-primary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'border-color 0.15s ease'
-              }}>
-                <Upload size={13} />
-                <span>Upload product photo (Optional)</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && handleFileUpload) handleFileUpload(file, 'productPhoto');
-                  }}
-                />
-              </label>
             )}
-          </div>
-          );
-        })()}
 
-        {/* 6. Logo Image (Optional) — chosen per video; prefilled from the business profile logo */}
-        {(() => {
-          const logo = videoLogoOf(userContext);
-          const profileLogo = profileLogoOf(userContext);
-          const fromProfile = userContext.videoLogo === undefined && Boolean(logo);
-          const profileUnusable = userContext.videoLogo === undefined && !logo && Boolean(profileLogo);
-          const canRestoreProfile = userContext.videoLogo === null && Boolean(toImageFile(profileLogo));
-          const bType = String(userContext.businessType || '').toLowerCase();
-          const productShown = !/gym|fitness|salon|beauty|spa|clinic|dental|health|coaching|tuition|consult|service|agency|interior|repair/.test(bType);
-          const pickLogo = (e) => {
-            const file = e.target.files?.[0];
-            if (file && handleFileUpload) handleFileUpload(file, 'videoLogo');
-          };
-          return (
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Building2 size={13} style={{ color: 'var(--accent-primary)' }} />
-                <span>{productShown ? 6 : 5}. Logo Image (Optional)</span>
-              </label>
-              {logo && (
-                <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <CheckCircle2 size={12} />
-                  Attached
-                </span>
-              )}
-            </div>
-
-            {logo ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                backgroundColor: 'var(--bg-elevated)',
-                borderRadius: 8,
-                border: '1px solid var(--border-subtle)',
-                flexWrap: 'wrap',
-                gap: 10
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <img
-                    src={`data:${logo.mime};base64,${logo.data}`}
-                    alt="Logo"
-                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-                  />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {logo.name}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                      {fromProfile ? 'From your business profile · used in this video' : 'Used in this video'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{
-                    padding: '4px 10px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}>
-                    <Upload size={11} />
-                    <span>Replace</span>
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => updateUserContext('videoLogo', null)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      color: 'var(--error)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3
-                    }}
-                  >
-                    <Trash2 size={11} />
-                    <span>Remove</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                <label style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px dashed var(--border-default)',
-                  color: 'var(--accent-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'border-color 0.15s ease'
-                }}>
-                  <Upload size={13} />
-                  <span>Upload logo image (Optional)</span>
-                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
-                </label>
-                {profileUnusable && (
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    Your business profile logo can't be used in videos — upload a PNG, JPG or WebP.
+            {/* Logo Image (separate capability from Product Photo) */}
+            {(() => {
+              const logo = videoLogoOf(userContext);
+              const profileLogo = profileLogoOf(userContext);
+              const profileUnusable = userContext.videoLogo === undefined && !logo && Boolean(profileLogo);
+              const canRestoreProfile = userContext.videoLogo === null && Boolean(toImageFile(profileLogo));
+              const pickLogo = (e) => {
+                const file = e.target.files?.[0];
+                if (file && handleFileUpload) handleFileUpload(file, 'videoLogo');
+              };
+              return (
+                <div data-testid="director-settings-logo-asset" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Building2 size={12} aria-hidden="true" />
+                    <span>Logo Image</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>· +5s outro</span>
                   </span>
-                )}
-                {canRestoreProfile && (
-                  <button
-                    type="button"
-                    onClick={() => updateUserContext('videoLogo', undefined)}
-                    style={{ padding: 0, backgroundColor: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Use my business profile logo
-                  </button>
-                )}
-              </div>
-            )}
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>💡</span>
-              <span>Adding a brand logo adds a +5s branded outro scene with your logo at the end of the commercial.</span>
-            </div>
+
+                  {logo ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 10px',
+                      backgroundColor: 'var(--bg-elevated)',
+                      borderRadius: 8,
+                      border: '1px solid var(--border-subtle)',
+                      gap: 8,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <img
+                          src={`data:${logo.mime};base64,${logo.data}`}
+                          alt="Logo"
+                          style={{ width: 28, height: 28, borderRadius: 5, objectFit: 'contain', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {logo.name}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <label style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                          Replace
+                          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => updateUserContext('videoLogo', null)}
+                          aria-label="Remove logo image"
+                          style={{ padding: '3px 6px', background: 'none', border: 'none', color: 'var(--error)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+                      <label style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '7px 11px',
+                        borderRadius: 8,
+                        backgroundColor: 'var(--bg-elevated)',
+                        border: '1px dashed var(--border-subtle)',
+                        color: 'var(--text-secondary)',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}>
+                        <Upload size={12} aria-hidden="true" />
+                        <span>Upload logo image</span>
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={pickLogo} />
+                      </label>
+                      {profileUnusable && (
+                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                          Profile logo unsupported — upload PNG, JPG or WebP.
+                        </span>
+                      )}
+                      {canRestoreProfile && (
+                        <button
+                          type="button"
+                          onClick={() => updateUserContext('videoLogo', undefined)}
+                          style={{ padding: 0, background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Use my business profile logo
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
-          );
-        })()}
+        </div>
       </div>
 
       {/* Navigation */}
@@ -2003,6 +1764,7 @@ export function Screen04Idea({
   const handleSelectIdea = (dir) => {
     setSelectedDirection(dir);
     setCustomDirection('');
+    setShowCustomIdeaInput(false);
   };
 
   const activeIdea = selectedDirection || (customDirection ? { title: customDirection, description: customDirection } : directionsList[0]);
@@ -2011,11 +1773,16 @@ export function Screen04Idea({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Title & Short Explanation */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          Let's find the idea
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>Choose a Creative Idea</span>
+          <HelpTooltip
+            title={HELP_TOOLTIPS.idea_selection.title}
+            body={HELP_TOOLTIPS.idea_selection.body}
+            ariaLabel="Help choosing a creative direction"
+          />
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Here are a few ways we could tell your story. Pick the one that fits your brand best.
+          Pick a direction for your video or enter your own below.
         </p>
       </div>
 
@@ -2078,63 +1845,145 @@ export function Screen04Idea({
             })}
           </div>
 
-          {/* Custom Idea */}
-          <div>
+          {/* Discoverable Own Creative Idea Secondary Card */}
+          <div style={{ marginTop: 4 }}>
             {!showCustomIdeaInput ? (
               <button
                 type="button"
                 onClick={() => setShowCustomIdeaInput(true)}
+                data-testid="own-idea-card"
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '4px 0',
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 14,
+                  padding: '16px 20px',
+                  borderRadius: 12,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <Plus size={14} />
-                <span>+ I have my own idea</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 260px', minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      backgroundColor: 'rgba(139, 92, 246, 0.12)',
+                      color: 'var(--accent-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Lightbulb size={18} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Have your own creative idea?
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                      Start with your own concept, story or creative direction. Let CleverCut help you develop it into an ad.
+                    </span>
+                  </div>
+                </div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: 'var(--accent-primary)',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                    borderRadius: 8,
+                    padding: '7px 14px',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>Start with my idea &rarr;</span>
+                </span>
               </button>
             ) : (
-              <div style={{
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 8,
-                padding: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8
-              }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>
-                  Tell us your idea
-                </label>
-                <input
-                  type="text"
+              <div
+                data-testid="own-idea-input-panel"
+                style={{
+                  backgroundColor: customDirection.trim() ? 'rgba(139, 92, 246, 0.08)' : 'var(--bg-surface)',
+                  border: customDirection.trim() ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  borderRadius: 12,
+                  padding: '16px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Lightbulb size={16} style={{ color: 'var(--accent-primary)' }} />
+                    <label
+                      htmlFor="own-creative-idea-input"
+                      style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}
+                    >
+                      Start with your own creative idea
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCustomIdeaInput(false);
+                      setCustomDirection('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-tertiary)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <X size={13} />
+                    <span>Cancel</span>
+                  </button>
+                </div>
+                <textarea
+                  id="own-creative-idea-input"
+                  rows={2}
                   value={customDirection}
                   onChange={(e) => {
                     setCustomDirection(e.target.value);
                     if (selectedDirection) setSelectedDirection(null);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && customDirection.trim()) {
+                    if (e.key === 'Enter' && !e.shiftKey && customDirection.trim()) {
                       e.preventDefault();
                       onContinue();
                     }
                   }}
                   placeholder="e.g. Show corporate managers scrambling for Diwali gifts until finding same-day hampers"
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: 6,
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 8,
                     border: '1px solid var(--border-default)',
-                    fontSize: 12,
+                    fontSize: 13,
                     backgroundColor: 'var(--bg-elevated)',
                     color: 'var(--text-primary)',
-                    outline: 'none'
+                    outline: 'none',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    lineHeight: 1.5,
                   }}
                 />
               </div>
@@ -2180,7 +2029,7 @@ export function Screen04Idea({
             boxShadow: '0 2px 10px var(--accent-glow)'
           }}
         >
-          <span>Use this idea</span>
+          <span>Continue</span>
           <ArrowRight size={16} />
         </button>
       </div>
@@ -2217,10 +2066,10 @@ export function Screen05Opening({
       {/* Title & Short Explanation */}
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          How should we start?
+          Choose an Opening
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          The first few seconds matter. Pick an opening that feels right for your film.
+          Pick the first 3 seconds for your video.
         </p>
       </div>
 
@@ -3358,11 +3207,48 @@ export function Screen07Script({
   isProjectSaved = false,
   isSavingProject = false,
   onOpenScriptModal,
+  guardrailReport = null,
+  onboardingState = null,
+  onDismissTip,
+  onBehaviorEvent,
+  draftStatus = null,
+  scriptSaveError = '',
+  onRetrySave = null,
+  onMarkUnsaved = null,
 }) {
   const [editingSceneIdx, setEditingSceneIdx] = useState(null);
   const [editSceneText, setEditSceneText] = useState('');
-  // Apply a scene edit shortly after typing pauses (Save just closes the editor), so the draft autosave
-  // keeps a long edit even if the tab closes before Save is pressed
+  const [sceneDrafts, setSceneDrafts] = useState({});
+  const [dirtyScenes, setDirtyScenes] = useState({});
+  const [collapsedScenes, setCollapsedScenes] = useState({});
+  const [activeSceneNavIdx, setActiveSceneNavIdx] = useState(0);
+  const [localModified, setLocalModified] = useState(false);
+  const [localSaveError, setLocalSaveError] = useState('');
+  const sceneRefs = useRef({});
+
+  // Sync active editor changes cleanly without losing keystrokes
+  const commitSceneEdit = (targetIdx, nextText, closeEditor = false) => {
+    if (targetIdx === null || targetIdx === undefined) return;
+    if (scenes[targetIdx] !== undefined && scenes[targetIdx] !== nextText) {
+      if (setScenes) {
+        const updated = [...scenes];
+        updated[targetIdx] = nextText;
+        setScenes(updated);
+      }
+      setDirtyScenes((prev) => ({ ...prev, [targetIdx]: true }));
+      setLocalModified(true);
+      setLocalSaveError('');
+      if (onMarkUnsaved) onMarkUnsaved();
+    }
+    setSceneDrafts((prev) => ({ ...prev, [targetIdx]: nextText }));
+    if (closeEditor) {
+      setEditingSceneIdx(null);
+      if (onBehaviorEvent) onBehaviorEvent('editedScriptCount');
+    }
+  };
+
+  // Apply a scene edit shortly after typing pauses (Save commits & closes the editor), so the draft
+  // autosave keeps a long edit even if the tab closes or the user navigates to another scene
   useEffect(() => {
     if (editingSceneIdx === null || !setScenes) return;
     const timer = setTimeout(() => {
@@ -3370,10 +3256,24 @@ export function Screen07Script({
         const updated = [...scenes];
         updated[editingSceneIdx] = editSceneText;
         setScenes(updated);
+        setDirtyScenes((prev) => ({ ...prev, [editingSceneIdx]: true }));
+        setLocalModified(true);
+        setLocalSaveError('');
+        if (onMarkUnsaved) onMarkUnsaved();
       }
     }, 800);
     return () => clearTimeout(timer);
   }, [editSceneText, editingSceneIdx]);
+
+  useEffect(() => {
+    if ((isProjectSaved || draftStatus?.state === 'saved') && !scriptSaveError && editingSceneIdx === null) {
+      setLocalModified(false);
+      setDirtyScenes({});
+      setLocalSaveError('');
+    } else if (draftStatus?.state === 'error' || scriptSaveError) {
+      setLocalSaveError(scriptSaveError || 'Autosave could not reach the server. Retry saving to keep your edits.');
+    }
+  }, [draftStatus?.state, isProjectSaved, scriptSaveError]);
   const [isCopiedFull, setIsCopiedFull] = useState(false);
   const [isEditingContinuity, setIsEditingContinuity] = useState(false);
   const [editSettingVal, setEditSettingVal] = useState(setting || '');
@@ -3394,8 +3294,62 @@ export function Screen07Script({
     if (onUpdateCharacters && (editChar1Val || editChar2Val)) {
       onUpdateCharacters(editChar1Val, editChar2Val);
     }
+    setLocalModified(true);
+    if (onMarkUnsaved) onMarkUnsaved();
     setIsEditingContinuity(false);
   };
+
+  const handleOpenSceneEditor = (targetIdx, fallbackText) => {
+    if (editingSceneIdx !== null && editingSceneIdx !== targetIdx) {
+      commitSceneEdit(editingSceneIdx, editSceneText, false);
+    }
+    setCollapsedScenes((prev) => ({ ...prev, [targetIdx]: false }));
+    setEditSceneText(sceneDrafts[targetIdx] ?? fallbackText);
+    setEditingSceneIdx(targetIdx);
+    setActiveSceneNavIdx(targetIdx);
+  };
+
+  const handleJumpToScene = (idx) => {
+    setCollapsedScenes((prev) => ({ ...prev, [idx]: false }));
+    setActiveSceneNavIdx(idx);
+    const el = sceneRefs.current[idx];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (el && typeof el.focus === 'function') {
+      try { el.focus({ preventScroll: true }); } catch {}
+    }
+  };
+
+  const allCollapsed = scenes.length > 0 && scenes.every((_, idx) => Boolean(collapsedScenes[idx]));
+  const toggleAllScenes = () => {
+    const nextVal = !allCollapsed;
+    const nextMap = {};
+    scenes.forEach((_, idx) => { nextMap[idx] = nextVal; });
+    setCollapsedScenes(nextMap);
+  };
+
+  const handleExplicitSave = async () => {
+    if (editingSceneIdx !== null) {
+      commitSceneEdit(editingSceneIdx, editSceneText, true);
+    }
+    setLocalSaveError('');
+    if (typeof onRetrySave === 'function' && (localSaveError || scriptSaveError || draftStatus?.state === 'error')) {
+      await onRetrySave();
+      return;
+    }
+    if (!onSaveProject) return;
+    await onSaveProject();
+  };
+
+  const hasPendingTyping = Boolean(
+    editingSceneIdx !== null &&
+    scenes[editingSceneIdx] !== undefined &&
+    scenes[editingSceneIdx] !== editSceneText
+  );
+  const isScriptSaving = Boolean(isSavingProject || draftStatus?.state === 'saving');
+  const resolvedSaveError = localSaveError || scriptSaveError || (draftStatus?.state === 'error' ? 'Save failed — check connection and retry.' : '');
+  const hasUnsavedChanges = Boolean(localModified || hasPendingTyping || (!isProjectSaved && Object.keys(dirtyScenes).length > 0));
 
   const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || '').includes('Demo') ? 'Product Demo' : (userContext.creativeStyle || '').includes('Comedy') ? 'Funny' : 'Story';
   const duration = userContext.targetDuration || userContext.duration || '30s';
@@ -3609,12 +3563,14 @@ export function Screen07Script({
       {/* Title & Badge */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-            Here's your script: Broadcast & Camera Direction
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Here's your script: Broadcast & Camera Direction</span>
+            <HelpTooltip
+              title={HELP_TOOLTIPS.script_editing.title}
+              body={HELP_TOOLTIPS.script_editing.body}
+              ariaLabel="Help editing scenes"
+            />
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Review scene-by-scene spoken dialogue, camera setups, and timing before video production.
-          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -3680,6 +3636,16 @@ export function Screen07Script({
           </div>
         </div>
       </div>
+
+      {/* Behavior-aware Script Editing Tip (auto-retires once user edits a scene) */}
+      {shouldShowContextualTip('tip_script_customize', onboardingState) && (
+        <ContextualTipBanner
+          tipId={CONTEXTUAL_TIPS.tip_script_customize.id}
+          title={CONTEXTUAL_TIPS.tip_script_customize.title}
+          body={CONTEXTUAL_TIPS.tip_script_customize.body}
+          onDismiss={onDismissTip}
+        />
+      )}
 
       {/* Continuity Context Strip (Anchored from Story World) */}
       {(setting || character1 || editSettingVal || editChar1Val) && (
@@ -3815,56 +3781,342 @@ export function Screen07Script({
         )
       )}
 
-      {/* 4 Visual Scene Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Creative Guardrails Compliance Notice (automated text check + visual human review boundary) */}
+      {guardrailReport && (guardrailReport.hasCriticalViolation || (guardrailReport.automatedChecks?.warnings?.length > 0) || (guardrailReport.visualReviewRequired?.length > 0)) && (
+        <div
+          style={{
+            backgroundColor: guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.07)',
+            border: `1px solid ${guardrailReport.hasCriticalViolation ? 'rgba(239, 68, 68, 0.3)' : 'rgba(99, 102, 241, 0.25)'}`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            fontSize: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontWeight: 700, color: guardrailReport.hasCriticalViolation ? '#ef4444' : 'var(--text-primary)' }}>
+              {guardrailReport.hasCriticalViolation
+                ? 'Creative Guardrail Alert — Critical Instruction Issue'
+                : 'Creative Guardrails Checked (Text Verified · Visual Review Noted)'}
+            </span>
+            {guardrailReport.hasCriticalViolation && onTryAnotherVersion && (
+              <button
+                type="button"
+                onClick={onTryAnotherVersion}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Regenerate Compliant Script
+              </button>
+            )}
+          </div>
+          {(guardrailReport.automatedChecks?.criticalViolations || []).map((v, i) => (
+            <div key={`cv_${i}`} style={{ color: '#ef4444', fontSize: 11 }}>
+              • {v.explanation}
+            </div>
+          ))}
+          {(guardrailReport.automatedChecks?.warnings || []).slice(0, 3).map((w, i) => (
+            <div key={`w_${i}`} style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+              • Advisory: {w.explanation}
+            </div>
+          ))}
+          {guardrailReport.visualReviewRequired && guardrailReport.visualReviewRequired.length > 0 && (
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+              Visual Review Needed: {guardrailReport.visualReviewRequired.map((r) => r.text).join('; ')} (constraints injected into video prompts; verify rendered visuals manually).
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Scene Overview & Navigation Strip + Save Status */}
+      <div
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 10,
+          padding: '10px 14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <nav
+            aria-label="Scene navigation"
+            data-testid="scene-nav-strip"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginRight: 4 }}>
+              Scenes ({scenes.length}):
+            </span>
+            {scenes.map((sceneText, idx) => {
+              const parsed = parseSceneData(sceneText, idx);
+              const isCurrent = activeSceneNavIdx === idx;
+              const isEdited = Boolean(dirtyScenes[idx] || (editingSceneIdx === idx && hasPendingTyping));
+              const shortBeat = (parsed.beatRole || '').split('/')[0].trim();
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleJumpToScene(idx)}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-label={`Jump to Scene ${idx + 1}: ${parsed.beatRole} (${parsed.timing})${isEdited ? ', edited' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 14,
+                    fontSize: 11,
+                    fontWeight: isCurrent ? 700 : 600,
+                    backgroundColor: isCurrent ? 'rgba(99, 102, 241, 0.16)' : 'var(--bg-elevated)',
+                    border: `1px solid ${isCurrent ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                    color: isCurrent ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <span>S{idx + 1} · {shortBeat}</span>
+                  <span style={{ opacity: 0.7, fontSize: 10 }}>{parsed.timing}</span>
+                  {isEdited && (
+                    <span
+                      title="Modified scene"
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: '#F59E0B',
+                        display: 'inline-block',
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* Accessible Script Save Status Pill */}
+            <div
+              role={resolvedSaveError ? 'alert' : 'status'}
+              aria-live="polite"
+              data-testid="script-save-status"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                borderRadius: 12,
+                fontSize: 11,
+                fontWeight: 600,
+                backgroundColor: resolvedSaveError
+                  ? 'rgba(239, 68, 68, 0.12)'
+                  : isScriptSaving
+                    ? 'var(--bg-elevated)'
+                    : hasUnsavedChanges
+                      ? 'rgba(245, 158, 11, 0.12)'
+                      : 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid ' + (
+                  resolvedSaveError
+                    ? 'rgba(239, 68, 68, 0.35)'
+                    : isScriptSaving
+                      ? 'var(--border-subtle)'
+                      : hasUnsavedChanges
+                        ? 'rgba(245, 158, 11, 0.35)'
+                        : 'rgba(16, 185, 129, 0.3)'
+                ),
+                color: resolvedSaveError
+                  ? '#EF4444'
+                  : isScriptSaving
+                    ? 'var(--text-secondary)'
+                    : hasUnsavedChanges
+                      ? '#F59E0B'
+                      : 'var(--success)',
+              }}
+            >
+              {resolvedSaveError ? (
+                <>
+                  <AlertCircle size={12} aria-hidden="true" />
+                  <span>Save failed</span>
+                  {(onSaveProject || onRetrySave) && (
+                    <button
+                      type="button"
+                      data-testid="script-retry-save-btn"
+                      onClick={handleExplicitSave}
+                      style={{
+                        marginLeft: 2,
+                        padding: '1px 7px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(239, 68, 68, 0.45)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.16)',
+                        color: '#FCA5A5',
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Retry save
+                    </button>
+                  )}
+                </>
+              ) : isScriptSaving ? (
+                <span>Saving…</span>
+              ) : hasUnsavedChanges ? (
+                <>
+                  <span>Unsaved changes</span>
+                  {onSaveProject && (
+                    <button
+                      type="button"
+                      onClick={handleExplicitSave}
+                      style={{
+                        marginLeft: 2,
+                        padding: '1px 7px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(245, 158, 11, 0.45)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                        color: '#FCD34D',
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Save
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Check size={12} aria-hidden="true" />
+                  <span>Saved</span>
+                </>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleAllScenes}
+              style={{
+                background: 'none',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 6,
+                padding: '4px 9px',
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              {allCollapsed ? 'Expand all' : 'Collapse all'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Scene Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {scenes.map((sceneText, idx) => {
           const s = parseSceneData(sceneText, idx);
           const isEditing = editingSceneIdx === idx;
+          const isCollapsed = Boolean(collapsedScenes[idx]) && !isEditing;
+          const isSceneDirty = Boolean(dirtyScenes[idx] || (isEditing && hasPendingTyping));
+          const summaryPreview = s.dialogues?.[0]?.text
+            ? `${s.dialogues[0].speaker}: "${s.dialogues[0].text}"`
+            : s.visual;
 
           return (
             <div
               key={idx}
+              id={`script-scene-${idx}`}
+              ref={(el) => { sceneRefs.current[idx] = el; }}
+              tabIndex={-1}
               style={{
                 backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
+                border: `1px solid ${activeSceneNavIdx === idx ? 'var(--accent-primary)' : 'var(--border-default)'}`,
                 borderRadius: 10,
-                padding: '16px 18px',
+                padding: '14px 18px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 12,
+                gap: 10,
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                scrollMarginTop: 84,
+                outline: 'none',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0, flex: '1 1 260px' }}>
+                  <button
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-controls={`script-scene-body-${idx}`}
+                    aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} Scene ${idx + 1}: ${s.beatRole}`}
+                    onClick={() => {
+                      setCollapsedScenes((prev) => ({ ...prev, [idx]: !isCollapsed }));
+                      setActiveSceneNavIdx(idx);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px 4px',
+                      marginLeft: -4,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight size={15} style={{ color: 'var(--text-tertiary)' }} aria-hidden="true" />
+                    ) : (
+                      <ChevronDown size={15} style={{ color: 'var(--text-tertiary)' }} aria-hidden="true" />
+                    )}
+                    <h2 style={{ margin: 0, fontSize: 12, fontWeight: 800, padding: '3px 9px', borderRadius: 4, backgroundColor: 'rgba(99, 102, 241, 0.14)', color: 'var(--accent-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {s.title} · {s.timing}
+                    </h2>
+                  </button>
                   <span style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: '3px 9px',
-                    borderRadius: 4,
-                    backgroundColor: 'rgba(99, 102, 241, 0.14)',
-                    color: 'var(--accent-primary)',
-                    fontFamily: "'JetBrains Mono', monospace"
-                  }}>
-                    {s.title} · {s.timing}
-                  </span>
-                  <span style={{
-                    fontSize: 10,
+                    fontSize: 10.5,
                     fontWeight: 600,
-                    color: 'var(--text-tertiary)',
+                    color: 'var(--text-secondary)',
                     backgroundColor: 'var(--bg-elevated)',
                     border: '1px solid var(--border-subtle)',
                     padding: '2px 8px',
                     borderRadius: 12,
                   }}>
-                    {s.beatRole}
+                    Purpose: {s.beatRole}
                   </span>
+                  {isSceneDirty && (
+                    <span style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: 10,
+                      backgroundColor: 'rgba(245, 158, 11, 0.14)',
+                      color: '#F59E0B',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                    }}>
+                      Edited
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     type="button"
-                    onClick={() => onOpenRewriteModal(idx, sceneText)}
+                    aria-label={`Improve Scene ${idx + 1} with AI`}
+                    onClick={() => {
+                      if (isEditing) commitSceneEdit(idx, editSceneText, false);
+                      onOpenRewriteModal(idx, sceneDrafts[idx] ?? sceneText);
+                    }}
                     style={{
                       padding: '4px 10px',
                       borderRadius: 6,
@@ -3879,21 +4131,18 @@ export function Screen07Script({
                       gap: 4
                     }}
                   >
-                    <Sparkles size={11} />
+                    <Sparkles size={11} aria-hidden="true" />
                     <span>Improve</span>
                   </button>
 
                   <button
                     type="button"
+                    aria-label={isEditing ? `Save Scene ${idx + 1}` : `Edit Scene ${idx + 1}`}
                     onClick={() => {
                       if (isEditing) {
-                        const updated = [...scenes];
-                        updated[idx] = editSceneText;
-                        setScenes(updated);
-                        setEditingSceneIdx(null);
+                        commitSceneEdit(idx, editSceneText, true);
                       } else {
-                        setEditSceneText(sceneText);
-                        setEditingSceneIdx(idx);
+                        handleOpenSceneEditor(idx, sceneText);
                       }
                     }}
                     style={{
@@ -3910,54 +4159,115 @@ export function Screen07Script({
                       gap: 4
                     }}
                   >
-                    <Edit3 size={11} />
+                    <Edit3 size={11} aria-hidden="true" />
                     <span>{isEditing ? 'Save' : 'Edit'}</span>
                   </button>
                 </div>
               </div>
 
-              {isEditing ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <textarea
-                    rows={4}
-                    value={editSceneText}
-                    onChange={(e) => setEditSceneText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                        e.preventDefault();
-                        const updated = [...scenes];
-                        updated[idx] = editSceneText;
-                        setScenes(updated);
-                        setEditingSceneIdx(null);
-                      }
-                    }}
-                    style={{ width: '100%', padding: '10px', fontSize: 13, lineHeight: 1.5, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                    Press Save or Ctrl+Enter to apply scene edits.
-                  </div>
+              {isCollapsed && summaryPreview && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    paddingLeft: 22,
+                  }}
+                >
+                  {summaryPreview}
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {/* Visual Setup */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <Camera size={14} style={{ color: 'var(--accent-primary)', marginTop: 2, flexShrink: 0 }} />
-                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                      {s.visual}
-                      {s.camera && (
-                        <span style={{ color: 'var(--text-tertiary)', fontSize: 11, marginLeft: 6 }}>
-                          · {s.camera}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              )}
 
-                  {/* Spoken Dialogue Bubbles */}
-                  {s.dialogues && s.dialogues.length > 0 ? (
-                    s.dialogues.map((d, dIdx) => (
-                      <div
-                        key={dIdx}
-                        style={{
+              {!isCollapsed && (
+                <div id={`script-scene-body-${idx}`}>
+                  {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label htmlFor={`scene-editor-textarea-${idx}`} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        Scene {idx + 1} Script Text
+                      </label>
+                      <textarea
+                        id={`scene-editor-textarea-${idx}`}
+                        rows={5}
+                        value={editSceneText}
+                        onChange={(e) => {
+                          const nextVal = e.target.value;
+                          setEditSceneText(nextVal);
+                          setSceneDrafts((prev) => ({ ...prev, [idx]: nextVal }));
+                        }}
+                        onKeyDown={(e) => {
+                          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            commitSceneEdit(idx, editSceneText, true);
+                          }
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontSize: 13, lineHeight: 1.5, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
+                      />
+                      <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>
+                        Press Save or Ctrl+Enter to apply scene edits (auto-retained when switching between scenes).
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* Visual Setup (Showing / Doing) */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <Camera size={14} style={{ color: 'var(--accent-primary)', marginTop: 3, flexShrink: 0 }} aria-hidden="true" />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                            Showing / Doing
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {s.visual}
+                            {s.camera && (
+                              <span style={{ color: 'var(--text-tertiary)', fontSize: 11, marginLeft: 6 }}>
+                                · Camera: {s.camera}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Spoken Dialogue Bubbles (Saying) */}
+                      {s.dialogues && s.dialogues.length > 0 ? (
+                        s.dialogues.map((d, dIdx) => (
+                          <div
+                            key={dIdx}
+                            style={{
+                              backgroundColor: 'var(--bg-elevated)',
+                              padding: '10px 14px',
+                              borderRadius: '0 8px 8px 0',
+                              borderLeft: '3px solid var(--accent-primary)',
+                              borderTop: '1px solid var(--border-subtle)',
+                              borderRight: '1px solid var(--border-subtle)',
+                              borderBottom: '1px solid var(--border-subtle)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                letterSpacing: '0.04em',
+                                color: 'var(--accent-primary)',
+                                textTransform: 'uppercase',
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                padding: '1px 6px',
+                                borderRadius: 3
+                              }}>
+                                {d.speaker || s.character}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                            </div>
+                            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                              "{d.text}"
+                            </div>
+                          </div>
+                        ))
+                      ) : s.dialogue ? (
+                        <div style={{
                           backgroundColor: 'var(--bg-elevated)',
                           padding: '10px 14px',
                           borderRadius: '0 8px 8px 0',
@@ -3968,82 +4278,50 @@ export function Screen07Script({
                           display: 'flex',
                           flexDirection: 'column',
                           gap: 4
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{
-                            fontSize: 10,
-                            fontWeight: 800,
-                            letterSpacing: '0.04em',
-                            color: 'var(--accent-primary)',
-                            textTransform: 'uppercase',
-                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                            padding: '1px 6px',
-                            borderRadius: 3
-                          }}>
-                            {d.speaker || s.character}
-                          </span>
-                          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Spoken dialogue</span>
-                        </div>
-                        <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                          "{d.text}"
-                        </div>
-                      </div>
-                    ))
-                  ) : s.dialogue ? (
-                    <div style={{
-                      backgroundColor: 'var(--bg-elevated)',
-                      padding: '10px 14px',
-                      borderRadius: '0 8px 8px 0',
-                      borderLeft: '3px solid var(--accent-primary)',
-                      borderTop: '1px solid var(--border-subtle)',
-                      borderRight: '1px solid var(--border-subtle)',
-                      borderBottom: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          letterSpacing: '0.04em',
-                          color: 'var(--accent-primary)',
-                          textTransform: 'uppercase',
-                          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                          padding: '1px 6px',
-                          borderRadius: 3
                         }}>
-                          {s.character}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Spoken dialogue</span>
-                      </div>
-                      <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                        "{s.dialogue}"
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontSize: 11,
-                      color: 'var(--text-tertiary)',
-                      padding: '6px 10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                      borderRadius: 6,
-                      border: '1px dashed var(--border-subtle)'
-                    }}>
-                      <MessageSquare size={12} style={{ color: 'var(--text-tertiary)' }} />
-                      <span>Visual action scene · No spoken dialogue</span>
-                    </div>
-                  )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              letterSpacing: '0.04em',
+                              color: 'var(--accent-primary)',
+                              textTransform: 'uppercase',
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              padding: '1px 6px',
+                              borderRadius: 3
+                            }}>
+                              {s.character}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                          </div>
+                          <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                            "{s.dialogue}"
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 11,
+                          color: 'var(--text-tertiary)',
+                          padding: '6px 10px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                          borderRadius: 6,
+                          border: '1px dashed var(--border-subtle)'
+                        }}>
+                          <MessageSquare size={12} style={{ color: 'var(--text-tertiary)' }} aria-hidden="true" />
+                          <span>Saying: Visual action scene · No spoken dialogue</span>
+                        </div>
+                      )}
 
-                  {/* Audio / SFX if present */}
-                  {s.audio && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)', paddingLeft: 2 }}>
-                      <Volume2 size={12} style={{ color: 'var(--text-secondary)' }} />
-                      <span>Sound: {s.audio}</span>
+                      {/* Audio / SFX if present */}
+                      {s.audio && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-tertiary)', paddingLeft: 2 }}>
+                          <Volume2 size={12} style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
+                          <span>Audio / SFX: {s.audio}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -4098,7 +4376,7 @@ export function Screen07Script({
             <button
               type="button"
               disabled={isSavingProject || isProjectSaved}
-              onClick={onSaveProject}
+              onClick={handleExplicitSave}
               style={{
                 padding: '10px 14px',
                 borderRadius: 8,
@@ -4191,9 +4469,13 @@ export function Screen08Video({
   elapsedTime = '00:00',
   videoUrl = null,
   onCreateAnother,
+  onRegenerateVideo,
+  onStartNewBrief,
   errorMessage = '',
   projectId = null,
   userId = null,
+  onboardingState = null,
+  onDismissTip,
 }) {
   const [showVideoDetails, setShowVideoDetails] = useState(false);
   const [showScriptPreview, setShowScriptPreview] = useState(false);
@@ -4537,7 +4819,7 @@ export function Screen08Video({
 
         {/* Reassurance Footer */}
         <div style={{ fontSize: 11, color: 'var(--text-tertiary)', maxWidth: 440, lineHeight: 1.4 }}>
-          ☕ Feel free to keep this tab open. Your finished video will automatically load and begin playing the moment generation completes.
+          Keep this tab open — your video will play here when ready.
         </div>
       </div>
     );
@@ -4561,12 +4843,9 @@ export function Screen08Video({
             <CheckCircle2 size={14} />
             <span>Production Complete</span>
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
             Your video is ready!
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Watch the finished video below. Download or share directly.
-          </p>
         </div>
 
         {/* Video Player */}
@@ -4598,92 +4877,159 @@ export function Screen08Video({
           )}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        {/* CTA Hierarchy */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {!videoUnavailable && shouldShowContextualTip('tip_create_another_video', onboardingState, { hasVideo: Boolean(videoUrl) }) && (
+            <ContextualTipBanner
+              tipId={CONTEXTUAL_TIPS.tip_create_another_video.id}
+              title={CONTEXTUAL_TIPS.tip_create_another_video.title}
+              body={CONTEXTUAL_TIPS.tip_create_another_video.body}
+              onDismiss={onDismissTip}
+            />
+          )}
+          {/* 1. Primary Action: Create another video */}
           <button
             type="button"
             onClick={onCreateAnother}
+            data-testid="create-another-video-cta"
             style={{
-              padding: '10px 18px',
-              borderRadius: 8,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-default)',
-              fontSize: 13,
-              fontWeight: 600,
+              width: '100%',
+              padding: '15px 20px',
+              borderRadius: 12,
+              backgroundColor: 'var(--accent-primary)',
+              border: 'none',
+              color: '#ffffff',
               cursor: 'pointer',
-              color: 'var(--text-primary)',
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: 6
+              justifyContent: 'space-between',
+              gap: 12,
+              textAlign: 'left',
+              boxShadow: '0 4px 16px var(--accent-glow)',
+              transition: 'all 0.15s ease',
             }}
           >
-            <RotateCcw size={13} />
-            <span>Create Another Video</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <Sparkles size={16} />
+                <span>Create another video</span>
+              </span>
+              <span style={{ fontSize: 12, opacity: 0.9, fontWeight: 400 }}>
+                Explore another creative direction using the same brief.
+              </span>
+            </div>
+            <ArrowRight size={18} style={{ flexShrink: 0 }} />
           </button>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              onClick={handleShareVideo}
-              disabled={videoUnavailable}
+          {/* 2. Existing Video-Level Actions (Secondary) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
               style={{
-                padding: '10px 18px',
-                borderRadius: 8,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: videoUnavailable ? 'not-allowed' : 'pointer',
-                opacity: videoUnavailable ? 0.5 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {hasCopiedShare ? (
-                <>
-                  <Check size={14} style={{ color: 'var(--success)' }} />
-                  <span style={{ color: 'var(--success)' }}>Link Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 size={14} />
-                  <span>Share</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`);
-                } catch (err) {
-                  alert(err.message || 'Download failed');
-                }
-              }}
-              disabled={videoUnavailable}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 8,
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
-                border: 'none',
-                cursor: videoUnavailable ? 'not-allowed' : 'pointer',
-                opacity: videoUnavailable ? 0.5 : 1,
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 2px 8px var(--accent-glow)'
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--text-tertiary)',
               }}
             >
-              <Download size={14} />
-              <span>Download Video</span>
-            </button>
+              Actions for this video
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleShareVideo}
+                disabled={videoUnavailable}
+                data-testid="share-video-btn"
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: videoUnavailable ? 'not-allowed' : 'pointer',
+                  opacity: videoUnavailable ? 0.5 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {hasCopiedShare ? (
+                  <>
+                    <Check size={14} style={{ color: 'var(--success)' }} />
+                    <span style={{ color: 'var(--success)' }}>Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={14} />
+                    <span>Share Video</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onRegenerateVideo || onMakeVideo}
+                data-testid="regenerate-video-btn"
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <RotateCcw size={14} />
+                <span>Regenerate Video</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`);
+                  } catch (err) {
+                    alert(err.message || 'Download failed');
+                  }
+                }}
+                disabled={videoUnavailable}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                  cursor: videoUnavailable ? 'not-allowed' : 'pointer',
+                  opacity: videoUnavailable ? 0.5 : 1,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <Download size={14} />
+                <span>Download Video</span>
+              </button>
+            </div>
           </div>
 
           {/* Post-Generation Creative Rating Prompt (Subtle & Non-blocking) */}
@@ -4694,6 +5040,30 @@ export function Screen08Video({
               userId={userId}
               brandId={userContext?.businessId}
             />
+          )}
+
+          {/* 3. Tertiary Action: Start a new brief */}
+          {onStartNewBrief && (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 2 }}>
+              <button
+                type="button"
+                onClick={onStartNewBrief}
+                data-testid="start-new-brief-link"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-tertiary)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 3,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                }}
+              >
+                Start a new brief
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -4708,7 +5078,7 @@ export function Screen08Video({
           {errorMessage ? 'Video Generation Incomplete' : 'Ready to Generate Video'}
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          {errorMessage ? 'An issue occurred during video production. You can review your script or retry below.' : 'Click Generate Video below to start video synthesis.'}
+          {errorMessage ? 'Review your script or retry below.' : 'Click Generate Video to start rendering.'}
         </p>
       </div>
 

@@ -10,6 +10,7 @@
 // - Cause -> Action -> Reaction sequencing
 
 const { dialogueOf } = require("./parse");
+const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
 
 const FRAMING_HIERARCHY = {
   HOOK: "Medium close-up (subject and hero product prominent in vertical frame)",
@@ -189,6 +190,12 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
         return `AUDIO & NARRATION: Off-screen Voiceover narration (${shot.dialogue}). The on-screen actor does NOT lip-sync or speak to camera; character performs physical action and authentic expressions matching the narrative tone.`;
       }
       return `SPOKEN DIALOGUE & ACTING DELIVERY: ${shot.dialogue}. The character visibly speaks this line on camera with natural expressive mouth/lip movement, engaged facial expressions, and authentic conversational delivery.`;
+    })(),
+
+    // 8. Creative Guardrails (Visual & Production Constraints passed to render pipeline)
+    (() => {
+      const g = options.creativeGuardrails || staticWorld.creativeGuardrails || null;
+      return hasActiveGuardrails(g) ? formatGuardrailsPromptBlock(g) : null;
     })(),
   ].filter(Boolean);
 

@@ -19,6 +19,10 @@ const netguard = require("./engine/netguard"); // called as netguard.safeFetch s
 const { isDisallowedUrl } = netguard;
 const feedback = require("./engine/feedback");
 const emailService = require("./engine/email");
+const understandingSpine = require("./engine/understandingSpine");
+const guardrails = require("./engine/guardrails");
+const guardrailsSpine = require("./engine/guardrailsSpine");
+const eventContextUtil = require("./engine/eventContext");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -100,6 +104,7 @@ function validateForm(b) {
     product: s(b.product),
     productName: s(b.productName),
     brief: s(b.brief),
+    creativeGuardrails: b.creativeGuardrails ? guardrails.normalizeCreativeGuardrails(b.creativeGuardrails) : null,
   };
   const missing = [["businessName", "Business name"], ["businessType", "Business type"]]
     .filter(([k]) => !f[k]).map(([, l]) => l);
@@ -216,7 +221,7 @@ async function runJSONStage(s, stage, change) {
 
 async function runScript(s, change) {
   const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInstruction("script", s, change));
-  const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: s.story.out.format, festival: festivalOf(s) };
+  const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: s.story.out.format, festival: festivalOf(s), creativeGuardrails: s.form.creativeGuardrails || null };
   let content = base, parsed, failures = [], attempts = 0;
   for (let i = 0; i <= MAX_REPAIRS; i++) {
     attempts++;
@@ -325,6 +330,15 @@ async function optionalAuth(req, res, next) {
 app.post("/api/session", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
+    if (req.body?.projectId) {
+      const { guardrails: activeG } = await guardrails.resolveProjectGuardrails({
+        db,
+        projectId: req.body.projectId,
+        userId: req.user.id,
+        fallbackGuardrails: form.creativeGuardrails,
+      });
+      if (guardrails.hasActiveGuardrails(activeG)) form.creativeGuardrails = activeG;
+    }
     const s = openSession(form, await getFestivals(), req.user.id);
     const out = await produce(s, "direction");
     res.json({ sessionId: s.id, ...out });
@@ -336,6 +350,15 @@ app.post("/api/session", authRequired, async (req, res) => {
 app.post("/api/pipeline/generate", authRequired, async (req, res) => {
   try {
     const form = validateForm(req.body || {});
+    if (req.body?.projectId) {
+      const { guardrails: activeG } = await guardrails.resolveProjectGuardrails({
+        db,
+        projectId: req.body.projectId,
+        userId: req.user.id,
+        fallbackGuardrails: form.creativeGuardrails,
+      });
+      if (guardrails.hasActiveGuardrails(activeG)) form.creativeGuardrails = activeG;
+    }
     const s = openSession(form, await getFestivals(), req.user.id);
 
     // Pre-flight check: ensure required creative parameters and product context can be satisfied
@@ -354,7 +377,7 @@ app.post("/api/pipeline/generate", authRequired, async (req, res) => {
     console.log(`[pipeline:${s.id}] Fast single-pass creative intelligence & script generation...`);
     const stageInst = "Pick the best customer tension and viral hook pattern for this business, and write the complete 4-scene film following all Product Spine rules. Return ONLY the OUTPUT markers.";
     const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInst);
-    const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s) };
+    const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s), creativeGuardrails: form.creativeGuardrails || null };
     let content = base, parsed, failures = [], attempts = 0;
     for (let i = 0; i <= MAX_REPAIRS; i++) {
       attempts++;
@@ -871,10 +894,17 @@ HEADINGS: ${headings.join(" | ") || "None"}`;
 // 1C) Existing Script Import & Quality Gate Validation (V2 Entry Point)
 app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
   try {
-    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform } = req.body || {};
+    const { rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform, projectId, creativeGuardrails: bodyGuardrails } = req.body || {};
     if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
       return res.status(400).json({ error: "Please enter or paste script text to validate." });
     }
+
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
 
     // Inspect sliceLines for dialogue and visual separation during script normalization
     const sliceLines = (lines, start, end) => lines.slice(start, end);
@@ -891,19 +921,353 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
       targetDuration: targetDuration || duration,
       aspectRatio,
       platform,
+      creativeGuardrails: activeGuardrails,
     });
 
     return res.json(result);
   } catch (err) {
     console.error("[api/script/validate-and-import]", err.message);
-    res.status(500).json({ error: err.message || "Failed to validate script." });
+    res.status(err.status || 500).json({ error: err.message || "Failed to validate script." });
+  }
+});
+
+// 1D) Creative Guardrails (Project Do's & Don'ts Source of Truth Endpoints)
+app.get("/api/projects/:id/guardrails", authRequired, async (req, res) => {
+  try {
+    const project = await db.getProjectById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found or not owned by authenticated user." });
+    }
+    const creativeGuardrails = guardrails.normalizeCreativeGuardrails(project.creativeGuardrails);
+    res.json({ ok: true, status: "success", creativeGuardrails });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || "Failed to retrieve Creative Guardrails." });
+  }
+});
+
+app.put("/api/projects/:id/guardrails", authRequired, async (req, res) => {
+  try {
+    const existing = await db.getProjectById(req.params.id, req.user.id);
+    if (!existing) {
+      return res.status(404).json({ error: "Project not found or not owned by authenticated user." });
+    }
+
+    const incoming = req.body?.creativeGuardrails !== undefined ? req.body.creativeGuardrails : req.body;
+    const normalized = guardrails.normalizeCreativeGuardrails(incoming, existing.creativeGuardrails);
+    let updatedUnderstanding = existing.aiUnderstanding || (existing.creativeDNA && existing.creativeDNA.aiUnderstanding) || null;
+
+    if (
+      updatedUnderstanding &&
+      understandingSpine.isUnderstandingOutdated(updatedUnderstanding, existing.brief || "", normalized)
+    ) {
+      updatedUnderstanding = {
+        ...updatedUnderstanding,
+        approval_status: "outdated",
+      };
+    }
+
+    const saved = await db.saveProject(
+      {
+        ...existing,
+        creativeGuardrails: normalized,
+        aiUnderstanding: updatedUnderstanding,
+      },
+      req.user.id
+    );
+
+    res.json({
+      ok: true,
+      status: "success",
+      creativeGuardrails: saved.creativeGuardrails,
+      aiUnderstanding: saved.aiUnderstanding,
+      project: saved,
+    });
+  } catch (err) {
+    console.error("[put/api/projects/:id/guardrails]", err.message);
+    res.status(err.status || 500).json({ error: err.message || "Failed to update Creative Guardrails." });
+  }
+});
+
+// 1b) AI Understanding (Intermediate Brief Analysis & Polish)
+app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
+  try {
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      language,
+      brandTone,
+      occasion,
+      websiteUrl,
+      creativeStyle,
+      format,
+      dimension,
+      aspectRatio,
+      duration,
+      targetDuration,
+      platform,
+      hasLogo,
+      videoLogo,
+      brandLogo,
+      logoDataUrl,
+      logo,
+      hasProductPhoto,
+      productPhoto,
+      settings: bodySettings,
+      projectId,
+      userCorrections,
+      previousUnderstanding,
+      creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
+    } = req.body || {};
+
+    if (!brief || !String(brief).trim()) {
+      return res.status(400).json({ error: "Creative brief is required to generate AI Understanding." });
+    }
+
+    // Resolve and sync Creative Guardrails from DB project / request
+    let existingProject = null;
+    if (projectId) {
+      existingProject = await db.getProjectById(projectId, req.user.id);
+      if (!existingProject && (await db.projectExists(projectId))) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+    }
+
+    const activeGuardrails = bodyGuardrails !== undefined
+      ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
+      : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
+
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, existingProject?.eventContext)
+      : eventContextUtil.normalizeEventContext(existingProject?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
+
+    const savedProjSettings = (existingProject && existingProject.creativeDNA && existingProject.creativeDNA.productionSettings) || {};
+    const mergedSettings = understandingSpine.normalizeUnderstandingSettings({
+      ...savedProjSettings,
+      ...(bodySettings && typeof bodySettings === "object" ? bodySettings : {}),
+      ...(language !== undefined ? { language } : {}),
+      ...(creativeStyle !== undefined || format !== undefined ? { creativeStyle: creativeStyle || format } : {}),
+      ...(dimension !== undefined || aspectRatio !== undefined ? { dimension: dimension || aspectRatio } : {}),
+      ...(duration !== undefined || targetDuration !== undefined ? { duration: duration || targetDuration } : {}),
+      ...(platform !== undefined ? { platform } : {}),
+      ...(hasLogo !== undefined || videoLogo !== undefined || brandLogo !== undefined || logoDataUrl !== undefined || logo !== undefined
+        ? { hasLogo: Boolean(hasLogo || videoLogo || brandLogo || logoDataUrl || logo) }
+        : {}),
+      ...(hasProductPhoto !== undefined || productPhoto !== undefined
+        ? { hasProductPhoto: Boolean(hasProductPhoto || productPhoto) }
+        : {}),
+    });
+
+    const understanding = await understandingSpine.generateAiUnderstanding({
+      businessName,
+      businessType,
+      town,
+      brief: String(brief).trim(),
+      language: mergedSettings.language,
+      brandTone: brandTone || "Warm & Authentic",
+      occasion,
+      websiteUrl,
+      settings: mergedSettings,
+      eventContext: hasEvent ? activeEventContext : null,
+      userCorrections,
+      previousUnderstanding,
+      creativeGuardrails: activeGuardrails,
+    });
+
+    if (projectId && existingProject) {
+      try {
+        await db.saveProject(
+          {
+            ...existingProject,
+            brief: String(brief).trim(),
+            language: mergedSettings.language,
+            creativeStyle: mergedSettings.creativeStyle,
+            productionSettings: understanding.source_settings,
+            creativeGuardrails: guardrails.hasActiveGuardrails(activeGuardrails) || bodyGuardrails !== undefined
+              ? activeGuardrails
+              : existingProject.creativeGuardrails,
+            eventContext: hasEvent ? activeEventContext : null,
+            aiUnderstanding: understanding,
+          },
+          req.user.id
+        );
+      } catch (err) {
+        console.warn("[ai-understanding] project association warning:", err.message);
+      }
+    }
+
+    res.json({
+      ok: true,
+      status: "success",
+      understanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
+    });
+  } catch (err) {
+    console.error("[api/creative/ai-understanding]", err.message);
+    res.status(err.status || 500).json({ error: err.message || "Failed to generate AI Understanding." });
+  }
+});
+
+app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { understanding, approvalStatus } = req.body || {};
+
+    if (!understanding || typeof understanding !== "object") {
+      return res.status(400).json({ error: "Structured understanding object is required." });
+    }
+
+    const existing = await db.getProjectById(projectId, req.user.id);
+    if (!existing) {
+      return res.status(404).json({ error: "Project not found or not owned by user." });
+    }
+
+    if (approvalStatus === "approved") {
+      const activeBrief = existing.brief || understanding.source_brief || "";
+      const activeGuardrails = existing.creativeGuardrails || null;
+      const activeSettings = (existing.creativeDNA && existing.creativeDNA.productionSettings) || null;
+      const activeEvent = existing.eventContext || null;
+      if (understandingSpine.isUnderstandingOutdated(understanding, activeBrief, activeGuardrails, activeSettings, activeEvent)) {
+        return res.status(409).json({
+          error: "Cannot approve outdated AI Understanding. Please regenerate with your latest brief, guardrails, event context, and settings.",
+          code: "UNDERSTANDING_OUTDATED",
+        });
+      }
+    }
+
+    const updated = {
+      ...understanding,
+      approval_status: approvalStatus === "approved" ? "approved" : understanding.approval_status || "pending",
+      approved_at: approvalStatus === "approved" ? new Date().toISOString() : understanding.approved_at || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const saved = await db.saveProject(
+      {
+        ...existing,
+        aiUnderstanding: updated,
+      },
+      req.user.id
+    );
+
+    res.json({ ok: true, status: "success", understanding: updated, project: saved });
+  } catch (err) {
+    console.error("[api/creative/ai-understanding/:projectId]", err.message);
+    res.status(500).json({ error: err.message || "Failed to update AI Understanding." });
+  }
+});
+
+app.get("/api/creative/ai-understanding/:projectId", authRequired, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const project = await db.getProjectById(projectId, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found or not owned by user." });
+    }
+    const understanding = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
+    res.json({ ok: true, status: "success", understanding });
+  } catch (err) {
+    console.error("[get/api/creative/ai-understanding/:projectId]", err.message);
+    res.status(500).json({ error: err.message || "Failed to retrieve AI Understanding." });
   }
 });
 
 // 2) Creative Direction
 app.post("/api/creative/directions", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, research, festival, format, creativeStyle, language, brandTone } = req.body || {};
+    const {
+      businessName,
+      businessType,
+      town,
+      brief,
+      research,
+      festival,
+      format,
+      creativeStyle,
+      language,
+      dimension,
+      aspectRatio,
+      duration,
+      targetDuration,
+      hasLogo,
+      videoLogo,
+      brandLogo,
+      logoDataUrl,
+      brandTone,
+      projectId,
+      aiUnderstanding: clientSuppliedUnderstanding,
+      creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
+    } = req.body || {};
+
+    let verifiedUnderstanding = null;
+    let activeGuardrails = null;
+    let activeEventContext = null;
+
+    // Point 3: Backend checks saved approval status and project ownership before allowing Creative Idea Generation
+    // Do NOT trust client-supplied aiUnderstanding as proof of approval
+    if (projectId) {
+      const project = await db.getProjectById(projectId, req.user.id);
+      if (!project) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+      activeGuardrails = guardrails.normalizeCreativeGuardrails(project.creativeGuardrails);
+      activeEventContext = bodyEventContext !== undefined
+        ? eventContextUtil.normalizeEventContext(bodyEventContext, project.eventContext)
+        : eventContextUtil.normalizeEventContext(project.eventContext);
+      const saved = project.aiUnderstanding || (project.creativeDNA && project.creativeDNA.aiUnderstanding) || null;
+      if (saved) {
+        const currentBrief = brief || project.brief || "";
+        const fallbackSettings = (project.creativeDNA && project.creativeDNA.productionSettings) || saved.source_settings || {};
+        const activeSettings = understandingSpine.normalizeUnderstandingSettings({
+          ...fallbackSettings,
+          ...(language !== undefined ? { language } : {}),
+          ...(format !== undefined || creativeStyle !== undefined ? { creativeStyle: format || creativeStyle } : {}),
+          ...(dimension !== undefined || aspectRatio !== undefined ? { dimension: dimension || aspectRatio } : {}),
+          ...(duration !== undefined || targetDuration !== undefined ? { duration: duration || targetDuration } : {}),
+          ...(hasLogo !== undefined || videoLogo !== undefined || brandLogo !== undefined || logoDataUrl !== undefined
+            ? { hasLogo: Boolean(hasLogo || videoLogo || brandLogo || logoDataUrl) }
+            : {}),
+        });
+        const isOutdated =
+          understandingSpine.isUnderstandingOutdated(saved, currentBrief) ||
+          understandingSpine.isUnderstandingOutdated(
+            saved,
+            currentBrief,
+            activeGuardrails,
+            activeSettings,
+            eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null
+          );
+        if (isOutdated || saved.approval_status === "outdated") {
+          console.warn("[directions] Project understanding is outdated compared to active brief, guardrails, event, or settings");
+          return res.status(409).json({
+            error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating ideas.",
+            code: "UNDERSTANDING_OUTDATED",
+          });
+        }
+        if (saved.approval_status === "approved" || saved.approval_status === "auto_approved") {
+          verifiedUnderstanding = saved;
+        } else {
+          return res.status(409).json({
+            error: "AI Understanding must be approved before generating creative ideas.",
+            code: "UNDERSTANDING_NOT_APPROVED",
+          });
+        }
+      }
+    } else {
+      activeGuardrails = guardrails.normalizeCreativeGuardrails(bodyGuardrails);
+      activeEventContext = eventContextUtil.normalizeEventContext(bodyEventContext);
+    }
+
+    // Point 2: Ensure mock understanding data can never be used in production
+    if (process.env.NODE_ENV === "production" && verifiedUnderstanding && verifiedUnderstanding.is_mock) {
+      return res.status(400).json({ error: "Mock understanding data cannot be used in production." });
+    }
+
     const result = await creative.generateDirections({
       businessName,
       businessType,
@@ -914,18 +1278,33 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
+      aiUnderstanding: verifiedUnderstanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/directions]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 3) Hook Intelligence
 app.post("/api/creative/hooks", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone } = req.body || {};
+    const { businessName, businessType, brief, direction, language, format, creativeStyle, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
+    });
     const result = await creative.generateHooks({
       businessName,
       businessType,
@@ -934,18 +1313,32 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       language: language || "English",
       format: format || creativeStyle || "UGC / Creator-style",
       brandTone,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/hooks]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 4) Plot Generation
 app.post("/api/creative/plots", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, brief, direction, hook, format, language, brandTone } = req.body || {};
+    const { businessName, businessType, brief, direction, hook, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
+    });
     const result = await creative.generatePlots({
       businessName,
       businessType,
@@ -955,18 +1348,32 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       format: format || "Storytelling",
       language: language || "English",
       brandTone,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/plots]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 5) Story Architecture & World Building
 app.post("/api/creative/story", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone } = req.body || {};
+    const { businessName, businessType, town, brief, direction, hook, plot, format, language, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
+    });
     const result = await creative.generateStoryWorld({
       businessName,
       businessType,
@@ -978,25 +1385,65 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       format: format || "Storytelling",
       language: language || "English",
       brandTone,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
     console.error("[api/creative/story]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // 6) Master Script Synthesis & Quality Gate
 app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
   try {
-    const { form, creativeDNA, constraints, avoid } = req.body || {};
+    const { form, creativeDNA, constraints, avoid, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
     const validated = validateForm(form);
+    const { guardrails: activeGuardrails, project } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+      constraints,
+      avoid,
+    });
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, project?.eventContext)
+      : eventContextUtil.normalizeEventContext(project?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
+
+    if (project && project.aiUnderstanding) {
+      const savedSettings = (project.creativeDNA && project.creativeDNA.productionSettings) || null;
+      const isOutdated = understandingSpine.isUnderstandingOutdated(
+        project.aiUnderstanding,
+        validated.brief || project.brief || "",
+        activeGuardrails,
+        savedSettings,
+        hasEvent ? activeEventContext : null
+      );
+      if (isOutdated || project.aiUnderstanding.approval_status === "outdated") {
+        return res.status(409).json({
+          error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating script.",
+          code: "UNDERSTANDING_OUTDATED",
+        });
+      }
+      if (project.aiUnderstanding.approval_status !== "approved" && project.aiUnderstanding.approval_status !== "auto_approved") {
+        return res.status(409).json({
+          error: "AI Understanding must be approved before generating script.",
+          code: "UNDERSTANDING_NOT_APPROVED",
+        });
+      }
+    }
+
     const result = await creative.synthesizeMasterScript({
       form: validated,
       creativeDNA: creativeDNA || {},
       constraints: constraints || [],
       avoid: avoid || [],
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
     res.json(result);
   } catch (e) {
@@ -1008,8 +1455,20 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+    const { eventContext: activeEventContext, hasEvent } = await eventContextUtil.resolveProjectEventContext({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackEventContext: bodyEventContext,
+    });
     const rewritten = await creative.rewriteScene({
       sceneText,
       sceneIndex: Number(sceneIndex) || 0,
@@ -1019,8 +1478,17 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       characters,
       setting,
       brandTone: brandTone || form?.brandTone,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json({ scene: rewritten });
+    const guardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
+      ? guardrails.validateOutputAgainstGuardrails({
+          outputText: rewritten,
+          stage: "rewrite",
+          guardrails: activeGuardrails,
+        })
+      : null;
+    res.json({ scene: rewritten, guardrailReport });
   } catch (e) {
     console.error("[api/creative/rewrite-scene]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1046,6 +1514,10 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
       hasLogo,
       brandLogo,
       logoDataUrl,
+      projectId,
+      aiUnderstanding: incomingUnderstanding,
+      creativeGuardrails: bodyGuardrails,
+      eventContext: bodyEventContext,
     } = req.body || {};
     if (!businessName || !businessName.trim()) {
       return res.status(400).json({ error: "businessName is required." });
@@ -1053,23 +1525,124 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     if (!brief || !brief.trim()) {
       return res.status(400).json({ error: "Brief is required." });
     }
+
+    // Load project with ownership check if projectId provided
+    let existingProject = null;
+    if (projectId) {
+      existingProject = await db.getProjectById(projectId, req.user.id);
+      if (!existingProject && (await db.projectExists(projectId))) {
+        return res.status(403).json({ error: "Project not found or not owned by authenticated user." });
+      }
+    }
+
+    const activeGuardrails = bodyGuardrails !== undefined
+      ? guardrails.normalizeCreativeGuardrails(bodyGuardrails, existingProject?.creativeGuardrails)
+      : guardrails.normalizeCreativeGuardrails(existingProject?.creativeGuardrails);
+
+    const activeEventContext = bodyEventContext !== undefined
+      ? eventContextUtil.normalizeEventContext(bodyEventContext, existingProject?.eventContext)
+      : eventContextUtil.normalizeEventContext(existingProject?.eventContext);
+    const hasEvent = eventContextUtil.hasActiveEventContext(activeEventContext);
+
+    const simpleSettings = understandingSpine.normalizeUnderstandingSettings({
+      language: language || "English",
+      creativeStyle: creativeStyle || "UGC / Creator-style",
+      dimension: aspectRatio || dimension || "9:16",
+      duration: duration || "20s",
+      hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
+    });
+
+    // Simple Mode: AI Understanding executes internally on the backend and silently refreshes when brief, guardrails, event, or settings change
+    let internalUnderstanding = (existingProject && existingProject.aiUnderstanding) || incomingUnderstanding || null;
+    const understandingIsStale = internalUnderstanding
+      ? understandingSpine.isUnderstandingOutdated(
+          internalUnderstanding,
+          brief.trim(),
+          activeGuardrails,
+          simpleSettings,
+          hasEvent ? activeEventContext : null
+        )
+      : true;
+
+    if (!internalUnderstanding || understandingIsStale) {
+      try {
+        internalUnderstanding = await understandingSpine.generateAiUnderstanding({
+          businessName: businessName.trim(),
+          businessType: businessType || "Local Business",
+          town: town || "",
+          brief: brief.trim(),
+          language: simpleSettings.language,
+          brandTone: brandTone || "Warm & Authentic",
+          settings: simpleSettings,
+          eventContext: hasEvent ? activeEventContext : null,
+          creativeGuardrails: activeGuardrails,
+        });
+        // Point 4: Use distinct internal status 'auto_approved' rather than explicit user approval 'approved'
+        internalUnderstanding.approval_status = "auto_approved";
+        internalUnderstanding.approved_at = new Date().toISOString();
+      } catch (err) {
+        if (process.env.NODE_ENV === "production") {
+          console.error("[simple-packages] AI understanding failed in production:", err.message);
+          return res.status(500).json({ error: `AI Understanding failed: ${err.message}` });
+        }
+        console.warn("[simple-packages] Silent AI understanding warning:", err.message);
+      }
+    } else {
+      internalUnderstanding.approval_status = "auto_approved";
+    }
+
+    // Point 2: Ensure mock understanding data can never silently be used in production
+    if (process.env.NODE_ENV === "production" && internalUnderstanding && internalUnderstanding.is_mock) {
+      return res.status(500).json({ error: "Mock understanding data cannot be used in production." });
+    }
+
+    // Save internally against the project if projectId provided
+    if (projectId && existingProject && (internalUnderstanding || bodyGuardrails !== undefined || bodyEventContext !== undefined)) {
+      try {
+        await db.saveProject(
+          {
+            ...existingProject,
+            brief: brief.trim(),
+            language: simpleSettings.language,
+            creativeStyle: simpleSettings.creativeStyle,
+            productionSettings: simpleSettings,
+            creativeGuardrails: activeGuardrails,
+            eventContext: hasEvent ? activeEventContext : null,
+            aiUnderstanding: internalUnderstanding || existingProject.aiUnderstanding,
+          },
+          req.user.id
+        );
+      } catch (err) {
+        console.warn("[simple-packages] project save warning:", err.message);
+      }
+    }
+
     const packages = await creative.generateSimpleAdPackages({
       businessName: businessName.trim(),
       businessType: businessType || "Local Business",
       town: town || "",
       brief: brief || "",
-      targetAudience: targetAudience || "",
+      targetAudience: targetAudience || (internalUnderstanding && internalUnderstanding.target_audience) || "",
       language: language || "English",
       creativeStyle: creativeStyle || "UGC / Creator-style",
       brandTone,
       duration: duration || "20s",
       aspectRatio: aspectRatio || dimension || "9:16",
       hasLogo: Boolean(hasLogo || brandLogo || logoDataUrl),
+      aiUnderstanding: internalUnderstanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json({ status: "success", packages });
+    res.json({
+      status: "success",
+      packages,
+      aiUnderstanding: internalUnderstanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
+    });
   } catch (e) {
     console.error("[api/creative/simple-packages]", e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 app.post("/api/run", authRequired, async (req, res) => {
@@ -1092,8 +1665,37 @@ app.post("/api/run", authRequired, async (req, res) => {
       brief,
       businessType,
       businessName,
+      projectId,
+      creativeGuardrails: bodyGuardrails,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+
+    const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
+      db,
+      projectId,
+      userId: req.user.id,
+      fallbackGuardrails: bodyGuardrails,
+    });
+
+    // Validate pre-prompt scenes against Creative Guardrails before invoking Magnific render
+    const preRenderGuardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
+      ? guardrails.validateOutputAgainstGuardrails({
+          outputText: scenes.join("\n"),
+          visualPromptText: scenes.join("\n"),
+          stage: "video_prompt",
+          guardrails: activeGuardrails,
+        })
+      : null;
+
+    if (preRenderGuardrailReport && preRenderGuardrailReport.hasCriticalViolation) {
+      return res.status(422).json({
+        error: `Critical Creative Guardrail violation prevented video rendering: ${preRenderGuardrailReport.automatedChecks.criticalViolations.map((v) => v.explanation).join(" | ")}`,
+        code: "GUARDRAIL_VIOLATION",
+        guardrailReport: preRenderGuardrailReport,
+        failures: preRenderGuardrailReport.automatedChecks.criticalViolations.map((v) => v.explanation),
+      });
+    }
+
     // 9:16 unless the owner picked 16:9 or 1:1; the Magnific flow itself is chosen server-side from this
     const platformRatio = typeof platform === "string" ? (platform.includes("16:9") ? "16:9" : platform.includes("1:1") ? "1:1" : null) : null;
     const ratio = aspectRatio || dimension || shotSpec?.project?.aspectRatio || platformRatio || "9:16";
@@ -1127,6 +1729,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "),
         businessType: businessType || shotSpec.project?.businessType || bCat,
         style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
+        creativeGuardrails: activeGuardrails,
       };
 
       processedScenes = shotSpec.shots.map((sh, idx) => {
@@ -1148,6 +1751,7 @@ app.post("/api/run", authRequired, async (req, res) => {
           platform: platform,
           style: shotSpec.project?.style || req.body?.creativeStyle,
           format: shotSpec.format,
+          creativeGuardrails: activeGuardrails,
         });
       });
     } else {
@@ -1161,6 +1765,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
+        creativeGuardrails: activeGuardrails,
       }));
     }
 
@@ -1177,7 +1782,7 @@ app.post("/api/run", authRequired, async (req, res) => {
     });
     // Persist runId association with authenticated user immediately
     await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });
-    res.json({ runId, shotCount: processedScenes.length });
+    res.json({ runId, shotCount: processedScenes.length, guardrailReport: preRenderGuardrailReport });
   } catch (e) {
     console.error("[run]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1824,6 +2429,19 @@ app.put("/api/auth/profile", authRequired, async (req, res) => {
   }
 });
 
+app.patch("/api/auth/onboarding", authRequired, async (req, res) => {
+  try {
+    const patch = req.body && typeof req.body === "object"
+      ? (req.body.onboardingState && typeof req.body.onboardingState === "object" ? req.body.onboardingState : req.body)
+      : {};
+    const onboardingState = await db.updateUserOnboarding(req.user.id, patch);
+    res.json({ status: "success", onboardingState });
+  } catch (err) {
+    console.error("[auth] Update onboarding state error:", err);
+    res.status(400).json({ error: err.message || "Failed to update onboarding preferences." });
+  }
+});
+
 app.delete("/api/auth/account", authRequired, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1908,6 +2526,50 @@ app.delete("/api/projects/:id", authRequired, async (req, res) => {
     const ok = await db.deleteProject(req.params.id, req.user.id);
     if (!ok) return res.status(404).json({ error: "Project not found." });
     res.json({ status: "success", message: "Project deleted." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/projects/bulk-delete", authRequired, async (req, res) => {
+  try {
+    const rawIds = req.body?.projectIds;
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: "projectIds must be a non-empty array of project IDs." });
+    }
+    const cleanIds = Array.from(
+      new Set(
+        rawIds
+          .filter((id) => typeof id === "string" && id.trim().length > 0)
+          .map((id) => id.trim())
+      )
+    );
+    if (cleanIds.length === 0) {
+      return res.status(400).json({ error: "projectIds must contain at least one valid project ID." });
+    }
+    if (cleanIds.length > 200) {
+      return res.status(400).json({ error: "Cannot delete more than 200 projects in a single request." });
+    }
+
+    const { deletedIds, notDeletedIds } = await db.deleteProjects(cleanIds, req.user.id);
+    if (deletedIds.length === 0) {
+      return res.status(404).json({
+        error: "No matching projects found.",
+        deletedIds: [],
+        notDeletedIds,
+      });
+    }
+
+    const isPartial = notDeletedIds.length > 0;
+    res.json({
+      status: isPartial ? "partial" : "success",
+      deletedIds,
+      notDeletedIds,
+      deletedCount: deletedIds.length,
+      message: isPartial
+        ? `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? "project" : "projects"}; ${notDeletedIds.length} could not be deleted.`
+        : `Deleted ${deletedIds.length} ${deletedIds.length === 1 ? "project" : "projects"}.`,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
