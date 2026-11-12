@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Clapperboard,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import BrandMark from './BrandMark.jsx';
 import AuthVideoShowcase from './AuthVideoShowcase.jsx';
+import AuthClipWall from './AuthClipWall.jsx';
 import LegalDocumentModal from './LegalDocumentModal.jsx';
 
 /**
@@ -42,6 +43,10 @@ export default function AuthScreen({
   const [googleNotice, setGoogleNotice] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalTab, setLegalTab] = useState('terms');
+
+  // Background: the Coverr clip wall, or the bundled single video if Coverr can't be reached
+  const [clipWallUnavailable, setClipWallUnavailable] = useState(false);
+  const handleClipWallUnavailable = useCallback(() => setClipWallUnavailable(true), []);
 
   // Dedicated Verification-Pending Screen State
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
@@ -267,45 +272,111 @@ export default function AuthScreen({
 
         .auth-floating-panel {
           width: 100%;
-          max-width: 430px;
+          max-width: 420px;
           margin-left: auto !important;
           margin-right: 0 !important;
-          background-color: rgba(18, 18, 17, 0.88);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          border-radius: 20px;
-          padding: 30px 32px;
+          background-color: color-mix(in srgb, var(--cc-surface) 84%, transparent);
+          backdrop-filter: blur(24px) saturate(140%);
+          -webkit-backdrop-filter: blur(24px) saturate(140%);
+          border: 1px solid var(--cc-line-2);
+          border-radius: var(--cc-radius-lg);
+          padding: 28px;
           box-sizing: border-box;
-          box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.06);
+          box-shadow: var(--cc-shadow-modal), inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
+        .auth-panel-title {
+          font-family: var(--cc-font-display);
+          font-size: 24px;
+          font-weight: 600;
+          letter-spacing: -0.025em;
+          color: var(--cc-text-1);
+          margin: 0 0 6px;
+        }
+        .auth-panel-subtitle {
+          font-size: 14px;
+          color: var(--cc-text-2);
+          margin: 0;
+          line-height: 1.45;
+        }
+        .auth-input::placeholder { color: var(--cc-text-4); }
 
         .auth-showcase-caption {
           position: fixed;
-          bottom: 44px;
-          left: 48px;
+          bottom: clamp(48px, 8vh, 84px);
+          left: clamp(32px, 3.8vw, 56px);
           z-index: 20;
-          max-width: 500px;
+          max-width: min(600px, calc(100vw - 560px));
           pointer-events: none;
           user-select: none;
+        }
+        .auth-showcase-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 18px;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--cc-text-2);
+        }
+        .auth-showcase-eyebrow-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: var(--cc-radius-pill);
+          background-color: var(--cc-success);
+        }
+        .auth-showcase-headline {
+          font-family: var(--cc-font-display);
+          font-size: clamp(40px, 4.6vw, 68px);
+          font-weight: 600;
+          line-height: 1.02;
+          letter-spacing: -0.035em;
+          color: var(--cc-text-1);
+          margin: 0 0 18px;
+          text-wrap: balance;
+        }
+        .auth-showcase-sub {
+          font-size: clamp(15px, 1.15vw, 17px);
+          line-height: 1.5;
+          color: var(--cc-text-2);
+          margin: 0 0 22px;
+          max-width: 460px;
+        }
+        .auth-showcase-audiences {
+          list-style: none;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin: 0;
+          padding: 0;
+        }
+        .auth-showcase-audiences li {
+          padding: 6px 12px;
+          border-radius: var(--cc-radius-pill);
+          border: 1px solid var(--cc-line-3);
+          background-color: color-mix(in srgb, var(--cc-bg) 55%, transparent);
+          font-size: 12px;
+          font-weight: 500;
+          color: var(--cc-text-1);
         }
 
         .auth-input {
           width: 100%;
           box-sizing: border-box;
-          padding: 13px 16px;
+          padding: 12px 14px;
           font-size: 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background-color: rgba(33, 33, 30, 0.85);
-          color: #FFFFFF;
+          border-radius: var(--cc-radius-sm);
+          border: 1px solid var(--cc-line-2);
+          background-color: var(--cc-raised);
+          color: var(--cc-text-1);
           outline: none;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+          transition: border-color var(--cc-dur-1) var(--cc-ease), box-shadow var(--cc-dur-1) var(--cc-ease), background-color var(--cc-dur-1) var(--cc-ease);
+        }
+        .auth-input:hover:not(:focus):not(:disabled) {
+          border-color: var(--cc-line-3);
         }
         .auth-input:focus {
           border-color: var(--cc-focus);
-          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.22);
-          background-color: rgba(33, 33, 30, 0.95);
+          box-shadow: 0 0 0 3px var(--cc-action-tint);
         }
 
         .auth-btn-google {
@@ -315,18 +386,23 @@ export default function AuthScreen({
           justify-content: center;
           gap: 10px;
           padding: 12px 18px;
-          border-radius: 12px;
-          background-color: rgba(33, 33, 30, 0.85);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: var(--cc-radius-pill);
+          background-color: var(--cc-hover);
+          border: 1px solid var(--cc-line-2);
           color: var(--cc-text-1);
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
-          transition: background-color 0.15s ease, border-color 0.15s ease;
+          transition: background-color var(--cc-dur-1) var(--cc-ease), border-color var(--cc-dur-1) var(--cc-ease);
         }
         .auth-btn-google:hover {
-          background-color: rgba(33, 33, 30, 0.95);
-          border-color: rgba(255, 255, 255, 0.2);
+          background-color: var(--cc-active);
+          border-color: var(--cc-line-3);
+        }
+        .auth-btn-google:focus-visible,
+        .auth-btn-primary:focus-visible {
+          outline: 2px solid var(--cc-focus);
+          outline-offset: 2px;
         }
 
         .auth-btn-primary {
@@ -413,12 +489,16 @@ export default function AuthScreen({
         }
       `}</style>
 
-      {/* 1. FULL-SCREEN BACKGROUND VIDEO: Covers entire viewport with dark overlay */}
-      <AuthVideoShowcase
-        videoSrc="/videos/background-optimized.mp4"
-        fallbackVideoSrc="/videos/background.mp4"
-        posterSrc="/videos/background-poster.jpg"
-      />
+      {/* 1. FULL-SCREEN BACKGROUND: tilted wall of ad clips; the single bundled video is the fallback */}
+      {clipWallUnavailable ? (
+        <AuthVideoShowcase
+          videoSrc="/videos/background-optimized.mp4"
+          fallbackVideoSrc="/videos/background.mp4"
+          posterSrc="/videos/background-poster.jpg"
+        />
+      ) : (
+        <AuthClipWall onUnavailable={handleClipWallUnavailable} />
+      )}
 
       {/* 2. INDEPENDENT CLEVERCUT LOGO: Floats in the top-left directly over full-screen video */}
       <div
@@ -451,87 +531,27 @@ export default function AuthScreen({
 
       {/* 3. SHOWCASE EDITORIAL CAPTION: Anchored in bottom-left over the background video */}
       <div className="auth-showcase-caption">
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '5px 12px',
-            borderRadius: 999,
-            backgroundColor: 'rgba(244, 244, 236, 0.1)',
-            border: '1px solid rgba(244, 244, 236, 0.315)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            color: 'var(--cc-text-1)',
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.005em',
-            marginBottom: 14,
-          }}
-        >
-          <span>AI Commercial Video Studio</span>
+        <div className="auth-showcase-eyebrow">
+          <span className="auth-showcase-eyebrow-dot" aria-hidden="true" />
+          <span>End-to-end AI ad production</span>
         </div>
 
-        <h2
-          style={{
-            fontSize: 'clamp(24px, 2.4vw, 32px)',
-            fontWeight: 600,
-            lineHeight: 1.22,
-            letterSpacing: '-0.025em',
-            color: '#FFFFFF',
-            margin: '0 0 10px',
-            textShadow: '0 2px 16px rgba(0, 0, 0, 0.85)',
-          }}
-        >
-          Turn product briefs into customer-converting video ads.
-        </h2>
+        <h2 className="auth-showcase-headline">From one brief to a finished commercial.</h2>
 
-        <p
-          style={{
-            fontSize: 14,
-            lineHeight: 1.6,
-            color: 'rgba(255, 255, 255, 0.76)',
-            margin: 0,
-            maxWidth: 440,
-            textShadow: '0 1px 8px rgba(0, 0, 0, 0.75)',
-          }}
-        >
-          Generate high-retention video hooks, multi-scene storyboards, and realistic commercial video for your brand in minutes.
+        <p className="auth-showcase-sub">
+          Strategy, script, scenes and final film in one flow. Not a pile of clips to stitch together.
         </p>
+
+        <ul className="auth-showcase-audiences" aria-label="Built for">
+          <li>Growing businesses</li>
+          <li>Enterprise brands</li>
+          <li>Agencies</li>
+        </ul>
       </div>
 
       {/* 4. FLOATING AUTHENTICATION PANEL: Anchored firmly on the RIGHT side of the viewport */}
-      <div
-        className="auth-floating-wrapper"
-        style={{
-          position: 'relative',
-          zIndex: 10,
-          minHeight: '100vh',
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          padding: '40px clamp(24px, 5vw, 64px)',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          className="auth-floating-panel"
-          style={{
-            width: '100%',
-            maxWidth: 430,
-            marginLeft: 'auto',
-            marginRight: 0,
-            backgroundColor: 'rgba(18, 18, 17, 0.88)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255, 255, 255, 0.10)',
-            borderRadius: 20,
-            padding: '30px 32px',
-            boxSizing: 'border-box',
-            boxShadow: '0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.06)',
-          }}
-        >
+      <div className="auth-floating-wrapper">
+        <div className="auth-floating-panel">
           {/* Dedicated Verification-Pending Screen */}
           {pendingVerificationEmail ? (
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
@@ -706,27 +726,12 @@ export default function AuthScreen({
             <>
           {/* Header: Title & Subtitle */}
           <div style={{ marginBottom: 22 }}>
-            <h1
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                letterSpacing: '-0.025em',
-                color: '#FFFFFF',
-                margin: '0 0 6px',
-              }}
-            >
+            <h1 className="auth-panel-title">
               {mode === 'signup' ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p
-              style={{
-                fontSize: 13,
-                color: 'var(--cc-text-2)',
-                margin: 0,
-                lineHeight: 1.45,
-              }}
-            >
+            <p className="auth-panel-subtitle">
               {mode === 'signup'
-                ? 'Access your saved scripts and campaigns anywhere.'
+                ? 'One brief in. A finished commercial out.'
                 : 'Log in to continue creating with CleverCut.'}
             </p>
           </div>
@@ -789,9 +794,9 @@ export default function AuthScreen({
               fontWeight: 500,
             }}
           >
-            <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+            <div style={{ flex: 1, height: 1, backgroundColor: 'var(--cc-line-2)' }} />
             <span>Or with email</span>
-            <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+            <div style={{ flex: 1, height: 1, backgroundColor: 'var(--cc-line-2)' }} />
           </div>
 
           {/* Error Banner */}
