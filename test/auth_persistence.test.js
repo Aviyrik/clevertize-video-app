@@ -745,3 +745,11 @@ test('Auth clip wall: Coverr clips are hotlinked CDN files, lazy, muted, and cre
   assert.ok(wall.includes('onUnavailable'), 'falls back when Coverr cannot be reached');
   assert.ok(wall.includes('Background videos from Coverr'), 'credits Coverr on the page');
 });
+
+test('Returning visitors: the auth screen opens on Log in once this browser has been logged in', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(app.includes("const RETURNING_USER_KEY = 'clevertize_returning_user'"), 'a returning-user key is defined');
+  assert.ok(/localStorage\.getItem\(RETURNING_USER_KEY\)[\s\S]{0,120}\? 'signin'[\s\S]{0,20}: 'signup'/.test(app), 'start mode is signin for returning visitors, signup otherwise');
+  assert.ok(/if \(!currentUser \|\| !authToken\) return;\s*try \{\s*localStorage\.setItem\(RETURNING_USER_KEY, '1'\)/.test(app), 'the key is set whenever someone is logged in');
+  assert.ok(!/removeItem\(RETURNING_USER_KEY\)/.test(app), 'logout keeps the key');
+});

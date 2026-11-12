@@ -255,6 +255,9 @@ const CREATIVE_STYLE_PRESETS = [
   },
 ];
 
+// Set in this browser once someone has logged in; picks Log in over Sign up on the auth screen
+const RETURNING_USER_KEY = 'clevertize_returning_user';
+
 // Fast Generation Pipeline Stages (Script & Storyboard preparation)
 const FAST_PIPELINE_STAGES = [
   {
@@ -1291,7 +1294,16 @@ export default function App() {
   const [isResettingPassword, setIsResettingPassword] = useState(
     () => typeof window !== 'undefined' && window.location.pathname.startsWith('/reset-password')
   );
-  const [authInitialMode, setAuthInitialMode] = useState('signup');
+  // Returning visitors (this browser has been logged in before) land on Log in; new visitors on Sign up
+  const [authInitialMode, setAuthInitialMode] = useState(() => {
+    try {
+      return localStorage.getItem(RETURNING_USER_KEY) || localStorage.getItem('clevertize_remember_email')
+        ? 'signin'
+        : 'signup';
+    } catch {
+      return 'signup';
+    }
+  });
 
   const handleReturnFromVerification = (targetMode = 'signin') => {
     setIsVerifyingEmail(false);
@@ -1740,6 +1752,16 @@ export default function App() {
     setStudioStage('brief');
     setActiveAppView('home');
   };
+
+  // Once anyone is logged in, remember it in this browser (kept on logout) so the
+  // auth screen opens on Log in after a logout or an expired session.
+  useEffect(() => {
+    if (!currentUser || !authToken) return;
+    try {
+      localStorage.setItem(RETURNING_USER_KEY, '1');
+    } catch {}
+    setAuthInitialMode('signin');
+  }, [currentUser, authToken]);
 
   const handleAuthSuccess = (userDataOrUser, possibleToken, authMode) => {
     const user = userDataOrUser?.user || userDataOrUser;
