@@ -595,7 +595,7 @@ export default function ExistingScriptModal({
       compileStructuredScene(s, idx, scenesData.length)
     );
 
-    // 2. Prepare or synchronize shotSpec for downstream Magnific generation
+    // 2. Prepare or synchronize shotSpec for downstream video generation
     let updatedShotSpec = validationResult?.shotSpec
       ? JSON.parse(JSON.stringify(validationResult.shotSpec))
       : null;

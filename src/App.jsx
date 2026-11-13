@@ -27,6 +27,7 @@ import {
   transferSimpleToDirector,
   transferDirectorToSimple,
 } from './utils/modeTransfer.js';
+import { brandSafeMessage } from './utils/brandSafeText.js';
 import { TOUR_STEPS } from './data/tourSteps.js';
 import {
   StudioStateContext,
@@ -950,7 +951,8 @@ export default function App() {
       setErrorMessageRaw('The video production service returned an unexpected HTML response. The server may be restarting or temporarily busy. Please retry in a moment.');
       return;
     }
-    setErrorMessageRaw(str);
+    // Never show the rendering provider's name: raw provider errors become a CleverCut message
+    setErrorMessageRaw(brandSafeMessage(str));
   };
   const errorMessage = errorMessageRaw;
   const [validationError, setValidationError] = useState('');
@@ -3919,9 +3921,9 @@ export default function App() {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      }), 'Could not start your video render. Please try again.');
 
-      // 3. Poll Magnific status
+      // 3. Poll render status
       await pollRenderStatus(runData.runId, { session });
     } catch (err) {
       if (studioSessionRef.current !== session) return; // the studio moved on: don't show this error there
@@ -3960,7 +3962,7 @@ export default function App() {
         ? userContext.customBusinessType.trim()
         : userContext.businessType;
 
-      // 2. Start Magnific Run with compiled shot specification & consistent characters
+      // 2. Start the render with the compiled shot specification & consistent characters
       const runPayload = {
         scenes: scenes.map((s) => s.trim()).filter(Boolean),
         character1: character1.trim(),
@@ -3994,7 +3996,7 @@ export default function App() {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      }), 'Could not start your video render. Please try again.');
 
       setRenderStatusText('Rendering neural video frames…');
       await pollRenderStatus(data.runId, { session });
@@ -4473,7 +4475,7 @@ export default function App() {
           setIsRendering(false);
           setIsBusy(false);
           setCurrentStep('input');
-          const detail = data.error || (data.status === 'completed_with_errors' ? 'The Magnific workflow ran into internal generation errors (such as missing/low-resolution images, node timeout, or content filters). Please check your product photo or try re-generating.' : `Rendering failed: ${data.status}`);
+          const detail = data.error || (data.status === 'completed_with_errors' ? 'Our video engine ran into errors while generating this video (for example a missing or low-resolution image, a timeout, or a content filter). Please check your product photo or try generating again.' : `Rendering failed: ${data.status}`);
           setErrorMessage(detail);
           // The run is over: the draft forgets it, so reopening the draft lets the user render again
           draftRenderRef.current = null;
@@ -4482,7 +4484,7 @@ export default function App() {
         }
 
         const niceStatus = data.status && !/run|process|pending|queue|unknown/i.test(data.status)
-          ? data.status
+          ? brandSafeMessage(data.status, 'Synthesizing frames & audio in neural pipeline…')
           : 'Synthesizing frames & audio in neural pipeline…';
         if (isLive()) setRenderStatusText(niceStatus);
       } catch (pollErr) {
@@ -4504,7 +4506,7 @@ export default function App() {
     setIsRendering(false);
     setIsBusy(false);
     setCurrentStep('input');
-    setErrorMessage('Render taking longer than expected. Please verify your Magnific workspace.');
+    setErrorMessage('Your video is taking longer than expected to render. It is still in progress: reopen this project from My Projects in a few minutes to pick it up.');
   };
 
   // Video Share Action
