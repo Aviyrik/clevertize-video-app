@@ -1870,6 +1870,45 @@ async function resetPasswordWithToken(rawToken, newPassword) {
   return { id: u.id, email: u.email, name: u.name, avatar: u.avatar || null, emailVerified: true, emailVerifiedAt: u.emailVerifiedAt, onboardingState: normalizeOnboardingState(u.onboardingState), createdAt: u.createdAt };
 }
 
+// Signed-in password change: the current password must match. Every other session for the user is
+// signed out; the session making the change (keepSessionToken) stays signed in.
+// Throws an Error whose .code is USER_NOT_FOUND | WRONG_PASSWORD | WEAK_PASSWORD | SAME_PASSWORD.
+async function changePassword(userId, currentPassword, newPassword, keepSessionToken = null) {
+  const fail = (code, message) => Object.assign(new Error(message), { code });
+  const user = await findUserById(userId);
+  if (!user) throw fail('USER_NOT_FOUND', 'Account not found.');
+  if (!currentPassword || !user.passwordHash || !user.salt
+      || !verifyPassword(String(currentPassword), user.passwordHash, user.salt)) {
+    throw fail('WRONG_PASSWORD', 'Your current password is incorrect.');
+  }
+  if (!newPassword || String(newPassword).length < MIN_PASSWORD_LENGTH) {
+    throw fail('WEAK_PASSWORD', `New password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+  }
+  if (String(newPassword) === String(currentPassword)) {
+    throw fail('SAME_PASSWORD', 'Choose a password different from your current one.');
+  }
+  const { hash, salt } = hashPassword(String(newPassword));
+
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    await pool.query('UPDATE users SET password_hash = $1, salt = $2 WHERE id = $3', [hash, salt, userId]);
+    await pool.query('DELETE FROM sessions WHERE user_id = $1 AND token <> $2', [userId, keepSessionToken || '']);
+    return true;
+  }
+
+  const users = readJsonFile('users.json', []);
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw fail('USER_NOT_FOUND', 'Account not found.');
+  users[idx] = { ...users[idx], passwordHash: hash, salt };
+  writeJsonFile('users.json', users);
+  writeJsonFile(
+    'sessions.json',
+    readJsonFile('sessions.json', []).filter((s) => s.userId !== userId || (keepSessionToken && s.token === keepSessionToken))
+  );
+  return true;
+}
+
 module.exports = {
   isPostgresConfigured,
   ensurePgTables,
@@ -1909,4 +1948,5 @@ module.exports = {
   getLatestPasswordResetTokenForUser,
   checkPasswordResetToken,
   resetPasswordWithToken,
+  changePassword,
 };

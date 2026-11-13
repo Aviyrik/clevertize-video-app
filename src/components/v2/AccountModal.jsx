@@ -11,11 +11,30 @@ import {
   LogOut,
   RefreshCw,
   Camera,
-  Upload,
   Check,
-  MessageSquare,
   Compass,
+  ChevronRight,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
+
+const sectionHeadingStyle = {
+  margin: 0,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: '0.005em',
+  color: 'var(--cc-text-3)',
+};
+
+const cardStyle = {
+  padding: '12px 14px',
+  borderRadius: 'var(--cc-radius-md)',
+  backgroundColor: 'var(--cc-raised)',
+  border: '1px solid var(--cc-line-1)',
+};
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 export default function AccountModal({
   isOpen,
@@ -24,7 +43,9 @@ export default function AccountModal({
   onLogout,
   onDeleteAccount,
   onUpdateProfile,
-  onOpenFeedback,
+  onChangePassword,
+  onOpenProjects,
+  onOpenBusinesses,
   onReplayTour,
   onResumeTour,
   hasPausedTour = false,
@@ -39,7 +60,14 @@ export default function AccountModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [avatar, setAvatar] = useState(currentUser?.avatar || null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordFields, setPasswordFields] = useState({ current: '', next: '', confirm: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const fileInputRef = useRef(null);
+  const passwordTriggerRef = useRef(null);
+  const currentPasswordRef = useRef(null);
   const previousFocusRef = useRef(null);
   const closeButtonRef = useRef(null);
   const deleteTriggerRef = useRef(null);
@@ -77,6 +105,28 @@ export default function AccountModal({
     }, 10);
   };
 
+  const resetPasswordForm = () => {
+    setShowPasswordForm(false);
+    setPasswordFields({ current: '', next: '', confirm: '' });
+    setPasswordError('');
+    setShowPasswords(false);
+  };
+
+  // The trigger button is re-mounted when the form closes, so focus it after that render
+  const restorePasswordFocusRef = useRef(false);
+  useEffect(() => {
+    if (!showPasswordForm && restorePasswordFocusRef.current) {
+      restorePasswordFocusRef.current = false;
+      try { passwordTriggerRef.current?.focus(); } catch {}
+    }
+  }, [showPasswordForm]);
+
+  const handleCancelPasswordForm = () => {
+    if (isSavingPassword) return;
+    restorePasswordFocusRef.current = true;
+    resetPasswordForm();
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e) => {
@@ -84,6 +134,8 @@ export default function AccountModal({
         e.preventDefault();
         if (showConfirm) {
           handleCancelDeleteConfirm();
+        } else if (showPasswordForm) {
+          handleCancelPasswordForm();
         } else if (!isDeleting) {
           handleClose();
         }
@@ -91,18 +143,61 @@ export default function AccountModal({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, showConfirm, isDeleting]);
+  }, [isOpen, showConfirm, showPasswordForm, isDeleting, isSavingPassword]);
 
   if (!isOpen || !currentUser) return null;
 
   const handleClose = () => {
-    if (isDeleting) return;
+    if (isDeleting || isSavingPassword) return;
     setShowConfirm(false);
     setConfirmInput('');
     setErrorMsg('');
     setSuccessMsg('');
+    resetPasswordForm();
     onClose();
   };
+
+  const handleSubmitPassword = async (e) => {
+    e.preventDefault();
+    const { current, next, confirm } = passwordFields;
+    if (!current) return setPasswordError('Enter your current password.');
+    if (next.length < 6) return setPasswordError('New password must be at least 6 characters.');
+    if (next === current) return setPasswordError('Choose a password different from your current one.');
+    if (next !== confirm) return setPasswordError('The new passwords don’t match.');
+    if (!onChangePassword) return;
+
+    setPasswordError('');
+    setIsSavingPassword(true);
+    try {
+      await onChangePassword({ currentPassword: current, newPassword: next });
+      restorePasswordFocusRef.current = true;
+      resetPasswordForm();
+      setSuccessMsg('Password updated. Other devices have been signed out.');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err) {
+      setPasswordError(err.message || 'Unable to change your password right now.');
+      if (err.code === 'WRONG_PASSWORD') {
+        setTimeout(() => { try { currentPasswordRef.current?.select(); } catch {} }, 10);
+      }
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const passwordInputStyle = {
+    width: '100%',
+    boxSizing: 'border-box',
+    height: 36,
+    backgroundColor: 'var(--cc-surface)',
+    border: '1px solid var(--cc-line-2)',
+    borderRadius: 'var(--cc-radius-sm)',
+    padding: '0 12px',
+    fontSize: 13,
+    color: 'var(--cc-text-1)',
+    fontFamily: 'var(--cc-font-text)',
+  };
+
+  const passwordLabelStyle = { fontSize: 12, fontWeight: 500, color: 'var(--cc-text-2)' };
 
   const handleConfirmDelete = async () => {
     if (confirmInput.trim().toUpperCase() !== 'DELETE') return;
@@ -140,7 +235,7 @@ export default function AccountModal({
       if (onUpdateProfile) {
         try {
           await onUpdateProfile({ avatar: dataUrl });
-          setSuccessMsg('Profile picture updated successfully!');
+          setSuccessMsg('Profile picture updated.');
           setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) {
           setErrorMsg('Failed to save profile picture.');
@@ -164,12 +259,62 @@ export default function AccountModal({
     }
   };
 
+  const goTo = (navigate) => () => {
+    handleClose();
+    navigate();
+  };
+
   const memberSince = currentUser.createdAt
     ? new Date(currentUser.createdAt).toLocaleDateString(undefined, {
         month: 'short',
         year: 'numeric',
       })
     : 'Recent';
+
+  const detailLineStyle = {
+    fontSize: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+  };
+
+  const inlineLinkStyle = {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    transition: 'color var(--cc-dur-1) var(--cc-ease)',
+  };
+
+  const StatLink = ({ icon: Icon, label, onClick }) => {
+    const content = (
+      <>
+        <Icon size={12} aria-hidden="true" />
+        <span>{label}</span>
+        {onClick && <ChevronRight size={12} aria-hidden="true" />}
+      </>
+    );
+    if (!onClick) {
+      return <span style={{ ...detailLineStyle, color: 'var(--cc-text-2)' }}>{content}</span>;
+    }
+    return (
+      <button
+        type="button"
+        onClick={goTo(onClick)}
+        style={{ ...inlineLinkStyle, color: 'var(--cc-text-2)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cc-text-1)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cc-text-2)'; }}
+      >
+        {content}
+      </button>
+    );
+  };
 
   return (
     <div
@@ -196,10 +341,10 @@ export default function AccountModal({
           width: '100%',
           maxWidth: 500,
           maxHeight: 'min(90vh, 720px)',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 16,
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'var(--cc-surface)',
+          border: '1px solid var(--cc-line-2)',
+          borderRadius: 'var(--cc-radius-lg)',
+          boxShadow: 'var(--cc-shadow-modal)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -210,7 +355,7 @@ export default function AccountModal({
         <div
           style={{
             padding: '18px 24px',
-            borderBottom: '1px solid var(--border-subtle)',
+            borderBottom: '1px solid var(--cc-line-1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -222,8 +367,8 @@ export default function AccountModal({
               style={{
                 width: 32,
                 height: 32,
-                borderRadius: 8,
-                backgroundColor: 'rgba(244, 244, 236, 0.075)',
+                borderRadius: 'var(--cc-radius-sm)',
+                backgroundColor: 'var(--cc-tint)',
                 color: 'var(--cc-emphasis)',
                 display: 'flex',
                 alignItems: 'center',
@@ -233,11 +378,11 @@ export default function AccountModal({
               <User size={16} aria-hidden="true" />
             </div>
             <div>
-              <h2 id="account-settings-title" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Account Settings
+              <h2 id="account-settings-title" style={{ margin: 0, fontFamily: 'var(--cc-font-display)', fontSize: 16, fontWeight: 600, color: 'var(--cc-text-1)' }}>
+                Account settings
               </h2>
-              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                Profile, authentication, tour &amp; data controls
+              <span style={{ fontSize: 12, color: 'var(--cc-text-3)' }}>
+                Manage your profile and sign-in
               </span>
             </div>
           </div>
@@ -251,10 +396,10 @@ export default function AccountModal({
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--text-tertiary)',
+              color: 'var(--cc-text-3)',
               cursor: isDeleting ? 'not-allowed' : 'pointer',
               padding: 6,
-              borderRadius: 6,
+              borderRadius: 'var(--cc-radius-xs)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -280,9 +425,8 @@ export default function AccountModal({
               role="alert"
               style={{
                 padding: '10px 14px',
-                borderRadius: 8,
-                backgroundColor: 'rgba(255, 122, 107, 0.12)',
-                border: '1px solid rgba(255, 122, 107, 0.3)',
+                borderRadius: 'var(--cc-radius-sm)',
+                backgroundColor: 'var(--cc-danger-tint)',
                 color: 'var(--cc-danger)',
                 fontSize: 13,
                 display: 'flex',
@@ -301,9 +445,8 @@ export default function AccountModal({
               aria-live="polite"
               style={{
                 padding: '10px 14px',
-                borderRadius: 8,
-                backgroundColor: 'rgba(95, 212, 174, 0.12)',
-                border: '1px solid rgba(95, 212, 174, 0.3)',
+                borderRadius: 'var(--cc-radius-sm)',
+                backgroundColor: 'var(--cc-success-tint)',
                 color: 'var(--cc-success)',
                 fontSize: 13,
                 display: 'flex',
@@ -316,30 +459,19 @@ export default function AccountModal({
             </div>
           )}
 
-          {/* Section 1: Personal & Account Information */}
-          <section aria-labelledby="account-profile-heading" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h3 id="account-profile-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
-              Personal Information
+          {/* Section 1: Personal information */}
+          <section aria-labelledby="account-profile-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <h3 id="account-profile-heading" style={sectionHeadingStyle}>
+              Personal information
             </h3>
-          <div
-            style={{
-              padding: 18,
-              borderRadius: 12,
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ ...cardStyle, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
               {/* Avatar Upload Button (keyboard-accessible) */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   aria-label={avatar ? 'Change profile picture' : 'Upload profile picture'}
-                  title="Click to change profile picture"
+                  title={`${avatar ? 'Change' : 'Upload'} profile picture (JPG, PNG or WebP, up to 5MB)`}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -349,61 +481,60 @@ export default function AccountModal({
                     display: 'block',
                   }}
                 >
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={currentUser.name || 'Profile'}
-                    style={{
-                      width: 68,
-                      height: 68,
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid var(--cc-selected-line)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-                      display: 'block',
-                    }}
-                  />
-                ) : (
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt={currentUser.name || 'Profile'}
+                      style={{
+                        width: 68,
+                        height: 68,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid var(--cc-selected-line)',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 68,
+                        height: 68,
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--cc-tint)',
+                        color: 'var(--cc-emphasis)',
+                        fontFamily: 'var(--cc-font-display)',
+                        fontSize: 24,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '2px dashed var(--cc-line-2)',
+                      }}
+                    >
+                      {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                    </div>
+                  )}
+
                   <div
+                    aria-hidden="true"
                     style={{
-                      width: 68,
-                      height: 68,
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      width: 24,
+                      height: 24,
                       borderRadius: '50%',
-                      backgroundColor: 'var(--accent-subtle)',
-                      color: 'var(--cc-emphasis)',
-                      fontSize: 24,
-                      fontWeight: 600,
+                      backgroundColor: 'var(--cc-active)',
+                      color: 'var(--cc-text-1)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: '2px dashed var(--border-default)',
+                      border: '2px solid var(--cc-raised)',
+                      pointerEvents: 'none',
                     }}
                   >
-                    {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                    <Camera size={12} />
                   </div>
-                )}
-
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--cc-active)',
-                    color: 'var(--cc-text-1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                    border: '2px solid var(--bg-surface)',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <Camera size={12} />
-                </div>
                 </button>
 
                 <input
@@ -415,363 +546,275 @@ export default function AccountModal({
                 />
               </div>
 
-              {/* User Details & Photo Actions */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* User details, photo removal and quick links */}
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div
                   style={{
+                    fontFamily: 'var(--cc-font-display)',
                     fontSize: 16,
                     fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    marginBottom: 3,
+                    color: 'var(--cc-text-1)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {currentUser.name || 'CleverCut Creator'}
+                  {currentUser.name || 'CleverCut creator'}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--text-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 4,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  <Mail size={12} style={{ flexShrink: 0 }} />
-                  <span>{currentUser.email}</span>
+                <div style={{ ...detailLineStyle, color: 'var(--cc-text-2)' }}>
+                  <Mail size={12} style={{ flexShrink: 0 }} aria-hidden="true" />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUser.email}</span>
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--text-tertiary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <Calendar size={11} />
+                <div style={{ ...detailLineStyle, color: 'var(--cc-text-3)' }}>
+                  <Calendar size={12} aria-hidden="true" />
                   <span>Joined {memberSince}</span>
+                  {avatar && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        aria-label="Remove profile picture"
+                        style={{
+                          ...inlineLinkStyle,
+                          color: 'var(--cc-text-3)',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 2,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cc-danger)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cc-text-3)'; }}
+                      >
+                        Remove photo
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 4 }}>
+                  <StatLink
+                    icon={Film}
+                    label={plural(projectCount, 'saved project', 'saved projects')}
+                    onClick={onOpenProjects}
+                  />
+                  <StatLink
+                    icon={Building2}
+                    label={plural(businessCount, 'brand profile', 'brand profiles')}
+                    onClick={onOpenBusinesses}
+                  />
                 </div>
               </div>
             </div>
-
-            {/* Profile Picture Action Buttons */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                paddingTop: 12,
-                borderTop: '1px solid var(--border-subtle)',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  color: 'var(--text-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--cc-selected-line)';
-                  e.currentTarget.style.color = 'var(--cc-emphasis)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border-default)';
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-              >
-                <Upload size={13} />
-                <span>{avatar ? 'Replace Photo' : 'Upload Photo'}</span>
-              </button>
-
-              {avatar && (
-                <button
-                  type="button"
-                  onClick={handleRemoveAvatar}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    backgroundColor: 'transparent',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-tertiary)',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--cc-danger)';
-                    e.currentTarget.style.color = 'var(--cc-danger)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                    e.currentTarget.style.color = 'var(--text-tertiary)';
-                  }}
-                >
-                  <Trash2 size={12} />
-                  <span>Remove</span>
-                </button>
-              )}
-
-              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
-                JPG, PNG, or WebP up to 5MB
-              </span>
-            </div>
-          </div>
-
-          {/* Usage Stats Pills */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 10,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(244, 244, 236, 0.05)',
-                  color: 'var(--cc-emphasis)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Film size={16} />
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {projectCount}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saved Projects</div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 10,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(95, 212, 174, 0.1)',
-                  color: 'var(--cc-success)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Building2 size={16} />
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {businessCount}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Brand Profiles</div>
-              </div>
-            </div>
-          </div>
           </section>
 
-          {/* Section 2: Preferences & Guidance */}
-          {(onReplayTour || onResumeTour || onOpenFeedback) && (
+          {/* Section 2: Product tour */}
+          {(onReplayTour || (hasPausedTour && onResumeTour)) && (
             <section aria-labelledby="account-preferences-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h3 id="account-preferences-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
-                Preferences &amp; Walkthrough
+              <h3 id="account-preferences-heading" style={sectionHeadingStyle}>
+                Product tour
               </h3>
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                {hasPausedTour && onResumeTour && (
-                  <button
-                    type="button"
-                    data-testid="account-resume-tour-btn"
-                    aria-label={`Resume product tour from Step ${pausedTourStep + 1} of ${totalTourSteps}`}
-                    onClick={() => {
-                      handleClose();
-                      onResumeTour();
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      backgroundColor: 'rgba(244, 244, 236, 0.07)',
-                      border: '1px solid rgba(244, 244, 236, 0.315)',
-                      color: 'var(--cc-emphasis)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <Compass size={13} aria-hidden="true" />
-                    <span>Resume Tour (Step {pausedTourStep + 1}/{totalTourSteps})</span>
-                  </button>
-                )}
+              <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--cc-text-3)' }}>
+                  A short walkthrough of the studio.
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {hasPausedTour && onResumeTour && (
+                    <button
+                      type="button"
+                      className="cc-btn cc-btn--secondary cc-btn--sm"
+                      data-testid="account-resume-tour-btn"
+                      aria-label={`Resume product tour from step ${pausedTourStep + 1} of ${totalTourSteps}`}
+                      onClick={() => {
+                        handleClose();
+                        onResumeTour();
+                      }}
+                    >
+                      <Compass size={13} aria-hidden="true" />
+                      <span>Resume tour (step {pausedTourStep + 1}/{totalTourSteps})</span>
+                    </button>
+                  )}
 
-                {onReplayTour && (
-                  <button
-                    type="button"
-                    data-testid="account-replay-tour-btn"
-                    aria-label="Replay Guided Tour from Step 1"
-                    onClick={() => {
-                      handleClose();
-                      onReplayTour();
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <Compass size={13} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
-                    <span>Replay Tour</span>
-                  </button>
-                )}
-
-                {onOpenFeedback && (
-                  <button
-                    type="button"
-                    aria-label="Send Feedback"
-                    onClick={() => {
-                      handleClose();
-                      onOpenFeedback();
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-secondary)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <MessageSquare size={13} style={{ color: 'var(--cc-emphasis)' }} aria-hidden="true" />
-                    <span>Send Feedback</span>
-                  </button>
-                )}
+                  {onReplayTour && (
+                    <button
+                      type="button"
+                      className="cc-btn cc-btn--ghost cc-btn--sm"
+                      data-testid="account-replay-tour-btn"
+                      aria-label="Replay guided tour from step 1"
+                      onClick={() => {
+                        handleClose();
+                        onReplayTour();
+                      }}
+                    >
+                      <Compass size={13} aria-hidden="true" />
+                      <span>Replay tour</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </section>
           )}
 
-          {/* Section 3: Authentication & Session */}
+          {/* Section 3: Security & session */}
           <section aria-labelledby="account-auth-heading" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <h3 id="account-auth-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)' }}>
-              Security &amp; Session
+            <h3 id="account-auth-heading" style={sectionHeadingStyle}>
+              Security &amp; session
             </h3>
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 12,
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 10,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Active Session
+            <div style={{ ...cardStyle, padding: 0 }}>
+            {onChangePassword && (
+              <div data-testid="account-password-row" style={{ padding: '12px 14px', borderBottom: '1px solid var(--cc-line-1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--cc-text-1)' }}>
+                      Password
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--cc-text-3)', marginTop: 2 }}>
+                      Changing it signs you out on your other devices.
+                    </div>
+                  </div>
+                  {!showPasswordForm && (
+                    <button
+                      ref={passwordTriggerRef}
+                      type="button"
+                      className="cc-btn cc-btn--secondary cc-btn--sm"
+                      data-testid="change-password-trigger"
+                      aria-expanded={showPasswordForm}
+                      aria-controls="change-password-form"
+                      onClick={() => {
+                        setSuccessMsg('');
+                        setShowPasswordForm(true);
+                        setTimeout(() => { try { currentPasswordRef.current?.focus(); } catch {} }, 20);
+                      }}
+                    >
+                      <KeyRound size={13} aria-hidden="true" />
+                      <span>Change password</span>
+                    </button>
+                  )}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+
+                {showPasswordForm && (
+                  <form
+                    id="change-password-form"
+                    data-testid="change-password-form"
+                    onSubmit={handleSubmitPassword}
+                    noValidate
+                    style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}
+                  >
+                    {/* Lets password managers link the new password to this account */}
+                    <input type="text" name="username" autoComplete="username" value={currentUser.email || ''} readOnly hidden />
+
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={passwordLabelStyle}>Current password</span>
+                      <input
+                        ref={currentPasswordRef}
+                        type={showPasswords ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={passwordFields.current}
+                        onChange={(e) => setPasswordFields((p) => ({ ...p, current: e.target.value }))}
+                        disabled={isSavingPassword}
+                        style={passwordInputStyle}
+                      />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={passwordLabelStyle}>New password</span>
+                      <input
+                        type={showPasswords ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="At least 6 characters"
+                        value={passwordFields.next}
+                        onChange={(e) => setPasswordFields((p) => ({ ...p, next: e.target.value }))}
+                        disabled={isSavingPassword}
+                        style={passwordInputStyle}
+                      />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={passwordLabelStyle}>Confirm new password</span>
+                      <input
+                        type={showPasswords ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={passwordFields.confirm}
+                        onChange={(e) => setPasswordFields((p) => ({ ...p, confirm: e.target.value }))}
+                        disabled={isSavingPassword}
+                        style={passwordInputStyle}
+                      />
+                    </label>
+
+                    {passwordError && (
+                      <div role="alert" data-testid="change-password-error" style={{ fontSize: 12, color: 'var(--cc-danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <AlertTriangle size={13} aria-hidden="true" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords((v) => !v)}
+                        aria-pressed={showPasswords}
+                        style={{ ...inlineLinkStyle, color: 'var(--cc-text-3)' }}
+                      >
+                        {showPasswords ? <EyeOff size={13} aria-hidden="true" /> : <Eye size={13} aria-hidden="true" />}
+                        <span>{showPasswords ? 'Hide passwords' : 'Show passwords'}</span>
+                      </button>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="cc-btn cc-btn--ghost cc-btn--sm"
+                          onClick={handleCancelPasswordForm}
+                          disabled={isSavingPassword}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="cc-btn cc-btn--secondary cc-btn--sm"
+                          data-testid="change-password-submit"
+                          disabled={isSavingPassword}
+                        >
+                          {isSavingPassword ? (
+                            <>
+                              <RefreshCw size={12} className="icon-spinner" aria-hidden="true" />
+                              <span>Updating…</span>
+                            </>
+                          ) : (
+                            <span>Update password</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+            <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--cc-text-1)' }}>
+                  Active session
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--cc-text-3)', marginTop: 2 }}>
                   Sign out of this browser. Projects and brands stay saved.
                 </div>
               </div>
               <button
                 type="button"
+                className="cc-btn cc-btn--secondary cc-btn--sm"
                 aria-label="Sign out of CleverCut"
                 onClick={() => {
                   handleClose();
                   if (onLogout) onLogout();
                 }}
-                style={{
-                  padding: '7px 12px',
-                  borderRadius: 8,
-                  backgroundColor: 'var(--bg-surface)',
-                  border: '1px solid var(--border-default)',
-                  color: 'var(--text-primary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
               >
                 <LogOut size={13} aria-hidden="true" />
-                <span>Sign Out</span>
+                <span>Sign out</span>
               </button>
+            </div>
             </div>
           </section>
 
-          {/* Section 4: Danger Zone — Permanent & Irreversible Actions */}
+          {/* Section 4: Danger zone — permanent and irreversible actions */}
           <section
             aria-labelledby="danger-zone-heading"
             data-testid="account-danger-zone"
             style={{
               padding: 14,
-              borderRadius: 12,
+              borderRadius: 'var(--cc-radius-md)',
               backgroundColor: 'rgba(255, 122, 107, 0.04)',
               border: '1px solid rgba(255, 122, 107, 0.25)',
               display: 'flex',
@@ -781,18 +824,18 @@ export default function AccountModal({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <AlertTriangle size={14} style={{ color: 'var(--cc-danger)' }} aria-hidden="true" />
-              <h3 id="danger-zone-heading" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-danger)' }}>
-                Danger Zone · Permanent &amp; Irreversible
+              <h3 id="danger-zone-heading" style={{ ...sectionHeadingStyle, color: 'var(--cc-danger)' }}>
+                Danger zone
               </h3>
             </div>
 
             {!showConfirm ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div style={{ flex: '1 1 220px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Delete Account Permanently
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--cc-text-1)' }}>
+                    Delete account
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 12, color: 'var(--cc-text-2)', marginTop: 2, lineHeight: 1.45 }}>
                     Permanently erases your CleverCut profile, all brand profiles, saved scripts, and generated videos. This cannot be undone.
                   </div>
                 </div>
@@ -800,6 +843,7 @@ export default function AccountModal({
                 <button
                   ref={deleteTriggerRef}
                   type="button"
+                  className="cc-btn cc-btn--danger cc-btn--sm"
                   data-testid="delete-account-trigger"
                   aria-expanded={showConfirm}
                   aria-label="Delete account permanently — opens confirmation"
@@ -811,23 +855,10 @@ export default function AccountModal({
                       }
                     }, 20);
                   }}
-                  style={{
-                    padding: '7px 12px',
-                    borderRadius: 7,
-                    backgroundColor: 'transparent',
-                    border: '1px solid rgba(255, 122, 107, 0.45)',
-                    color: 'var(--cc-danger)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    flexShrink: 0,
-                  }}
+                  style={{ flexShrink: 0 }}
                 >
                   <Trash2 size={13} aria-hidden="true" />
-                  <span>Delete Account…</span>
+                  <span>Delete account…</span>
                 </button>
               </div>
             ) : (
@@ -839,8 +870,8 @@ export default function AccountModal({
                 data-testid="delete-account-confirm-panel"
                 style={{
                   padding: 12,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(255, 122, 107, 0.08)',
+                  borderRadius: 'var(--cc-radius-sm)',
+                  backgroundColor: 'var(--cc-danger-tint)',
                   border: '1px solid rgba(255, 122, 107, 0.35)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -848,17 +879,17 @@ export default function AccountModal({
                 }}
               >
                 <div>
-                  <div id="delete-account-confirm-title" style={{ fontSize: 12.5, fontWeight: 600, color: '#FFA79C', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div id="delete-account-confirm-title" style={{ fontSize: 13, fontWeight: 600, color: 'var(--cc-danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <AlertTriangle size={14} aria-hidden="true" />
                     <span>Confirm permanent account deletion</span>
                   </div>
-                  <div id="delete-account-confirm-desc" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
-                    This irreversible action will immediately sign you out and permanently remove all {projectCount} project(s) and {businessCount} brand profile(s).
+                  <div id="delete-account-confirm-desc" style={{ fontSize: 12, color: 'var(--cc-text-2)', marginTop: 4, lineHeight: 1.45 }}>
+                    This will sign you out and permanently remove {plural(projectCount, 'project', 'projects')} and {plural(businessCount, 'brand profile', 'brand profiles')}.
                   </div>
                 </div>
 
-                <label htmlFor="account-delete-confirm-input" style={{ fontSize: 12, fontWeight: 600, color: '#FFA79C' }}>
-                  To confirm permanent deletion, type <strong>DELETE</strong> below:
+                <label htmlFor="account-delete-confirm-input" style={{ fontSize: 12, fontWeight: 600, color: 'var(--cc-danger)' }}>
+                  To confirm, type <strong>DELETE</strong> below:
                 </label>
 
                 <input
@@ -872,13 +903,13 @@ export default function AccountModal({
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 6,
+                    backgroundColor: 'var(--cc-raised)',
+                    border: '1px solid var(--cc-line-2)',
+                    borderRadius: 'var(--cc-radius-xs)',
                     padding: '7px 10px',
                     fontSize: 12,
-                    color: 'var(--text-primary)',
-                    fontFamily: "'JetBrains Mono', monospace",
+                    color: 'var(--cc-text-1)',
+                    fontFamily: 'var(--cc-font-mono)',
                     outline: 'none',
                   }}
                 />
@@ -886,41 +917,21 @@ export default function AccountModal({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
+                    className="cc-btn cc-btn--secondary cc-btn--sm"
                     data-testid="delete-account-cancel-btn"
                     onClick={handleCancelDeleteConfirm}
                     disabled={isDeleting}
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: 6,
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-default)',
-                      color: 'var(--text-primary)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: isDeleting ? 'not-allowed' : 'pointer',
-                    }}
                   >
-                    Cancel &amp; Keep Account
+                    Keep my account
                   </button>
 
                   <button
                     type="button"
+                    className="cc-btn cc-btn--sm"
                     data-testid="delete-account-confirm-btn"
                     onClick={handleConfirmDelete}
                     disabled={confirmInput.trim().toUpperCase() !== 'DELETE' || isDeleting}
-                    style={{
-                      padding: '7px 12px',
-                      borderRadius: 6,
-                      backgroundColor: confirmInput.trim().toUpperCase() === 'DELETE' ? 'var(--cc-danger)' : 'rgba(255, 122, 107, 0.35)',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: confirmInput.trim().toUpperCase() === 'DELETE' && !isDeleting ? 'pointer' : 'not-allowed',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                    }}
+                    style={{ backgroundColor: 'var(--cc-danger)', color: 'var(--cc-bg)', fontWeight: 600 }}
                   >
                     {isDeleting ? (
                       <>
@@ -930,7 +941,7 @@ export default function AccountModal({
                     ) : (
                       <>
                         <Trash2 size={12} aria-hidden="true" />
-                        <span>Permanently Delete Account</span>
+                        <span>Delete account permanently</span>
                       </>
                     )}
                   </button>
@@ -944,8 +955,7 @@ export default function AccountModal({
         <div
           style={{
             padding: '14px 24px',
-            borderTop: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-elevated)',
+            borderTop: '1px solid var(--cc-line-1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
@@ -954,17 +964,8 @@ export default function AccountModal({
         >
           <button
             type="button"
+            className="cc-btn cc-btn--primary cc-btn--sm"
             onClick={handleClose}
-            style={{
-              padding: '8px 20px',
-              borderRadius: 999,
-              backgroundColor: 'var(--cc-action)',
-              border: 'none',
-              color: 'var(--cc-on-action)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
           >
             Done
           </button>

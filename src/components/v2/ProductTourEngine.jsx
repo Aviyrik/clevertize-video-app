@@ -96,6 +96,14 @@ export default function ProductTourEngine({
 
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 720;
+
+    // Target exists but sits off-screen (e.g. inside the closed mobile nav drawer): show the step
+    // as a centred card with no spotlight instead of clamping a ring onto the screen edge.
+    if (r.right <= 0 || r.left >= vw || r.bottom <= 0 || r.top >= vh) {
+      setTargetRect(null);
+      return;
+    }
+
     const pad = 8;
     const top = Math.max(2, r.top - pad);
     const left = Math.max(2, r.left - pad);
@@ -329,7 +337,7 @@ export default function ProductTourEngine({
           <span
             data-testid="tour-step-counter"
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: '0.005em',
               color: 'var(--cc-emphasis)',

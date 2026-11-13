@@ -2328,6 +2328,22 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
+// Signed-in password change from Account settings. Other devices are signed out; this one stays in.
+app.post("/api/auth/change-password", authRequired, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    await db.changePassword(req.user.id, currentPassword, newPassword, req.sessionToken);
+    res.json({ success: true, message: "Password updated. Other devices have been signed out." });
+  } catch (err) {
+    const status = err.code === "WRONG_PASSWORD" ? 403 : err.code ? 400 : 500;
+    res.status(status).json({
+      success: false,
+      code: err.code || "SERVER_ERROR",
+      error: err.code ? err.message : "Unable to change your password right now. Please try again.",
+    });
+  }
+});
+
 // Login needs a verified email (including accounts made before verification existed) in production.
 // EMAIL_VERIFICATION_REQUIRED=true|false overrides; local development defaults to off, so a machine
 // without a Resend key can still log in to existing accounts.

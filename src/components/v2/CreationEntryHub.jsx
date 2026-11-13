@@ -215,6 +215,7 @@ export default function CreationEntryHub({
         {/* Visual: the path ahead, as a slate over warm footage light */}
         <div
           aria-hidden="true"
+          className="hub-hero-visual"
           style={{
             position: 'relative',
             minHeight: 210,
@@ -242,7 +243,7 @@ export default function CreationEntryHub({
                   color: 'rgba(255, 255, 255, 0.88)',
                 }}
               >
-                <span style={{ fontFamily: 'var(--cc-font-mono)', fontSize: 11.5, color: 'rgba(255,255,255,0.55)' }}>0{i + 1}</span>
+                <span style={{ fontFamily: 'var(--cc-font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>0{i + 1}</span>
                 {label}
               </div>
             ))}
@@ -293,7 +294,7 @@ export default function CreationEntryHub({
             </span>
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
-            <span>Import Script</span>
+            <span className="hub-card-action-label">Import Script</span>
             <ArrowRight size={15} />
           </span>
         </button>
@@ -330,7 +331,7 @@ export default function CreationEntryHub({
             </span>
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
-            <span>Scan Website</span>
+            <span className="hub-card-action-label">Scan Website</span>
             <ArrowRight size={15} />
           </span>
         </button>
@@ -389,7 +390,7 @@ export default function CreationEntryHub({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
               gap: 16,
             }}
           >
@@ -422,7 +423,7 @@ export default function CreationEntryHub({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: '0.005em',
                         color: 'var(--text-secondary)',
@@ -474,7 +475,7 @@ export default function CreationEntryHub({
           borderTop: '1px solid var(--border-subtle)',
           paddingTop: 20,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
           gap: 16,
         }}
       >

@@ -241,7 +241,7 @@ export default function ScreenUnderstanding({
                 {draftData.is_mock && (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '2px 6px',
                       borderRadius: 4,
@@ -858,7 +858,7 @@ function SectionCard({ id, title, icon, content, isEditing, onStartEdit, onCance
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h3>
         </div>
         {!isEditing && (
-          <button
+          <button className="tap-target"
             type="button"
             onClick={onStartEdit}
             style={{
@@ -1070,7 +1070,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 </span>
               </button>
               {showAiFallback && (
-                <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
                   {aiDos.length > 0 && (
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
@@ -1168,7 +1168,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
               </span>
               <span
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 999,
@@ -1179,7 +1179,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 Entered by You
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
               <div
                 style={{
                   backgroundColor: 'rgba(95, 212, 174, 0.05)',
@@ -1243,7 +1243,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
               </span>
               <span
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 999,
@@ -1272,7 +1272,7 @@ function GuardrailsCard({ guardrails, userGuardrails = null, guardrailAnalysis =
                 ))}
               </ul>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
                 {aiDos.length > 0 && (
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>
@@ -1409,7 +1409,7 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
           </h3>
         </div>
         {!isEditing && (
-          <button
+          <button className="tap-target"
             type="button"
             onClick={onStartEdit}
             style={{
@@ -1535,7 +1535,7 @@ function AssumptionsCard({ verifiedFacts = [], assumptions = [], missing = [], i
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 14 }}>
           {/* Assumptions */}
           <div
             style={{

@@ -413,7 +413,7 @@ export default function ScriptLibraryView({
                   <span>{tab.label}</span>
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '1px 6px',
                       borderRadius: 10,
@@ -917,7 +917,7 @@ export default function ScriptLibraryView({
                         {bizType && (
                           <div
                             style={{
-                              fontSize: 11.5,
+                              fontSize: 12,
                               color: 'var(--text-tertiary)',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -933,7 +933,7 @@ export default function ScriptLibraryView({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           display: 'flex',
                           alignItems: 'center',
@@ -1458,7 +1458,7 @@ export default function ScriptLibraryView({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: 600,
                                 flexShrink: 0,
                               }}
