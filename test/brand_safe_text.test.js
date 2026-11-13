@@ -21,6 +21,9 @@ test('frontend source never names the rendering provider (except the filter itse
   ].filter((f) => /\.(jsx?|css|html|json)$/.test(f) && !f.endsWith(path.join('utils', 'brandSafeText.js')));
   const offenders = files.filter((f) => /magnific/i.test(fs.readFileSync(f, 'utf8')));
   assert.deepEqual(offenders.map((f) => path.relative(root, f)), []);
+  // Rendering is simply not talked about: no claim of an in-house or proprietary video engine
+  const claims = files.filter((f) => /video engine|in-house/i.test(fs.readFileSync(f, 'utf8')));
+  assert.deepEqual(claims.map((f) => path.relative(root, f)), []);
 });
 
 test('server messages that name the provider are replaced; others pass through', () => {

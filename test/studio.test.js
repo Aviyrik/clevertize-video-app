@@ -1622,7 +1622,8 @@ test('V2 Entry Points: CreationEntryHub exposes Brief, Existing Script, and Webs
   assert.ok(hubSrc.includes('Start with a Website URL'), 'Hub must feature Start with a Website URL');
   assert.ok(hubSrc.includes('18-Point Continuity Gate'), 'Hub must highlight 18-point continuity gate');
   assert.ok(hubSrc.includes('Devanagari script support'), 'Hub must highlight regional script support');
-  assert.ok(hubSrc.includes('In-House Video Engine'), 'Hub must highlight in-house video rendering');
+  assert.ok(hubSrc.includes('Every Platform Format'), 'Hub must highlight multi-format output');
+  assert.ok(!/video engine|in-house/i.test(hubSrc), 'Hub must not claim an in-house video engine');
   assert.ok(!/magnific/i.test(hubSrc), 'Hub must not name the rendering provider');
 });
 

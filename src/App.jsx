@@ -4475,7 +4475,7 @@ export default function App() {
           setIsRendering(false);
           setIsBusy(false);
           setCurrentStep('input');
-          const detail = data.error || (data.status === 'completed_with_errors' ? 'Our video engine ran into errors while generating this video (for example a missing or low-resolution image, a timeout, or a content filter). Please check your product photo or try generating again.' : `Rendering failed: ${data.status}`);
+          const detail = data.error || (data.status === 'completed_with_errors' ? 'Something went wrong while generating this video (for example a missing or low-resolution image, a timeout, or a content filter). Please check your product photo or try generating again.' : `Rendering failed: ${data.status}`);
           setErrorMessage(detail);
           // The run is over: the draft forgets it, so reopening the draft lets the user render again
           draftRenderRef.current = null;
