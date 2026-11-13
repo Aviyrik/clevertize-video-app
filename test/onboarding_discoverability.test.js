@@ -217,7 +217,7 @@ test('5. Tour Config, Tooltips & Contextual Tips completeness and scope guard (n
   const accountSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
   assert.ok(!shellSrc.includes('Help & Learning'), 'Help & Learning must remain out of scope');
   assert.ok(!accountSrc.includes('Help & Learning'), 'Help & Learning must remain out of scope');
-  assert.ok(accountSrc.includes('Replay Tour'), 'Tour must be replayable from Account Settings');
+  assert.ok(accountSrc.includes('Replay tour'), 'Tour must be replayable from Account Settings');
   assert.ok(shellSrc.includes('data-tour="tour-replay-trigger"'), 'Tour must be replayable from sidebar footer');
 });
 

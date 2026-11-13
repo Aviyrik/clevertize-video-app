@@ -1924,6 +1924,24 @@ export default function App() {
     }
   };
 
+  // Throws with the server's message so Account settings can show it next to the form
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    if (!authToken) throw new Error('Please log in again to change your password.');
+    const res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw Object.assign(new Error(data.error || 'Unable to change your password right now.'), { code: data.code });
+    }
+    return data;
+  };
+
   const handleSaveCurrentProject = async () => {
     // 1. Synchronous in-flight guard: blocks rapid concurrent invocations before React state updates
     if (isSavingProjectRef.current || isSavingProject) {
@@ -6793,7 +6811,9 @@ export default function App() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
-        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+        onChangePassword={handleChangePassword}
+        onOpenProjects={() => setActiveAppView('projects')}
+        onOpenBusinesses={() => setActiveAppView('businesses')}
         onReplayTour={handleReplayTour}
         onResumeTour={handleResumeTour}
         hasPausedTour={hasResumableTourProgress(onboardingState, TOUR_STEPS.length)}

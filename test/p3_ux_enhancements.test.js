@@ -23,7 +23,7 @@ test('P3.1A Business Setup: 4-step accessible progress, required cues, Back/Cont
 test('P3.1B Account Settings: grouped sections, Danger Zone differentiation, Escape & focus return on Delete confirmation', () => {
   const accountSrc = fs.readFileSync(path.join(ROOT, 'src/components/v2/AccountModal.jsx'), 'utf8');
 
-  assert.ok(accountSrc.includes('Personal Information') && accountSrc.includes('Security &amp; Session') && accountSrc.includes('Danger Zone'));
+  assert.ok(accountSrc.includes('Personal information') && accountSrc.includes('Security &amp; session') && accountSrc.includes('Danger zone'));
   assert.ok(accountSrc.includes('data-testid="account-danger-zone"') && accountSrc.includes('role="alertdialog"'));
   assert.ok(accountSrc.includes('data-testid="delete-account-cancel-btn"') && accountSrc.includes('data-testid="delete-account-confirm-btn"'));
   assert.ok(accountSrc.includes('deleteTriggerRef') && accountSrc.includes('previousFocusRef'));

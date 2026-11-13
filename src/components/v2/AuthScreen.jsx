@@ -275,7 +275,7 @@ export default function AuthScreen({
           max-width: 420px;
           margin-left: auto !important;
           margin-right: 0 !important;
-          background-color: color-mix(in srgb, var(--cc-surface) 84%, transparent);
+          background-color: color-mix(in srgb, var(--cc-surface) 82%, transparent);
           backdrop-filter: blur(24px) saturate(140%);
           -webkit-backdrop-filter: blur(24px) saturate(140%);
           border: 1px solid var(--cc-line-2);
@@ -866,7 +866,7 @@ export default function AuthScreen({
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ramesh Sharma"
+                  placeholder="e.g. Alex Morgan"
                   disabled={isSubmitting}
                   className="auth-input"
                 />
