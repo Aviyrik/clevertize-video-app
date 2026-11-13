@@ -29,6 +29,7 @@ import LegalDocumentModal from './LegalDocumentModal.jsx';
 export default function AuthScreen({
   onAuthSuccess,
   initialMode = 'signup', // 'signup' | 'signin' | 'login'
+  notice = '', // e.g. "Your session has expired" after an automatic sign-out
 }) {
   const normalizeMode = (m) => (m === 'login' || m === 'signin' ? 'signin' : 'signup');
   const [mode, setMode] = useState(() => normalizeMode(initialMode));
@@ -734,6 +735,27 @@ export default function AuthScreen({
                 ? 'One brief in. A finished commercial out.'
                 : 'Log in to continue creating with CleverCut.'}
             </p>
+            {notice && (
+              <div
+                role="status"
+                data-testid="auth-notice"
+                style={{
+                  marginTop: 14,
+                  padding: '10px 12px',
+                  borderRadius: 'var(--cc-radius-sm)',
+                  backgroundColor: 'var(--cc-info-tint)',
+                  color: 'var(--cc-text-1)',
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                }}
+              >
+                <Info size={15} aria-hidden="true" style={{ color: 'var(--cc-info)', flexShrink: 0, marginTop: 1 }} />
+                <span>{notice}</span>
+              </div>
+            )}
           </div>
 
           {/* Google Authentication Button */}
