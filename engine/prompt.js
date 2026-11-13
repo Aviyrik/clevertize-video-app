@@ -73,7 +73,7 @@ function buildUserContent(f, fest, previous, today, stageText = STAGE_FALLBACK) 
     `LANGUAGE: ${f.language}`,
     `AREA: ${v(f.area, "(blank — no specific neighborhood)")}`,
     `SPECIALTY: ${v(f.specialty, "(blank — use the default)")}`,
-    `BRAND_TONE: ${v(f.brandTone, "Warm & Authentic")} (Brand voice and emotional tone: reflect this personality in character dynamic, spoken cadence, visual warmth, and attitude)`,
+    `BRAND_TONE: ${v(f.brandTone, "Warm & Authentic")} (Brand voice and emotional tone: reflect this personality in character dynamic, spoken cadence, visual warmth, and attitude)${f.complianceContext && f.complianceContext.mood && f.complianceContext.mood.enforced ? ` — category mood rule: ${f.complianceContext.mood.reason}` : ""}`,
     `OFFER: ${v(f.offer, "(blank — no offer; sell the business itself)")}`,
     `OCCASION: ${v(f.occasion, "(blank — decide via the festival section)")}`,
     `CONTACT: ${v(f.contact, "(blank — visit-the-shop ending)")}`,
@@ -94,6 +94,16 @@ function buildUserContent(f, fest, previous, today, stageText = STAGE_FALLBACK) 
     }
   }
 
+  // Category compliance module (universal + category rules), loaded at the brief and carried into every stage
+  let complianceSection = "";
+  if (f.complianceContext) {
+    const { formatPromptBlock } = require("./categoryGuardrails");
+    const block = formatPromptBlock(f.complianceContext, "script");
+    if (block) complianceSection = `
+
+${block}`;
+  }
+
   content.push({
     type: "text",
     text: `TODAY: ${today}
@@ -105,7 +115,7 @@ ${festivalText(fest)}
 
 ${hookLibraryText()}
 
-${prev}${guardrailsSection}
+${prev}${guardrailsSection}${complianceSection}
 
 ${stageText}`,
   });

@@ -13,6 +13,7 @@ import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject, bri
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
 import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
 import { hasActiveClientEventContext } from './utils/eventContext.js';
+import { humanReviewPrompt } from './utils/categoryCompliance.js';
 import {
   createDefaultOnboardingState,
   normalizeOnboardingState,
@@ -593,6 +594,7 @@ export default function App() {
     logo: null,
     brandFile: null,
     creativeGuardrails: null,
+    categoryCompliance: null,
     eventContext: null,
   });
 
@@ -934,6 +936,7 @@ export default function App() {
   const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
   const [understandingError, setUnderstandingError] = useState('');
   const [scriptGuardrailReport, setScriptGuardrailReport] = useState(null);
+  const [scriptComplianceReport, setScriptComplianceReport] = useState(null); // category guardrails report for the script
   // A business the user picked while a film was in progress: the confirm modal asks before switching to it
   const [pendingBusinessSwitch, setPendingBusinessSwitch] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -2177,6 +2180,7 @@ export default function App() {
     const restoredEventContext = proj.eventContext || proj.creativeDNA?.eventContext || proj.stages?.eventContext || (draft && draft.guided && draft.guided.eventContext) || null;
     updateUserContext('eventContext', restoredEventContext);
     setScriptGuardrailReport(null);
+    setScriptComplianceReport(null);
     setActiveAppView('studio');
     setToastMessage(resume ? `Resumed "${proj.title || 'your video'}" where you left off.` : `Loaded "${proj.title || 'Project'}" into Studio.`);
     setTimeout(() => setToastMessage(''), 3500);
@@ -2701,6 +2705,7 @@ export default function App() {
       productPhoto: userContext.productPhoto ? { mime: userContext.productPhoto.mime, data: userContext.productPhoto.data } : null,
       logo: videoLogoPayload(userContext),
       creativeGuardrails: userContext.creativeGuardrails || null,
+      categoryCompliance: userContext.categoryCompliance || null,
     };
   };
 
@@ -2855,6 +2860,7 @@ export default function App() {
           userCorrections: effectiveCorrections,
           previousUnderstanding: aiUnderstanding,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
       });
@@ -2982,6 +2988,7 @@ export default function App() {
           hasLogo: prodSettings.hasLogo,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
           aiUnderstanding: aiUnderstanding && aiUnderstanding.approval_status === 'approved' ? aiUnderstanding : null,
@@ -3099,6 +3106,7 @@ export default function App() {
           creativeStyle: activeFormat,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
@@ -3149,6 +3157,7 @@ export default function App() {
           brandTone: userContext.brandTone || 'Warm & Authentic',
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
@@ -3202,6 +3211,7 @@ export default function App() {
           brandTone: userContext.brandTone || 'Warm & Authentic',
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
@@ -3327,6 +3337,7 @@ export default function App() {
           avoid: avoidList,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
@@ -3343,6 +3354,7 @@ export default function App() {
       setScriptPayloadData(data);
       setGeneratedScript(data);
       setScriptGuardrailReport(data.guardrailReport || null);
+      setScriptComplianceReport(data.compliance || null);
       setCharacter1(data.character1 || '');
       setCharacter2(data.character2 || '');
       setSetting(data.setting || '');
@@ -3384,6 +3396,7 @@ export default function App() {
           setting,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         }),
@@ -3399,6 +3412,8 @@ export default function App() {
         if (data.guardrailReport !== undefined) {
           setScriptGuardrailReport(data.guardrailReport);
         }
+        // re-check the whole script against the category rules after the rewrite
+        rescanScriptCompliance(updated);
         if (shotSpec && Array.isArray(shotSpec.shots)) {
           setShotSpec((prev) => {
             if (!prev || !Array.isArray(prev.shots)) return prev;
@@ -3788,7 +3803,10 @@ export default function App() {
 
     if (!res.ok) {
       if (data && data.error) {
-        throw new Error(data.error);
+        const apiErr = new Error(data.error);
+        apiErr.code = data.code || null; // e.g. HUMAN_REVIEW_REQUIRED, COMPLIANCE_VIOLATION
+        apiErr.data = data;
+        throw apiErr;
       }
       if (res.status === 413) {
         throw new Error('Uploaded files are too large. Please use a smaller product photo or logo image (under 5MB).');
@@ -3813,6 +3831,54 @@ export default function App() {
     }
 
     return data;
+  };
+
+  // Category guardrails: deterministic re-scan of the whole script (after a scene rewrite), keeping the human-review flag
+  const rescanScriptCompliance = async (sceneList) => {
+    try {
+      const bType = userContext.businessType === 'Other' && userContext.customBusinessType?.trim()
+        ? userContext.customBusinessType.trim()
+        : userContext.businessType;
+      const res = await fetch('/api/compliance/scan', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          businessType: bType,
+          categoryCompliance: userContext.categoryCompliance || null,
+          brief: userContext.brief || '',
+          offer: userContext.offer || '',
+          specialty: userContext.specialty || '',
+          setting,
+          character1,
+          character2,
+          scenes: sceneList,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setScriptComplianceReport(data.compliance || null);
+      }
+    } catch (e) {
+      console.warn('[compliance] re-scan failed:', e.message);
+    }
+  };
+
+  // POST /api/run. High-tier (or flagged) films come back HUMAN_REVIEW_REQUIRED before the end frame is added
+  // (category guardrails): a person confirms the compliance review, then the render is sent again with the sign-off.
+  const startRenderRun = async (runPayload, defaultErrorMsg) => {
+    const send = (extra = {}) => safeApiCall(fetch('/api/run', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ ...runPayload, ...extra }),
+    }), defaultErrorMsg);
+    try {
+      return await send();
+    } catch (err) {
+      if (err.code !== 'HUMAN_REVIEW_REQUIRED') throw err;
+      const confirmed = window.confirm(humanReviewPrompt(err.data && err.data.humanReview));
+      if (!confirmed) throw new Error('Rendering paused: this film needs a human compliance review before the end frame is added.');
+      return send({ humanReview: { confirmed: true, confirmedAt: new Date().toISOString() } });
+    }
   };
 
   // FAST SINGLE-CLICK PIPELINE: Brand -> Brief -> Options -> Direct GPU Video Render in ~20s
@@ -3893,15 +3959,12 @@ export default function App() {
         logo: videoLogoPayload(userContext),
         projectId: activeProjectId,
         creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
+        categoryCompliance: overrideParams?.categoryCompliance || userContext.categoryCompliance || null,
         shotSpec: pipeData.shotSpec || null,
         aspectRatio: aspectRatioOf(userContext),
       };
 
-      const runData = await safeApiCall(fetch('/api/run', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      const runData = await startRenderRun(runPayload, 'Failed to dispatch render job to Magnific.');
 
       // 3. Poll Magnific status
       await pollRenderStatus(runData.runId, { session });
@@ -3961,6 +4024,7 @@ export default function App() {
         logo: videoLogoPayload(userContext),
         projectId: activeProjectId,
         creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
+        categoryCompliance: overrideParams?.categoryCompliance || userContext.categoryCompliance || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -3972,11 +4036,7 @@ export default function App() {
         aspectRatio: aspectRatioOf(userContext),
       };
 
-      const data = await safeApiCall(fetch('/api/run', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      const data = await startRenderRun(runPayload, 'Failed to dispatch render job to Magnific.');
 
       setRenderStatusText('Rendering neural video frames…');
       await pollRenderStatus(data.runId, { session });
@@ -4042,6 +4102,7 @@ export default function App() {
           productPhoto: userContext.productPhoto,
           videoLogo: userContext.videoLogo,
           creativeGuardrails: userContext.creativeGuardrails || null,
+          categoryCompliance: userContext.categoryCompliance || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
         },
         stages: {
@@ -4648,6 +4709,7 @@ export default function App() {
       setIsAnalyzingBrief(false);
       setUnderstandingError('');
       setScriptGuardrailReport(null);
+    setScriptComplianceReport(null);
 
       setSessionId(null);
       setActiveProjectId(null);
@@ -4693,6 +4755,7 @@ export default function App() {
           specialty: '',
           offer: '',
           creativeGuardrails: null,
+          categoryCompliance: null,
           eventContext: null,
         };
         try {
@@ -4959,6 +5022,7 @@ export default function App() {
     setShotSpec(null);
     setScriptPayloadData(null);
     setScriptGuardrailReport(null);
+    setScriptComplianceReport(null);
     setDirectionData(null);
     setPlotData(null);
     setStoryData(null);
@@ -5108,6 +5172,7 @@ export default function App() {
         logo: videoLogoPayload(userContext),
         projectId: activeProjectId,
         creativeGuardrails: overrideParams?.creativeGuardrails || userContext.creativeGuardrails || null,
+        categoryCompliance: overrideParams?.categoryCompliance || userContext.categoryCompliance || null,
         shotSpec: shotSpec ? {
           ...shotSpec,
           staticWorld: {
@@ -5118,11 +5183,7 @@ export default function App() {
         } : null,
       };
 
-      const data = await safeApiCall(fetch('/api/run', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job.');
+      const data = await startRenderRun(runPayload, 'Failed to dispatch render job.');
 
       setRenderStatusText('Creating scenes and putting everything together…');
       await pollRenderStatus(data.runId, { session });
@@ -6513,6 +6574,7 @@ export default function App() {
             isSavingProject={isSavingProject}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             guardrailReport={scriptGuardrailReport}
+            complianceReport={scriptComplianceReport}
             onboardingState={onboardingState}
             onDismissTip={handleDismissTip}
             onBehaviorEvent={handleBehaviorEvent}
@@ -6754,6 +6816,7 @@ export default function App() {
         targetDuration={userContext.targetDuration || '20s'}
         aspectRatio={userContext.aspectRatio || (userContext.platform?.includes('16:9') ? '16:9' : userContext.platform?.includes('1:1') ? '1:1' : '9:16')}
         brandTone={userContext.brandTone || 'Warm & Authentic'}
+        categoryCompliance={userContext.categoryCompliance || null}
       />
 
       {/* URL Research Modal (V2 Entry Point) */}

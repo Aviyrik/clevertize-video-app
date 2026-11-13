@@ -113,6 +113,12 @@ function sceneForGeneration(scene, ctx = {}) {
       lock.push(formatGuardrailsPromptBlock(ctx.creativeGuardrails));
     }
   }
+  if (ctx.compliance) {
+    // Category compliance: universal + category visual / AI-generation rules reach the video model
+    const { formatRenderBlock } = require("./categoryGuardrails");
+    const block = formatRenderBlock(ctx.compliance);
+    if (block) lock.push(block);
+  }
   return `${lock.join("\n")}\n\n${body}`;
 }
 

@@ -6,6 +6,8 @@ const path = require('path');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'guardrails-test-'));
 process.env.ANTHROPIC_API_KEY = 'test-key';
+// mocked Anthropic answers are queued per call: keep the extra compliance-reviewer call out of this file (test/category_guardrails.test.js covers it)
+process.env.COMPLIANCE_REVIEWER = "off";
 process.env.MAGNIFIC_API_KEY = 'test-magnific-key';
 process.env.FESTIVAL_LIVE = 'off';
 

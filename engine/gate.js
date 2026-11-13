@@ -3,6 +3,7 @@
 const { dialogueOf } = require("./parse");
 const { festiveDecorFor } = require("./festive");
 const { hasActiveGuardrails, validateOutputAgainstGuardrails } = require("./guardrails");
+const categoryRules = require("./categoryGuardrails");
 
 const DEVANAGARI = /[ऀ-ॿ]/;
 const LATIN = /[A-Za-z]/;
@@ -63,7 +64,7 @@ function formatMatches(hFormat, approved) {
  * parsed: output of parseOutput; f: validated form; opts: { scriptMode, previous }
  * Returns an array of failure strings (empty = pass).
  */
-function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "", allowVo = false, audioDeliveryMode = "", targetDuration = "", allowSceneCount = null, creativeGuardrails = null } = {}) {
+function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approvedFormat = "", festival = "", allowVo = false, audioDeliveryMode = "", targetDuration = "", allowSceneCount = null, creativeGuardrails = null, compliance = null } = {}) {
   const fails = [];
   const h = parsed.header;
   const isVoMode = Boolean(
@@ -293,6 +294,11 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
       }
     }
   }
+
+  // Category compliance (universal + category module): auto-reject words/visuals, gated claims without proof,
+  // safety visuals and AI-weakness rules, scanned in dialogue, voiceover and visual fields (Roman + Devanagari)
+  const cc = compliance || (f && f.complianceContext) || null;
+  if (cc) fails.push(...categoryRules.gateFailures(cc, parsed));
 
   return [...new Set(fails)];
 }

@@ -23,6 +23,8 @@ const understandingSpine = require("./engine/understandingSpine");
 const guardrails = require("./engine/guardrails");
 const guardrailsSpine = require("./engine/guardrailsSpine");
 const eventContextUtil = require("./engine/eventContext");
+const categoryRules = require("./engine/categoryGuardrails");
+const complianceReviewer = require("./engine/complianceReviewer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -77,6 +79,29 @@ function resolveProduct(f) {
   return "featured product";
 }
 
+// Category compliance guardrails (engine/categoryGuardrails.js, rules in engine/rules/categoryGuardrails.json).
+// Built once per request as soon as the business type is known; every later prompt, gate and render reads it.
+// src: request body / form (businessType, categoryCompliance { category, scope, proof }, offer, brief…)
+function complianceFor(src = {}, extra = {}) {
+  const ev = src.eventContext && typeof src.eventContext === "object" ? (src.eventContext.name || src.eventContext.category || "") : "";
+  const ctx = categoryRules.buildComplianceContext({
+    businessType: src.businessType,
+    categoryCompliance: src.categoryCompliance,
+    brandTone: src.brandTone,
+    offer: src.offer,
+    specialty: src.specialty,
+    brief: src.brief,
+    product: src.product,
+    productName: src.productName,
+    occasion: src.occasion || ev,
+    festival: typeof src.festival === "string" ? src.festival : (src.festival && src.festival.name) || "",
+    hasPhotos: Boolean((src.shopPhoto && src.shopPhoto.data) || (src.productPhoto && src.productPhoto.data)),
+    ...extra,
+  });
+  categoryRules.assertCanGenerate(ctx); // e.g. property ads never generate without a RERA number
+  return ctx;
+}
+
 function validateForm(b) {
   const s = (x) => (typeof x === "string" ? x.trim() : "");
   const durationVal = s(b.targetDuration || b.duration) || "20s";
@@ -115,17 +140,40 @@ function validateForm(b) {
 
   // Ensure resolved product is attached
   f.resolvedProduct = resolveProduct(f);
+
+  // Category compliance: load the module now (brief stage) so every later step has it; enforce the category mood
+  f.categoryCompliance = b.categoryCompliance && typeof b.categoryCompliance === "object" ? b.categoryCompliance : null;
+  f.complianceContext = complianceFor(f);
+  if (f.complianceContext.mood.enforced && f.complianceContext.mood.label) {
+    f.requestedBrandTone = f.brandTone;
+    f.brandTone = f.complianceContext.mood.label;
+  }
   return f;
 }
 
 // end frame is composited after generation (M11) — built from the form, never generated
-function endFrame(f) {
-  return {
+function endFrame(f, compliance = null) {
+  const cc = f.complianceContext || null;
+  const frame = {
     businessName: f.businessName,
     address: [f.area, f.town].filter(Boolean).join(", "),
     contact: f.contact || "",
     offer: f.offer || "",
   };
+  // regulatory lines from proof fields (RERA no., FSSAI licence, clinic registration) — never generated
+  if (cc && cc.endFrameLines.length) frame.regulatory = cc.endFrameLines;
+  // High-tier / flagged films wait for a human reviewer before the end frame is added and the film is rendered
+  if (compliance && compliance.humanReview && compliance.humanReview.required) frame.humanReview = compliance.humanReview;
+  return frame;
+}
+
+// Writer pass is done and the gate passed: run the separate compliance reviewer, then build the report.
+// Returns { failures, review, report } — failures (reviewer rejects) go back into the repair loop.
+async function complianceCheck(ctx, parsed) {
+  if (!ctx) return { failures: [], review: null, report: null };
+  const review = await complianceReviewer.reviewScript({ ctx, script: parsed });
+  const report = categoryRules.buildComplianceReport(ctx, parsed, { reviewer: review });
+  return { failures: complianceReviewer.reviewerFailures(review), review, report };
 }
 
 // ---- 1) checkpoint sessions (Product Spine v2: 4 owner checkpoints) ----
@@ -222,16 +270,26 @@ async function runJSONStage(s, stage, change) {
 async function runScript(s, change) {
   const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInstruction("script", s, change));
   const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: s.story.out.format, festival: festivalOf(s), creativeGuardrails: s.form.creativeGuardrails || null };
-  let content = base, parsed, failures = [], attempts = 0;
+  let content = base, parsed, failures = [], attempts = 0, compliance = null, reviewerOnly = false;
   for (let i = 0; i <= MAX_REPAIRS; i++) {
     attempts++;
     if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
     parsed = parseOutput(await callClaude({ system: s.system, content, thinking: false }));
-    failures = runGate(parsed, s.form, gateOpts);
+    failures = runGate(parsed, s.form, gateOpts); // includes the category scanner (dialogue, VO, visual)
+    reviewerOnly = false;
+    if (!failures.length) {
+      compliance = await complianceCheck(s.form.complianceContext, parsed); // separate reviewer pass
+      failures = compliance.failures;
+      reviewerOnly = failures.length > 0;
+    }
     console.log(`[script] pass #${attempts}: ${failures.length ? `${failures.length} failing checks` : "passed"}`);
     if (!failures.length) break;
   }
-  return { parsed, failures, attempts };
+  if (failures.length && reviewerOnly) {
+    console.warn(`[script] compliance reviewer still objects after ${attempts} passes — flagged for human review`);
+    failures = [];
+  }
+  return { parsed, failures, attempts, compliance: compliance && compliance.report };
 }
 
 function scriptPayload(s) {
@@ -243,7 +301,8 @@ function scriptPayload(s) {
     setting: p.setting,
     scenes: p.scenes,
     record: s.script.record,
-    endFrame: endFrame(s.form),
+    endFrame: endFrame(s.form, s.script.compliance),
+    compliance: s.script.compliance || null,
     meta: {
       attempts: s.script.attempts,
       festivalSource: s.fest.source,
@@ -266,6 +325,7 @@ async function produce(s, stage, change) {
     s.script = {
       parsed: p,
       attempts: r.attempts,
+      compliance: r.compliance || null,
       record: { ...p.record, business_name: s.form.businessName, business_type: s.form.businessType, town: s.form.town, date: s.today, format: s.story.out.format, scenes: p.scenes.length },
     };
     return { stage, seconds: Math.round((Date.now() - t0) / 1000), data: scriptPayload(s) };
@@ -276,7 +336,7 @@ async function produce(s, stage, change) {
 
 const sendErr = (res, e, tag) => {
   console.error(`[${tag}]`, e.message);
-  res.status(e.status || 500).json({ error: e.message, failures: e.failures });
+  res.status(e.status || 500).json({ error: e.message, failures: e.failures, code: e.code });
 };
 
 // ---- Auth Middleware & Helpers (Phase 1 Security) ----
@@ -378,14 +438,24 @@ app.post("/api/pipeline/generate", authRequired, async (req, res) => {
     const stageInst = "Pick the best customer tension and viral hook pattern for this business, and write the complete 4-scene film following all Product Spine rules. Return ONLY the OUTPUT markers.";
     const base = buildUserContent(s.form, s.fest, s.previous, s.today, stageInst);
     const gateOpts = { scriptMode: s.form.scriptMode, previous: s.previous, approvedFormat: "Storytelling", festival: festivalOf(s), creativeGuardrails: form.creativeGuardrails || null };
-    let content = base, parsed, failures = [], attempts = 0;
+    let content = base, parsed, failures = [], attempts = 0, compliance = null, reviewerOnly = false;
     for (let i = 0; i <= MAX_REPAIRS; i++) {
       attempts++;
       if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
       parsed = parseOutput(await callClaude({ system: s.system, content, thinking: false }));
-      failures = runGate(parsed, s.form, gateOpts);
+      failures = runGate(parsed, s.form, gateOpts); // includes the category scanner (dialogue, VO, visual)
+      reviewerOnly = false;
+      if (!failures.length) {
+        compliance = await complianceCheck(s.form.complianceContext, parsed); // separate reviewer pass
+        failures = compliance.failures;
+        reviewerOnly = failures.length > 0;
+      }
       console.log(`[pipeline:${s.id}] pass #${attempts}: ${failures.length ? `${failures.length} failing checks` : "passed"}`);
       if (!failures.length) break;
+    }
+    if (failures.length && reviewerOnly) {
+      console.warn(`[pipeline:${s.id}] compliance reviewer still objects after ${attempts} passes — flagged for human review`);
+      failures = [];
     }
 
     if (failures.length) {
@@ -397,6 +467,7 @@ app.post("/api/pipeline/generate", authRequired, async (req, res) => {
     s.script = {
       parsed,
       attempts,
+      compliance: compliance && compliance.report,
       record: { ...parsed.record, business_name: s.form.businessName, business_type: s.form.businessType, town: s.form.town, date: s.today, format: parsed.record?.format || "Storytelling", scenes: parsed.scenes.length },
     };
     const scriptRes = { data: scriptPayload(s) };
@@ -417,7 +488,8 @@ app.post("/api/pipeline/generate", authRequired, async (req, res) => {
       character2: s.script.parsed.character2,
       setting: s.script.parsed.setting,
       scenes: s.script.parsed.scenes,
-      endFrame: endFrame(s.form),
+      endFrame: endFrame(s.form, s.script.compliance),
+      compliance: s.script.compliance || null,
       record: s.script.record,
       product: form.resolvedProduct,
       productName: form.resolvedProduct,
@@ -922,6 +994,7 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
       aspectRatio,
       platform,
       creativeGuardrails: activeGuardrails,
+      compliance: complianceFor(req.body || {}),
     });
 
     return res.json(result);
@@ -1061,7 +1134,9 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
         : {}),
     });
 
+    const compliance = complianceFor(req.body || {}); // category module loaded at the brief
     const understanding = await understandingSpine.generateAiUnderstanding({
+      compliance,
       businessName,
       businessType,
       town,
@@ -1268,7 +1343,9 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       return res.status(400).json({ error: "Mock understanding data cannot be used in production." });
     }
 
+    const compliance = complianceFor(req.body || {});
     const result = await creative.generateDirections({
+      compliance,
       businessName,
       businessType,
       town,
@@ -1282,7 +1359,7 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
       eventContext: eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null,
     });
-    res.json(result);
+    res.json(categoryRules.annotateIdeas(compliance, result));
   } catch (e) {
     console.error("[api/creative/directions]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1305,7 +1382,9 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
+    const compliance = complianceFor(req.body || {});
     const result = await creative.generateHooks({
+      compliance,
       businessName,
       businessType,
       brief,
@@ -1316,7 +1395,7 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
       eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json(result);
+    res.json(categoryRules.annotateIdeas(compliance, result));
   } catch (e) {
     console.error("[api/creative/hooks]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1339,7 +1418,9 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
+    const compliance = complianceFor(req.body || {});
     const result = await creative.generatePlots({
+      compliance,
       businessName,
       businessType,
       brief,
@@ -1351,7 +1432,7 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
       eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json(result);
+    res.json(categoryRules.annotateIdeas(compliance, result));
   } catch (e) {
     console.error("[api/creative/plots]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1374,7 +1455,9 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
+    const compliance = complianceFor(req.body || {});
     const result = await creative.generateStoryWorld({
+      compliance,
       businessName,
       businessType,
       town,
@@ -1388,7 +1471,7 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
       eventContext: hasEvent ? activeEventContext : null,
     });
-    res.json(result);
+    res.json(categoryRules.annotateIdeas(compliance, result));
   } catch (e) {
     console.error("[api/creative/story]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1400,7 +1483,7 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
   try {
     const { form, creativeDNA, constraints, avoid, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
     if (!form || !form.businessName) throw Object.assign(new Error("Form data with businessName is required."), { status: 400 });
-    const validated = validateForm(form);
+    const validated = validateForm({ ...form, categoryCompliance: form.categoryCompliance || (req.body || {}).categoryCompliance || null });
     const { guardrails: activeGuardrails, project } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,
@@ -1469,7 +1552,14 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
+    const compliance = complianceFor({
+      ...(form || {}),
+      ...(req.body || {}),
+      businessType: (form && form.businessType) || (req.body || {}).businessType,
+      categoryCompliance: (req.body || {}).categoryCompliance || (form && form.categoryCompliance) || null,
+    });
     const rewritten = await creative.rewriteScene({
+      compliance,
       sceneText,
       sceneIndex: Number(sceneIndex) || 0,
       totalScenes: Number(totalScenes) || 4,
@@ -1488,7 +1578,8 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
           guardrails: activeGuardrails,
         })
       : null;
-    res.json({ scene: rewritten, guardrailReport });
+    const complianceReport = categoryRules.buildComplianceReport(compliance, { setting: setting || "", scenes: [rewritten] }, { stage: "rewrite" });
+    res.json({ scene: rewritten, guardrailReport, compliance: complianceReport });
   } catch (e) {
     console.error("[api/creative/rewrite-scene]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1525,6 +1616,8 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     if (!brief || !brief.trim()) {
       return res.status(400).json({ error: "Brief is required." });
     }
+    // Category module loaded at the brief (blocks property ads without a RERA number)
+    const compliance = complianceFor({ ...(req.body || {}), businessType: businessType || "Local Business" });
 
     // Load project with ownership check if projectId provided
     let existingProject = null;
@@ -1567,6 +1660,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     if (!internalUnderstanding || understandingIsStale) {
       try {
         internalUnderstanding = await understandingSpine.generateAiUnderstanding({
+          compliance,
           businessName: businessName.trim(),
           businessType: businessType || "Local Business",
           town: town || "",
@@ -1618,6 +1712,7 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
     }
 
     const packages = await creative.generateSimpleAdPackages({
+      compliance,
       businessName: businessName.trim(),
       businessType: businessType || "Local Business",
       town: town || "",
@@ -1667,8 +1762,39 @@ app.post("/api/run", authRequired, async (req, res) => {
       businessName,
       projectId,
       creativeGuardrails: bodyGuardrails,
+      humanReview: humanReviewSignOff,
     } = req.body || {};
     if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+
+    // Category compliance — last check before the end frame is added and the film is rendered.
+    // Property ads without a RERA number never render; scanned rule breaks block the render;
+    // High-tier (and flagged) films need a human reviewer's sign-off first.
+    const compliance = complianceFor({ ...(req.body || {}), businessType: businessType || shotSpec?.project?.businessType || "" });
+    const renderCompliance = categoryRules.buildComplianceReport(compliance, { setting: setting || "", character1: character1 || "", character2: character2 || "", scenes }, { stage: "render" });
+    if (renderCompliance && (renderCompliance.violations.length || renderCompliance.safetyGaps.length)) {
+      const failures = [
+        ...renderCompliance.violations.map((v) => v.message),
+        ...renderCompliance.safetyGaps.map((g) => `Compliance (${g.moduleName}): safety visual missing — ${g.label}.`),
+      ];
+      return res.status(422).json({
+        error: `This script breaks the ${renderCompliance.category ? renderCompliance.category.name : "universal"} compliance rules, so it was not sent for rendering: ${failures.slice(0, 3).join(" | ")}`,
+        code: "COMPLIANCE_VIOLATION",
+        failures,
+        compliance: renderCompliance,
+      });
+    }
+    const signedOff = Boolean(humanReviewSignOff && humanReviewSignOff.confirmed === true);
+    if (renderCompliance && renderCompliance.humanReview.required && !signedOff) {
+      return res.status(409).json({
+        error: `Human review required before the end frame is added: ${renderCompliance.humanReview.reasons.join(" ")}`,
+        code: "HUMAN_REVIEW_REQUIRED",
+        humanReview: renderCompliance.humanReview,
+        compliance: renderCompliance,
+      });
+    }
+    if (signedOff && renderCompliance && renderCompliance.humanReview.required) {
+      console.log(`[run] human compliance review signed off by user ${req.user.id} (${renderCompliance.category ? renderCompliance.category.name : "universal"}): ${renderCompliance.humanReview.reasons.join(" ")}`);
+    }
 
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
@@ -1730,6 +1856,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         businessType: businessType || shotSpec.project?.businessType || bCat,
         style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
         creativeGuardrails: activeGuardrails,
+        compliance,
       };
 
       processedScenes = shotSpec.shots.map((sh, idx) => {
@@ -1752,6 +1879,7 @@ app.post("/api/run", authRequired, async (req, res) => {
           style: shotSpec.project?.style || req.body?.creativeStyle,
           format: shotSpec.format,
           creativeGuardrails: activeGuardrails,
+          compliance,
         });
       });
     } else {
@@ -1766,6 +1894,7 @@ app.post("/api/run", authRequired, async (req, res) => {
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,
         language: shotSpec?.project?.language || "English",
         creativeGuardrails: activeGuardrails,
+        compliance,
       }));
     }
 
@@ -1782,10 +1911,52 @@ app.post("/api/run", authRequired, async (req, res) => {
     });
     // Persist runId association with authenticated user immediately
     await db.saveVideoRun(runId, req.user.id, { status: "PENDING" });
-    res.json({ runId, shotCount: processedScenes.length, guardrailReport: preRenderGuardrailReport });
+    res.json({ runId, shotCount: processedScenes.length, guardrailReport: preRenderGuardrailReport, compliance: renderCompliance, endFrameRegulatory: compliance.endFrameLines });
   } catch (e) {
     console.error("[run]", e.message);
     res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// Category compliance module for the brief form: which category a business type maps to, its proof fields,
+// risk tier and mood rule. Rules only — no user data — so it needs no login.
+app.get("/api/compliance/category", (req, res) => {
+  try {
+    const q = req.query || {};
+    const str = (v) => (typeof v === "string" ? v.slice(0, 200) : "");
+    const ctx = categoryRules.buildComplianceContext({
+      businessType: str(q.businessType),
+      categoryCompliance: { category: str(q.category), scope: str(q.scope) },
+      brandTone: str(q.brandTone),
+      offer: str(q.offer),
+      occasion: str(q.occasion),
+    });
+    res.json(categoryRules.describeForClient(ctx));
+  } catch (e) {
+    console.error("[api/compliance/category]", e.message);
+    res.status(500).json({ error: "Could not load the category rules." });
+  }
+});
+
+// Re-scan a whole script against the category rules (after a scene rewrite or edit). Deterministic scanner only.
+app.post("/api/compliance/scan", authRequired, (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!Array.isArray(b.scenes)) return res.status(400).json({ error: "scenes must be a list." });
+    const ctx = categoryRules.buildComplianceContext({
+      businessType: b.businessType,
+      categoryCompliance: b.categoryCompliance,
+      brandTone: b.brandTone,
+      offer: b.offer,
+      specialty: b.specialty,
+      brief: b.brief,
+      occasion: b.occasion,
+    });
+    const script = { setting: String(b.setting || ""), character1: String(b.character1 || ""), character2: String(b.character2 || ""), scenes: b.scenes.slice(0, 12).map((x) => String(x || "")) };
+    res.json({ compliance: categoryRules.buildComplianceReport(ctx, script, { stage: "edit" }) });
+  } catch (e) {
+    console.error("[api/compliance/scan]", e.message);
+    res.status(500).json({ error: "Could not check the script against the category rules." });
   }
 });
 

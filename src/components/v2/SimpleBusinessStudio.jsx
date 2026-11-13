@@ -11,6 +11,8 @@ import OccasionEventSection from './OccasionEventSection.jsx';
 import ProductPhotoSection from './ProductPhotoSection.jsx';
 import TargetAudienceSection from './TargetAudienceSection.jsx';
 import HelpTooltip from './HelpTooltip.jsx';
+import CategoryComplianceSection from './CategoryComplianceSection.jsx';
+import ComplianceReportNotice from './ComplianceReportNotice.jsx';
 import ContextualTipBanner from './ContextualTipBanner.jsx';
 import { HELP_TOOLTIPS, CONTEXTUAL_TIPS } from '../../data/tourSteps.js';
 import { shouldShowContextualTip } from '../../utils/onboarding.js';
@@ -176,6 +178,8 @@ export default function SimpleBusinessStudio({
     draft.guardrailDraftInputs || { doText: '', dontText: '' }
   );
   const [eventContext, setEventContext] = useState(draft.eventContext || null);
+  // Category compliance: proof fields / category pick for this film (category guardrails)
+  const [categoryCompliance, setCategoryCompliance] = useState(draft.categoryCompliance || null);
   const [expandedPackageId, setExpandedPackageId] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [briefOptionalExpanded, setBriefOptionalExpanded] = useState(
@@ -198,10 +202,10 @@ export default function SimpleBusinessStudio({
   }, [dictatedBriefSync?.seq]);
 
   // Report this flow's state so the app can autosave it as a draft (it debounces; step changes save at once)
-  const draftState = () => ({ step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, briefOptionalExpanded });
+  const draftState = () => ({ step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, categoryCompliance, briefOptionalExpanded });
   useEffect(() => {
     if (onDraftChange) onDraftChange(draftState(), { flush: false });
-  }, [step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, briefOptionalExpanded]);
+  }, [step, brief, targetAudience, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId, aiUnderstanding, creativeGuardrails, guardrailDraftInputs, eventContext, categoryCompliance, briefOptionalExpanded]);
 
   const handleApplyTemplate = (tpl) => {
     setBrief(tpl);
@@ -267,6 +271,7 @@ export default function SimpleBusinessStudio({
           aiUnderstanding,
           creativeGuardrails,
           eventContext,
+          categoryCompliance,
         }),
       });
 
@@ -339,6 +344,7 @@ export default function SimpleBusinessStudio({
         aspectRatio: selectedPackage.aspectRatio || aspectRatio,
         dimension: selectedPackage.aspectRatio || aspectRatio,
         creativeGuardrails,
+        categoryCompliance,
         platform: (selectedPackage.aspectRatio || aspectRatio) === '16:9' ? 'YouTube / 16:9' : (selectedPackage.aspectRatio || aspectRatio) === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16',
       });
     }
@@ -1016,6 +1022,12 @@ export default function SimpleBusinessStudio({
                   onToggleExpand={(next) => setBriefOptionalExpanded((prev) => ({ ...prev, audience: next }))}
                 />
 
+                <CategoryComplianceSection
+                  businessType={category}
+                  value={categoryCompliance}
+                  onChange={setCategoryCompliance}
+                />
+
                 <CreativeInstructionsSection
                   creativeGuardrails={creativeGuardrails}
                   onChange={setCreativeGuardrails}
@@ -1192,6 +1204,8 @@ export default function SimpleBusinessStudio({
                         : `Visual instructions passed into generation (${pkg.guardrailReport.visualReviewRequired.length} item(s) need manual visual check after render).`}
                     </div>
                   )}
+
+                  <ComplianceReportNotice report={pkg.compliance} testId={`pkg-compliance-${pkg.id}`} />
 
                   {/* Expand / Collapse 4 Scenes */}
                   <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>

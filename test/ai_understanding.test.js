@@ -1,7 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+// Never touch the live local file-store DB in data/: this file saves projects through engine/db
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'clevercut-test-'));
 const understandingSpine = require('../engine/understandingSpine');
 const db = require('../engine/db');
 
