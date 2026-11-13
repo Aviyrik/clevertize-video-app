@@ -1,5 +1,7 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
+const appRoutes = require("./src/utils/appRoutes.js");
 const { Readable } = require("stream");
 require("dotenv").config();
 
@@ -39,7 +41,10 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "25mb" }));
+// index: false — the page shell is served by the catch-all below, which sets the right status
+// (404 for unknown addresses) and fills in absolute share-image URLs.
 app.use(express.static(path.join(__dirname, "dist"), {
+  index: false,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith("index.html")) {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -48,7 +53,7 @@ app.use(express.static(path.join(__dirname, "dist"), {
     }
   }
 }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 // ---- form validation ----
 const IMG_MIME = /^image\/(jpeg|png|gif|webp)$/;
@@ -2689,12 +2694,33 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || "Internal server error" });
 });
 
+// The page shell with absolute share-image URLs: link previews (WhatsApp, LinkedIn, Slack…)
+// ignore relative og:image paths. The base is APP_BASE_URL, else the request's host.
+function renderAppShell(req) {
+  const html = fs.readFileSync(path.join(__dirname, "dist", "index.html"), "utf8");
+  const base = emailService.getAppBaseUrl(req);
+  return html.replace(/(content|href)="\/(og-image\.png)"/g, `$1="${base}/$2"`);
+}
+
 // SPA catch-all fallback for client routing
 app.get("*", (req, res) => {
+  // A missing file (anything with an extension: .png, .mp4, .ico, robots.txt…) is a plain 404,
+  // never the app page — otherwise broken images/videos fail confusingly
+  if (path.extname(req.path)) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  // Unknown addresses still get the app (it shows "Page not found"), but with a real 404 status
+  const status = appRoutes.isKnownAppPath(req.path) ? 200 : 404;
+  let html;
+  try {
+    html = renderAppShell(req);
+  } catch (err) {
+    return res.status(503).type("text/plain").send("The app is being updated. Please refresh in a moment.");
+  }
+  res.status(status).type("html").send(html);
 });
 
 if (require.main === module) {
