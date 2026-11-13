@@ -57,6 +57,7 @@ import {
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
 import { isVideoLinkExpired } from '../utils/videoLink.js';
+import { filterReachedChoices } from '../utils/choicesVisibility.js';
 import VideoFormatFields from './v2/VideoFormatFields.jsx';
 import OptionalFieldDisclosure from './v2/OptionalFieldDisclosure.jsx';
 import HelpTooltip from './v2/HelpTooltip.jsx';
@@ -194,6 +195,7 @@ export function StudioProgressHeader({
 export function StudioChoicesBar({
   explicitChoices = {},
   currentStage = null,
+  completedStages = [],
   onNavigateStage,
   hasStaleWarning,
   onApplyUpdate,
@@ -217,10 +219,11 @@ export function StudioChoicesBar({
   if (idea) activeChoices.push({ type: 'idea', label: idea, prefix: 'Idea', stage: 'idea' });
   if (opening) activeChoices.push({ type: 'opening', label: opening, prefix: 'Opening', stage: 'opening' });
 
-  // On Settings stage, avoid echoing back settings already visible in the controls unless stale update banner is active
-  const visibleChoices = currentStage === 'settings' && !hasStaleWarning
-    ? activeChoices.filter((c) => c.stage !== 'settings')
-    : activeChoices;
+  // Never show a choice from a stage the user hasn't reached yet (e.g. specs carried over
+  // from Simple Studio must not appear on Brief before the user has seen Settings).
+  const visibleChoices = filterReachedChoices(activeChoices, currentStage, completedStages)
+    // On Settings stage, avoid echoing back settings already visible in the controls unless stale update banner is active
+    .filter((c) => !(currentStage === 'settings' && !hasStaleWarning && c.stage === 'settings'));
 
   // STRICT RULE: If zero explicit choices to display, hide the entire strip!
   if (visibleChoices.length === 0) return null;

@@ -5789,6 +5789,7 @@ export default function App() {
         />
         <StudioChoicesBar
           currentStage={studioStage}
+          completedStages={completedStages}
           explicitChoices={explicitChoices}
           onNavigateStage={handleNavigateStage}
           hasStaleWarning={Boolean(

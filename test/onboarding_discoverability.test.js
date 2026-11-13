@@ -512,3 +512,36 @@ test('9. P1 UX Improvements: Draft Autosave Status, Long AI Recovery, Unadded Gu
   assert.ok(hubSrc.includes('Start with a Brief') && hubSrc.includes('Start with an Existing Script') && hubSrc.includes('Start with a Website URL'));
   assert.ok(hubSrc.includes('Next step:') && hubSrc.includes('<button') && hubSrc.includes('Recommended') && hubSrc.includes('minmax(min(260px, 100%), 1fr)'));
 });
+
+test('Choices bar hides Settings specs carried from Simple Studio until the user reaches Settings', () => {
+  const { filterReachedChoices } = require('../src/utils/choicesVisibility.js');
+  const s2d = modeTransfer.transferSimpleToDirector({
+    simpleState: { brief: '', language: 'English', creativeStyle: 'UGC / Creator-style', duration: '20s', aspectRatio: '9:16' },
+    currentUserContext: { businessName: 'TEST' },
+  });
+  // Values are still carried (Settings will be prefilled)...
+  assert.equal(s2d.targetStage, 'brief');
+  assert.equal(s2d.explicitChoices.duration, '20s');
+
+  const chips = [
+    { type: 'style', stage: 'settings' },
+    { type: 'language', stage: 'settings' },
+    { type: 'duration', stage: 'settings' },
+    { type: 'dimension', stage: 'settings' },
+    { type: 'idea', stage: 'idea' },
+  ];
+  // ...but none show on Brief before Settings is reached.
+  assert.deepEqual(filterReachedChoices(chips, 'brief', s2d.completedStages), []);
+  // After Settings is completed they show on later stages, but not choices from stages still ahead.
+  const onIdeaStageBeforeComplete = filterReachedChoices(chips, 'understanding', ['brief', 'settings']).map((c) => c.type);
+  assert.deepEqual(onIdeaStageBeforeComplete, ['style', 'language', 'duration', 'dimension']);
+  // Going back to Brief after completing Settings keeps the confirmed chips.
+  assert.equal(filterReachedChoices(chips, 'brief', ['brief', 'settings']).length, 4);
+  // Unknown stage: no filtering.
+  assert.equal(filterReachedChoices(chips, null, []).length, 5);
+
+  const guidedSrc = fs.readFileSync(path.join(__dirname, '../src/components/GuidedStudio.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(guidedSrc.includes('filterReachedChoices(activeChoices, currentStage, completedStages)'));
+  assert.ok(appSrc.includes('completedStages={completedStages}'));
+});
