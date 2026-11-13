@@ -4506,7 +4506,7 @@ export function Screen08Video({
   const [showScriptPreview, setShowScriptPreview] = useState(false);
   const [videoTipIdx, setVideoTipIdx] = useState(0);
   const [hasCopiedShare, setHasCopiedShare] = useState(false);
-  // Older projects may hold an expired Magnific link: show that plainly instead of a broken player
+  // Older projects may hold an expired rendering-provider link: show that plainly instead of a broken player
   const [playbackFailed, setPlaybackFailed] = useState(false);
   useEffect(() => { setPlaybackFailed(false); }, [videoUrl]);
   const videoUnavailable = Boolean(videoUrl) && (playbackFailed || isVideoLinkExpired(videoUrl));

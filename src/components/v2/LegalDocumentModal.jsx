@@ -308,7 +308,7 @@ export default function LegalDocumentModal({
                   2. Service Description & AI Generation
                 </h3>
                 <p style={{ margin: 0 }}>
-                  CleverCut is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis through neural generative video models (including Magnific AI and large language models). While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
+                  CleverCut is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis through its neural generative video engine and large language models. While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
                 </p>
               </div>
 
@@ -358,7 +358,7 @@ export default function LegalDocumentModal({
                   6. Third-Party Integrations & Generation Latency
                 </h3>
                 <p style={{ margin: 0 }}>
-                  Video rendering and frame synthesis rely on state-of-the-art neural diffusion pipelines (including Magnific AI). Processing times may fluctuate based on global cloud infrastructure demand and render queue length. CleverCut coordinates, polls, and delivers final high-definition MP4 renders once completed by the rendering cluster.
+                  Video rendering and frame synthesis rely on state-of-the-art neural diffusion pipelines. Processing times may fluctuate based on global cloud infrastructure demand and render queue length. CleverCut coordinates, polls, and delivers final high-definition MP4 renders once completed by the rendering cluster.
                 </p>
               </div>
 
@@ -486,7 +486,7 @@ export default function LegalDocumentModal({
                   3. Third-Party AI Processors & Cloud Infrastructure
                 </h3>
                 <p style={{ margin: 0 }}>
-                  To perform generative operations, text prompts and image references are transmitted over encrypted HTTPS to vetted infrastructure partners (including Anthropic for script synthesis, Magnific AI for neural video rendering, and Supabase / PostgreSQL for database hosting). These processors are bound by strict data processing confidentiality agreements and do not train public models on your proprietary business assets.
+                  To perform generative operations, text prompts and image references are transmitted over encrypted HTTPS to vetted infrastructure partners (including Anthropic for script synthesis, cloud video-rendering infrastructure for neural video rendering, and Supabase / PostgreSQL for database hosting). These processors are bound by strict data processing confidentiality agreements and do not train public models on your proprietary business assets.
                 </p>
               </div>
 
