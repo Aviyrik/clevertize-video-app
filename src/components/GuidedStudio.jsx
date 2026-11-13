@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Edit3,
   X,
-  Plus,
   Trash2,
   Lightbulb,
   Tag,
@@ -98,9 +97,18 @@ export function StudioProgressHeader({
   onNavigateStage,
 }) {
   const currentIdx = STUDIO_STAGES.findIndex((s) => s.id === currentStage);
+  const progressRef = useRef(null);
+
+  // On narrow screens the bar scrolls sideways; keep the current stage in view
+  useEffect(() => {
+    const el = progressRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const current = el.querySelector('[data-current-stage="true"]');
+    if (current) el.scrollLeft = Math.max(0, current.offsetLeft - (el.clientWidth - current.offsetWidth) / 2);
+  }, [currentStage]);
 
   return (
-    <div style={{
+    <div ref={progressRef} className="studio-progress" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -122,6 +130,7 @@ export function StudioProgressHeader({
             <button
               type="button"
               disabled={!isNavigable}
+              data-current-stage={isCurrent ? 'true' : undefined}
               onClick={() => isNavigable && onNavigateStage(st.id)}
               style={{
                 background: 'none',
@@ -154,14 +163,14 @@ export function StudioProgressHeader({
                   ? 'rgba(95, 212, 174, 0.15)'
                   : 'var(--bg-elevated)',
                 color: isCurrent
-                  ? '#ffffff'
+                  ? 'var(--cc-on-action)'
                   : isCompleted
                   ? 'var(--success)'
                   : 'var(--text-tertiary)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : st.num}
@@ -170,7 +179,7 @@ export function StudioProgressHeader({
             </button>
 
             {idx < STUDIO_STAGES.length - 1 && (
-              <span style={{ color: 'var(--border-subtle)', fontSize: 12 }}>→</span>
+              <span aria-hidden="true" style={{ color: 'var(--border-subtle)', fontSize: 12, flexShrink: 0 }}>→</span>
             )}
           </React.Fragment>
         );
@@ -571,7 +580,7 @@ export function Screen01Business({
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {userContext.logo.name || 'Brand logo'}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                       {userContext.productPhoto?.fromWebsite ? '✓ Attached from website' : 'Attached for video production'}
                     </div>
                   </div>
@@ -926,6 +935,7 @@ export function Screen02Brief({
 
         <div style={{ position: 'relative' }}>
           <textarea
+            className="brief-textarea"
             rows={5}
             value={userContext.brief || ''}
             onChange={(e) => {
@@ -935,7 +945,9 @@ export function Screen02Brief({
             placeholder={`e.g. Show fresh pure desi ghee sweets being packed into premium festive gift hampers. Mention same-day delivery for corporate orders.`}
             style={{
               width: '100%',
-              padding: '14px 16px',
+              boxSizing: 'border-box',
+              // bottom room so text never runs under the Dictate button
+              padding: '14px 16px 52px',
               borderRadius: 8,
               border: '1px solid var(--border-default)',
               fontSize: 14,
@@ -947,7 +959,7 @@ export function Screen02Brief({
           />
 
           {/* Dictate Button */}
-          <button
+          <button className="brief-dictate-btn"
             type="button"
             onClick={toggleRecording}
             aria-label={isRecording ? 'Stop recording voice brief' : 'Dictate your brief using microphone'}
@@ -1033,7 +1045,7 @@ export function Screen02Brief({
               {/* Dynamic Category Suggestions if available */}
               {Array.isArray(briefSuggestions) && briefSuggestions.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
                     Ideas for your business category:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1134,7 +1146,7 @@ export function Screen02Brief({
           flexDirection: 'column',
           gap: 6
         }}>
-          <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Sparkles size={11} style={{ color: 'var(--cc-emphasis)' }} />
             <span>Market Context (Background)</span>
           </div>
@@ -1375,7 +1387,7 @@ export function Screen03Settings({
                     {dur.popular && (
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           opacity: isSelected ? 0.9 : 0.75,
                           color: isSelected ? '#ffffff' : 'var(--cc-emphasis)',
@@ -1804,7 +1816,7 @@ export function Screen04Idea({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* ~3 Idea Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
             {directionsList.map((dir, idx) => {
               const isSelected = selectedDirection?.id === dir.id;
               const icons = [Gift, Smartphone, Truck, Lightbulb, Sparkles];
@@ -1830,7 +1842,7 @@ export function Screen04Idea({
                     <span style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'var(--cc-hover)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{React.createElement(icon, { size: 16, 'aria-hidden': true })}</span>
                     {dir.recommended && (
                       <span style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
@@ -2091,7 +2103,7 @@ export function Screen05Opening({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* 5-6 Visual Opening Options */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 10 }}>
             {hooksList.map((hk, idx) => {
               const isSelected = selectedHook?.id === hk.id;
               const isEditing = editingHookId === hk.id;
@@ -2117,18 +2129,18 @@ export function Screen05Opening({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ display: 'inline-flex', color: 'var(--text-tertiary)' }}>{React.createElement(icon, { size: 14, 'aria-hidden': true })}</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)' }}>
                         {hk.archetype || hk.type || 'Opening'}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', gap: 6 }}>
                       {hk.recommended && (
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 5px', borderRadius: 4, backgroundColor: 'rgba(244, 244, 236, 0.075)', color: 'var(--cc-emphasis)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 5px', borderRadius: 4, backgroundColor: 'rgba(244, 244, 236, 0.075)', color: 'var(--cc-emphasis)' }}>
                           TOP PICK
                         </span>
                       )}
-                      <button
+                      <button className="tap-target"
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2146,7 +2158,7 @@ export function Screen05Opening({
                             setEditingHookId(hk.id);
                           }
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                       >
                         {isEditing ? 'Save' : '[Edit]'}
                       </button>
@@ -2208,7 +2220,6 @@ export function Screen05Opening({
                   gap: 4
                 }}
               >
-                <Plus size={14} />
                 <span>+ Write my own opening</span>
               </button>
             ) : (
@@ -2648,7 +2659,7 @@ export function Screen06Story({
                   ) : isCurrent ? (
                     <RefreshCw size={11} className="icon-spinner" style={{ color: 'var(--cc-emphasis)' }} />
                   ) : (
-                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>{idx + 1}</span>
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2729,7 +2740,7 @@ export function Screen06Story({
                 <Layers size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>1. Narrative Progression (4 Beats)</span>
               </div>
-              <span style={{ fontSize: 11.5, textTransform: 'none', color: 'var(--cc-emphasis)', fontWeight: 600 }}>
+              <span style={{ fontSize: 12, textTransform: 'none', color: 'var(--cc-emphasis)', fontWeight: 600 }}>
                 {userContext.targetDuration || '20s'} Film
               </span>
             </div>
@@ -2759,7 +2770,7 @@ export function Screen06Story({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
@@ -2769,7 +2780,7 @@ export function Screen06Story({
                       }}>
                         {st.label} ({timingLabel})
                       </span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                         0{idx + 1}
                       </span>
                     </div>
@@ -2783,7 +2794,7 @@ export function Screen06Story({
                     </div>
 
                     {b.dialogue && (
-                      <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 2, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 2, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
                         "{b.dialogue}"
                       </div>
                     )}
@@ -2808,7 +2819,7 @@ export function Screen06Story({
                 <Users size={13} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>2. People & Setting (Continuity Anchors)</span>
               </div>
-              <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', textTransform: 'none', fontWeight: 500 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'none', fontWeight: 500 }}>
                 Kept consistent across all scenes
               </span>
             </div>
@@ -2817,8 +2828,8 @@ export function Screen06Story({
               {/* Lead */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Main person</span>
-                  <button
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Main person</span>
+                  <button className="tap-target"
                     type="button"
                     onClick={() => {
                       if (editingCard === 'lead') {
@@ -2827,7 +2838,7 @@ export function Screen06Story({
                         startEditLead();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'lead' ? 'Save' : '[Edit]'}
                   </button>
@@ -2861,8 +2872,8 @@ export function Screen06Story({
               {/* Supporting */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Other person</span>
-                  <button
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Other person</span>
+                  <button className="tap-target"
                     type="button"
                     onClick={() => {
                       if (editingCard === 'supp') {
@@ -2871,7 +2882,7 @@ export function Screen06Story({
                         startEditSupp();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'supp' ? 'Save' : '[Edit]'}
                   </button>
@@ -2905,8 +2916,8 @@ export function Screen06Story({
               {/* Setting */}
               <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place</span>
-                  <button
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place</span>
+                  <button className="tap-target"
                     type="button"
                     onClick={() => {
                       if (editingCard === 'place') {
@@ -2915,7 +2926,7 @@ export function Screen06Story({
                         startEditPlace();
                       }
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
                     {editingCard === 'place' ? 'Save' : '[Edit]'}
                   </button>
@@ -2945,7 +2956,7 @@ export function Screen06Story({
                   <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>
                           {isService ? 'Service Offering' : 'Featured Product'}
                         </span>
                       </div>
@@ -2958,7 +2969,7 @@ export function Screen06Story({
                             startEditProduct();
                           }
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                       >
                         {editingCard === 'prod' ? 'Save' : '[Edit Text]'}
                       </button>
@@ -2977,7 +2988,7 @@ export function Screen06Story({
                         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {storyWorldData?.product || userContext.specialty || userContext.brief?.slice(0, 30) || (isService ? `${userContext.businessName || 'Business'} Service` : `${userContext.businessName || 'Store'} items`)}
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
                           {isService ? 'Service experience showcased' : 'Product highlighted in scenes'}
                         </div>
                       </div>
@@ -3012,7 +3023,7 @@ export function Screen06Story({
                 <span>3. Story Constraints & Avoid Rules (Optional)</span>
                 {(currentConstraints.length > 0 || currentAvoid.length > 0) && (
                   <span style={{
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     padding: '2px 6px',
                     borderRadius: 10,
@@ -3677,7 +3688,7 @@ export function Screen07Script({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />PLACE / SETTING</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><House size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />PLACE / SETTING</label>
                 <input
                   type="text"
                   value={editSettingVal}
@@ -3687,7 +3698,7 @@ export function Screen07Script({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />LEAD CHARACTER</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><User size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />LEAD CHARACTER</label>
                 <input
                   type="text"
                   value={editChar1Val}
@@ -3697,7 +3708,7 @@ export function Screen07Script({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />SUPPORTING CHARACTER</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 3 }}><Users size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />SUPPORTING CHARACTER</label>
                 <input
                   type="text"
                   value={editChar2Val}
@@ -3737,24 +3748,24 @@ export function Screen07Script({
             flexWrap: 'wrap',
             fontSize: 12,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.005em', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px 12px', flexWrap: 'wrap', flex: '1 1 auto', minWidth: 0 }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.005em', display: 'flex', alignItems: 'center', gap: 4, flexBasis: '100%' }}>
                 <Lock size={12} style={{ color: 'var(--cc-emphasis)' }} />
                 <span>Story Continuity:</span>
               </span>
               {(setting || editSettingVal) && (
-                <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <span><House size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place:</span>
+                <span style={{ color: 'var(--text-secondary)', display: 'block', flex: '1 1 260px', minWidth: 0, lineHeight: 1.5 }}>
+                  <span><House size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Place:</span>{' '}
                   <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{setting || editSettingVal}</strong>
                 </span>
               )}
               {(character1 || editChar1Val) && (
-                <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <span><Users size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Cast:</span>
+                <span style={{ color: 'var(--text-secondary)', display: 'block', flex: '1 1 260px', minWidth: 0, lineHeight: 1.5 }}>
+                  <span><Users size={13} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />Cast:</span>{' '}
                   <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character1 || editChar1Val}</strong>
                   {(character2 || editChar2Val) && (
                     <>
-                      <span style={{ color: 'var(--text-tertiary)' }}>&</span>
+                      <span style={{ color: 'var(--text-tertiary)' }}> & </span>
                       <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{character2 || editChar2Val}</strong>
                     </>
                   )}
@@ -3762,7 +3773,7 @@ export function Screen07Script({
               )}
             </div>
             {(onUpdateSetting || onUpdateCharacters) && (
-              <button
+              <button className="tap-target"
                 type="button"
                 onClick={() => {
                   setEditSettingVal(setting);
@@ -3897,7 +3908,7 @@ export function Screen07Script({
                   }}
                 >
                   <span>S{idx + 1} · {shortBeat}</span>
-                  <span style={{ opacity: 0.7, fontSize: 11.5 }}>{parsed.timing}</span>
+                  <span style={{ opacity: 0.7, fontSize: 12 }}>{parsed.timing}</span>
                   {isEdited && (
                     <span
                       title="Modified scene"
@@ -3970,7 +3981,7 @@ export function Screen07Script({
                         border: '1px solid rgba(255, 122, 107, 0.45)',
                         backgroundColor: 'rgba(255, 122, 107, 0.16)',
                         color: '#FFA79C',
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
@@ -3995,7 +4006,7 @@ export function Screen07Script({
                         border: '1px solid rgba(242, 184, 75, 0.45)',
                         backgroundColor: 'rgba(242, 184, 75, 0.16)',
                         color: 'var(--cc-emphasis)',
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
@@ -4095,7 +4106,7 @@ export function Screen07Script({
                     </h2>
                   </button>
                   <span style={{
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: 'var(--text-secondary)',
                     backgroundColor: 'var(--bg-elevated)',
@@ -4107,7 +4118,7 @@ export function Screen07Script({
                   </span>
                   {isSceneDirty && (
                     <span style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '2px 7px',
                       borderRadius: 10,
@@ -4215,7 +4226,7 @@ export function Screen07Script({
                         }}
                         style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontSize: 13, lineHeight: 1.5, borderRadius: 6, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', outline: 'none' }}
                       />
-                      <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                         Press Save or Ctrl+Enter to apply scene edits (auto-retained when switching between scenes).
                       </div>
                     </div>
@@ -4225,7 +4236,7 @@ export function Screen07Script({
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                         <Camera size={14} style={{ color: 'var(--cc-emphasis)', marginTop: 3, flexShrink: 0 }} aria-hidden="true" />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 2 }}>
                             Showing / Doing
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
@@ -4259,7 +4270,7 @@ export function Screen07Script({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: 600,
                                 letterSpacing: '0.005em',
                                 color: 'var(--cc-emphasis)',
@@ -4291,7 +4302,7 @@ export function Screen07Script({
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: 600,
                               letterSpacing: '0.005em',
                               color: 'var(--cc-emphasis)',
@@ -4341,7 +4352,7 @@ export function Screen07Script({
       </div>
 
       {/* Navigation & Action Bar */}
-      <div className="cc-production-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
+      <div className="cc-production-bar production-bar--multi" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
         <button
           type="button"
           onClick={onBack}
@@ -4360,7 +4371,7 @@ export function Screen07Script({
           ← Back
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className="production-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleCopyEntireScript}
@@ -4439,6 +4450,7 @@ export function Screen07Script({
 
           <button
             type="button"
+            className="production-bar-primary"
             disabled={isBusy || !scenes.length}
             onClick={onApproveScript}
             style={{
@@ -4703,7 +4715,7 @@ export function Screen08Video({
                     <div style={{ fontSize: 12, fontWeight: isCurrent ? 600 : 600, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                       {s.title}
                     </div>
-                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {s.timeRange}
                     </span>
                   </div>

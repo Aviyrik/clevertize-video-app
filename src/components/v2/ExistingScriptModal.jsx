@@ -721,21 +721,24 @@ export default function ExistingScriptModal({
       >
         {/* Header */}
         <div
+          className="script-modal-header"
           style={{
             padding: '16px 24px',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: 12,
             backgroundColor: 'var(--bg-elevated)',
             flexShrink: 0,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <div
               style={{
                 width: 36,
                 height: 36,
+                flexShrink: 0,
                 borderRadius: 8,
                 backgroundColor: 'var(--accent-subtle)',
                 color: 'var(--cc-emphasis)',
@@ -747,13 +750,13 @@ export default function ExistingScriptModal({
               {modalStep === 2 ? <Film size={20} /> : <FileCode2 size={20} />}
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', rowGap: 4 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {modalStep === 2 ? 'Review & Edit Production Script' : 'Start with an Existing Script'}
                 </h3>
                 <span
                   style={{
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     padding: '2px 8px',
                     borderRadius: 12,
@@ -776,8 +779,9 @@ export default function ExistingScriptModal({
           </div>
 
           {/* Stepper Navigation Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div
+              className="script-modal-stepper"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -980,7 +984,7 @@ export default function ExistingScriptModal({
                   gap: 12,
                 }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 14 }}>
                   {/* 1. Target Duration */}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -1021,7 +1025,7 @@ export default function ExistingScriptModal({
                             }}
                           >
                             <span>{d.label}</span>
-                            <span style={{ fontSize: 11, opacity: isSel ? 0.9 : 0.65 }}>{d.subtitle}</span>
+                            <span style={{ fontSize: 12, opacity: isSel ? 0.9 : 0.65 }}>{d.subtitle}</span>
                           </button>
                         );
                       })}
@@ -1068,7 +1072,7 @@ export default function ExistingScriptModal({
                             }}
                           >
                             <span>{a.label}</span>
-                            <span style={{ fontSize: 11, opacity: isSel ? 0.9 : 0.65 }}>{a.subtitle}</span>
+                            <span style={{ fontSize: 12, opacity: isSel ? 0.9 : 0.65 }}>{a.subtitle}</span>
                           </button>
                         );
                       })}
@@ -1420,7 +1424,7 @@ export default function ExistingScriptModal({
                       </span>
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           backgroundColor: 'rgba(244, 244, 236, 0.075)',
                           color: 'var(--cc-emphasis)',
@@ -1567,7 +1571,7 @@ export default function ExistingScriptModal({
                     </span>
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         backgroundColor: 'var(--accent-subtle)',
                         color: 'var(--cc-emphasis)',
@@ -1586,7 +1590,7 @@ export default function ExistingScriptModal({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
                     gap: 12,
                   }}
                 >
@@ -1618,7 +1622,7 @@ export default function ExistingScriptModal({
                         outline: 'none',
                       }}
                     />
-                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                       Kept consistent across all shots.
                     </span>
                   </div>
@@ -1657,7 +1661,7 @@ export default function ExistingScriptModal({
                         outline: 'none',
                       }}
                     />
-                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                       {detectScriptAudioMode(scriptText) === 'voiceover' || validationResult?.audioDeliveryMode === 'voiceover'
                         ? 'Actor performing physical actions on camera (visual only, no spoken lines).'
                         : 'Face, skin tone, and clothing consistent in every shot.'}
@@ -1701,7 +1705,7 @@ export default function ExistingScriptModal({
                           <span style={{ color: 'var(--cc-emphasis)' }}>●</span>
                           <span>Voiceover (VO) — Off-Screen Narrator</span>
                         </div>
-                        <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                           Narration plays over visual scene action. No secondary character or lip-sync needed.
                         </span>
                       </div>
@@ -1723,7 +1727,7 @@ export default function ExistingScriptModal({
                             outline: 'none',
                           }}
                         />
-                        <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3, display: 'block' }}>
                           Secondary character or customer interaction.
                         </span>
                       </>
@@ -1786,7 +1790,7 @@ export default function ExistingScriptModal({
                         </span>
                         <span
                           style={{
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--text-tertiary)',
                             backgroundColor: 'var(--bg-elevated)',
@@ -1802,7 +1806,7 @@ export default function ExistingScriptModal({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                           style={{
-                            fontSize: 11.5,
+                            fontSize: 12,
                             color: 'var(--text-tertiary)',
                             fontWeight: 600,
                           }}
@@ -1866,7 +1870,7 @@ export default function ExistingScriptModal({
                       >
                         <span
                           style={{
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--text-tertiary)',
                             flexShrink: 0,
@@ -1925,7 +1929,7 @@ export default function ExistingScriptModal({
                             style={{
                               padding: '2px 8px',
                               borderRadius: 4,
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: 600,
                               cursor: 'pointer',
                               border: /^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(
@@ -1957,7 +1961,7 @@ export default function ExistingScriptModal({
                             style={{
                               padding: '2px 8px',
                               borderRadius: 4,
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: 600,
                               cursor: 'pointer',
                               border: !/^(?:text\s*[\+&]\s*)?(?:vo|v\.o\.|v\/o|voiceover|voice[\s-]over|narrator|narration|off[\s-]screen|audio)\b/i.test(

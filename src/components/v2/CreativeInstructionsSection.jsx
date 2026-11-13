@@ -257,7 +257,7 @@ export default function CreativeInstructionsSection({
                       onClick={() => handleTogglePriority(type, item)}
                       title="Click to switch between Critical (enforced) and Preference (advisory)"
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '2px 7px',
                         borderRadius: 10,

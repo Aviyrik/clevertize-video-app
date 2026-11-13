@@ -79,7 +79,7 @@ export function ResearchInsightsBanner({
             Research Complete
           </span>
           <span style={{
-            fontSize: 11.5,
+            fontSize: 12,
             fontWeight: 600,
             padding: '2px 6px',
             borderRadius: 4,
@@ -102,10 +102,10 @@ export function ResearchInsightsBanner({
       </div>
 
       {/* Condensed 2-column cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: researchData.informationGap ? 10 : 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 10, marginBottom: researchData.informationGap ? 10 : 0 }}>
         {researchData.audienceInsight && (
           <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 600, color: 'var(--cc-emphasis)', fontSize: 11.5, display: 'block', marginBottom: 2 }}>
+            <span style={{ fontWeight: 600, color: 'var(--cc-emphasis)', fontSize: 12, display: 'block', marginBottom: 2 }}>
               Audience Insight
             </span>
             {researchData.audienceInsight}
@@ -113,7 +113,7 @@ export function ResearchInsightsBanner({
         )}
         {researchData.creativeOpportunity && (
           <div style={{ backgroundColor: 'var(--bg-elevated)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 600, color: 'var(--success)', fontSize: 11.5, display: 'block', marginBottom: 2 }}>
+            <span style={{ fontWeight: 600, color: 'var(--success)', fontSize: 12, display: 'block', marginBottom: 2 }}>
               Creative Opportunity
             </span>
             {researchData.creativeOpportunity}
@@ -187,7 +187,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
       gap: 10,
       flexWrap: 'wrap',
     }}>
-      <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--cc-emphasis)', display: 'flex', alignItems: 'center', gap: 4 }}>
         <Layers size={11} />
         <span>Your Creative Plan:</span>
       </span>
@@ -212,7 +212,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('direction')}
-              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 12, fontWeight: 600 }}
               title="Edit Direction"
             >
               Edit
@@ -239,7 +239,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('hook')}
-              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 12, fontWeight: 600 }}
               title="Edit Hook"
             >
               Edit
@@ -266,7 +266,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
             <button
               type="button"
               onClick={() => onEditPanel('plot')}
-              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
+              style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 12, fontWeight: 600 }}
               title="Edit Plot"
             >
               Edit
@@ -292,7 +292,7 @@ export function CreativeDNABar({ creativeDNA, canonicalFormat, onEditPanel }) {
           <button
             type="button"
             onClick={() => onEditPanel('story')}
-            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 11.5, fontWeight: 600 }}
+            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', cursor: 'pointer', padding: 0, fontSize: 12, fontWeight: 600 }}
             title="Edit Video Format & Story"
           >
             Edit
@@ -369,7 +369,7 @@ function CreativeProgressiveStepper({
               ) : (
                 <span style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11.5,
+                  fontSize: 12,
                   opacity: 0.75
                 }}>
                   {st.num}
@@ -646,7 +646,7 @@ export function CreativePanelsWorkspace({
           {isLoadingDirections || (!directionsList?.length && !customDirection) ? (
             <CreativeLoadingState message="Finding strong creative territories…" />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 12 }}>
               {(directionsList || []).map((dir, idx) => {
                 const isSelected = selectedDirection?.id === dir.id || (!selectedDirection && dir.recommended);
                 return (
@@ -669,7 +669,7 @@ export function CreativePanelsWorkspace({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           padding: '2px 6px',
                           borderRadius: 4,
@@ -686,7 +686,7 @@ export function CreativePanelsWorkspace({
 
                       {dir.recommended && (
                         <span style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           backgroundColor: 'rgba(244, 244, 236, 0.075)',
                           color: 'var(--cc-emphasis)',
@@ -762,7 +762,7 @@ export function CreativePanelsWorkspace({
           {isLoadingHooks || (!hooksList?.length && !customHook) ? (
             <CreativeLoadingState message="Finding scroll-stopping hooks…" />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 10 }}>
               {(hooksList || []).map((h, idx) => {
                 const isSelected = selectedHook?.id === h.id || (!selectedHook && h.recommended);
                 return (
@@ -783,7 +783,7 @@ export function CreativePanelsWorkspace({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: 4,
@@ -794,7 +794,7 @@ export function CreativePanelsWorkspace({
                       </span>
                       {h.recommended && (
                         <span style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           backgroundColor: 'rgba(244, 244, 236, 0.075)',
                           color: 'var(--cc-emphasis)',
@@ -870,7 +870,7 @@ export function CreativePanelsWorkspace({
           {isLoadingPlots || (!plotsList?.length && !customPlot) ? (
             <CreativeLoadingState message="Building story options…" />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 12 }}>
               {(plotsList || []).map((p, idx) => {
                 const isSelected = selectedPlot?.id === p.id || (!selectedPlot && p.recommended);
                 return (
@@ -895,7 +895,7 @@ export function CreativePanelsWorkspace({
                       </span>
                       {p.recommended && (
                         <span style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           backgroundColor: 'rgba(244, 244, 236, 0.075)',
                           color: 'var(--cc-emphasis)',
@@ -921,13 +921,13 @@ export function CreativePanelsWorkspace({
                       gap: 4,
                       border: '1px solid var(--border-subtle)'
                     }}>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                         <strong style={{ color: 'var(--cc-emphasis)' }}>01 Hook:</strong> {p.hookBeat || 'Opening tension'}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                         <strong style={{ color: 'var(--warning)' }}>02 Conflict:</strong> {p.conflictBeat || 'Problem deepens'}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                         <strong style={{ color: 'var(--success)' }}>03 Payoff:</strong> {p.payoffBeat || 'Delightful resolution'}
                       </div>
                     </div>
@@ -993,7 +993,7 @@ export function CreativePanelsWorkspace({
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>1. Video Format</span>
-                  <span style={{ fontSize: 11.5, color: 'var(--cc-emphasis)', textTransform: 'none', fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: 'var(--cc-emphasis)', textTransform: 'none', fontWeight: 600 }}>
                     Changes regenerate downstream beats
                   </span>
                 </div>
@@ -1044,7 +1044,7 @@ export function CreativePanelsWorkspace({
                           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {fmt.label}
                           </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 2 }}>
                             {fmt.tagline}
                           </div>
                         </div>
@@ -1085,15 +1085,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('leadCharacter', `${newLead.name} (${newLead.role})`);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 12 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1107,7 +1107,7 @@ export function CreativePanelsWorkspace({
                             setEditLeadRole(typeof c1 === 'object' ? (c1.role || 'Host') : 'Customer');
                             setEditingCard('lead');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1164,15 +1164,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('supportingCharacter', `${newSupp.name} (${newSupp.role})`);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 12 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1186,7 +1186,7 @@ export function CreativePanelsWorkspace({
                             setEditSuppRole(typeof c2 === 'object' ? (c2.role || 'Customer') : 'Customer');
                             setEditingCard('supporting');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1247,15 +1247,15 @@ export function CreativePanelsWorkspace({
                               updateUserContext('environment', newLoc);
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 12 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1268,7 +1268,7 @@ export function CreativePanelsWorkspace({
                             setEditSettingName(curSetting);
                             setEditingCard('setting');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1315,15 +1315,15 @@ export function CreativePanelsWorkspace({
                               setStoryWorldData((prev) => ({ ...prev, product: newProd }));
                               setEditingCard(null);
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                           >
                             Save
                           </button>
-                          <span style={{ color: 'var(--border-default)', fontSize: 11.5 }}>|</span>
+                          <span style={{ color: 'var(--border-default)', fontSize: 12 }}>|</span>
                           <button
                             type="button"
                             onClick={() => setEditingCard(null)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11.5, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                           >
                             Cancel
                           </button>
@@ -1335,7 +1335,7 @@ export function CreativePanelsWorkspace({
                             setEditProductName(storyWorldData?.product || userContext.brief?.slice(0, 40) || `${userContext.businessName} items`);
                             setEditingCard('product');
                           }}
-                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--cc-emphasis)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                           [Edit]
                         </button>
@@ -1365,11 +1365,11 @@ export function CreativePanelsWorkspace({
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>3. 4 Story Beats Architecture</span>
-                    <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', textTransform: 'none' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'none' }}>
                       Target: {userContext.targetDuration || '20s'} Film
                     </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 10 }}>
                     {storyWorldData.beats.map((b, idx) => {
                       const dur = parseInt(userContext.targetDuration, 10) || 20;
                       const timingLabel = b.timing || (
@@ -1394,7 +1394,7 @@ export function CreativePanelsWorkspace({
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: 600,
                               padding: '2px 6px',
                               borderRadius: 4,
@@ -1405,7 +1405,7 @@ export function CreativePanelsWorkspace({
                             }}>
                               {b.beat || `BEAT ${idx + 1}`} ({timingLabel})
                             </span>
-                            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: "'JetBrains Mono', monospace" }}>
                               0{idx + 1}
                             </span>
                           </div>
@@ -1417,7 +1417,7 @@ export function CreativePanelsWorkspace({
                           </div>
                           {b.dialogue && (
                             <div style={{
-                              fontSize: 11.5,
+                              fontSize: 12,
                               color: 'var(--text-tertiary)',
                               fontStyle: 'italic',
                               marginTop: 2,
@@ -1802,10 +1802,10 @@ export function ProductionShotSpecView({ shotSpec, scenes }) {
                 Shot 0{idx + 1} Specification
               </span>
               <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{ fontSize: 11.5, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--cc-emphasis)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: 12, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--cc-emphasis)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {sh.shotSize || 'Medium'}
                 </span>
-                <span style={{ fontSize: 11.5, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: 12, padding: '2px 6px', borderRadius: 4, backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {sh.cameraMotion || 'Slow push'}
                 </span>
               </div>

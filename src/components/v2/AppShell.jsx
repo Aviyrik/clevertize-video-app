@@ -156,7 +156,7 @@ export default function AppShell({
 
             <span
               style={{
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 500,
                 color: 'var(--text-tertiary)',
                 backgroundColor: 'transparent',
@@ -410,7 +410,7 @@ export default function AppShell({
                     >
                       <div
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           letterSpacing: '0.005em',
                           color: 'var(--text-tertiary)',
@@ -469,7 +469,7 @@ export default function AppShell({
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       color: '#FFFFFF',
-                                      fontSize: 11.5,
+                                      fontSize: 12,
                                       fontWeight: 600,
                                       flexShrink: 0,
                                     }}
@@ -492,7 +492,7 @@ export default function AppShell({
                                   </div>
                                   <div
                                     style={{
-                                      fontSize: 11.5,
+                                      fontSize: 12,
                                       color: 'var(--text-tertiary)',
                                       whiteSpace: 'nowrap',
                                       overflow: 'hidden',
@@ -730,7 +730,7 @@ export default function AppShell({
           >
             <div
               style={{
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
                 color: 'var(--text-tertiary)',
                 letterSpacing: '0.005em',
@@ -826,6 +826,7 @@ export default function AppShell({
             {currentUser ? (
               <div
                 onClick={onOpenAccountModal}
+                onClickCapture={() => setMobileMenuOpen(false)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -924,7 +925,7 @@ export default function AppShell({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
+              <button className="tap-target"
                 type="button"
                 onClick={() => {
                   if (onOpenFeedbackModal) onOpenFeedbackModal();
@@ -987,7 +988,7 @@ export default function AppShell({
               )}
 
               {onReplayTour && (
-                <button
+                <button className="tap-target"
                   type="button"
                   data-tour="tour-replay-trigger"
                   onClick={() => {
@@ -1023,7 +1024,7 @@ export default function AppShell({
               )}
             </div>
 
-            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontFamily: 'var(--cc-font-mono)', opacity: 0.7 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: 'var(--cc-font-mono)', opacity: 0.7 }}>
               v2.0
             </span>
           </div>
@@ -1072,7 +1073,7 @@ export default function AppShell({
               {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
 
-            <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-tertiary)' }}>
+            <span className="header-crumb-parent" style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-tertiary)' }}>
               {(activeView === 'projects' || activeView === 'library')
                 ? 'My Projects'
                 : (activeView === 'businesses' || activeView === 'business')
@@ -1081,8 +1082,8 @@ export default function AppShell({
                 ? 'Creation Hub'
                 : 'Creative Studio'}
             </span>
-            <ChevronRight size={14} style={{ color: 'var(--text-tertiary)', opacity: 0.7 }} />
-            <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>
+            <ChevronRight className="header-crumb-parent" size={14} style={{ color: 'var(--text-tertiary)', opacity: 0.7 }} />
+            <span className="header-crumb-current" style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)' }}>
               {(activeView === 'projects' || activeView === 'library')
                 ? 'Video Commercials & Projects'
                 : (activeView === 'businesses' || activeView === 'business')
@@ -1097,6 +1098,7 @@ export default function AppShell({
             {/* Indicator 1: Pure indicator of active mode (shows current mode accurately, non-clickable) */}
             {activeView === 'studio' && (
               <span
+                className="header-mode-indicator"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1120,6 +1122,7 @@ export default function AppShell({
               <span
                 role="status"
                 aria-live="polite"
+                className="header-draft-status"
                 data-testid="draft-autosave-status"
                 title={draftStatus.detail || 'Drafts autosave to My Projects after persistence confirms'}
                 style={{
@@ -1164,7 +1167,7 @@ export default function AppShell({
                           border: '1px solid rgba(255, 122, 107, 0.45)',
                           backgroundColor: 'rgba(255, 122, 107, 0.14)',
                           color: '#FFA79C',
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
                         }}
@@ -1235,7 +1238,7 @@ export default function AppShell({
                 >
                   {studioMode === 'simple' ? <Zap size={11} /> : <Sliders size={11} />}
                   <span>{studioMode === 'simple' ? 'Simple' : 'Director'}</span>
-                  <span style={{ opacity: 0.65, fontSize: 11.5 }}>⇄</span>
+                  <span style={{ opacity: 0.65, fontSize: 12 }}>⇄</span>
                 </button>
               </div>
 

@@ -355,6 +355,7 @@ export default function SimpleBusinessStudio({
     <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px 80px' }}>
       {/* 3-STEP GUIDED PROGRESS HEADER */}
       <div
+        className="studio-progress studio-progress--compact"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -382,6 +383,8 @@ export default function SimpleBusinessStudio({
               <button
                 type="button"
                 disabled={!isNavigable}
+                data-step-state={isCurrent ? 'current' : 'other'}
+                aria-label={`Step ${s.stepNum}: ${s.label}`}
                 onClick={() => isNavigable && setStep(s.stepNum)}
                 style={{
                   background: 'none',
@@ -415,23 +418,23 @@ export default function SimpleBusinessStudio({
                       ? 'rgba(95, 212, 174, 0.15)'
                       : 'var(--bg-elevated)',
                     color: isCurrent
-                      ? '#ffffff'
+                      ? 'var(--cc-on-action)'
                       : isCompleted
                       ? 'var(--success)'
                       : 'var(--text-tertiary)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                   }}
                 >
                   {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : s.num}
                 </span>
-                <span>{s.label}</span>
+                <span className="step-label">{s.label}</span>
               </button>
               {idx < 2 && (
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 11.5 }}>›</span>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>›</span>
               )}
             </React.Fragment>
           );
@@ -572,10 +575,12 @@ export default function SimpleBusinessStudio({
                     placeholder={dynamicPlaceholder}
                     rows={4}
                     aria-label="What are you promoting?"
+                    className="brief-textarea"
                     style={{
                       width: '100%',
                       boxSizing: 'border-box',
-                      padding: '14px',
+                      // bottom room so text never runs under the Dictate button
+                      padding: onToggleRecording ? '14px 14px 52px' : '14px',
                       borderRadius: 10,
                       border: '1px solid var(--border-default)',
                       backgroundColor: 'var(--bg-elevated)',
@@ -588,7 +593,7 @@ export default function SimpleBusinessStudio({
                   />
 
                   {onToggleRecording && (
-                    <button
+                    <button className="brief-dictate-btn"
                       type="button"
                       onClick={() => onToggleRecording(brief)}
                       aria-label={isRecording ? 'Stop recording voice brief' : 'Dictate your brief using microphone'}
@@ -1115,7 +1120,7 @@ export default function SimpleBusinessStudio({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           letterSpacing: '0.005em',
                           padding: '3px 8px',
@@ -1129,10 +1134,10 @@ export default function SimpleBusinessStudio({
                       <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         {pkg.angle}
                       </span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
                         <Timer size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{pkg.duration || duration}
                       </span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
                         <Ratio size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{pkg.aspectRatio || aspectRatio}
                       </span>
                     </div>
@@ -1162,7 +1167,7 @@ export default function SimpleBusinessStudio({
                       marginBottom: 10,
                     }}
                   >
-                    <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--cc-emphasis)', marginBottom: 2 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--cc-emphasis)', marginBottom: 2 }}>
                       Opening Hook
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontStyle: 'italic' }}>
@@ -1234,7 +1239,7 @@ export default function SimpleBusinessStudio({
                               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                                 Scene {sc.sceneNumber || sIdx + 1} · {sc.beat}
                               </span>
-                              <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{sc.timing}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{sc.timing}</span>
                             </div>
                             <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>
                               <Clapperboard size={12} aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5, opacity: 0.8 }} />{sc.visual}

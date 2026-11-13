@@ -82,7 +82,7 @@ export default function ModeSelectionScreen({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
             <span
               style={{
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: '0.005em',
                 color: 'var(--cc-emphasis)',
@@ -133,7 +133,7 @@ export default function ModeSelectionScreen({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
           gap: 18,
           alignItems: 'stretch',
         }}
@@ -179,7 +179,7 @@ export default function ModeSelectionScreen({
                 {preferredMode === 'simple' && (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: 12,
@@ -194,7 +194,7 @@ export default function ModeSelectionScreen({
                 {simpleCardRecommended && (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: '0.005em',
                       padding: '3px 9px',
@@ -229,7 +229,7 @@ export default function ModeSelectionScreen({
                 padding: '10px 12px',
               }}
             >
-              <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                 3 Steps
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -342,7 +342,7 @@ export default function ModeSelectionScreen({
                 {preferredMode === 'advanced' && (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: 12,
@@ -357,7 +357,7 @@ export default function ModeSelectionScreen({
                 {directorCardRecommended ? (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: '0.005em',
                       padding: '3px 9px',
@@ -371,7 +371,7 @@ export default function ModeSelectionScreen({
                 ) : (
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: '0.005em',
                       padding: '3px 9px',
@@ -407,7 +407,7 @@ export default function ModeSelectionScreen({
                 padding: '10px 12px',
               }}
             >
-              <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.005em', color: 'var(--text-tertiary)', marginBottom: 8 }}>
                 {isScriptEntry ? 'Scene Editor' : '7 Stages'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
@@ -415,7 +415,7 @@ export default function ModeSelectionScreen({
                   <React.Fragment key={step}>
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: 600,
                         padding: '3px 7px',
                         borderRadius: 6,
@@ -427,7 +427,7 @@ export default function ModeSelectionScreen({
                       {step}
                     </span>
                     {i < directorSteps.length - 1 && (
-                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>→</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>→</span>
                     )}
                   </React.Fragment>
                 ))}
