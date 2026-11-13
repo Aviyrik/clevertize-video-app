@@ -8,7 +8,7 @@
 const PROVIDER_PATTERN = new RegExp([['mag', 'nific'], ['free', 'pik']].map((p) => p.join('')).join('|'), 'i');
 
 const GENERIC_RENDER_ERROR =
-  'Our video engine hit a problem while rendering. Please try again in a moment.';
+  'Something went wrong while rendering your video. Please try again in a moment.';
 
 function mentionsProvider(text) {
   return typeof text === 'string' && PROVIDER_PATTERN.test(text);

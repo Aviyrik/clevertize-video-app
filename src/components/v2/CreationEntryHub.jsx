@@ -507,10 +507,10 @@ export default function CreationEntryHub({
           <CheckCircle2 size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>
-              In-House Video Engine
+              Every Platform Format
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Same cast and setting in every scene
+              9:16, 16:9 and 1:1 from one brief
             </div>
           </div>
         </div>

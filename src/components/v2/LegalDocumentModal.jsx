@@ -308,7 +308,7 @@ export default function LegalDocumentModal({
                   2. Service Description & AI Generation
                 </h3>
                 <p style={{ margin: 0 }}>
-                  CleverCut is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis through its neural generative video engine and large language models. While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
+                  CleverCut is an AI-powered creative dashboard and video production studio designed for businesses, agencies, and retail brands. The platform synthesizes marketing briefs, generates story concepts and scripts, and coordinates video synthesis using generative AI models. While we provide high-fidelity generation tools, output depends upon the user&rsquo;s prompts, settings, and business context.
                 </p>
               </div>
 
