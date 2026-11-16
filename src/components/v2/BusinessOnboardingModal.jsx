@@ -562,7 +562,7 @@ export default function BusinessOnboardingModal({
                   />
                   <div
                     style={{
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: isCurrent ? 600 : 500,
                       color: isCurrent ? 'var(--cc-emphasis)' : isDone ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                       display: 'flex',
@@ -707,7 +707,7 @@ export default function BusinessOnboardingModal({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           lineHeight: 1,
                         }}
@@ -742,7 +742,7 @@ export default function BusinessOnboardingModal({
                       title="Upload business logo"
                     >
                       <Upload size={16} />
-                      <span style={{ fontSize: 11, fontWeight: 600, marginTop: 2, }}>Logo</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, marginTop: 2, }}>Logo</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -815,6 +815,7 @@ export default function BusinessOnboardingModal({
               <div
                 role="group"
                 aria-label="Business Category"
+                className="category-card-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))',
@@ -856,6 +857,7 @@ export default function BusinessOnboardingModal({
                     >
                       {/* Visual Header */}
                       <div
+                        className="category-card-visual"
                         style={{
                           position: 'relative',
                           height: 70,
@@ -948,7 +950,7 @@ export default function BusinessOnboardingModal({
                         </div>
                         <div
                           style={{
-                            fontSize: 11.5,
+                            fontSize: 12,
                             color: 'var(--text-tertiary)',
                             marginTop: 3,
                             lineHeight: 1.3,

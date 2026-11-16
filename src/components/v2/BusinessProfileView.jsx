@@ -151,7 +151,7 @@ export default function BusinessProfileView({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))',
             gap: 20,
           }}
         >
@@ -261,7 +261,7 @@ export default function BusinessProfileView({
                       {isActive && (
                         <span
                           style={{
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--cc-emphasis)',
                             backgroundColor: 'rgba(244, 244, 236, 0.06)',

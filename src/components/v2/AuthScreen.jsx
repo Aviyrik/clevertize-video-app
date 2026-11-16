@@ -29,6 +29,7 @@ import LegalDocumentModal from './LegalDocumentModal.jsx';
 export default function AuthScreen({
   onAuthSuccess,
   initialMode = 'signup', // 'signup' | 'signin' | 'login'
+  notice = '', // e.g. "Your session has expired" after an automatic sign-out
 }) {
   const normalizeMode = (m) => (m === 'login' || m === 'signin' ? 'signin' : 'signup');
   const [mode, setMode] = useState(() => normalizeMode(initialMode));
@@ -275,7 +276,7 @@ export default function AuthScreen({
           max-width: 420px;
           margin-left: auto !important;
           margin-right: 0 !important;
-          background-color: color-mix(in srgb, var(--cc-surface) 84%, transparent);
+          background-color: color-mix(in srgb, var(--cc-surface) 82%, transparent);
           backdrop-filter: blur(24px) saturate(140%);
           -webkit-backdrop-filter: blur(24px) saturate(140%);
           border: 1px solid var(--cc-line-2);
@@ -734,6 +735,27 @@ export default function AuthScreen({
                 ? 'One brief in. A finished commercial out.'
                 : 'Log in to continue creating with CleverCut.'}
             </p>
+            {notice && (
+              <div
+                role="status"
+                data-testid="auth-notice"
+                style={{
+                  marginTop: 14,
+                  padding: '10px 12px',
+                  borderRadius: 'var(--cc-radius-sm)',
+                  backgroundColor: 'var(--cc-info-tint)',
+                  color: 'var(--cc-text-1)',
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                }}
+              >
+                <Info size={15} aria-hidden="true" style={{ color: 'var(--cc-info)', flexShrink: 0, marginTop: 1 }} />
+                <span>{notice}</span>
+              </div>
+            )}
           </div>
 
           {/* Google Authentication Button */}
@@ -866,7 +888,7 @@ export default function AuthScreen({
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ramesh Sharma"
+                  placeholder="e.g. Alex Morgan"
                   disabled={isSubmitting}
                   className="auth-input"
                 />

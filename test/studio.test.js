@@ -1622,7 +1622,9 @@ test('V2 Entry Points: CreationEntryHub exposes Brief, Existing Script, and Webs
   assert.ok(hubSrc.includes('Start with a Website URL'), 'Hub must feature Start with a Website URL');
   assert.ok(hubSrc.includes('18-Point Continuity Gate'), 'Hub must highlight 18-point continuity gate');
   assert.ok(hubSrc.includes('Devanagari script support'), 'Hub must highlight regional script support');
-  assert.ok(hubSrc.includes('Magnific GPU Rendering'), 'Hub must highlight video GPU rendering');
+  assert.ok(hubSrc.includes('Every Platform Format'), 'Hub must highlight multi-format output');
+  assert.ok(!/video engine|in-house/i.test(hubSrc), 'Hub must not claim an in-house video engine');
+  assert.ok(!/magnific/i.test(hubSrc), 'Hub must not name the rendering provider');
 });
 
 test('V2 Entry Point 1 (Brief): Start with Brief navigates into studio workflow', () => {
@@ -2234,9 +2236,9 @@ test('Account Settings: Compact, subtle danger zone and safe logout in modal', (
   const modalSrc = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
 
   // Compact danger zone verification
-  assert.ok(modalSrc.includes('Delete Account'), 'Must contain Delete Account section');
+  assert.ok(modalSrc.includes('Delete account'), 'Must contain Delete account section');
   assert.ok(modalSrc.includes('showConfirm'), 'Must have expandable confirmation state');
-  assert.ok(modalSrc.includes('Sign Out'), 'Must include safe Sign Out action');
+  assert.ok(modalSrc.includes('Sign out'), 'Must include safe Sign out action');
 });
 
 test('My Projects Video Experience: ScriptLibraryView provides video download, business branding, and video-centric copy', () => {
@@ -2689,3 +2691,14 @@ test('Post-Generation CTA Hierarchy: Create another video (Primary), Share & Reg
 
 
 
+
+test('Account settings: no separate Upload photo row, no Send feedback, stat links navigate', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../src/components/v2/AccountModal.jsx'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '../src/App.jsx'), 'utf8');
+  assert.ok(!src.includes('Upload Photo') && !src.includes('Replace Photo'), 'Avatar camera badge is the only upload control');
+  assert.ok(src.includes('Remove photo'), 'Photo can still be removed');
+  assert.ok(!src.includes('Send Feedback') && !src.includes('onOpenFeedback'), 'Feedback lives in the sidebar and top bar only');
+  assert.ok(src.includes('onOpenProjects') && src.includes('onOpenBusinesses'));
+  assert.ok(appSrc.includes("onOpenProjects={() => setActiveAppView('projects')}") && appSrc.includes("onOpenBusinesses={() => setActiveAppView('businesses')}"));
+  assert.ok(!/#[0-9A-Fa-f]{6}/.test(src), 'AccountModal uses tokens, not hard-coded hex colours');
+});

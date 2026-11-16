@@ -198,7 +198,7 @@ export default function AuthClipWall({ onUnavailable }) {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          filter: brightness(0.62) saturate(0.85);
+          filter: brightness(0.7) saturate(0.85);
         }
         .clip-card__video {
           animation: clip-fade var(--cc-dur-4) var(--cc-ease-out) both;
@@ -208,18 +208,32 @@ export default function AuthClipWall({ onUnavailable }) {
           to { opacity: 1; }
         }
 
-        /* Shading: keeps the copy (bottom-left), logo (top-left) and form (right) readable */
+        /* Shading: the clips stay alive on the left and centre, while a dark pool around the form
+           (right) keeps it the focal point. Bottom-left copy and top-left logo get local shading. */
         .clip-wall__shade {
           position: absolute;
           inset: 0;
           background:
-            linear-gradient(0deg, color-mix(in srgb, var(--cc-bg) 92%, transparent) 0%, transparent 55%),
-            linear-gradient(180deg, color-mix(in srgb, var(--cc-bg) 70%, transparent) 0%, transparent 22%),
+            radial-gradient(ellipse 34% 75% at 81% 50%, color-mix(in srgb, var(--cc-bg) 60%, transparent) 0%, transparent 100%),
+            linear-gradient(0deg,
+              color-mix(in srgb, var(--cc-bg) 92%, transparent) 0%,
+              color-mix(in srgb, var(--cc-bg) 60%, transparent) 30%,
+              transparent 58%),
+            linear-gradient(180deg, color-mix(in srgb, var(--cc-bg) 65%, transparent) 0%, transparent 18%),
             linear-gradient(90deg,
-              color-mix(in srgb, var(--cc-bg) 60%, transparent) 0%,
-              color-mix(in srgb, var(--cc-bg) 35%, transparent) 45%,
-              color-mix(in srgb, var(--cc-bg) 75%, transparent) 100%),
-            color-mix(in srgb, var(--cc-bg) 30%, transparent);
+              color-mix(in srgb, var(--cc-bg) 50%, transparent) 0%,
+              color-mix(in srgb, var(--cc-bg) 22%, transparent) 40%,
+              color-mix(in srgb, var(--cc-bg) 72%, transparent) 70%,
+              color-mix(in srgb, var(--cc-bg) 82%, transparent) 100%),
+            color-mix(in srgb, var(--cc-bg) 22%, transparent);
+        }
+        /* Narrow screens: the form sits centred over the wall, so dim evenly behind it */
+        @media (max-width: 900px) {
+          .clip-wall__shade {
+            background:
+              linear-gradient(0deg, color-mix(in srgb, var(--cc-bg) 80%, transparent) 0%, transparent 40%),
+              color-mix(in srgb, var(--cc-bg) 55%, transparent);
+          }
         }
 
         .clip-wall__credit {

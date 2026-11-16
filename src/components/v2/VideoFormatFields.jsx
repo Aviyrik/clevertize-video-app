@@ -159,7 +159,7 @@ export default function VideoFormatFields({
                 <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)' }}>
                   {dim.label}
                 </div>
-                <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
                   {dim.platformHint}
                 </div>
               </button>
@@ -240,13 +240,13 @@ export default function VideoFormatFields({
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: isSelected ? 'var(--cc-emphasis)' : 'var(--text-primary)' }}>
                   {dur.label}
                 </div>
-                <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)', lineHeight: 1.25 }}>
                   {dur.pacingNote}
                 </div>
                 {dur.recommended && (
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: 'var(--cc-emphasis)',
                       letterSpacing: '0.02em',

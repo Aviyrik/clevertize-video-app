@@ -512,7 +512,7 @@ export default function FeedbackModal({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                     gap: 8,
                   }}
                 >
@@ -564,15 +564,14 @@ export default function FeedbackModal({
                         >
                           <IconComp size={15} />
                         </div>
-                        <div style={{ overflow: 'hidden' }}>
+                        <div style={{ overflow: 'hidden', minWidth: 0 }}>
                           <div
                             style={{
                               fontSize: 12,
                               fontWeight: isSelected ? 600 : 600,
                               color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              lineHeight: 1.3,
+                              overflowWrap: 'anywhere',
                             }}
                           >
                             {cat.label}
@@ -752,7 +751,7 @@ export default function FeedbackModal({
                             >
                               {att.name}
                             </div>
-                            <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                               {(att.size / 1024).toFixed(0)} KB
                             </div>
                           </div>
@@ -823,7 +822,7 @@ export default function FeedbackModal({
                       fontSize: 12,
                       color: 'var(--text-secondary)',
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                       gap: '4px 12px',
                     }}
                   >

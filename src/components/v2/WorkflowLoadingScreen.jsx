@@ -252,7 +252,7 @@ export default function WorkflowLoadingScreen({
         {badgeLabel && (
           <div
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: '0.005em',
               color: 'var(--cc-emphasis)',
@@ -433,7 +433,7 @@ export default function WorkflowLoadingScreen({
         >
           <div
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: '0.005em',
               color: 'var(--text-tertiary)',
@@ -484,7 +484,7 @@ export default function WorkflowLoadingScreen({
                   ) : (
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: 'var(--text-tertiary)',
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -509,7 +509,7 @@ export default function WorkflowLoadingScreen({
                     {stg.timeRange && (
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           fontFamily: "'JetBrains Mono', monospace",
                         }}

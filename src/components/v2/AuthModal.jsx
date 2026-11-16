@@ -644,7 +644,7 @@ export default function AuthModal({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Ramesh Sharma"
+                    placeholder="e.g. Alex Morgan"
                     disabled={isSubmitting}
                     style={{
                       width: '100%',

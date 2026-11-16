@@ -1,4 +1,4 @@
-// Magnific video links expire: their token carries "exp=<unix seconds>" (e.g. ?token=exp=1730000000~hmac=…).
+// Rendering-provider video links expire: their token carries "exp=<unix seconds>" (e.g. ?token=exp=1730000000~hmac=…).
 // Copies saved to permanent storage carry no such token. Projects made before videos were copied may
 // hold an expired link — show that clearly instead of a broken player.
 

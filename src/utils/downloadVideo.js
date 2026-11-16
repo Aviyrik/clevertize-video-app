@@ -4,6 +4,8 @@
  * This prevents leaking long-lived user session tokens into query strings, URLs,
  * browser history, and proxy logs.
  */
+import { brandSafeMessage } from './brandSafeText.js';
+
 export async function downloadVideoWithTicket(videoUrl, filename = 'commercial_video.mp4') {
   if (!videoUrl) return;
 
@@ -24,7 +26,7 @@ export async function downloadVideoWithTicket(videoUrl, filename = 'commercial_v
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to prepare video download.');
+    throw new Error(brandSafeMessage(data.error, 'Failed to prepare video download.') || 'Failed to prepare video download.');
   }
 
   const data = await res.json();

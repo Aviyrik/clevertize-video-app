@@ -217,7 +217,7 @@ export default function OccasionEventSection({
           </div>
 
           {/* 2. Event Name (Searchable or Custom Entry) & 3. Event Timing */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 10 }}>
             <div style={{ position: 'relative' }}>
               <label
                 htmlFor="occasion-event-name-input"
@@ -304,7 +304,7 @@ export default function OccasionEventSection({
                       }}
                     >
                       <span>{item.name}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>{item.category}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.category}</span>
                     </button>
                   ))}
                 </div>
@@ -368,7 +368,7 @@ export default function OccasionEventSection({
                     }}
                   >
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{opt.label}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 1 }}>{opt.hint}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1 }}>{opt.hint}</div>
                   </button>
                 );
               })}

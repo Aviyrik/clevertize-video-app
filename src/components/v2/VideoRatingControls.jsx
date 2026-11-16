@@ -298,7 +298,7 @@ export function ProjectRatingBar({
                   style={{
                     padding: '3px 8px',
                     borderRadius: 4,
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
                     border: isSelected
@@ -342,7 +342,7 @@ export function ProjectRatingBar({
               alignItems: 'center',
               justifyContent: 'space-between',
               marginTop: 6,
-              fontSize: 11.5,
+              fontSize: 12,
               color: 'var(--text-tertiary)',
             }}
           >
@@ -355,7 +355,7 @@ export function ProjectRatingBar({
                 border: 'none',
                 color: 'var(--cc-emphasis)',
                 fontWeight: 600,
-                fontSize: 11.5,
+                fontSize: 12,
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -525,7 +525,7 @@ export function PostGenerationFeedbackPrompt({
             {currentRating && (
               <span
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 600,
                   padding: '1px 6px',
                   borderRadius: 4,

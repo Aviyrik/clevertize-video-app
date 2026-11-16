@@ -256,7 +256,7 @@ export default function UrlResearchModal({
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
               Sample store:
             </span>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {URL_PRESETS.map((p, idx) => (
                 <button
                   key={idx}
@@ -288,7 +288,7 @@ export default function UrlResearchModal({
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
               Website or Store URL
             </label>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="url-scan-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <input
                 type="text"
                 value={urlInput}
@@ -298,7 +298,8 @@ export default function UrlResearchModal({
                 }}
                 placeholder="e.g. https://mybusiness.com or myshop.in"
                 style={{
-                  flex: 1,
+                  flex: '1 1 220px',
+                  minWidth: 0,
                   padding: '10px 14px',
                   fontSize: 14,
                   backgroundColor: 'var(--bg-elevated)',
@@ -315,13 +316,16 @@ export default function UrlResearchModal({
                 onClick={handleAnalyzeUrl}
                 disabled={isScanning || !urlInput.trim()}
                 style={{
-                  backgroundColor: 'var(--cc-action)',
-                  border: 'none',
+                  // One primary action per view: Scan is primary until a site has been scanned
+                  backgroundColor: scanResult ? 'var(--bg-elevated)' : 'var(--cc-action)',
+                  border: scanResult ? '1px solid var(--border-default)' : 'none',
                   borderRadius: 999,
                   padding: '0 20px',
+                  minHeight: 40,
+                  justifyContent: 'center',
                   fontSize: 13,
                   fontWeight: 600,
-                  color: 'var(--cc-on-action)',
+                  color: scanResult ? 'var(--text-primary)' : 'var(--cc-on-action)',
                   cursor: isScanning || !urlInput.trim() ? 'not-allowed' : 'pointer',
                   opacity: isScanning || !urlInput.trim() ? 0.6 : 1,
                   display: 'flex',
@@ -404,7 +408,7 @@ export default function UrlResearchModal({
               </div>
 
               {/* Editable Fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Brand Name
@@ -485,7 +489,7 @@ export default function UrlResearchModal({
                     <div style={{ overflow: 'hidden' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span>Detected Product Photo</span>
-                        <span style={{ fontSize: 11.5, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(95, 212, 174, 0.15)', color: 'var(--success)' }}>
+                        <span style={{ fontSize: 12, padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(95, 212, 174, 0.15)', color: 'var(--success)' }}>
                           Scraped from URL
                         </span>
                       </div>
@@ -545,6 +549,8 @@ export default function UrlResearchModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
             backgroundColor: 'var(--bg-elevated)',
             flexShrink: 0,
           }}
@@ -571,19 +577,19 @@ export default function UrlResearchModal({
             onClick={handleProceed}
             disabled={!draftBrand.trim() && !draftBrief.trim()}
             style={{
-              backgroundColor: 'var(--cc-action)',
-              border: 'none',
+              backgroundColor: scanResult ? 'var(--cc-action)' : 'var(--bg-surface)',
+              border: scanResult ? 'none' : '1px solid var(--border-default)',
               borderRadius: 999,
               padding: '9px 20px',
               fontSize: 13,
               fontWeight: 600,
-              color: 'var(--cc-on-action)',
+              color: scanResult ? 'var(--cc-on-action)' : 'var(--text-primary)',
               cursor: !draftBrand.trim() && !draftBrief.trim() ? 'not-allowed' : 'pointer',
               opacity: !draftBrand.trim() && !draftBrief.trim() ? 0.6 : 1,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+              boxShadow: scanResult ? 'inset 0 1px 0 rgba(255,255,255,0.35)' : 'none',
             }}
           >
             <span>Proceed to Studio with Brief</span>

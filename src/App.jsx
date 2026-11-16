@@ -27,6 +27,7 @@ import {
   transferSimpleToDirector,
   transferDirectorToSimple,
 } from './utils/modeTransfer.js';
+import { brandSafeMessage } from './utils/brandSafeText.js';
 import { TOUR_STEPS } from './data/tourSteps.js';
 import {
   StudioStateContext,
@@ -42,6 +43,8 @@ import ExistingScriptModal from './components/v2/ExistingScriptModal.jsx';
 import UrlResearchModal from './components/v2/UrlResearchModal.jsx';
 import AuthModal from './components/v2/AuthModal.jsx';
 import AuthScreen from './components/v2/AuthScreen.jsx';
+import NotFoundScreen from './components/v2/NotFoundScreen.jsx';
+import { isKnownAppPath, pathForView, viewForPath, initialViewForPath } from './utils/appRoutes.js';
 import EmailVerificationScreen from './components/v2/EmailVerificationScreen.jsx';
 import ResetPasswordScreen from './components/v2/ResetPasswordScreen.jsx';
 import BusinessOnboardingModal from './components/v2/BusinessOnboardingModal.jsx';
@@ -950,7 +953,8 @@ export default function App() {
       setErrorMessageRaw('The video production service returned an unexpected HTML response. The server may be restarting or temporarily busy. Please retry in a moment.');
       return;
     }
-    setErrorMessageRaw(str);
+    // Never show the rendering provider's name: raw provider errors become a CleverCut message
+    setErrorMessageRaw(brandSafeMessage(str));
   };
   const errorMessage = errorMessageRaw;
   const [validationError, setValidationError] = useState('');
@@ -1162,7 +1166,10 @@ export default function App() {
     }
   };
 
-  const [activeAppView, setActiveAppViewState] = useState('hub');
+  // The address bar picks the opening view (/projects, /businesses); see appRoutes.js
+  const [activeAppView, setActiveAppViewState] = useState(() =>
+    typeof window !== 'undefined' ? initialViewForPath(window.location.pathname) : 'hub'
+  );
   const setActiveAppView = (viewOrUpdater) => {
     setActiveAppViewState((prev) => {
       const nextView = typeof viewOrUpdater === 'function' ? viewOrUpdater(prev) : viewOrUpdater;
@@ -1763,6 +1770,122 @@ export default function App() {
     setAuthInitialMode('signin');
   }, [currentUser, authToken]);
 
+  // ---- Addresses & browser history -------------------------------------------------------
+  // Unknown addresses show "Page not found" (the server also answers them with a 404).
+  const [isNotFound, setIsNotFound] = useState(
+    () => typeof window !== 'undefined' && !isKnownAppPath(window.location.pathname)
+  );
+  // A page asked for while signed out (e.g. /projects) is opened after logging in
+  const pendingDeepLinkRef = useRef(
+    typeof window !== 'undefined' ? initialViewForPath(window.location.pathname) : 'hub'
+  );
+  const activeViewRef = useRef(activeAppView);
+  activeViewRef.current = activeAppView;
+  const popNavigationRef = useRef(false);
+  const hasSyncedAddressRef = useRef(false);
+
+  // View -> address: each screen change becomes a history entry, so Back/Forward move between screens
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!currentUser || !authToken || isNotFound || isVerifyingEmail || isResettingPassword) return;
+    const target = pathForView(activeAppView, studioStage);
+    // First sync after load (e.g. a reload on /studio opens the hub) and Back/Forward replace the
+    // entry instead of adding one, so Back never bounces to the address just left
+    const replace = popNavigationRef.current || !hasSyncedAddressRef.current;
+    popNavigationRef.current = false;
+    hasSyncedAddressRef.current = true;
+    if (window.location.pathname === target) return;
+    try {
+      if (replace) window.history.replaceState({ view: activeAppView }, '', target);
+      else window.history.pushState({ view: activeAppView }, '', target);
+    } catch {}
+  }, [activeAppView, studioStage, currentUser, authToken, isNotFound, isVerifyingEmail, isResettingPassword]);
+
+  // Address -> view: Back/Forward buttons and swipe-back gestures
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onPopState = () => {
+      const path = window.location.pathname;
+      if (!isKnownAppPath(path)) {
+        setIsNotFound(true);
+        return;
+      }
+      setIsNotFound(false);
+      const view = viewForPath(path);
+      if (!view) return;
+      const current = activeViewRef.current;
+      const sameView = view === current || (view === 'hub' && current === 'home');
+      if (!sameView) {
+        popNavigationRef.current = true;
+        setActiveAppView(view);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const handleLeaveNotFound = () => {
+    try {
+      window.history.pushState({ view: 'hub' }, '', '/');
+    } catch {}
+    setIsNotFound(false);
+    setActiveAppView('hub');
+  };
+
+  // ---- Expired sessions ---------------------------------------------------------------------
+  // Sessions last 30 days but were only checked on page load. Any signed-in API call answered
+  // with 401 now signs the user out cleanly and the log-in screen explains why.
+  const [sessionNotice, setSessionNotice] = useState('');
+  const handleLogoutRef = useRef(null);
+  const sessionExpiryInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') return undefined;
+    const originalFetch = window.fetch;
+    if (originalFetch.__clevercutSessionGuard) return undefined;
+    const AUTH_ENTRY = /\/api\/auth\/(login|signup|verify-email|resend-verification|forgot-password|reset-password|logout)/;
+    const guardedFetch = async (input, init) => {
+      const res = await originalFetch(input, init);
+      try {
+        if (res.status === 401) {
+          const url = typeof input === 'string' ? input : (input && input.url) || '';
+          const headers = (init && init.headers) || {};
+          const hasAuth = typeof headers.get === 'function'
+            ? Boolean(headers.get('Authorization'))
+            : Boolean(headers.Authorization || headers.authorization);
+          if (url.includes('/api/') && hasAuth && !AUTH_ENTRY.test(url)) {
+            window.dispatchEvent(new CustomEvent('clevercut:session-expired'));
+          }
+        }
+      } catch {}
+      return res;
+    };
+    guardedFetch.__clevercutSessionGuard = true;
+    window.fetch = guardedFetch;
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onExpired = async () => {
+      let hasToken = false;
+      try { hasToken = Boolean(localStorage.getItem('clevertize_token')); } catch {}
+      if (sessionExpiryInFlightRef.current || !hasToken || !handleLogoutRef.current) return;
+      sessionExpiryInFlightRef.current = true;
+      try {
+        await handleLogoutRef.current();
+      } finally {
+        setSessionNotice('Your session has expired. Please log in again to continue.');
+        setAuthInitialMode('signin');
+        sessionExpiryInFlightRef.current = false;
+      }
+    };
+    window.addEventListener('clevercut:session-expired', onExpired);
+    return () => window.removeEventListener('clevercut:session-expired', onExpired);
+  }, []);
+
   const handleAuthSuccess = (userDataOrUser, possibleToken, authMode) => {
     const user = userDataOrUser?.user || userDataOrUser;
     const token = possibleToken || userDataOrUser?.token;
@@ -1792,6 +1915,12 @@ export default function App() {
 
     // Deep clean any lingering film & video state from prior sessions
     resetAllCreativeFilmState();
+    setSessionNotice('');
+    // Opened /projects or /businesses while signed out: go there now
+    if (pendingDeepLinkRef.current && pendingDeepLinkRef.current !== 'hub') {
+      setActiveAppView(pendingDeepLinkRef.current);
+    }
+    pendingDeepLinkRef.current = 'hub';
 
     if (token) {
       setAuthToken(token);
@@ -1844,9 +1973,13 @@ export default function App() {
     setIsCurrentProjectSaved(false);
     setUserContext(createEmptyUserContext());
     resetAllCreativeFilmState();
+    try {
+      window.history.replaceState({}, document.title, '/');
+    } catch {}
     setToastMessage('Signed out successfully.');
     setTimeout(() => setToastMessage(''), 3000);
   };
+  handleLogoutRef.current = handleLogout;
 
   const handleDeleteAccount = async () => {
     if (!authToken) return;
@@ -1922,6 +2055,24 @@ export default function App() {
     } catch (err) {
       console.error('Failed to update profile:', err);
     }
+  };
+
+  // Throws with the server's message so Account settings can show it next to the form
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    if (!authToken) throw new Error('Please log in again to change your password.');
+    const res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw Object.assign(new Error(data.error || 'Unable to change your password right now.'), { code: data.code });
+    }
+    return data;
   };
 
   const handleSaveCurrentProject = async () => {
@@ -3901,9 +4052,9 @@ export default function App() {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      }), 'Could not start your video render. Please try again.');
 
-      // 3. Poll Magnific status
+      // 3. Poll render status
       await pollRenderStatus(runData.runId, { session });
     } catch (err) {
       if (studioSessionRef.current !== session) return; // the studio moved on: don't show this error there
@@ -3942,7 +4093,7 @@ export default function App() {
         ? userContext.customBusinessType.trim()
         : userContext.businessType;
 
-      // 2. Start Magnific Run with compiled shot specification & consistent characters
+      // 2. Start the render with the compiled shot specification & consistent characters
       const runPayload = {
         scenes: scenes.map((s) => s.trim()).filter(Boolean),
         character1: character1.trim(),
@@ -3976,7 +4127,7 @@ export default function App() {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(runPayload),
-      }), 'Failed to dispatch render job to Magnific.');
+      }), 'Could not start your video render. Please try again.');
 
       setRenderStatusText('Rendering neural video frames…');
       await pollRenderStatus(data.runId, { session });
@@ -4455,7 +4606,7 @@ export default function App() {
           setIsRendering(false);
           setIsBusy(false);
           setCurrentStep('input');
-          const detail = data.error || (data.status === 'completed_with_errors' ? 'The Magnific workflow ran into internal generation errors (such as missing/low-resolution images, node timeout, or content filters). Please check your product photo or try re-generating.' : `Rendering failed: ${data.status}`);
+          const detail = data.error || (data.status === 'completed_with_errors' ? 'Something went wrong while generating this video (for example a missing or low-resolution image, a timeout, or a content filter). Please check your product photo or try generating again.' : `Rendering failed: ${data.status}`);
           setErrorMessage(detail);
           // The run is over: the draft forgets it, so reopening the draft lets the user render again
           draftRenderRef.current = null;
@@ -4464,7 +4615,7 @@ export default function App() {
         }
 
         const niceStatus = data.status && !/run|process|pending|queue|unknown/i.test(data.status)
-          ? data.status
+          ? brandSafeMessage(data.status, 'Synthesizing frames & audio in neural pipeline…')
           : 'Synthesizing frames & audio in neural pipeline…';
         if (isLive()) setRenderStatusText(niceStatus);
       } catch (pollErr) {
@@ -4486,7 +4637,7 @@ export default function App() {
     setIsRendering(false);
     setIsBusy(false);
     setCurrentStep('input');
-    setErrorMessage('Render taking longer than expected. Please verify your Magnific workspace.');
+    setErrorMessage('Your video is taking longer than expected to render. It is still in progress: reopen this project from My Projects in a few minutes to pick it up.');
   };
 
   // Video Share Action
@@ -5387,6 +5538,11 @@ export default function App() {
     </div>
   );
 
+  // 0. Unknown address: "Page not found" (works signed in or out)
+  if (isNotFound) {
+    return <NotFoundScreen onGoHome={handleLeaveNotFound} />;
+  }
+
   // 0. Password reset link (/reset-password?token=...)
   if (isResettingPassword) {
     return (
@@ -5451,6 +5607,7 @@ export default function App() {
       <AuthScreen
         initialMode={authInitialMode}
         onAuthSuccess={handleAuthSuccess}
+        notice={sessionNotice}
       />
     );
   }
@@ -5771,6 +5928,7 @@ export default function App() {
         />
         <StudioChoicesBar
           currentStage={studioStage}
+          completedStages={completedStages}
           explicitChoices={explicitChoices}
           onNavigateStage={handleNavigateStage}
           hasStaleWarning={Boolean(
@@ -6793,7 +6951,9 @@ export default function App() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
         onUpdateProfile={handleUpdateProfile}
-        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+        onChangePassword={handleChangePassword}
+        onOpenProjects={() => setActiveAppView('projects')}
+        onOpenBusinesses={() => setActiveAppView('businesses')}
         onReplayTour={handleReplayTour}
         onResumeTour={handleResumeTour}
         hasPausedTour={hasResumableTourProgress(onboardingState, TOUR_STEPS.length)}
