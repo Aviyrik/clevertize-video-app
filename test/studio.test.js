@@ -2410,7 +2410,8 @@ test('Streamlined Script Stage: Directly follows Opening Hook, embedding Cast & 
 
   // 3. App.jsx onContinue from opening directly sets studioStage to script and synthesizes master script
   assert.ok(appSrc.includes("setStudioStage('script');"), 'Opening onContinue must fast-track directly to script stage');
-  assert.ok(appSrc.includes('await handleSynthesizeMasterScript();'), 'Opening onContinue must synthesize script directly');
+  // the script step is handed the story (concept.json) built in the same click
+  assert.ok(/await handleSynthesizeMasterScript\((?:false, story)?\);/.test(appSrc), 'Opening onContinue must synthesize script directly');
 
   // 4. Script Stage (Screen07Script) presents Story Continuity with inline edit capabilities
   assert.ok(
@@ -2448,7 +2449,10 @@ test('Screen07Script: Scene Parser extracts multi-line visuals and multi-speaker
 test('Script Import (/api/script/validate-and-import): separates dialogue from visual action without hardcoded camera boilerplate', () => {
   const serverSrc = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
   assert.ok(!serverSrc.includes('Visual:\nBalanced medium shot in steady room lighting.'), 'Server import must not overwrite visual description with boilerplate camera line');
-  assert.ok(serverSrc.includes('sliceLines'), 'Server import must inspect sliceLines for dialogue and visual separation');
+  // Script & Storyboard Spine: the import is rewritten into script.json, whose Visual and Audio fields are separate
+  assert.ok(serverSrc.includes('scriptSpine.importScript({ rawScript, concept: importConcept, brief: importBrief })'), 'Server import runs through the Script & Storyboard Spine');
+  const scriptSpineSrc = fs.readFileSync(path.join(__dirname, '../engine/spines/scriptSpine.js'), 'utf8');
+  assert.ok(scriptSpineSrc.includes("Keep the user's story, characters and lines where they meet the rules"), 'Import keeps the user\'s own lines');
 });
 
 test('Video Generation Completion: App.jsx avoids bare selectedDirectionIndex / undefined stage variables in activeVideoProject and save payloads', () => {

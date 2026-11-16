@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const spineAnswers = require('./helpers/spineAnswers');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'occasion-event-test-'));
 process.env.ANTHROPIC_API_KEY = 'test-key';
@@ -312,10 +313,13 @@ test('4. Director Mode Propagation & Stale Invalidations + Simple Mode Silent Ev
     approvalStatus: 'approved',
   });
 
+  // The Brief Spine records the user's event in brief.json (occasion); the Creative Spine reads only that
+  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
+  assert.strictEqual(savedBrief.occasion.event, 'Wedding Season');
+  assert.ok(/Strongly/.test(savedBrief.occasion.fit), 'the influence level the user chose travels with the event');
+
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J([
-    { id: 'd1', title: 'Heirloom Trust', description: 'Show bridal gifting warmth', angle: 'Family trust', recommended: true },
-  ]));
+  anthropicQueue.push(J(spineAnswers.insight));
   const okDirRes = await api('POST', '/api/creative/directions', {
     businessName: 'Meera Jewels',
     businessType: 'Jewellery Store',
@@ -324,19 +328,17 @@ test('4. Director Mode Propagation & Stale Invalidations + Simple Mode Silent Ev
   });
   assert.strictEqual(okDirRes.status, 200);
   const dirPrompt = recordedAnthropicRequests.at(-1).messages[0].content;
-  assert.ok(dirPrompt.includes('OPTIONAL OCCASION & EVENT CONTEXT'));
-  assert.ok(dirPrompt.includes('Wedding Season'));
-  assert.ok(dirPrompt.includes('INFLUENCE LEVEL — STRONGLY'));
+  assert.ok(dirPrompt.includes('"occasion":{"event":"Wedding Season"'), 'brief.json occasion reaches the Creative Spine');
+  assert.ok(dirPrompt.includes('Strongly'));
 
   // Hooks endpoint also receives project eventContext
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J([
-    { id: 'h1', archetype: 'Story', hookLine: 'Moments families keep forever.', visualAction: 'Close-up heirloom tray', recommended: true },
-  ]));
+  anthropicQueue.push(J(spineAnswers.angles));
   const hookRes = await api('POST', '/api/creative/hooks', {
     businessName: 'Meera Jewels',
     businessType: 'Jewellery Store',
     brief,
+    direction: okDirRes.body[0],
     projectId: projId,
   });
   assert.strictEqual(hookRes.status, 200);

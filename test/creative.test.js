@@ -3,6 +3,7 @@ const assert = require("node:assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const spineAnswers = require("./helpers/spineAnswers");
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "creative-test-"));
 process.env.ANTHROPIC_API_KEY = "test";
@@ -243,16 +244,18 @@ Editing Notes: Cut smoothly on packet handover.`;
 });
 
 test("8. End-to-end API: /api/research endpoint handles request and returns JSON", async () => {
+  // Brief Spine, Sections 2–3: Prompt R1 (company scan) + Prompt R2 (competitor scan)
   anthropicQueue.push(J({
-    tier: 2,
-    tierLabel: "Tier 2 — Established Regional Brand",
-    brandFootprint: "Established chain of organic cafes in Bangalore",
-    audienceInsight: "Tech professionals want quick gut-friendly meals without sugar crashes.",
-    creativeOpportunity: "Contrast midday post-lunch lethargy with high clean energy.",
-    competitivePattern: "Focus on aesthetic plating pictures on social media.",
-    categoryTension: "Fear that healthy food is bland or overpriced.",
-    informationGap: null,
-    sources: ["Brand Footprint Analysis"]
+    company_scan: {
+      positioning: "Established chain of organic cafes in Bangalore",
+      praise: ["Tech professionals want quick gut-friendly meals without sugar crashes."],
+      complaints: ["Fear that healthy food is bland or overpriced."],
+      sources: [{ fact: "Chain of organic cafes", source: "Brand website", date: "2026-11-01", confidence: "Med" }],
+    },
+    competitors: [{ name: "Salad chain", positioning: "Fresh bowls", messages: ["Aesthetic plating on social media"], source: "Meta Ad Library", confidence: "Low" }],
+    white_space: "Contrast midday post-lunch lethargy with high clean energy.",
+    unknown_required_fields: ["BUSINESS_PROBLEM"],
+    question: null,
   }));
 
   // Unauthenticated request must be rejected with 401
@@ -279,8 +282,12 @@ test("8. End-to-end API: /api/research endpoint handles request and returns JSON
 
   assert.strictEqual(res.status, 200);
   const data = await res.json();
-  assert.strictEqual(data.tier, 2);
-  assert.ok(data.audienceInsight.includes("Tech professionals"));
+  assert.strictEqual(data.spine, "brief");
+  assert.strictEqual(data.company_scan.positioning, "Established chain of organic cafes in Bangalore");
+  assert.strictEqual(data.competitors.length, 1);
+  assert.ok(data.audienceInsight.includes("Tech professionals"), "the research panel still gets its summary fields");
+  assert.ok(data.creativeOpportunity.includes("lethargy"));
+  assert.ok(lastAnthropicBody.system.includes("Prompt R1") && lastAnthropicBody.system.includes("Run Section 2"), "runs the Brief Spine research prompts");
 });
 
 test("9. generateHooks and generatePlots default to English and handle neutral language", async () => {
@@ -811,6 +818,10 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
   });
   assert.strictEqual(unauthHook.status, 401);
 
+  // brief.json (Brief Spine output) records the language and script; the Creative Spine reads only that
+  const briefJson = { ...spineAnswers.brief, company: { brand: "Practo", category: "Healthcare / Clinic" }, language: { name: "Hinglish", script: "Devanagari" } };
+  anthropicQueue.push(J(spineAnswers.insight));
+
   // Test /api/creative/directions accepts and forwards language
   const dirRes = await fetch(`${base}/api/creative/directions`, {
     method: "POST",
@@ -822,12 +833,17 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
       businessName: "Practo",
       businessType: "Healthcare / Clinic",
       brief: "Consult top doctors online",
-      language: "Hinglish"
+      language: "Hinglish",
+      briefJson,
     })
   });
   assert.strictEqual(dirRes.status, 200);
   const dirData = await dirRes.json();
   assert.ok(Array.isArray(dirData) && dirData.length >= 3);
+  assert.ok(lastAnthropicBody.messages[0].content.includes('"name":"Hinglish","script":"Devanagari"'), "the insight stage reads the language from brief.json");
+
+  const hinglishAngles = J({ angles: spineAnswers.angles.angles.map((a) => ({ ...a, hooks: a.hooks.map((h) => ({ ...h, line: "डॉक्टर अभी ऑनलाइन, बस एक कॉल?" })) })) });
+  anthropicQueue.push(hinglishAngles);
 
   // Test /api/creative/hooks returns Hinglish hooks with zero Kannada
   const hookRes = await fetch(`${base}/api/creative/hooks`, {
@@ -841,7 +857,8 @@ test("22. End-to-end API: /api/creative/directions and /api/creative/hooks prese
       businessType: "Healthcare / Clinic",
       brief: "Consult top doctors online",
       language: "Hinglish",
-      direction: { town: "Bangalore, India", title: "Instant Doctor Consultation" }
+      direction: dirData[0],
+      briefJson,
     })
   });
   assert.strictEqual(hookRes.status, 200);

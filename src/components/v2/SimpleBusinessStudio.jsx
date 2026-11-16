@@ -11,6 +11,7 @@ import OccasionEventSection from './OccasionEventSection.jsx';
 import ProductPhotoSection from './ProductPhotoSection.jsx';
 import TargetAudienceSection from './TargetAudienceSection.jsx';
 import HelpTooltip from './HelpTooltip.jsx';
+import { CREATIVE_STYLE_OPTIONS, normalizeCreativeStyle, creativeStyleShortLabel } from '../../utils/creativeStyle.js';
 import ContextualTipBanner from './ContextualTipBanner.jsx';
 import { HELP_TOOLTIPS, CONTEXTUAL_TIPS } from '../../data/tourSteps.js';
 import { shouldShowContextualTip } from '../../utils/onboarding.js';
@@ -58,21 +59,11 @@ const POPULAR_LANGUAGES = [
   'Punjabi',
 ];
 
-const AD_STYLES = [
-  { id: 'UGC / Creator-style', label: 'UGC', shortLabel: 'UGC', desc: 'A creator speaks naturally about your product.' },
-  { id: 'Product Demo', label: 'Product Demo', shortLabel: 'Product Demo', desc: 'Show your product in action.' },
-  { id: 'Situational Comedy', label: 'Humorous & Fun', shortLabel: 'Funny', desc: 'Use humour and playful situations.' },
-  { id: 'Storytelling', label: 'Story', shortLabel: 'Story', desc: 'Build an emotional connection through storytelling.' },
-];
+// The three Creative Style options (shared with Director Mode)
+const AD_STYLES = CREATIVE_STYLE_OPTIONS;
 
 function formatStyleShortLabel(style = '') {
-  const s = String(style || '');
-  if (s.includes('UGC')) return 'UGC';
-  if (s.includes('Demo')) return 'Product Demo';
-  if (s.includes('Comedy') || s.includes('Funny')) return 'Funny';
-  if (s.includes('Conversational')) return 'Conversational';
-  if (s.includes('Story')) return 'Story';
-  return s || 'UGC';
+  return creativeStyleShortLabel(style);
 }
 
 const SIMPLE_DIMENSION_OPTIONS = [
@@ -149,7 +140,7 @@ export default function SimpleBusinessStudio({
   const [brief, setBrief] = useState(draft.brief ?? (initialBrief || ''));
   const [targetAudience, setTargetAudience] = useState(draft.targetAudience ?? (initialTargetAudience || ''));
   const [language, setLanguage] = useState(draft.language || initialLanguage || 'English');
-  const [creativeStyle, setCreativeStyle] = useState(draft.creativeStyle || initialStyle || 'UGC / Creator-style');
+  const [creativeStyle, setCreativeStyle] = useState(normalizeCreativeStyle(draft.creativeStyle || initialStyle));
   const [duration, setDuration] = useState(draft.duration || initialDuration || '20s');
   const [aspectRatio, setAspectRatio] = useState(draft.aspectRatio || initialAspectRatio || '9:16');
   const [videoSettingsExpanded, setVideoSettingsExpanded] = useState(true);

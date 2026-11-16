@@ -291,7 +291,7 @@ test('Brief & Settings Cognitive Load Redesign: Progressive disclosure, cleaner 
   assert.ok(simpleSrc.includes('Where will you share your video?') && simpleSrc.includes('Choose a format that fits your platform.'));
   assert.ok(simpleSrc.includes('How long should your video be?') && simpleSrc.includes('Short videos suit quick offers; longer videos allow more storytelling.'));
   assert.ok(simpleSrc.includes('What style would you like?') && simpleSrc.includes('Choose how your product or offer should be presented.'));
-  assert.ok(simpleSrc.includes('A creator speaks naturally about your product.') && simpleSrc.includes('Humorous & Fun'));
+  assert.ok(simpleSrc.includes('const AD_STYLES = CREATIVE_STYLE_OPTIONS;'), 'Simple Studio offers the three Creative Style options');
 
   // Director Mode stays concise & technical without beginner-oriented explanations
   const dirSettings = guidedSrc.slice(guidedSrc.indexOf('export function Screen03Settings'), guidedSrc.indexOf('export function Screen04Idea'));
@@ -316,7 +316,7 @@ test('Brief & Settings Cognitive Load Redesign: Progressive disclosure, cleaner 
   // 2. Director Mode Settings hierarchy
   const settingsBlock = guidedSrc.slice(guidedSrc.indexOf('export function Screen03Settings'), guidedSrc.indexOf('export function Screen04Idea'));
   assert.ok(!settingsBlock.includes('How should it feel?'), 'Renamed How should it feel? to Creative Style');
-  assert.ok(settingsBlock.includes('Creative Style') && settingsBlock.includes('Conversational') && settingsBlock.includes('UGC') && settingsBlock.includes('Product Demo') && settingsBlock.includes('Story'));
+  assert.ok(settingsBlock.includes('Creative Style') && settingsBlock.includes('CREATIVE_STYLE_OPTIONS'), 'Creative Style offers the three options');
   assert.ok(!settingsBlock.includes('"Two people in dialogue."') && !settingsBlock.includes('"Feels like a real person made it."'), 'Removed quoted descriptions from Creative Style cards');
   assert.ok(settingsBlock.includes('director-settings-product-asset') && settingsBlock.includes('director-settings-logo-asset'), 'Product Photo and Logo Image kept separate and secondary');
 
@@ -406,12 +406,11 @@ test('Director Mode Compact Video Settings Redesign: dropdown language, compact 
   assert.ok(dirSettings.includes('director-duration-option-${dur.id}'));
   assert.ok(!dirSettings.includes('Punchy promo') && !dirSettings.includes('Balanced story') && !dirSettings.includes('Full story + product proof'));
 
-  // 4. Creative Style: 4 compact tiles, names only, preserving exact internal IDs
+  // 4. Creative Style: 3 compact tiles (UGC / Creator-style, VO-led, Storytelling), names only, exact internal IDs
   assert.ok(dirSettings.includes('data-testid="director-style-group"'));
-  assert.ok(dirSettings.includes("id: 'Conversational / Dialogue', label: 'Conversational'"));
-  assert.ok(dirSettings.includes("id: 'UGC / Creator-style', label: 'UGC'"));
-  assert.ok(dirSettings.includes("id: 'Product Demo', label: 'Product Demo'"));
-  assert.ok(dirSettings.includes("id: 'Storytelling', label: 'Story'"));
+  assert.ok(dirSettings.includes('const STYLES = CREATIVE_STYLE_OPTIONS.map('), 'Director settings offer the three Creative Style options');
+  const styleOptions = require('../src/utils/creativeStyle.js').CREATIVE_STYLE_OPTIONS;
+  assert.deepStrictEqual(styleOptions.map((o) => [o.id, o.shortLabel]), [['UGC / Creator-style', 'UGC'], ['VO-led', 'VO-led'], ['Storytelling', 'Story']]);
   assert.ok(!dirSettings.includes('Two-person banter') && !dirSettings.includes('Real-person creator style'));
 
   // 5. Optional Assets: Product Photo & Logo Image in compact two-column grid with Upload / Replace / Remove

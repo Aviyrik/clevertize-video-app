@@ -71,6 +71,10 @@ function parseOutput(text) {
 function sceneForGeneration(scene, ctx = {}) {
   const body = scene
     .replace(/\n\s*Editing Notes[^\n]*:[\s\S]*$/i, "")
+    // Section 3 scenes (Script & Storyboard Spine): supers, callouts, CTA, disclaimers, UI and logo are rendered
+    // by Production, never generated (S-M5); the transition is an edit-step cue
+    .replace(/\n\s*On-screen elements[^\n]*:[\s\S]*?(?=\n\s*Audio\s*\/\s*Dialogue)/i, "")
+    .replace(/^\s*Transition out:.*$/gim, "")
     .replace(/^.*Music mood note.*$/gim, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

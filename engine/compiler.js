@@ -17,6 +17,9 @@ const FRAMING_HIERARCHY = {
   BUILD: "Medium shot (character interaction with clear waist-up framing)",
   TURN: "Medium close-up (focused on product demonstration and reaction)",
   RESOLUTION: "Medium shot held on reassuring smile and clear product visibility",
+  // Script & Storyboard Spine beat names (Section 1)
+  "REAL MOMENT": "Medium shot (character interaction with clear waist-up framing)",
+  PAYOFF: "Medium shot held on reassuring smile and clear product visibility",
 };
 
 /**
@@ -27,7 +30,9 @@ function extractSceneParts(sceneText) {
     return { visual: "", camera: "smooth subtle push-in", dialogue: "None" };
   }
 
-  const visualMatch = sceneText.match(/Visual:\s*([\s\S]*?)(?:\n\s*Animation Elements:|$)/i);
+  // Stops at the next block in either scene format: Annex A ("Animation Elements:") or the Script & Storyboard
+  // Spine's Section 3 format ("Shot: … · Camera: …", "On-screen elements …", "Audio / Dialogue / Voiceover:")
+  const visualMatch = sceneText.match(/Visual:\s*([\s\S]*?)(?:\n\s*Animation Elements:|\n\s*Shot:|\n\s*On-screen elements|\n\s*Audio\s*\/\s*Dialogue|$)/i);
   let visual = visualMatch ? visualMatch[1].trim() : "";
   // Strip "Same setting:" prefix for clean action parsing
   visual = visual.replace(/^Same setting:\s*/i, "").trim();
@@ -73,7 +78,7 @@ function compileShotSpecification(parsedScript, form = {}) {
   const shots = (parsedScript.scenes || []).map((sceneText, idx) => {
     const { visual, camera, dialogue } = extractSceneParts(sceneText);
     const shotNumber = idx + 1;
-    const titleMatch = (sceneText || "").match(/SCENE\s*\d+\s*[–-]\s*([^:\n]+)/i);
+    const titleMatch = (sceneText || "").match(/SCENE\s*\d+\s*[–-]\s*([^:\n–]+)/i);
     const beat = titleMatch ? titleMatch[1].trim() : (["HOOK", "BUILD", "TURN", "RESOLUTION", "PAYOFF", "OUTRO"][idx] || `SHOT ${shotNumber}`);
 
     // Framing decision tailored for 9:16 mobile feeds (Subject prominent, never tiny)
