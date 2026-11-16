@@ -313,11 +313,6 @@ test('4. Director Mode Propagation & Stale Invalidations + Simple Mode Silent Ev
     approvalStatus: 'approved',
   });
 
-  // The Brief Spine records the user's event in brief.json (occasion); the Creative Spine reads only that
-  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
-  assert.strictEqual(savedBrief.occasion.event, 'Wedding Season');
-  assert.ok(/Strongly/.test(savedBrief.occasion.fit), 'the influence level the user chose travels with the event');
-
   recordedAnthropicRequests = [];
   anthropicQueue.push(J(spineAnswers.insight));
   const okDirRes = await api('POST', '/api/creative/directions', {
@@ -327,6 +322,12 @@ test('4. Director Mode Propagation & Stale Invalidations + Simple Mode Silent Ev
     projectId: projId, // omit eventContext in request body -> backend injects saved project eventContext!
   });
   assert.strictEqual(okDirRes.status, 200);
+
+  // The Brief Spine records the user's event in brief.json (occasion); the Creative Spine reads only that.
+  // brief.json is on the project once the Creative Spine has read it (Section 7 is produced after Checkpoint 1).
+  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
+  assert.strictEqual(savedBrief.occasion.event, 'Wedding Season');
+  assert.ok(/Strongly/.test(savedBrief.occasion.fit), 'the influence level the user chose travels with the event');
   const dirPrompt = recordedAnthropicRequests.at(-1).messages[0].content;
   assert.ok(dirPrompt.includes('"occasion":{"event":"Wedding Season"'), 'brief.json occasion reaches the Creative Spine');
   assert.ok(dirPrompt.includes('Strongly'));

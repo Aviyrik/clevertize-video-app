@@ -68,6 +68,27 @@ async function buildBriefJson({ form = {}, understanding = null, creativeGuardra
   }
 }
 
+// brief.json is the Brief Spine's Section 7 output, produced after Checkpoint 1. The studio never shows it, so the
+// Understanding step doesn't wait for it: it starts in the background as soon as the polished brief exists and the
+// first creative stage picks it up (usually finished by the time the user has read and approved the checkpoint).
+// An edit at the checkpoint changes the polished brief's basis, so that brief is built again from the edited one.
+// In memory only: after a restart, or on another instance, the stage simply builds it (with its own retry).
+const pendingBriefs = new Map(); // `${userId}|${basis}` → { at, promise }
+const PENDING_BRIEF_TTL_MS = 2 * 60 * 60 * 1000;
+const PENDING_BRIEF_MAX = 200;
+const pendingBriefKey = (userId, u) => `${userId}|${briefBasis(u)}`;
+function startBriefJson(key, args) {
+  const now = Date.now();
+  for (const [k, v] of pendingBriefs) if (now - v.at > PENDING_BRIEF_TTL_MS) pendingBriefs.delete(k);
+  while (pendingBriefs.size >= PENDING_BRIEF_MAX) pendingBriefs.delete(pendingBriefs.keys().next().value);
+  const promise = buildBriefJson(args).then((brief) => {
+    console.log(`[brief spine] brief.json ready in ${Math.round((Date.now() - now) / 100) / 10}s (after Checkpoint 1)`);
+    return brief;
+  });
+  promise.catch((e) => console.warn("[brief spine] brief.json not ready:", e.message)); // reported when a stage asks for it
+  pendingBriefs.set(key, { at: now, promise });
+}
+
 // /synthesize-script and /validate-and-import response: script.json, storyboard.json and the gate, plus the fields
 // the studio and production already use (scenes, character1, character2, setting, shotSpec).
 function scriptResponse(written, form, activeGuardrails) {
@@ -146,12 +167,24 @@ async function briefForStage(req, { project = undefined } = {}) {
   if (u && u.brief_json && u.brief_basis === briefBasis(u)) brief = u.brief_json;
   else if (!u && body.briefJson && typeof body.briefJson === "object") brief = body.briefJson;
   if (!brief) {
-    brief = await buildBriefJson({
-      form: body,
-      understanding: u,
-      creativeGuardrails: (proj && proj.creativeGuardrails) || body.creativeGuardrails || null,
-      eventContext: (proj && proj.eventContext) || body.eventContext || null,
-    });
+    // the one started when this polished brief was made (unedited at the checkpoint)
+    const pending = u && req.user ? pendingBriefs.get(pendingBriefKey(req.user.id, u)) : null;
+    if (pending) {
+      try {
+        brief = await pending.promise;
+      } catch (e) {
+        if (e.code === "BRIEF_OFF_LIMITS") throw e; // B-M12: say so and stop, before any idea
+        brief = null; // anything else: build it again here, with its own retry
+      }
+    }
+    if (!brief) {
+      brief = await buildBriefJson({
+        form: body,
+        understanding: u,
+        creativeGuardrails: (proj && proj.creativeGuardrails) || body.creativeGuardrails || null,
+        eventContext: (proj && proj.eventContext) || body.eventContext || null,
+      });
+    }
     if (proj && u) {
       try {
         await db.saveProject({ ...proj, aiUnderstanding: { ...u, brief_json: brief, brief_basis: briefBasis(u) } }, req.user.id);
@@ -1230,15 +1263,14 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
     });
 
-    // Brief Spine: the polished brief above + the dashboard's fields + Do's and Don'ts + occasion → brief.json,
-    // approved together at Checkpoint 1 and the only thing the Creative Spine reads.
-    understanding.brief_json = await buildBriefJson({
+    // Brief Spine: the polished brief above + the dashboard's fields + Do's and Don'ts + occasion → brief.json
+    // (Section 7, after Checkpoint 1), the only thing the Creative Spine reads. Started now, not waited for.
+    startBriefJson(pendingBriefKey(req.user.id, understanding), {
       form: { ...(req.body || {}), creativeStyle: mergedSettings.creativeStyle, language: mergedSettings.language, aspectRatio: mergedSettings.dimension, duration: mergedSettings.duration },
       understanding,
       creativeGuardrails: activeGuardrails,
       eventContext: hasEvent ? activeEventContext : null,
     });
-    understanding.brief_basis = briefBasis(understanding);
 
     if (projectId && existingProject) {
       try {

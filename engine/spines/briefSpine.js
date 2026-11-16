@@ -130,15 +130,36 @@ function buildBriefInputs({ form = {}, understanding = null, creativeGuardrails 
   };
 }
 
+// The app builds every brief.json field it already knows (company, deliverables, mandatories, the binding Do's and
+// Don'ts, the user's event, field_status, benchmarks, competitors from the research step), so the model writes only
+// the fields that need the spine's judgement, at Section 5b's lengths. Output length is what this call's time is
+// made of (~53 tokens/s); the full contract written out by the model took 80–115 s.
 const RUN_BRIEF = `=== RUN NOW (CleverCut app) ===
-You are running the Brief Spine above for one film inside the CleverCut app.
-- The app has already collected Section 1 from the dashboard form and the business profile (FIELDS, tagged in FIELD_STATUS). The app shows Checkpoint 1 itself, so do not ask questions: infer what is unknown from what is given, mark it "inferred" in field_status, and list it in polished_brief.assumptions.
-- POLISHED_BRIEF_FROM_CHECKPOINT is the polished brief the user sees and approves at Checkpoint 1 (Section 5b). Keep brief.json consistent with it.
-- This run has no live web access. Use only RESEARCH (the research step's Sections 2–3 output), the URL research already in FIELDS, and the other inputs. Never invent statistics, ratings, ad counts or benchmarks: write "no benchmark found", suggest a starting target and mark it for learning, or leave the field empty. Every external fact carries {source, date, confidence}.
-- FESTIVAL_CALENDAR is the app's festival and commerce calendar for the next 45 days; score moments with Section 4.5. If EVENT_CONTEXT is set, the user chose that event.
-- Keep every item in DOS_DONTS unchanged (B-M13), including the "Film format" rule. You may add brand or category items (B-M11) with source "brand" or "category".
+You are running the Brief Spine above for one film inside the CleverCut app, at Section 7 (after Checkpoint 1).
+- The app has already collected Section 1 (FIELDS, tagged in FIELD_STATUS). The app writes these parts of brief.json itself from its own data, so do not write them: company, platforms, formats, language, mandatories (logo, product images, offer, CTA), the DOS_DONTS list below, the user's chosen event, field_status, KPI benchmarks and competitors.
+- POLISHED_BRIEF_FROM_CHECKPOINT is the polished brief the user approves at Checkpoint 1 (Section 5b). Keep everything you write consistent with it; where it and the raw inputs disagree, it wins.
+- This run has no live web access, so Sections 2–3 (company and competitor scans) and the Section 5 benchmark lookup are not run here. Use only RESEARCH if it is given. Never invent statistics, ratings, ad counts or benchmarks.
+- Do not ask questions: infer what is unknown and list it in polished_brief.assumptions.
+- FESTIVAL_CALENDAR is the app's calendar for the next 45 days; score moments with Section 4.5. If EVENT_CONTEXT is set, the user chose that event: score it and give its do's and don'ts.
 - If the brief is off-limits under B-M12, return only {"off_limits": "<one polite sentence>"}.
-Run Sections 4, 4.5, 5 and 5b, then return exactly brief.json (Section 7) between @@JSON@@ and @@END@@, and nothing else.`;
+Write to Section 5b's lengths: one sentence where it says one sentence (20 words at most), at most 3 items in any list, each item 10 words at most. No explanations and no restating of the inputs.
+Return only this JSON between @@JSON@@ and @@END@@, and nothing else. Write it exactly in this layout: the opening brace on its own line, then one top-level key per line with its whole value on that line (no indentation), then the closing brace on its own line:
+{
+"business_problem": "",
+"objective": {"stage": "", "statement": ""},
+"kpis": [{"name": "", "target": "", "primary": true}],
+"platform_constraints": {"sound_off": "unknown unless RESEARCH gives a sourced figure", "safe_zones": "", "ideal_length_s": 0, "hook_in_first_2s": true},
+"four_c": {"client": {"positioning": "", "proof": [], "voice": ""}, "consumer": {"persona": {"who": ""}, "jobs": [], "triggers": [], "fears": [], "desires": [], "objections": [], "moments": [], "own_words": []}, "category": {"norms": [], "cliches": [], "trends": [], "regulation": [], "moment": ""}, "gap": ""},
+"smp": "",
+"rtbs": [{"claim": "", "proof": ""}],
+"extra_dos_donts": [{"rule": "", "type": "", "strength": "must|prefer", "source": "brand|category", "applies_to": []}],
+"disclaimers": [],
+"occasion": {"event": "", "date": "", "score": 0, "fit": "", "dos": [], "donts": []},
+"user_idea": "",
+"polished_brief": {"problem": "", "human_problem": "", "think_feel_do": [], "assumptions": []},
+"compliance_flags": []
+}
+KPIs: one primary and up to two secondary, each with a target; where no benchmark exists, the target is a suggested starting target marked for learning (Section 5). extra_dos_donts: only brand or category rules (B-M11) that are not already in DOS_DONTS. occasion: the top moment, or {"event": "everyday"}.`;
 
 function mergeDosDonts(forcedList, llmList) {
   const out = [...forcedList];
@@ -169,6 +190,53 @@ function applyForced(brief, inputs, today) {
   return contracts.normalizeBrief(b);
 }
 
+/**
+ * brief.json (Section 7) from the model's judgement fields plus what the app already holds. The shape is the
+ * contract's; only who writes each field changes. Competitors come from the research step (Section 3) when it ran,
+ * never from the model's memory, and a KPI without a found benchmark says so (Section 5).
+ */
+function assembleBrief(core, inputs, today) {
+  const c = core || {};
+  const four = c.four_c || {};
+  const fc = inputs.forced;
+  const research = inputs.research || {};
+  const competitors = (Array.isArray(research.competitors) ? research.competitors : []).slice(0, 7).map((x) => ({
+    name: clean(x && x.name),
+    positioning: clean(x && x.positioning),
+    active_ads: Number.isFinite(x && x.active_ads) ? x.active_ads : 0,
+    formats: (x && x.formats) || [],
+    hooks: (x && x.hooks) || [],
+    messages: (x && x.messages) || [],
+    complaints: (x && x.complaints) || [],
+    source: clean(x && x.source) || 'research step (no live web access)',
+  })).filter((x) => x.name);
+  const assets = [...(fc.company.logo ? ['logo'] : []), ...(fc.company.product_images.length ? ['product photo'] : [])];
+  const pastMessaging = (inputs.previous_campaigns || []).map((r) => [r && r.angle_route, r && r.hook_pattern].filter(Boolean).join(' · ')).filter(Boolean).slice(0, 3);
+  const noBenchmark = { range: 'no benchmark found', source: '', date: '', confidence: 'Low' };
+  const kpis = (Array.isArray(c.kpis) ? c.kpis : []).slice(0, 3).map((k) => ({ ...k, benchmark: k && k.benchmark && k.benchmark.range ? k.benchmark : noBenchmark }));
+  return applyForced({
+    business_problem: c.business_problem,
+    objective: c.objective,
+    kpis,
+    four_c: {
+      client: { ...(four.client || {}), assets, past_messaging: pastMessaging },
+      competitors,
+      consumer: four.consumer,
+      category: four.category,
+      gap: four.gap,
+    },
+    smp: c.smp,
+    rtbs: c.rtbs,
+    platform_constraints: c.platform_constraints,
+    mandatories: { disclaimers: c.disclaimers || (c.mandatories && c.mandatories.disclaimers) || [] },
+    dos_donts: c.extra_dos_donts || c.dos_donts || [],
+    occasion: c.occasion,
+    user_idea: c.user_idea,
+    polished_brief: c.polished_brief,
+    compliance_flags: c.compliance_flags,
+  }, inputs, today);
+}
+
 function offLimitsError(message) {
   const err = new Error(message || 'This brief is outside what CleverCut can make an ad for.');
   err.status = 422;
@@ -196,15 +264,16 @@ async function runBriefSpine(inputs, { call = callClaude, today } = {}) {
   ].join('\n\n');
   // Section 5 requires one objective; the polished brief one SMP. An answer without them is retried once, then
   // treated as a model failure (the caller falls back or reports it) rather than passed downstream incomplete.
+  // The answer is ~1–2k tokens; the cap leaves room for a long one without letting a runaway answer run for minutes.
   const usable = (p) => p && (p.off_limits || (p.objective && p.objective.stage && p.smp));
   let parsed = null;
   for (let attempt = 0; attempt < 2 && !usable(parsed); attempt++) {
-    const raw = await call({ system: `${spine.text}\n\n${RUN_BRIEF}`, content, maxTokens: 6000, thinking: false });
+    const raw = await call({ system: `${spine.text}\n\n${RUN_BRIEF}`, content, maxTokens: 3500, thinking: false });
     try { parsed = parseJSONBlock(raw); } catch (_) { parsed = null; }
   }
   if (!usable(parsed)) throw new Error('The Brief Spine did not return a complete brief.json (objective and SMP).');
   if (parsed && parsed.off_limits) throw offLimitsError(String(parsed.off_limits));
-  const brief = applyForced(parsed || {}, inputs, date);
+  const brief = assembleBrief(parsed, inputs, date);
   return { brief, spineVersion: spine.version };
 }
 
@@ -228,7 +297,8 @@ const RUN_RESEARCH = `=== RUN NOW (CleverCut app) ===
 Run Section 2 (Prompt R1 – Company scan) and Section 3 (Prompt R2 – Competitor scan) of the Brief Spine above for the company in FIELDS.
 This run has no live web access: use only what you reliably know about this brand and category and what FIELDS give. Never invent statistics, ratings, ad counts or reviews. Mark every item with {source, date, confidence}; when you are not sure, say "unknown" and use confidence "Low". Use competitor work only to find the gap; never copy lines.
 Then list the required Section 1 fields still unknown, and at most one question for the most important one (B-M6: never ask what the inputs already answer).
-Return only JSON between @@JSON@@ and @@END@@:
+Keep every list to at most 3 items (competitors as R2 says) and every item to 10 words at most.
+Return only this JSON, minified on one line (no indentation or line breaks), between @@JSON@@ and @@END@@:
 {"company_scan": {"positioning": "", "range": "", "hero_product": "", "price_position": "", "assets": [], "proof": [], "past_messaging": [], "voice": "", "praise": [], "complaints": [], "sources": [{"fact": "", "source": "", "date": "", "confidence": "High|Med|Low"}]},
  "competitors": [{"name": "", "direct": true, "positioning": "", "active_ads": null, "formats": [], "hooks": [], "messages": [], "tone_and_look": "", "complaints": [], "white_space": "", "source": "", "confidence": "High|Med|Low"}],
  "white_space": "", "unknown_required_fields": [],
@@ -240,7 +310,8 @@ async function runResearch({ form = {}, call = callClaude } = {}) {
   const raw = await call({
     system: `${spine.text}\n\n${RUN_RESEARCH}`,
     content: `FIELDS (Section 1): ${JSON.stringify(inputs.fields)}\nFIELD_STATUS: ${JSON.stringify(inputs.field_status)}\nUSER'S BRIEF TEXT: """${inputs.user_brief_text}"""`,
-    maxTokens: 3000,
+    // a pretty-printed answer reached 3,000 tokens and was cut off (then unreadable); the compact one is ~1.5–2k
+    maxTokens: 4000,
     thinking: false,
   });
   const r = parseJSONBlock(raw) || {};
@@ -276,4 +347,4 @@ function withFilmFormat(brief, creativeStyle) {
   return b;
 }
 
-module.exports = { buildBriefInputs, runBriefSpine, fallbackBrief, applyForced, runResearch, withFilmFormat, languageOf, platformsOf, offLimitsError, RUN_BRIEF, RUN_RESEARCH };
+module.exports = { buildBriefInputs, runBriefSpine, fallbackBrief, applyForced, assembleBrief, runResearch, withFilmFormat, languageOf, platformsOf, offLimitsError, RUN_BRIEF, RUN_RESEARCH };

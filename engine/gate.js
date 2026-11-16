@@ -450,7 +450,8 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   if (rules.hasVo) {
     const voWords = scenes.reduce((n, sc) => n + words(sc.vo).length, 0);
     const r = contracts.voWordRange(plan.length_s);
-    if (voWords < r.min || voWords > r.max) countProblems.push(`VO runs ${voWords} words; a ${plan.length_s}s VO-led film runs about ${r.min}–${r.max}.`);
+    // the writer is asked for 40–50 words per 20s; the spine says "about", so the check allows 10% either side
+    if (voWords < Math.floor(r.min * 0.9) || voWords > Math.ceil(r.max * 1.1)) countProblems.push(`VO runs ${voWords} words; a ${plan.length_s}s VO-led film runs about ${r.min}–${r.max}.`);
   }
   check("scene_count", "Scene count matches the length; VO-led within about 40–50 words per 20s", countProblems);
 
@@ -494,10 +495,15 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   const ddProblems = [];
   const sceneText = scenes.map((sc) => [sc.visual, (sc.dialogue || []).map((d) => d.line).join(" "), sc.vo, sc.super, sc.callout].join(" ")).join("\n");
   const notes = scenes.map((sc) => String(sc.edit_notes || "").toLowerCase());
+  const judgedDonts = [];
   for (const d of brief.dos_donts || []) {
     if (d.strength !== "must" || !(d.applies_to || []).includes("script") || contracts.FILM_FORMAT_RULE_RE.test(d.rule)) continue;
     const key = tokens(d.rule).filter((t) => !["must", "include", "never", "don't", "dont", "the", "and", "with"].includes(t));
     if (/not include|never|don'?t/i.test(`${d.type} ${d.rule}`)) {
+      // The word check is built for the user's own Don'ts ("Do not mention DiamondPlaza" → "DiamondPlaza"). Brand
+      // and category Don'ts (B-M11) are sentences ("no health claims about sweet products"); matching their words
+      // fails scripts that merely say "sweet". The writer self-checks those against brief.dos_donts (S-M11).
+      if (d.source !== "user") { judgedDonts.push(d.rule); continue; }
       const v = validateOutputAgainstGuardrails({ outputText: sceneText, stage: "script", guardrails: { dos: [], donts: [{ id: "dd", text: d.rule, priority: "critical" }] } });
       if (v.hasCriticalViolation) ddProblems.push(`Don't broken: "${d.rule}" (${v.automatedChecks.criticalViolations[0].matchedFragment || ""}).`);
     } else if (!notes.some((n) => /must include/.test(n) && key.some((k) => n.includes(k)))) {
@@ -505,6 +511,7 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
     }
   }
   check("dos_donts", "Every Do and Don't that applies to the script is met; each \"must include\" is placed in a named scene", ddProblems);
+  if (judgedDonts.length) check("dos_donts_judged", "Brand and category Don'ts are respected (the writer's self-check; a word match can't judge them)", judgedDonts, "self-check");
 
   // 19. Occasion as the concept specified — judgement
   check("occasion", "The occasion (if any) appears only as the concept specified, with its don'ts respected", [], "self-check");

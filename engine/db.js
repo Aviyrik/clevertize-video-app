@@ -940,6 +940,15 @@ function extractProjectSettingsForSave(projectData, cDNA, existingSettings = nul
   return null;
 }
 
+// brief.json (Brief Spine) is built on the server after Checkpoint 1 and the studio never holds a copy, so a save
+// that carries the understanding without it (a draft autosave) keeps the stored one. Its brief_basis says which
+// polished brief it was built from; the creative stages check that before using it.
+function keepServerBrief(incoming, existing) {
+  if (!incoming || typeof incoming !== 'object' || incoming.brief_json) return incoming;
+  if (!existing || typeof existing !== 'object' || !existing.brief_json) return incoming;
+  return { ...incoming, brief_json: existing.brief_json, brief_basis: existing.brief_basis };
+}
+
 async function saveProject(projectData, userId) {
   if (!userId) throw new Error('Authentication required to save project.');
   const {
@@ -1059,7 +1068,7 @@ async function saveProject(projectData, userId) {
       cDNA.productionSettings = resolvedPgSettings;
     }
     aiUnder = invalidateStaleUnderstanding(
-      aiUnder || existingPgUnderstanding,
+      keepServerBrief(aiUnder, existingPgUnderstanding) || existingPgUnderstanding,
       resolvedGuardrails,
       brief ? String(brief).trim() : null,
       resolvedPgSettings,
@@ -1172,7 +1181,8 @@ async function saveProject(projectData, userId) {
     cDNA.productionSettings = resolvedFileSettings;
   }
   aiUnder = invalidateStaleUnderstanding(
-    aiUnder || (existingRecord && existingRecord.aiUnderstanding) || null,
+    keepServerBrief(aiUnder, existingRecord && (existingRecord.aiUnderstanding || (existingRecord.creativeDNA && existingRecord.creativeDNA.aiUnderstanding))) ||
+      (existingRecord && existingRecord.aiUnderstanding) || null,
     resolvedGuardrails,
     brief ? String(brief).trim() : null,
     resolvedFileSettings,

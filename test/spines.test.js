@@ -17,12 +17,14 @@ process.env.SPINES_DIR = SPINES_COPY;
 
 const answers = require("./helpers/spineAnswers");
 const requests = [];
+let briefSpineDelayMs = 0; // set by a test to make the Brief Spine answer slow, as the live model is
 const realFetch = global.fetch;
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
   if (u.startsWith("https://api.anthropic.com")) {
     const body = JSON.parse(opts.body);
     requests.push(body);
+    if (briefSpineDelayMs && /You are running the Brief Spine above/.test(body.system)) await new Promise((r) => setTimeout(r, briefSpineDelayMs));
     return new Response(JSON.stringify({ content: [{ type: "text", text: answers.answer({ system: body.system }) }], stop_reason: "end_turn" }), { status: 200, headers: { "content-type": "application/json" } });
   }
   if (u.includes("api.magnific.com")) throw new Error("Magnific must not be called in these tests");
@@ -171,6 +173,30 @@ test("Annex B gate enforces S-M7 per format", () => {
   const g = make("Storytelling", () => {});
   assert.equal(g.checks.find((c) => c.id === "storyboard").status, "not_run");
   assert.equal(g.checks.find((c) => c.id === "ending_payoff").status, "self-check");
+
+  // Don'ts: the user's own are word-checked; the Brief Spine's brand/category sentences are the writer's self-check
+  // (found live: "no health claims about sweet products" failed every Kanti Sweets script for saying "sweet").
+  const withDonts = (dos_donts) => {
+    const s = C.normalizeScript({ ...base, format: "Storytelling", length_s: 20, language: { name: "English", script: "Latin" } });
+    s.scenes = s.scenes.map((x, i) => ({ ...x, n: i + 1, beat: ["Hook", "Real moment", "Turn", "Payoff"][i] }));
+    s.scenes[0].visual = `${s.scenes[0].visual} A box of sweets from DiamondPlaza sits on the counter.`;
+    return runScriptGate(s, { header, brief: { ...brief, dos_donts } });
+  };
+  const category = { rule: "Do not make specific health, nutrition or weight claims about sweet products", type: "Must not include", strength: "must", source: "category", applies_to: ["script"] };
+  const userDont = { rule: "Do not mention DiamondPlaza", type: "Must not include", strength: "must", source: "user", applies_to: ["script"] };
+  const judged = withDonts([category]);
+  assert.ok(judged.passed, judged.failures.join(" | "));
+  assert.equal(judged.checks.find((c) => c.id === "dos_donts_judged").status, "self-check");
+  assert.ok(withDonts([category, userDont]).failures.some((f) => /Don't broken: "Do not mention DiamondPlaza"/.test(f)), "the user's own Don't is still enforced");
+
+  // VO-led: "about 40–50 words for 20s" — 52 is about right, 60 is not
+  const voScript = (n) => make("VO-led", (s) => {
+    const per = [Math.ceil(n / 4), Math.ceil(n / 4), Math.ceil(n / 4), n - 3 * Math.ceil(n / 4)];
+    s.scenes.forEach((x, i) => { x.dialogue = []; x.vo = Array.from({ length: per[i] }, (_, k) => `word${k}`).join(" "); });
+  });
+  assert.ok(!voScript(52).failures.some((f) => /VO runs/.test(f)), "52 words is about 40–50");
+  assert.ok(voScript(60).failures.some((f) => /VO runs 60 words/.test(f)));
+  assert.ok(voScript(30).failures.some((f) => /VO runs 30 words/.test(f)));
 });
 
 test("Section 3 scenes still feed the unchanged render path (visual, camera, dialogue; supers never generated)", () => {
@@ -227,15 +253,16 @@ test("API: brief → creative → script end to end on one business, and an old 
   const und = await api("POST", "/api/creative/ai-understanding", { ...FORM, creativeStyle: "VO-led", projectId: projId });
   delete process.env.MOCK_SPINE;
   assert.equal(und.status, 200, JSON.stringify(und.body));
-  const bj = und.body.understanding.brief_json;
-  assert.ok(bj && bj.objective.stage && bj.smp, "Checkpoint 1 carries brief.json");
-  assert.equal(C.filmFormatFromBrief(bj), "VO-led");
+  assert.equal(und.body.understanding.brief_json, undefined, "Checkpoint 1 doesn't wait for brief.json (Section 7 comes after it)");
   assert.equal((await api("PUT", `/api/creative/ai-understanding/${projId}`, { understanding: und.body.understanding, approvalStatus: "approved" })).status, 200);
 
   const dirs = await api("POST", "/api/creative/directions", { ...FORM, creativeStyle: "VO-led", projectId: projId });
   assert.equal(dirs.status, 200, JSON.stringify(dirs.body));
   assert.equal(dirs.body.length, 3);
   assert.ok(dirs.body[0].insight && dirs.body[0].recommended && dirs.body[0].title);
+  const bj = (await db.getProjectById(projId, (await db.getUserBySessionToken(token)).id)).aiUnderstanding.brief_json;
+  assert.ok(bj && bj.objective.stage && bj.smp, "brief.json is on the project once the Creative Spine has read it");
+  assert.equal(C.filmFormatFromBrief(bj), "VO-led");
 
   const hooks = await api("POST", "/api/creative/hooks", { ...FORM, format: "VO-led", direction: dirs.body[0], projectId: projId });
   assert.equal(hooks.status, 200);
@@ -266,6 +293,38 @@ test("API: brief → creative → script end to end on one business, and an old 
   const old = await api("POST", "/api/creative/synthesize-script", { form: { ...FORM }, creativeDNA: { story: { format: "Storytelling", setting: "x" } }, projectId: projId });
   assert.equal(old.status, 409);
   assert.equal(old.body.code, "CONCEPT_MISSING");
+});
+
+test("API: Understanding doesn't wait for brief.json; Ideas uses the one started at Checkpoint 1, and a draft save keeps it", async () => {
+  const userId = (await db.getUserBySessionToken(token)).id;
+  const projId = `proj_spines_bg_${Date.now()}`;
+  await db.saveProject({ id: projId, businessName: FORM.businessName, businessType: FORM.businessType, brief: FORM.brief }, userId);
+  briefSpineDelayMs = 600;
+  try {
+    requests.length = 0;
+    process.env.MOCK_SPINE = "true";
+    const t0 = Date.now();
+    const und = await api("POST", "/api/creative/ai-understanding", { ...FORM, creativeStyle: "UGC / Creator-style", projectId: projId });
+    const understandingMs = Date.now() - t0;
+    delete process.env.MOCK_SPINE;
+    assert.equal(und.status, 200);
+    assert.ok(understandingMs < briefSpineDelayMs, `Understanding returned in ${understandingMs}ms, before the Brief Spine answered`);
+    assert.equal((await api("PUT", `/api/creative/ai-understanding/${projId}`, { understanding: und.body.understanding, approvalStatus: "approved" })).status, 200);
+    const dirs = await api("POST", "/api/creative/directions", { ...FORM, creativeStyle: "UGC / Creator-style", projectId: projId });
+    assert.equal(dirs.status, 200, JSON.stringify(dirs.body));
+    const briefCalls = requests.filter((r) => /You are running the Brief Spine above/.test(r.system));
+    assert.equal(briefCalls.length, 1, "Ideas waited for the brief.json already being built instead of starting another");
+    const saved = (await db.getProjectById(projId, userId)).aiUnderstanding;
+    assert.ok(saved.brief_json && saved.brief_json.smp && saved.brief_basis);
+
+    // the studio's draft autosave sends the understanding without brief.json; the stored one stays
+    await db.saveProject({ id: projId, businessName: FORM.businessName, businessType: FORM.businessType, brief: FORM.brief, aiUnderstanding: { ...und.body.understanding, approval_status: "approved" } }, userId);
+    const afterDraft = (await db.getProjectById(projId, userId)).aiUnderstanding;
+    assert.deepEqual(afterDraft.brief_json, saved.brief_json);
+    assert.equal(afterDraft.brief_basis, saved.brief_basis);
+  } finally {
+    briefSpineDelayMs = 0;
+  }
 });
 
 test("API: an edit to the polished brief at Checkpoint 1 makes the Brief Spine rebuild brief.json before ideas", async () => {

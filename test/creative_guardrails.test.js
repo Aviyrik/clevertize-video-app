@@ -312,11 +312,6 @@ test('5. Guardrails Propagation: Backend injects saved project guardrails across
   });
   assert.strictEqual(approveRes.status, 200);
 
-  // The project's Do's and Don'ts reach every later stage inside brief.json (Brief Spine, Section 1d → dos_donts).
-  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
-  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Include 916 BIS Hallmark certification' && d.strength === 'must' && d.source === 'user'));
-  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Do not mention DiamondPlaza' && d.type === 'Must not include'));
-
   // 2) Creative Directions → Creative Spine Checkpoint 2 (caller omits guardrails in body; brief.json comes from the DB project)
   recordedAnthropicRequests = [];
   anthropicQueue.push(J(spineAnswers.insight));
@@ -328,6 +323,12 @@ test('5. Guardrails Propagation: Backend injects saved project guardrails across
   });
   assert.strictEqual(dirRes.status, 200);
   assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.includes('Do not mention DiamondPlaza'), 'Directions prompt received project Don\'t from DB');
+
+  // The project's Do's and Don'ts reach every later stage inside brief.json (Brief Spine, Section 1d → dos_donts),
+  // which is on the project once the Creative Spine has read it (Section 7 is produced after Checkpoint 1).
+  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
+  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Include 916 BIS Hallmark certification' && d.strength === 'must' && d.source === 'user'));
+  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Do not mention DiamondPlaza' && d.type === 'Must not include'));
 
   // 3) Hooks → Creative Spine Checkpoint 3 (angles)
   recordedAnthropicRequests = [];
