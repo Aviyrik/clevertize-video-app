@@ -16,20 +16,6 @@ const {
   formatGuardrailsPromptBlock,
   validateOutputAgainstGuardrails,
 } = require("./guardrails");
-const categoryRules = require("./categoryGuardrails");
-const complianceReviewer = require("./complianceReviewer");
-
-// Category compliance (engine/categoryGuardrails.js): the module block every stage prompt carries, and the
-// category-enforced mood that replaces the brand tone when the tone isn't allowed for the category.
-function complianceBlockFor(compliance, stage) {
-  const block = compliance ? categoryRules.formatPromptBlock(compliance, stage) : "";
-  return block ? `
-
-${block}` : "";
-}
-function moodToneFor(compliance, brandTone) {
-  return compliance && compliance.mood && compliance.mood.enforced && compliance.mood.label ? compliance.mood.label : brandTone;
-}
 const {
   hasActiveEventContext,
   formatEventPromptBlock,
@@ -134,9 +120,7 @@ USER BRIEF / GOAL: ${brief || "Create a high-converting commercial video"}`;
 /**
  * 2. CREATIVE DIRECTION (3-5 Territories)
  */
-async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding, creativeGuardrails = null, compliance = null, eventContext = null }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "directions");
+async function generateDirections({ businessName, businessType, town, brief, research, festival, language = "English", format = "UGC / Creator-style", brandTone, aiUnderstanding, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
@@ -223,7 +207,7 @@ CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${brandTone || "Warm & Authentic"}
 AUDIENCE INSIGHT: ${research?.audienceInsight || aiUnderstanding?.target_audience || "Everyday buyers"}
 CREATIVE OPPORTUNITY: ${research?.creativeOpportunity || aiUnderstanding?.creative_opportunity || "Relatable problem-first story"}
-UPCOMING OCCASION: ${(hasActiveEventContext(eventContext) ? (eventContext.name || eventContext.category) : null) || festival?.name || aiUnderstanding?.occasion_context || "None"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}${complianceBlock}`;
+UPCOMING OCCASION: ${(hasActiveEventContext(eventContext) ? (eventContext.name || eventContext.category) : null) || festival?.name || aiUnderstanding?.occasion_context || "None"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Guardrails (Must include): ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Guardrails (Avoid): ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}`;
 
   try {
     let raw = await callClaude({ system, content, maxTokens: 1500, thinking: false });
@@ -487,9 +471,7 @@ function validateHooksList(hooks, language = "English") {
  * 3. HOOK INTELLIGENCE (5-8 Multi-Archetype Hooks)
  */
 async function generateHooks(params = {}) {
-  let { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone, creativeGuardrails = null, eventContext = null, compliance = null } = params;
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "hooks");
+  const { businessName, businessType, brief, direction, format = "UGC / Creator-style", brandTone, creativeGuardrails = null, eventContext = null } = params;
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
@@ -621,7 +603,7 @@ CHOSEN FORMAT: ${cleanFormat}
 SELECTED CREATIVE DIRECTION: ${direction?.title || "Everyday Relatable"} — ${direction?.description || ""}
 CANONICAL FILM LANGUAGE: ${language}
 BRAND TONE: ${activeTone || "Warm & Authentic"}
-LOCATION: ${direction?.town || "Pan-India / Universal"}${eventBlock}${guardrailBlock}${complianceBlock}`;
+LOCATION: ${direction?.town || "Pan-India / Universal"}${eventBlock}${guardrailBlock}`;
 
   const MAX_RETRIES = 2;
   let lastFailureReason = "";
@@ -833,9 +815,7 @@ Under NO circumstances output Kannada (ಕನ್ನಡ), Tamil (தமிழ்)
 /**
  * 4. PLOT LINES (3-5 Structured Narrative Arcs)
  */
-async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone, creativeGuardrails = null, compliance = null, eventContext = null }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "plots");
+async function generatePlots({ businessName, businessType, brief, direction, hook, format = "Storytelling", language = "English", brandTone, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
@@ -898,7 +878,7 @@ BRIEF: ${brief || "Promote brand"}
 DIRECTION: ${direction?.title || "Relatable Tension"}
 CHOSEN HOOK: ${hook?.hookLine || ""} (${hook?.visualAction || ""})
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}${complianceBlock}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}`;
 
   try {
     let raw = await callClaude({ system, content, maxTokens: 2000, thinking: false });
@@ -956,9 +936,7 @@ BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}${c
 /**
  * 5. STORY & WORLD (Format, 4 Beats, Characters, Location)
  */
-async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone, creativeGuardrails = null, compliance = null, eventContext = null }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "story");
+async function generateStoryWorld({ businessName, businessType, town, brief, direction, hook, plot, format = "UGC / Creator-style", language = "English", brandTone, creativeGuardrails = null, eventContext = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
     ? `\n${formatGuardrailsPromptBlock(normGuardrails)}`
@@ -1074,7 +1052,7 @@ HOOK: ${hook?.hookLine || ""} — ${hook?.visualAction || ""}
 PLOT: ${plot?.title || ""} — ${plot?.coreIdea || ""}
 FORMAT: ${cleanFormat}
 CANONICAL FILM LANGUAGE: ${language}
-BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}${complianceBlock}`;
+BRAND TONE: ${activeTone || "Warm & Authentic"}${eventBlock}${guardrailBlock}`;
 
   try {
     const raw = await callClaude({ system, content, maxTokens: 2500, thinking: false });
@@ -1324,30 +1302,17 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     creativeGuardrails: hasActiveGuardrails(effectiveGuardrails) ? effectiveGuardrails : null,
   };
 
-  const compliance = form.complianceContext || null; // built by validateForm at the brief stage
-  let content = base, parsed, failures = [], attempts = 0, review = null, reviewerOnly = false;
+  let content = base, parsed, failures = [], attempts = 0;
   for (let i = 0; i <= 3; i++) {
     attempts++;
     if (i > 0) content = buildRepairContent(base, parsed.raw, failures);
     parsed = parseOutput(await callClaude({ system, content, maxTokens: 4000, thinking: false }));
     parsed = sanitizeParsedScript(parsed, form, format, creativeDNA, festName);
-    failures = runGate(parsed, form, gateOpts); // includes the category scanner
-    reviewerOnly = false;
-    if (!failures.length && compliance) {
-      review = await complianceReviewer.reviewScript({ ctx: compliance, script: parsed }); // separate reviewer pass
-      failures = complianceReviewer.reviewerFailures(review);
-      reviewerOnly = failures.length > 0;
-    }
+    failures = runGate(parsed, form, gateOpts);
     console.log(`[synthesis] pass #${attempts}: ${failures.length ? `${failures.length} failing checks (${failures.map(f => (typeof f === "object" ? f.rule || f.message : f)).join(" | ")})` : "PASSED"}`);
     if (!failures.length) break;
   }
 
-
-  if (failures.length && reviewerOnly) {
-    // the rule scanner passes; the reviewer's remaining objections go to the human reviewer instead
-    console.warn(`[synthesis] compliance reviewer still objects after ${attempts} passes — flagged for human review`);
-    failures = [];
-  }
 
   if (failures.length) {
     console.warn(`[synthesis] Quality gate had ${failures.length} remaining check(s) after ${attempts} passes:`, failures);
@@ -1413,15 +1378,12 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
     });
   }
 
-  const complianceReport = compliance ? categoryRules.buildComplianceReport(compliance, parsed, { reviewer: review, stage: "script" }) : null;
-
   return {
     script: parsed.raw,
     parsed,
     attempts,
     shotSpec,
     guardrailReport,
-    compliance: complianceReport,
     header: parsed.header,
     character1: parsed.character1,
     character2: parsed.character2,
@@ -1440,9 +1402,7 @@ ${format.includes("Demo") ? "- PRODUCT DEMO SPEAKER RULE: Visual demonstration l
  * 7. SCENE-LEVEL AI REWRITER
  * Rewrites a single scene according to user instruction while preserving continuity.
  */
-async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, creativeGuardrails = null, compliance = null, eventContext = null }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "scene rewrite");
+async function rewriteScene({ sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, creativeGuardrails = null, eventContext = null }) {
   const isEng = !form?.language || /eng/i.test(form?.language);
   const activeTone = brandTone || form?.brandTone;
   const toneGuidance = getBrandToneGuidance(activeTone);
@@ -1463,7 +1423,7 @@ Rules:
 - Keep characters consistent: ${characters || "Same characters"}.
 - Maximum 2 spoken lines per character.
 - Dialogue in ${form?.language || "English"} (${isEng ? "natural conversational English" : /hindi|hinglish|marathi/i.test(form?.language) ? "Devanagari script if Hindi/Hinglish/Marathi" : `authentic ${form?.language} script`}).
-- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.${eventBlock}${guardrailBlock}${complianceBlock}`;
+- Output ONLY the revised scene starting with SCENE ${sceneIndex + 1} and ending with Editing Notes.${eventBlock}${guardrailBlock}`;
 
   const content = `ORIGINAL SCENE:
 ${sceneText}
@@ -2425,10 +2385,7 @@ async function generateSimpleAdPackages({
   aiUnderstanding = null,
   creativeGuardrails = null,
   eventContext = null,
-  compliance = null,
 }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "ad packages");
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   const gAnalysis = aiUnderstanding?.guardrail_analysis || null;
   const guardrailBlock = hasActiveGuardrails(normGuardrails)
@@ -2436,14 +2393,6 @@ async function generateSimpleAdPackages({
     : "";
   const formattedEvent = formatEventPromptBlock(eventContext);
   const eventBlock = formattedEvent ? `\n${formattedEvent}` : "";
-  // Category compliance per package: deterministic scan (and, once the final set is chosen, the reviewer pass)
-  const attachCompliance = async (pkgs, { review = false } = {}) => {
-    if (!compliance) return pkgs;
-    return Promise.all(pkgs.map(async (pkg) => {
-      const reviewer = review ? await complianceReviewer.reviewScript({ ctx: compliance, script: pkg }) : null;
-      return { ...pkg, compliance: categoryRules.buildComplianceReport(compliance, pkg, { reviewer, stage: "ad package" }) };
-    }));
-  };
   const attachSimpleGuardrailReport = (pkgs) => {
     if (!hasActiveGuardrails(normGuardrails)) return pkgs;
     return pkgs.map((pkg) => {
@@ -2500,9 +2449,6 @@ CATEGORY-SPECIFIC MANDATES FOR FASHION & APPAREL:
 - Authenticity elements: Pure handloom silks, bridal lehengas, trendy festive collection, fabric drape, curated designer wear.
 - STRICT NEGATIVE RULES: NEVER mention "free consultation" (unless boutique styling advice), "repairs", "maintenance", or "diagnostics".`;
   }
-  // When a category compliance module is loaded it replaces these hand-written hints — some of them push claims
-  // the category guardrails only allow with proof ("100% pure desi ghee", "Pure handloom silks", "916 BIS Hallmark").
-  if (compliance && compliance.category) categoryGuidance = "";
 
   const langLower = String(language || "English").toLowerCase().trim();
   const isHinglish = langLower.includes("hinglish");
@@ -2531,7 +2477,7 @@ Generate exactly 3 complete, distinct, and realistic Ad Packages for this busine
 Each Ad Package must have:
 1. "Problem & Relief" angle (relatable pain-point, trusted fix).
 2. "Customer Experience & Trust" angle (word-of-mouth, transparency, authentic satisfaction).
-3. "Limited-Time Special Offer" angle (${compliance ? "the owner's real offer only, stated in full; urgency only if the offer states a real end date (universal rule U3)" : "celebration / seasonal deal, urgency, clear savings"}).${categoryGuidance ? "\n" + categoryGuidance : ""}
+3. "Limited-Time Special Offer" angle (celebration / seasonal deal, urgency, clear savings).${categoryGuidance ? "\n" + categoryGuidance : ""}
 
 BRAND VOICE & PERSONALITY:
 ${toneGuidance}
@@ -2586,7 +2532,7 @@ STYLE: ${creativeStyle}
 DURATION: ${durStr}
 SCENES: ${plan.totalScenes} scenes (~5s each)
 DIMENSION / ASPECT RATIO: ${arStr} (${arDesc})
-BRAND TONE: ${brandTone || "Warm & Authentic"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}${complianceBlock}
+BRAND TONE: ${brandTone || "Warm & Authentic"}${eventBlock}${aiUnderstanding ? `\nAI STRUCTURED UNDERSTANDING:\n- Campaign Objective: ${aiUnderstanding.campaign_objective}\n- Core Communication: ${aiUnderstanding.core_communication}\n- Target Audience: ${aiUnderstanding.target_audience}${!hasActiveGuardrails(normGuardrails) ? `\n- Dos: ${(aiUnderstanding.creative_guardrails?.dos || []).join('; ')}\n- Don'ts: ${(aiUnderstanding.creative_guardrails?.donts || []).join('; ')}` : ''}` : ''}${guardrailBlock}
 
 Create 3 distinct Ad Packages now:`;
 
@@ -2633,39 +2579,13 @@ Create 3 distinct Ad Packages now:`;
           ));
         }
       }
-      if (compliance) {
-        normalized = await attachCompliance(normalized);
-        const issues = normalized.flatMap((p) => (p.compliance && !p.compliance.passed ? [...p.compliance.violations.map((v) => v.message), ...p.compliance.safetyGaps.map((g) => `Safety visual missing: ${g.label}`)] : []));
-        if (issues.length) {
-          const retryContent = `${content}
-
-COMPLIANCE CORRECTION: The previous packages broke the category compliance rules: ${[...new Set(issues)].slice(0, 8).join(" | ")}. Regenerate all 3 packages so none of these appear.`;
-          let retryParsed = null;
-          try {
-            retryParsed = parseJSONBlock(await callClaude({ system, content: retryContent, maxTokens: 4000, thinking: false }));
-          } catch (retryErr) {
-            console.warn("[generateSimpleAdPackages] compliance regeneration failed — keeping the flagged packages:", retryErr.message);
-          }
-          if (retryParsed && Array.isArray(retryParsed.packages) && retryParsed.packages.length === 3) {
-            normalized = attachSimpleGuardrailReport(retryParsed.packages.map((pkg, idx) =>
-              normalizeSimpleAdPackage(
-                { ...pkg, id: pkg.id || `pkg_${idx + 1}`, duration: pkg.duration || durStr, aspectRatio: pkg.aspectRatio || arStr },
-                brand,
-                bType,
-                { duration: durStr, aspectRatio: arStr, hasLogo: Boolean(hasLogo) }
-              )
-            ));
-          }
-        }
-        normalized = await attachCompliance(normalized, { review: true });
-      }
       return normalized;
     }
   } catch (e) {
     console.warn("[generateSimpleAdPackages] fallback to curated packages:", e.message);
   }
 
-  return attachCompliance(attachSimpleGuardrailReport(getFallbackAdPackages({
+  return attachSimpleGuardrailReport(getFallbackAdPackages({
     businessName: brand,
     businessType: bType,
     town: city,
@@ -2674,7 +2594,7 @@ COMPLIANCE CORRECTION: The previous packages broke the category compliance rules
     duration: durStr,
     aspectRatio: arStr,
     hasLogo: Boolean(hasLogo),
-  })));
+  }));
 }
 
 const VO_TERM_REGEX = /(?:^|\n)\s*(?:(?:TEXT\s*[\+&]\s*)?(?:VO|V\.O\.|V\/O|Voiceover|Voice[\s-]over|Narrator|Narration|Off[\s-]screen|Audio))\s*:\s*["']?/gi;
@@ -2749,9 +2669,7 @@ function detectScriptAudioMode(scriptText) {
  * Preserves user's creative intent, brand claims, language, dialogue, and CTA.
  * Avoids redundant AI calls if the script is already formatted and valid.
  */
-async function normalizeUserScript({ rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform, creativeGuardrails = null, compliance = null }) {
-  brandTone = moodToneFor(compliance, brandTone);
-  const complianceBlock = complianceBlockFor(compliance, "imported script");
+async function normalizeUserScript({ rawScript, businessName, businessType, town, language, creativeStyle, brief, brandTone, targetDuration, duration, aspectRatio, platform, creativeGuardrails = null }) {
   const normGuardrails = normalizeCreativeGuardrails(creativeGuardrails);
   if (!rawScript || typeof rawScript !== "string" || !rawScript.trim()) {
     throw new Error("Script content is required.");
@@ -2811,7 +2729,6 @@ async function normalizeUserScript({ rawScript, businessName, businessType, town
       targetDuration: durationStr,
       allowSceneCount: parsed.scenes.length,
       creativeGuardrails: hasActiveGuardrails(normGuardrails) ? normGuardrails : null,
-      compliance,
     };
     let failures = [];
     try {
@@ -2842,7 +2759,6 @@ async function normalizeUserScript({ rawScript, businessName, businessType, town
         aspectRatio: ratioStr,
         shotSpec,
         guardrailReport,
-        compliance: categoryRules.buildComplianceReport(compliance, sanitized, { stage: "imported script" }),
         fullScriptText: rawScript,
         totalScenes: sanitized.scenes.length,
         isAlreadyNormalized: true,
@@ -2978,7 +2894,7 @@ ASPECT RATIO: ${ratioStr}
 USER'S ORIGINAL SCRIPT:
 """
 ${rawScript}
-"""${complianceBlock}
+"""
 
 Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format now:`;
 
@@ -3000,7 +2916,6 @@ Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format
         audioDeliveryMode: audioMode,
         targetDuration: durationStr,
         allowSceneCount: targetScenesCount,
-        compliance,
       }) || [];
     } catch (gErr) {
       console.warn("[normalizeUserScript gate warning]", gErr.message);
@@ -3031,7 +2946,6 @@ Adapt this user script into the strict ${targetScenesCount}-scene Annex-A format
       aspectRatio: ratioStr,
       shotSpec,
       guardrailReport,
-      compliance: categoryRules.buildComplianceReport(compliance, adaptedParsed, { stage: "imported script" }),
       fullScriptText: raw,
       totalScenes: adaptedParsed.scenes ? adaptedParsed.scenes.length : 0,
       isAlreadyNormalized: false,

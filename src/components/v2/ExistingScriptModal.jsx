@@ -333,7 +333,6 @@ export default function ExistingScriptModal({
   language = 'English',
   creativeStyle = 'Conversational / Dialogue',
   brandTone = 'Warm & Authentic',
-  categoryCompliance = null, // category rules proof for this film (category guardrails)
   targetDuration = '20s',
   aspectRatio = '9:16',
 }) {
@@ -450,7 +449,6 @@ export default function ExistingScriptModal({
           duration: selectedDuration,
           aspectRatio: selectedAspect,
           platform: selectedAspect === '16:9' ? 'YouTube / 16:9' : selectedAspect === '1:1' ? 'Feed / 1:1' : 'Instagram Reels / 9:16',
-          categoryCompliance,
         }),
       });
 

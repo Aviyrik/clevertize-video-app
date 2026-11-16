@@ -7,8 +7,6 @@ const path = require("path");
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "adfilm-"));
 process.env.ANTHROPIC_API_KEY = "test";
-// mocked Anthropic answers are queued per call: keep the extra compliance-reviewer call out of this file (test/category_guardrails.test.js covers it)
-process.env.COMPLIANCE_REVIEWER = "off";
 process.env.MAGNIFIC_API_KEY = "test";
 process.env.FESTIVAL_LIVE = "off";
 
@@ -400,17 +398,12 @@ test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs q
 
 test("Simple Studio / api/run: missing setting or character1 auto-resolves gracefully without preflight failure", async () => {
   // Simulates exact scenario from Practo / Simple Studio where user triggers render directly
-  const body = {
+  const res = await post("/api/run", {
     scenes: ["Scene 1: Hook", "Scene 2: Problem", "Scene 3: Climax", "Scene 4: CTA"],
     businessName: "Practo",
     businessType: "Healthcare, Clinic & Pharmacy",
     brief: "Book verified doctor appointments instantly",
-  };
-  // Healthcare is a High-tier category: the film waits for a human reviewer before the end frame (category guardrails)
-  const unreviewed = await post("/api/run", body);
-  assert.equal(unreviewed.status, 409);
-  assert.equal(unreviewed.body.code, "HUMAN_REVIEW_REQUIRED");
-  const res = await post("/api/run", { ...body, humanReview: { confirmed: true } });
+  });
 
   assert.equal(res.status, 200, "Must succeed with HTTP 200 without pre-flight validation failure");
   assert.ok(res.body.runId, "Must return runId");

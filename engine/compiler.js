@@ -11,7 +11,6 @@
 
 const { dialogueOf } = require("./parse");
 const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
-const { formatRenderBlock } = require("./categoryGuardrails");
 
 const FRAMING_HIERARCHY = {
   HOOK: "Medium close-up (subject and hero product prominent in vertical frame)",
@@ -148,12 +147,8 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     : `UGC / CREATOR STAGING: Mobile-native ${reframe ? "" : "vertical "}framing with authentic intimacy, natural handheld energy, and creator point-of-view.`;
 
   const productPhoto = options.productPhoto || staticWorld.productPhoto;
-  const compliance = options.compliance || staticWorld.compliance || null;
   const productVisualRef = productPhoto
-    ? (compliance
-      // Universal rule U15 (M8): no legible text, logos or brand packaging in generated scenes
-      ? `PRODUCT VISUAL REFERENCE: Render the physical product matching the reference photo ("${productPhoto.name || 'product'}") in shape, colours and form, with no legible label text, logos or brand packaging.`
-      : `PRODUCT VISUAL REFERENCE: Render physical product matching reference photo ("${productPhoto.name || 'product packaging'}"), with accurate brand packaging, colors, and label details.`)
+    ? `PRODUCT VISUAL REFERENCE: Render physical product matching reference photo ("${productPhoto.name || 'product packaging'}"), with accurate brand packaging, colors, and label details.`
     : null;
 
   const isLogoOutro = Boolean(
@@ -202,9 +197,6 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
       const g = options.creativeGuardrails || staticWorld.creativeGuardrails || null;
       return hasActiveGuardrails(g) ? formatGuardrailsPromptBlock(g) : null;
     })(),
-
-    // 9. Category compliance: universal + category visual / AI-generation rules reach the video model
-    compliance ? formatRenderBlock(compliance) : null,
   ].filter(Boolean);
 
   return lines.join("\n\n");

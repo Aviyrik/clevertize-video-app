@@ -452,13 +452,8 @@ function buildTemporarySpineUserPrompt({
   guardrailAnalysis,
   settings,
   eventContext,
-  compliance = null,
 }) {
   const norm = normalizeCreativeGuardrails(creativeGuardrails);
-  const complianceText = compliance ? `
-
-${require('./categoryGuardrails').formatPromptBlock(compliance, 'brief / AI understanding')}
-Reflect these category rules in creative_guardrails (dos/donts) and never plan a claim the module does not allow.` : '';
   const s = normalizeUnderstandingSettings(settings || { language });
   const ec = normalizeEventContext(eventContext);
   const hasEvent = hasActiveEventContext(ec);
@@ -491,7 +486,7 @@ Product Visual Reference: ${s.hasProductPhoto ? 'Product reference image provide
 === ORIGINAL CREATIVE BRIEF ===
 """
 ${cleanBrief}
-"""${eventBlock}${gText}${conflictText}${complianceText}
+"""${eventBlock}${gText}${conflictText}
 ${userCorrections ? `User corrections / refinement notes for this regeneration:\n"""\n${userCorrections}\n"""` : ''}
 ${previousUnderstanding ? `Previous interpretation was:\n${JSON.stringify(previousUnderstanding, null, 2)}` : ''}
 
@@ -531,11 +526,8 @@ async function generateAiUnderstanding({
   userCorrections = '',
   previousUnderstanding = null,
   creativeGuardrails = null,
-  compliance = null,
 }) {
   const cleanBrief = String(brief || '').trim();
-  // Category compliance module: loaded at the brief so the understanding (and everything after it) follows it
-  if (compliance && compliance.mood && compliance.mood.enforced && compliance.mood.label) brandTone = compliance.mood.label;
   if (!cleanBrief) {
     throw new Error('A creative brief is required to generate AI Understanding.');
   }
@@ -634,7 +626,6 @@ async function generateAiUnderstanding({
     guardrailAnalysis,
     settings: normSettings,
     eventContext: hasEvent ? normEvent : null,
-    compliance,
   });
 
   try {

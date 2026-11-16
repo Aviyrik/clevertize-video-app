@@ -72,8 +72,6 @@ import {
   ScriptGenerationLoader,
 } from './v2/WorkflowLoadingScreen.jsx';
 import CreativeInstructionsSection from './v2/CreativeInstructionsSection.jsx';
-import CategoryComplianceSection from './v2/CategoryComplianceSection.jsx';
-import ComplianceReportNotice from './v2/ComplianceReportNotice.jsx';
 import OccasionEventSection from './v2/OccasionEventSection.jsx';
 import ProductPhotoSection from './v2/ProductPhotoSection.jsx';
 import TargetAudienceSection from './v2/TargetAudienceSection.jsx';
@@ -1086,13 +1084,6 @@ export function Screen02Brief({
           expanded={Boolean(optExpanded.audience)}
           onToggleExpand={(next) => setOptSectionExpanded('audience', next)}
         />
-
-            {/* Category rules & proof (category guardrails: proof fields unlock gated claims) */}
-            <CategoryComplianceSection
-              businessType={userContext.businessType === 'Other' && userContext.customBusinessType ? userContext.customBusinessType : userContext.businessType}
-              value={userContext.categoryCompliance}
-              onChange={(next) => updateUserContext('categoryCompliance', next)}
-            />
 
             {/* Creative Instructions (Optional · Collapsed by default) */}
             <CreativeInstructionsSection
@@ -3228,7 +3219,6 @@ export function Screen07Script({
   isSavingProject = false,
   onOpenScriptModal,
   guardrailReport = null,
-  complianceReport = null,
   onboardingState = null,
   onDismissTip,
   onBehaviorEvent,
@@ -3801,9 +3791,6 @@ export function Screen07Script({
           </div>
         )
       )}
-
-      {/* Category compliance guardrails: scanner + reviewer findings and the human-review flag before the end frame */}
-      <ComplianceReportNotice report={complianceReport} testId="script-compliance-report" />
 
       {/* Creative Guardrails Compliance Notice (automated text check + visual human review boundary) */}
       {guardrailReport && (guardrailReport.hasCriticalViolation || (guardrailReport.automatedChecks?.warnings?.length > 0) || (guardrailReport.visualReviewRequired?.length > 0)) && (
