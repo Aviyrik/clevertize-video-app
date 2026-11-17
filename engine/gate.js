@@ -297,4 +297,226 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
   return [...new Set(fails)];
 }
 
-module.exports = { runGate, speakerMatches, formatMatches };
+// =====================================================================================================
+// Script & Storyboard Spine — Section 5 quality gate (Annex B automated checklist) on script.json.
+// runGate above is the legacy Product Spine v2 (Section 8, M1–M28) gate; only the two legacy endpoints
+// with no UI caller (/api/session/*, /api/pipeline/generate) still use it.
+// Checks the code can verify run here; the ones that need judgement (ending pays off the hook, human
+// truth and emotional turn, mood held, occasion used as specified) are the writer's self-check (S-M11)
+// and are reported as "self-check".
+// =====================================================================================================
+const contracts = require("./spines/contracts");
+
+const SCRIPT_BEATS = ["Hook", "Real moment", "Turn", "Payoff"];
+const BROCHURE = /\b(best quality|premium quality|best-in-class|100% natural|no\.?\s*1\b|number one|trusted by millions|world[- ]class|one-?stop shop|shop now!?$|download now!?$)\b|सर्वोत्तम गुणवत्ता|उत्तम गुणवत्ता|नंबर\s*(1|वन)/i;
+const TESTIMONIAL = /\b(real customer|genuine review|customer review|testimonial|5[- ]star review)\b|असली ग्राहक/i;
+const NAMED_TRACK = /\b(song|track)\s*[:"“]|"[^"]+"\s+by\s+[A-Z]|\bby (arijit|a\.?\s*r\.?\s*rahman|badshah|diljit)\b/i;
+const FLAT_CUT = /^(hard\s+|flat\s+|straight\s+|plain\s+)?cut\.?$/i;
+const SUPPORTED_SCRIPTS = { Devanagari: /[ऀ-ॿ]/, Tamil: /[஀-௿]/, Telugu: /[ఀ-౿]/, Kannada: /[ಀ-೿]/, Malayalam: /[ഀ-ൿ]/, Bengali: /[ঀ-৿]/, Gujarati: /[઀-૿]/, Gurmukhi: /[਀-੿]/ };
+const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean);
+const isNone = (s) => /^\s*(none|n\/a|-)?\s*$/i.test(String(s || ""));
+const filled = (s) => String(s || "").trim().length > 0;
+// "about 8 words (3 seconds) or fewer": one word of slack for "about"
+const MAX_LINE_WORDS = 9;
+
+function runScriptGate(script, { header = {}, brief = {}, concept = null, storyboardStatus = "not_run" } = {}) {
+  const fails = [];
+  const checks = [];
+  const check = (id, text, problems, status) => {
+    const s = status || (problems.length ? "fail" : "pass");
+    checks.push({ id, text, status: s, details: problems });
+    if (s === "fail") fails.push(...problems);
+  };
+  const scenes = script.scenes || [];
+  const format = script.format || "UGC";
+  const rules = contracts.FORMAT_RULES[format] || contracts.FORMAT_RULES.UGC;
+  const S = (sc, i) => `Scene ${sc.n || i + 1}`;
+
+  // 1. Script header complete
+  const headerFields = ["brand", "objective", "platform_format", "film_format", "angle", "lens", "hook", "ending", "mood", "moment", "language"];
+  check("header", "Script header complete", headerFields.filter((k) => !filled(header[k])).map((k) => `Script header is missing "${k}" (it comes from brief.json / concept.json).`));
+
+  // 2. Context Block fully filled, with product and character reference IDs
+  const cb = script.context_block || {};
+  const cbProblems = [];
+  const chars = Array.isArray(cb.characters) ? cb.characters : [];
+  if (!chars.length) cbProblems.push("Context Block has no characters.");
+  chars.forEach((c, i) => {
+    const o = c && typeof c === "object" ? c : { description: c };
+    if (!filled(o.ref || o.reference || o.ref_id)) cbProblems.push(`Context Block character ${i + 1} has no reference image ID.`);
+    const desc = Object.values(o).filter((v) => typeof v === "string").join(" ");
+    if (words(desc).length < 6) cbProblems.push(`Context Block character ${i + 1} is too thin — give age, gender, skin tone, hair, build, wardrobe, accessories.`);
+  });
+  if (!cb.product || !Object.keys(cb.product).length) cbProblems.push("Context Block product is empty.");
+  else if (!filled(cb.product.ref || cb.product.reference || cb.product.ref_id)) cbProblems.push("Context Block product has no reference image ID.");
+  if (!cb.setting || !Object.keys(cb.setting).length) cbProblems.push("Context Block setting is empty.");
+  if (!cb.brand_elements || !Object.keys(cb.brand_elements).length) cbProblems.push("Context Block brand elements are empty.");
+  check("context_block", "Context Block fully filled, with product and character reference IDs", cbProblems);
+
+  // 3. Visual fields: complete pictures, physical actions only
+  const visProblems = [];
+  scenes.forEach((sc, i) => {
+    if (words(sc.visual).length < 8) visProblems.push(`${S(sc, i)} Visual is not a complete picture.`);
+    if (EMOTION_DIRECTION.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual uses emotion as direction ("${(sc.visual.match(EMOTION_DIRECTION) || [""])[0]}") — physical actions only (S-M6).`);
+    if (ONSCREEN_TEXT.test(sc.visual) || PHONE_UI.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual asks for text or a phone/app screen — those are on-screen elements rendered by Production (S-M5).`);
+    if (!filled(sc.shot) || !filled(sc.camera)) visProblems.push(`${S(sc, i)} is missing the shot size or camera move.`);
+  });
+  check("visual", "Visual fields are complete pictures, physical actions only, inside the safe zones", visProblems);
+
+  // 4. On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo
+  const osProblems = [];
+  scenes.forEach((sc, i) => {
+    for (const k of ["super", "callout", "cta", "disclaimer", "ui_mockup", "logo"]) if (!filled(sc[k])) osProblems.push(`${S(sc, i)} on-screen element "${k}" is empty — write it, or "none".`);
+    if (!isNone(sc.super) && words(sc.super).length > 6) osProblems.push(`${S(sc, i)} super is longer than 6 words.`);
+  });
+  check("on_screen", "On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo", osProblems);
+
+  // 5. Dialogue rules (S-M7, per format)
+  const dlgProblems = [];
+  const speakerScenes = {};
+  let totalLines = 0;
+  scenes.forEach((sc, i) => {
+    const lines = (sc.dialogue || []).filter((d) => filled(d.line));
+    const per = {};
+    for (const d of lines) {
+      const who = String(d.speaker || "").trim() || "?";
+      per[who] = (per[who] || 0) + 1;
+      totalLines++;
+      if (words(d.line).length > MAX_LINE_WORDS) dlgProblems.push(`${S(sc, i)}: ${who}'s line has ${words(d.line).length} words — keep it to about 8 (S-M7).`);
+    }
+    for (const [who, n] of Object.entries(per)) {
+      if (n > 1) dlgProblems.push(`${S(sc, i)}: ${who} has ${n} lines — max 1 line per character per scene (S-M7).`);
+      speakerScenes[who] = (speakerScenes[who] || 0) + 1;
+    }
+    if (rules.hasVo) {
+      if (lines.length) dlgProblems.push(`${S(sc, i)} has on-screen dialogue — VO-led films use one voice; people act but don't speak.`);
+      if (!filled(sc.vo)) dlgProblems.push(`${S(sc, i)} has no VO line — VO-led films have one crisp VO line per scene.`);
+    }
+  });
+  if (rules.speakerSceneCap) {
+    const cap = Math.max(1, scenes.length - 1);
+    for (const [who, n] of Object.entries(speakerScenes)) if (n > cap) dlgProblems.push(`UGC: ${who} speaks in ${n} of ${scenes.length} scenes — at most ${cap}; the other beat is B-roll (S-M7, Section 6).`);
+  }
+  if (format === "Storytelling" && totalLines >= 3 && Object.keys(speakerScenes).length < 2) dlgProblems.push("Storytelling: every line comes from one character — rotate speakers across scenes (S-M7).");
+  check("dialogue", "Dialogue ≤ 1 line per character per scene, about 8 words, spread across characters (UGC/Founder: speaker in ≤ 3 scenes)", dlgProblems);
+
+  // 6. Dialogue in brief.language and its correct script
+  const langProblems = [];
+  const scriptName = (script.language && script.language.script) || "Latin";
+  const brandWords = words((brief.company && brief.company.brand) || "").map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const brandRe = brandWords.length ? new RegExp(brandWords.join("|"), "gi") : null;
+  const spoken = [];
+  scenes.forEach((sc, i) => {
+    for (const d of sc.dialogue || []) if (filled(d.line)) spoken.push([S(sc, i), d.line]);
+    if (filled(sc.vo)) spoken.push([S(sc, i), sc.vo]);
+  });
+  for (const [where, line] of spoken) {
+    const text = brandRe ? line.replace(brandRe, "") : line;
+    if (scriptName === "Latin") {
+      if (/[ऀ-ॿ஀-ൿঀ-੿]/.test(text)) langProblems.push(`${where}: "${line.slice(0, 40)}" is not in Latin script.`);
+    } else if (SUPPORTED_SCRIPTS[scriptName]) {
+      if (!SUPPORTED_SCRIPTS[scriptName].test(text)) langProblems.push(`${where}: "${line.slice(0, 40)}" is not in ${scriptName}.`);
+      else if (scriptName === "Devanagari" && LATIN.test(text)) langProblems.push(`${where}: "${line.slice(0, 40)}" mixes Roman letters into a ${scriptName} line — write English words as spoken (S-M2).`);
+    }
+  }
+  check("language", "Dialogue in brief.language and its correct script", langProblems);
+
+  // 7. Sound Design = ambience + SFX + music mood note; no named tracks
+  const sndProblems = [];
+  scenes.forEach((sc, i) => {
+    for (const k of ["ambience", "sfx", "music_mood"]) if (!filled(sc[k])) sndProblems.push(`${S(sc, i)} Sound Design is missing "${k}".`);
+    if (NAMED_TRACK.test(`${sc.music_mood} ${sc.sfx}`)) sndProblems.push(`${S(sc, i)} names a song or track — use a music mood note only.`);
+  });
+  check("sound", "Sound Design = ambience + SFX + music mood note; no named tracks", sndProblems);
+
+  // 8. Transition out for every scene; no flat hard cut after the hook
+  const trProblems = [];
+  scenes.forEach((sc, i) => {
+    if (!filled(sc.transition_out)) trProblems.push(`${S(sc, i)} has no "Transition out".`);
+    else if (i < scenes.length - 1 && FLAT_CUT.test(String(sc.transition_out).split(/[–—-]/)[0].trim())) trProblems.push(`${S(sc, i)} uses a flat hard cut — link the scenes with a match, motion, prop, sound or eye-line.`);
+  });
+  check("transitions", "Transition out written for every scene; no flat hard cut after the hook", trProblems);
+
+  // 9. Editing Notes = edit-step cues only
+  check("edit_notes", "Editing Notes = edit-step cues only", scenes.filter((sc) => /\bgenerat/i.test(sc.edit_notes || "")).map((sc, i) => `${S(sc, i)} Editing Notes contain generation instructions (S-M9).`));
+
+  // 10. Scene count matches the length; VO-led within about 40–50 words per 20s
+  const plan = contracts.scenePlan(script.length_s);
+  const countProblems = [];
+  if (scenes.length !== plan.count) countProblems.push(`The script has ${scenes.length} scenes; a ${plan.length_s}s film has ${plan.count} (S-M3).`);
+  scenes.forEach((sc, i) => { if (!SCRIPT_BEATS.includes(sc.beat)) countProblems.push(`${S(sc, i)} beat "${sc.beat}" is not one of Hook, Real moment, Turn, Payoff.`); });
+  if (scenes.length && scenes[0].beat !== "Hook") countProblems.push("Scene 1 must be the Hook.");
+  if (scenes.length && scenes[scenes.length - 1].beat !== "Payoff") countProblems.push(`Scene ${scenes.length} must be the Payoff.`);
+  if (rules.hasVo) {
+    const voWords = scenes.reduce((n, sc) => n + words(sc.vo).length, 0);
+    const r = contracts.voWordRange(plan.length_s);
+    // the writer is asked for 40–50 words per 20s; the spine says "about", so the check allows 10% either side
+    if (voWords < Math.floor(r.min * 0.9) || voWords > Math.ceil(r.max * 1.1)) countProblems.push(`VO runs ${voWords} words; a ${plan.length_s}s VO-led film runs about ${r.min}–${r.max}.`);
+  }
+  check("scene_count", "Scene count matches the length; VO-led within about 40–50 words per 20s", countProblems);
+
+  // 11–13. Judgement items: the writer's self-check (S-M11)
+  check("ending_payoff", "The ending pays off the hook (same place, prop, line or question resolved)", [], "self-check");
+  const moodProblems = [];
+  if (!filled(header.mood)) moodProblems.push("No mood chosen.");
+  scenes.forEach((sc, i) => { if (!filled(sc.music_mood)) moodProblems.push(`${S(sc, i)} has no music mood note.`); });
+  check("mood", "One mood chosen and held across all scenes", moodProblems, moodProblems.length ? "fail" : "self-check");
+  check("human_truth", "One human truth and one clear emotional turn (Scene 3 or 4)", [], "self-check");
+
+  // 14. No brochure or slogan lines
+  check("brochure", "No brochure or slogan lines; the last line or beat is specific to this brand", spoken.filter(([, l]) => BROCHURE.test(l)).map(([w, l]) => `${w}: "${l.slice(0, 40)}" is a brochure line — write how people actually talk.`));
+
+  // 15. Claims and callouts from brief.rtbs or the offer; all required disclaimers present
+  const claimProblems = [];
+  const allowedClaims = [...((brief.rtbs || []).map((r) => `${r.claim} ${r.proof}`)), brief.mandatories && brief.mandatories.offer, brief.company && brief.company.offer].filter(Boolean).join(" ").toLowerCase();
+  const tokens = (s) => String(s || "").toLowerCase().split(/[^\p{L}\p{N}%₹]+/u).filter((t) => t.length > 2);
+  scenes.forEach((sc, i) => {
+    if (!isNone(sc.callout)) {
+      const t = tokens(sc.callout);
+      if (!allowedClaims || (t.length && !t.some((w) => allowedClaims.includes(w)))) claimProblems.push(`${S(sc, i)} callout "${sc.callout}" is not from brief.rtbs or the offer (S-M10).`);
+    }
+  });
+  const disclaimersText = scenes.map((sc) => sc.disclaimer).join(" ").toLowerCase();
+  for (const d of (brief.mandatories && brief.mandatories.disclaimers) || []) if (d && !disclaimersText.includes(String(d).toLowerCase().slice(0, 24))) claimProblems.push(`Required disclaimer missing: "${d}".`);
+  check("claims", "Every claim and callout comes from brief.rtbs or the offer; all required disclaimers present", claimProblems);
+
+  // 16. No fake testimonial, no deities, no named competitors, no copied lines
+  const safety = [];
+  scenes.forEach((sc, i) => {
+    if (DEITY.test(sc.visual)) safety.push(`${S(sc, i)} shows deities or idols.`);
+    if (TESTIMONIAL.test(`${sc.visual} ${(sc.dialogue || []).map((d) => d.line).join(" ")} ${sc.vo}`)) safety.push(`${S(sc, i)} reads as a testimonial — acted people are acted.`);
+  });
+  check("safety", "No fake testimonial, no deities, no named competitors, no copied hook lines or taglines", safety);
+
+  // 17. Storyboard frame check — the app has no image step yet (see engine/spines/storyboard.js)
+  check("storyboard", "Storyboard frame check passed on every frame; locks saved", [], storyboardStatus);
+
+  // 18. Do's and Don'ts that apply to the script
+  const ddProblems = [];
+  const sceneText = scenes.map((sc) => [sc.visual, (sc.dialogue || []).map((d) => d.line).join(" "), sc.vo, sc.super, sc.callout].join(" ")).join("\n");
+  const notes = scenes.map((sc) => String(sc.edit_notes || "").toLowerCase());
+  const judgedDonts = [];
+  for (const d of brief.dos_donts || []) {
+    if (d.strength !== "must" || !(d.applies_to || []).includes("script") || contracts.FILM_FORMAT_RULE_RE.test(d.rule)) continue;
+    const key = tokens(d.rule).filter((t) => !["must", "include", "never", "don't", "dont", "the", "and", "with"].includes(t));
+    if (/not include|never|don'?t/i.test(`${d.type} ${d.rule}`)) {
+      // The word check is built for the user's own Don'ts ("Do not mention DiamondPlaza" → "DiamondPlaza"). Brand
+      // and category Don'ts (B-M11) are sentences ("no health claims about sweet products"); matching their words
+      // fails scripts that merely say "sweet". The writer self-checks those against brief.dos_donts (S-M11).
+      if (d.source !== "user") { judgedDonts.push(d.rule); continue; }
+      const v = validateOutputAgainstGuardrails({ outputText: sceneText, stage: "script", guardrails: { dos: [], donts: [{ id: "dd", text: d.rule, priority: "critical" }] } });
+      if (v.hasCriticalViolation) ddProblems.push(`Don't broken: "${d.rule}" (${v.automatedChecks.criticalViolations[0].matchedFragment || ""}).`);
+    } else if (!notes.some((n) => /must include/.test(n) && key.some((k) => n.includes(k)))) {
+      ddProblems.push(`"Must include" not placed in a named scene's Editing Notes: "${d.rule}" (S-M13).`);
+    }
+  }
+  check("dos_donts", "Every Do and Don't that applies to the script is met; each \"must include\" is placed in a named scene", ddProblems);
+  if (judgedDonts.length) check("dos_donts_judged", "Brand and category Don'ts are respected (the writer's self-check; a word match can't judge them)", judgedDonts, "self-check");
+
+  // 19. Occasion as the concept specified — judgement
+  check("occasion", "The occasion (if any) appears only as the concept specified, with its don'ts respected", [], "self-check");
+
+  return { failures: [...new Set(fails)], checks, passed: !fails.length };
+}
+
+module.exports = { runGate, speakerMatches, formatMatches, runScriptGate, SCRIPT_BEATS, MAX_LINE_WORDS };

@@ -5,6 +5,7 @@
 const { callClaude } = require("./claude");
 const { buildSystem, buildUserContent, buildRepairContent, festivalOf, HOOKS_PULLED } = require("./prompt");
 const { parseOutput, parseJSONBlock, dialogueOf, sceneForGeneration } = require("./parse");
+const spineContracts = require("./spines/contracts");
 const { runGate } = require("./gate");
 const { compileShotSpecification } = require("./compiler");
 const { getFestivals, todayIST } = require("./festivals");
@@ -2450,6 +2451,12 @@ CATEGORY-SPECIFIC MANDATES FOR FASHION & APPAREL:
 - STRICT NEGATIVE RULES: NEVER mention "free consultation" (unless boutique styling advice), "repairs", "maintenance", or "diagnostics".`;
   }
 
+  // The Creative Style the user picked (UGC / Creator-style, VO-led, Storytelling) and its rules from the
+  // Creative Spine format table (Section 6) and the Script Spine dialogue rule (S-M7)
+  const filmFormat = spineContracts.filmFormatOf(creativeStyle);
+  const fr = spineContracts.FORMAT_RULES[filmFormat];
+  const simpleFormatRules = `- FILM FORMAT: ${filmFormat}. ${fr.looks_like} ${fr.generation}
+- DIALOGUE: ${fr.dialogue}${fr.hasVo ? " Write each scene's \"dialogue\" as \"VO: <line>\"; on-screen people act but do not speak." : ""}`;
   const langLower = String(language || "English").toLowerCase().trim();
   const isHinglish = langLower.includes("hinglish");
   const isHin = langLower === "hindi";
@@ -2491,7 +2498,7 @@ CRITICAL SCRIPT CONSTRAINTS:
 - Exactly ${plan.totalScenes} scenes per package (${plan.baseScenes} core story scenes${plan.hasLogo ? " + 1 dedicated 5-second brand outro scene with logo reveal" : ""}):
 ${plan.beats.map((b, i) => `  Scene ${i + 1}: ${b.name} (${b.timing})`).join("\n")}
 - Single continuous setting per ad package.
-- Exactly 2 characters with natural interaction.
+${simpleFormatRules}
 
 OUTPUT FORMAT:
 Output strictly valid JSON between @@JSON@@ and @@END@@ markers:

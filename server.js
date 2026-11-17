@@ -25,6 +25,177 @@ const understandingSpine = require("./engine/understandingSpine");
 const guardrails = require("./engine/guardrails");
 const guardrailsSpine = require("./engine/guardrailsSpine");
 const eventContextUtil = require("./engine/eventContext");
+// The three stage spines: Brief → brief.json → Creative → concept.json → Script & Storyboard → script.json
+const briefSpine = require("./engine/spines/briefSpine");
+const creativeSpine = require("./engine/spines/creativeSpine");
+const scriptSpine = require("./engine/spines/scriptSpine");
+const spineContracts = require("./engine/spines/contracts");
+
+// brief.json rides on the approved understanding (the polished brief the user approves at Checkpoint 1).
+// brief_basis records which version of the polished brief it was built from, so an edit at the checkpoint
+// makes the Brief Spine rebuild it (B-M9) before the Creative Spine reads it.
+const BRIEF_BASIS_FIELDS = ["business_understanding", "campaign_objective", "target_audience", "core_communication", "occasion_context", "creative_guardrails", "creative_opportunity", "assumptions"];
+function briefBasis(u) {
+  const core = {};
+  for (const k of BRIEF_BASIS_FIELDS) core[k] = u ? u[k] : null;
+  return crypto.createHash("sha1").update(JSON.stringify(core)).digest("hex").slice(0, 16);
+}
+function polishedView(u) {
+  if (!u) return null;
+  const view = {};
+  for (const k of [...BRIEF_BASIS_FIELDS, "missing_information"]) if (u[k] !== undefined) view[k] = u[k];
+  return view;
+}
+
+// Brief Spine: the dashboard's fields + the polished brief + Do's and Don'ts + occasion → brief.json
+async function buildBriefJson({ form = {}, understanding = null, creativeGuardrails = null, eventContext = null }) {
+  const inputs = briefSpine.buildBriefInputs({
+    form,
+    understanding: polishedView(understanding),
+    creativeGuardrails: guardrails.normalizeCreativeGuardrails(creativeGuardrails),
+    guardrailAnalysis: (understanding && understanding.guardrail_analysis) || null,
+    eventContext: eventContextUtil.hasActiveEventContext(eventContext) ? eventContext : null,
+    festivals: await getFestivals().catch(() => null),
+    research: form.research || null,
+    previousCampaigns: store.previousFor(form.businessName || "", form.town || ""),
+  });
+  try {
+    return (await briefSpine.runBriefSpine(inputs, { today: todayIST() })).brief;
+  } catch (e) {
+    if (e.code === "BRIEF_OFF_LIMITS" || process.env.NODE_ENV === "production") throw e;
+    console.warn("[brief spine] fallback brief.json (model unavailable):", e.message);
+    return briefSpine.fallbackBrief(inputs, { today: todayIST() });
+  }
+}
+
+// brief.json is the Brief Spine's Section 7 output, produced after Checkpoint 1. The studio never shows it, so the
+// Understanding step doesn't wait for it: it starts in the background as soon as the polished brief exists and the
+// first creative stage picks it up (usually finished by the time the user has read and approved the checkpoint).
+// An edit at the checkpoint changes the polished brief's basis, so that brief is built again from the edited one.
+// In memory only: after a restart, or on another instance, the stage simply builds it (with its own retry).
+const pendingBriefs = new Map(); // `${userId}|${basis}` → { at, promise }
+const PENDING_BRIEF_TTL_MS = 2 * 60 * 60 * 1000;
+const PENDING_BRIEF_MAX = 200;
+const pendingBriefKey = (userId, u) => `${userId}|${briefBasis(u)}`;
+function startBriefJson(key, args) {
+  const now = Date.now();
+  for (const [k, v] of pendingBriefs) if (now - v.at > PENDING_BRIEF_TTL_MS) pendingBriefs.delete(k);
+  while (pendingBriefs.size >= PENDING_BRIEF_MAX) pendingBriefs.delete(pendingBriefs.keys().next().value);
+  const promise = buildBriefJson(args).then((brief) => {
+    console.log(`[brief spine] brief.json ready in ${Math.round((Date.now() - now) / 100) / 10}s (after Checkpoint 1)`);
+    return brief;
+  });
+  promise.catch((e) => console.warn("[brief spine] brief.json not ready:", e.message)); // reported when a stage asks for it
+  pendingBriefs.set(key, { at: now, promise });
+}
+
+// /synthesize-script and /validate-and-import response: script.json, storyboard.json and the gate, plus the fields
+// the studio and production already use (scenes, character1, character2, setting, shotSpec).
+function scriptResponse(written, form, activeGuardrails) {
+  const len = written.script.length_s;
+  const ratio = written.script.aspect_ratios[0] || form.aspectRatio || "9:16";
+  const shotSpec = compileShotSpecification(
+    { scenes: written.scenes, setting: written.setting, character1: written.character1, character2: written.character2 },
+    { ...form, targetDuration: `${len}s`, duration: `${len}s`, aspectRatio: ratio, creativeStyle: spineContracts.normalizeCreativeStyle(form.creativeStyle) }
+  );
+  if (shotSpec) shotSpec.format = written.script.format;
+  const guardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
+    ? guardrails.validateOutputAgainstGuardrails({ outputText: written.scenes.join(String.fromCharCode(10)), stage: "script", guardrails: activeGuardrails })
+    : null;
+  return {
+    spine: "script",
+    spineVersion: written.spineVersion,
+    script: written.text,
+    header: written.header,
+    script_json: written.script,
+    storyboard_json: written.storyboard,
+    storyboardStatus: written.storyboardStatus,
+    gate: written.gate,
+    notices: written.notices,
+    record: written.record,
+    scenes: written.scenes,
+    character1: written.character1,
+    character2: written.character2,
+    setting: written.setting,
+    shotSpec,
+    guardrailReport,
+    duration: `${len}s`,
+    targetDuration: `${len}s`,
+    aspectRatio: ratio,
+    dimension: ratio,
+    platform: form.platform || "",
+  };
+}
+
+// Creative Guardrails (the project's Do's and Don'ts) checked on each creative stage's output, as before the spines
+function guardrailCheck(g, texts, stage) {
+  if (!guardrails.hasActiveGuardrails(g)) return null;
+  return guardrails.validateOutputAgainstGuardrails({ outputText: texts.filter(Boolean).join(String.fromCharCode(10)), stage, guardrails: g });
+}
+const violationText = (rep) => rep.automatedChecks.criticalViolations.map((v) => v.explanation).join(" | ");
+
+// The Ideas and Opening screens send back the card the user picked; the spine data travels inside it.
+function insightFromCard(card) {
+  if (card && card.insight && typeof card.insight === "object") return card.insight;
+  const c = card || {};
+  return { lens: c.lens || c.angle || "", tension: c.title || c.text || "", fear: "", desire: "", human_truth: c.description || "", locked: false };
+}
+function angleFromCard(card) {
+  const c = card || {};
+  const line = String(c.hookLine || c.text || "").trim();
+  if (c.angle && typeof c.angle === "object") {
+    const angle = JSON.parse(JSON.stringify(c.angle));
+    const first = (angle.hooks && angle.hooks[0]) || null;
+    const edited = Boolean(first && line && first.line !== line);
+    if (edited) first.line = line; // the owner edited the hook line on the Opening screen
+    return { angle, ideaSource: c.recommended && !edited ? "engine" : "user_selected" };
+  }
+  // a custom hook typed by the owner
+  return { angle: { id: "custom", name: "The owner's own hook", route: "", plot: line, hooks: [{ pattern: c.archetype || "Custom", library: "user", pulled: "", line, visual: c.visualAction || "", super: "", payoff: "" }] }, ideaSource: "user_submitted" };
+}
+
+// Creative and Script stages read brief.json only. It comes from the approved understanding (saved project
+// first), else the client's copy for an unsaved project; when it's missing or out of date the Brief Spine
+// rebuilds it from the approved polished brief and the dashboard fields, and it's saved back to the project.
+async function briefForStage(req, { project = undefined } = {}) {
+  const body = req.body || {};
+  let proj = project;
+  if (proj === undefined && body.projectId) proj = await db.getProjectById(body.projectId, req.user.id);
+  const u = (proj && (proj.aiUnderstanding || (proj.creativeDNA && proj.creativeDNA.aiUnderstanding))) ||
+    (body.aiUnderstanding && typeof body.aiUnderstanding === "object" ? body.aiUnderstanding : null);
+  let brief = null;
+  if (u && u.brief_json && u.brief_basis === briefBasis(u)) brief = u.brief_json;
+  else if (!u && body.briefJson && typeof body.briefJson === "object") brief = body.briefJson;
+  if (!brief) {
+    // the one started when this polished brief was made (unedited at the checkpoint)
+    const pending = u && req.user ? pendingBriefs.get(pendingBriefKey(req.user.id, u)) : null;
+    if (pending) {
+      try {
+        brief = await pending.promise;
+      } catch (e) {
+        if (e.code === "BRIEF_OFF_LIMITS") throw e; // B-M12: say so and stop, before any idea
+        brief = null; // anything else: build it again here, with its own retry
+      }
+    }
+    if (!brief) {
+      brief = await buildBriefJson({
+        form: body,
+        understanding: u,
+        creativeGuardrails: (proj && proj.creativeGuardrails) || body.creativeGuardrails || null,
+        eventContext: (proj && proj.eventContext) || body.eventContext || null,
+      });
+    }
+    if (proj && u) {
+      try {
+        await db.saveProject({ ...proj, aiUnderstanding: { ...u, brief_json: brief, brief_basis: briefBasis(u) } }, req.user.id);
+      } catch (err) {
+        console.warn("[brief spine] could not save the rebuilt brief.json:", err.message);
+      }
+    }
+  }
+  const style = body.creativeStyle || body.format || (body.form && body.form.creativeStyle);
+  return briefSpine.withFilmFormat(brief, style);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -490,15 +661,19 @@ app.post("/api/session/:id/approve", authRequired, (req, res) => {
 // 1) Adaptive Research (Tiers 0-3)
 app.post("/api/research", authRequired, async (req, res) => {
   try {
-    const { businessName, businessType, town, area, websiteUrl, brief } = req.body || {};
-    const result = await creative.performAdaptiveResearch({
-      businessName,
-      businessType,
-      town,
-      area,
-      websiteUrl,
-      brief,
-    });
+    // Brief Spine, Sections 2–3 (Prompt R1 company scan, Prompt R2 competitor scan)
+    const form = req.body || {};
+    let result;
+    try {
+      result = await briefSpine.runResearch({ form });
+    } catch (err) {
+      console.warn("[research] brief spine research unavailable:", err.message);
+      result = {
+        spine: "brief", company_scan: {}, competitors: [], white_space: "", unknown_required_fields: [],
+        tier: 0, tierLabel: "Company & competitor scan unavailable", brandFootprint: "", audienceInsight: "",
+        creativeOpportunity: "", competitivePattern: "", categoryTension: "", informationGap: null, sources: [],
+      };
+    }
     res.json(result);
   } catch (e) {
     console.error("[api/research]", e.message);
@@ -911,25 +1086,31 @@ app.post("/api/script/validate-and-import", authRequired, async (req, res) => {
       fallbackGuardrails: bodyGuardrails,
     });
 
-    // Inspect sliceLines for dialogue and visual separation during script normalization
-    const sliceLines = (lines, start, end) => lines.slice(start, end);
-
-    const result = await creative.normalizeUserScript({
-      rawScript,
-      businessName,
-      businessType,
-      town,
-      language,
-      creativeStyle,
-      brief,
-      brandTone,
-      targetDuration: targetDuration || duration,
-      aspectRatio,
-      platform,
-      creativeGuardrails: activeGuardrails,
+    // Script & Storyboard Spine. An imported script skips the Brief and Creative stages: the user brought the idea,
+    // so the import's concept is its own (idea_source "user_submitted") and the brief fields come from the dashboard.
+    const style = spineContracts.normalizeCreativeStyle(creativeStyle);
+    const form = { ...(req.body || {}), creativeStyle: style, targetDuration: targetDuration || duration };
+    const inputs = briefSpine.buildBriefInputs({ form, creativeGuardrails: activeGuardrails });
+    const importBrief = spineContracts.normalizeBrief({
+      company: inputs.forced.company, platforms: inputs.forced.platforms, formats: inputs.forced.formats,
+      language: inputs.forced.language, mandatories: inputs.forced.mandatories, dos_donts: inputs.forced.dos_donts,
     });
-
-    return res.json(result);
+    const importConcept = spineContracts.normalizeConcept({ idea_source: "user_submitted", concept: { format: spineContracts.filmFormatOf(style), core_idea: "The user's own script" } });
+    const written = await scriptSpine.importScript({ rawScript, concept: importConcept, brief: importBrief });
+    const shaped = scriptResponse(written, form, activeGuardrails);
+    return res.json({
+      ...shaped,
+      status: "success",
+      passedGate: written.passed,
+      gatePassed: written.passed,
+      failures: written.gate.failures,
+      audioDeliveryMode: written.script.format === "VO-led" ? "voiceover" : "dialogue",
+      detectedLanguage: written.script.language.name || language,
+      detectedFormat: style,
+      fullScriptText: written.text,
+      totalScenes: written.scenes.length,
+      isAlreadyNormalized: false,
+    });
   } catch (err) {
     console.error("[api/script/validate-and-import]", err.message);
     res.status(err.status || 500).json({ error: err.message || "Failed to validate script." });
@@ -1082,6 +1263,15 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
       creativeGuardrails: activeGuardrails,
     });
 
+    // Brief Spine: the polished brief above + the dashboard's fields + Do's and Don'ts + occasion → brief.json
+    // (Section 7, after Checkpoint 1), the only thing the Creative Spine reads. Started now, not waited for.
+    startBriefJson(pendingBriefKey(req.user.id, understanding), {
+      form: { ...(req.body || {}), creativeStyle: mergedSettings.creativeStyle, language: mergedSettings.language, aspectRatio: mergedSettings.dimension, duration: mergedSettings.duration },
+      understanding,
+      creativeGuardrails: activeGuardrails,
+      eventContext: hasEvent ? activeEventContext : null,
+    });
+
     if (projectId && existingProject) {
       try {
         await db.saveProject(
@@ -1144,8 +1334,11 @@ app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, r
       }
     }
 
+    const savedU = existing.aiUnderstanding || (existing.creativeDNA && existing.creativeDNA.aiUnderstanding) || {};
     const updated = {
       ...understanding,
+      // keep the Brief Spine's brief.json (and what it was built from) if the client didn't send it back
+      ...(understanding.brief_json ? {} : savedU.brief_json ? { brief_json: savedU.brief_json, brief_basis: savedU.brief_basis } : {}),
       approval_status: approvalStatus === "approved" ? "approved" : understanding.approval_status || "pending",
       approved_at: approvalStatus === "approved" ? new Date().toISOString() : understanding.approved_at || null,
       updated_at: new Date().toISOString(),
@@ -1273,21 +1466,12 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
       return res.status(400).json({ error: "Mock understanding data cannot be used in production." });
     }
 
-    const result = await creative.generateDirections({
-      businessName,
-      businessType,
-      town,
-      brief,
-      research,
-      festival,
-      language: language || "English",
-      format: format || creativeStyle || "UGC / Creator-style",
-      brandTone,
-      aiUnderstanding: verifiedUnderstanding,
-      creativeGuardrails: activeGuardrails,
-      eventContext: eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null,
-    });
-    res.json(result);
+    // Creative Spine — Checkpoint 2 (Insight). Reads brief.json only.
+    const briefJson = await briefForStage(req);
+    let insight = await creativeSpine.runInsight({ brief: briefJson });
+    const dirCheck = guardrailCheck(activeGuardrails, insight.tensions.map((t) => `${t.insight.tension} ${t.everyday_example} ${t.insight.human_truth}`), "directions");
+    if (dirCheck && dirCheck.hasCriticalViolation) insight = await creativeSpine.runInsight({ brief: briefJson, correction: violationText(dirCheck) });
+    res.json(creativeSpine.insightCards(insight));
   } catch (e) {
     console.error("[api/creative/directions]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1310,18 +1494,13 @@ app.post("/api/creative/hooks", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
-    const result = await creative.generateHooks({
-      businessName,
-      businessType,
-      brief,
-      direction,
-      language: language || "English",
-      format: format || creativeStyle || "UGC / Creator-style",
-      brandTone,
-      creativeGuardrails: activeGuardrails,
-      eventContext: hasEvent ? activeEventContext : null,
-    });
-    res.json(result);
+    // Creative Spine — Checkpoint 3 (Angles, each with 2 hooks). Reads brief.json + the Checkpoint 2 pick.
+    const briefJson = await briefForStage(req);
+    const angleInput = { brief: briefJson, insight: insightFromCard(direction), framings: Array.isArray(req.body.framings) ? req.body.framings : null };
+    let angles = await creativeSpine.runAngles(angleInput);
+    const hookCheck = guardrailCheck(activeGuardrails, angles.angles.map((a) => [a.name, a.plot, ...a.hooks.map((h) => `${h.line} ${h.visual} ${h.payoff}`)].join(" ")), "hooks");
+    if (hookCheck && hookCheck.hasCriticalViolation) angles = await creativeSpine.runAngles({ ...angleInput, correction: violationText(hookCheck) });
+    res.json(creativeSpine.angleCards(angles));
   } catch (e) {
     console.error("[api/creative/hooks]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1344,19 +1523,10 @@ app.post("/api/creative/plots", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
-    const result = await creative.generatePlots({
-      businessName,
-      businessType,
-      brief,
-      direction,
-      hook,
-      format: format || "Storytelling",
-      language: language || "English",
-      brandTone,
-      creativeGuardrails: activeGuardrails,
-      eventContext: hasEvent ? activeEventContext : null,
-    });
-    res.json(result);
+    // Creative Spine — Section 4 (Framing). Reads brief.json + the Checkpoint 2 pick.
+    const briefJson = await briefForStage(req);
+    const framings = await creativeSpine.runFraming({ brief: briefJson, insight: insightFromCard(direction) });
+    res.json(creativeSpine.framingCards(framings));
   } catch (e) {
     console.error("[api/creative/plots]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1379,21 +1549,17 @@ app.post("/api/creative/story", authRequired, async (req, res) => {
       userId: req.user.id,
       fallbackEventContext: bodyEventContext,
     });
-    const result = await creative.generateStoryWorld({
-      businessName,
-      businessType,
-      town,
-      brief,
-      direction,
-      hook,
-      plot,
-      format: format || "Storytelling",
-      language: language || "English",
-      brandTone,
-      creativeGuardrails: activeGuardrails,
-      eventContext: hasEvent ? activeEventContext : null,
-    });
-    res.json(result);
+    // Creative Spine — Checkpoint 4 (Story & format) → concept.json. Reads brief.json + the Checkpoint 2 and 3 picks.
+    const briefJson = await briefForStage(req);
+    const { angle, ideaSource } = angleFromCard(hook);
+    const conceptResult = await creativeSpine.runConcept(
+      { brief: briefJson, insight: insightFromCard(direction), angle, angles: [angle] },
+      { ideaSource }
+    );
+    const story = creativeSpine.storyResponse(conceptResult, spineContracts.normalizeCreativeStyle(format || req.body.creativeStyle));
+    const c = conceptResult.concept.concept;
+    story.guardrailReport = guardrailCheck(activeGuardrails, [c.core_idea, ...c.beats, JSON.stringify(c.hook || {}), c.ending_payoff], "story");
+    res.json(story);
   } catch (e) {
     console.error("[api/creative/story]", e.message);
     res.status(e.status || 500).json({ error: e.message });
@@ -1442,26 +1608,52 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
       }
     }
 
-    const result = await creative.synthesizeMasterScript({
-      form: validated,
-      creativeDNA: creativeDNA || {},
-      constraints: constraints || [],
-      avoid: avoid || [],
-      creativeGuardrails: activeGuardrails,
-      eventContext: hasEvent ? activeEventContext : null,
-    });
-    res.json(result);
+    // Script & Storyboard Spine. Reads concept.json (from Checkpoint 4) and the brief.json fields its rules name.
+    const conceptJson = (creativeDNA && creativeDNA.story && creativeDNA.story.concept) || req.body.concept || null;
+    if (!conceptJson || !conceptJson.concept) {
+      return res.status(409).json({
+        error: "The story for this film needs to be rebuilt before the script can be written.",
+        code: "CONCEPT_MISSING",
+      });
+    }
+    const briefJson = await briefForStage(req, { project: project || null });
+    const written = await scriptSpine.writeScript({ concept: conceptJson, brief: spineContracts.briefForScript(briefJson) });
+    // script record → campaign_memory (the store the Brief Spine reads as previous campaigns)
+    try { store.save(validated.businessName, validated.town, written.record, scriptSpine.headerText(written.header)); } catch (err) { console.warn("[script spine] record not saved:", err.message); }
+    res.json(scriptResponse(written, validated, activeGuardrails));
   } catch (e) {
     console.error("[api/creative/synthesize-script]", e.message);
-    res.status(e.status || 500).json({ error: e.message, failures: e.failures || [] });
+    res.status(e.status || 500).json({ error: e.message, failures: e.failures || [], code: e.code });
   }
 });
 
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext } = req.body || {};
-    if (!sceneText || !instruction) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext, scriptJson, scriptHeader } = req.body || {};
+    if (!instruction || (!sceneText && !scriptJson)) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
+    if (scriptJson && typeof scriptJson === "object" && Array.isArray(scriptJson.scenes)) {
+      // Script & Storyboard Spine, S-M12: revise only that scene and re-run the gate on it
+      const briefJson = await briefForStage(req).catch(() => null);
+      const edited = await scriptSpine.rewriteScene({
+        script: scriptJson,
+        header: scriptHeader || null,
+        brief: briefJson ? spineContracts.briefForScript(briefJson) : null,
+        sceneIndex: Number(sceneIndex) || 0,
+        instruction,
+      });
+      const { guardrails: g } = await guardrails.resolveProjectGuardrails({ db, projectId, userId: req.user.id, fallbackGuardrails: bodyGuardrails });
+      return res.json({
+        scene: edited.scene,
+        sceneIndex: edited.sceneIndex,
+        script_json: edited.script,
+        failures: edited.failures,
+        gate: edited.gate,
+        notices: edited.notices,
+        guardrailReport: guardrails.hasActiveGuardrails(g) ? guardrails.validateOutputAgainstGuardrails({ outputText: edited.scene, stage: "rewrite", guardrails: g }) : null,
+      });
+    }
+    // Older projects (scripts written before the spines) keep the earlier scene editor
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
       projectId,

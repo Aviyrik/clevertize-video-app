@@ -379,7 +379,8 @@ test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs q
   const badRes = await post("/api/script/validate-and-import", { rawScript: "" });
   assert.equal(badRes.status, 400);
 
-  // Valid script -> parses 4 scenes and returns gate verdict
+  // Valid script -> the Script & Storyboard Spine turns it into script.json (4 scenes for 20s) and runs the gate
+  queue = [require("./helpers/spineAnswers").scriptFor({ format: "Storytelling", script: "Devanagari" })];
   const validRes = await post("/api/script/validate-and-import", {
     rawScript: GOOD,
     businessName: "Palasia Kirana",
@@ -394,6 +395,10 @@ test("V2 Entry Point: /api/script/validate-and-import parses 4 scenes and runs q
   assert.ok(validRes.body.character1, "character1 must be extracted");
   assert.ok(validRes.body.character2, "character2 must be extracted");
   assert.ok(validRes.body.setting, "setting must be extracted");
+  assert.equal(validRes.body.script_json.scenes.length, 4);
+  assert.equal(validRes.body.detectedFormat, "Storytelling");
+  assert.match(validRes.body.scenes[0], /^SCENE 1 – HOOK – 0:00–0:05/, "scenes use the Section 3 scene format");
+  assert.ok(Array.isArray(validRes.body.gate.checks));
 });
 
 test("Simple Studio / api/run: missing setting or character1 auto-resolves gracefully without preflight failure", async () => {

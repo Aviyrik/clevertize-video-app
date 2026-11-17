@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const spineAnswers = require('./helpers/spineAnswers');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'guardrails-test-'));
 process.env.ANTHROPIC_API_KEY = 'test-key';
@@ -311,11 +312,9 @@ test('5. Guardrails Propagation: Backend injects saved project guardrails across
   });
   assert.strictEqual(approveRes.status, 200);
 
-  // 2) Creative Directions (caller omits guardrails in body; backend injects from DB project!)
+  // 2) Creative Directions → Creative Spine Checkpoint 2 (caller omits guardrails in body; brief.json comes from the DB project)
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J([
-    { id: 'dir_1', title: '916 Hallmark Purity Trust', description: 'Focus on certified purity.', angle: 'Trust', recommended: true },
-  ]));
+  anthropicQueue.push(J(spineAnswers.insight));
   const dirRes = await api('POST', '/api/creative/directions', {
     businessName: 'Alankar Jewels',
     businessType: 'Jewellery Store',
@@ -325,72 +324,71 @@ test('5. Guardrails Propagation: Backend injects saved project guardrails across
   assert.strictEqual(dirRes.status, 200);
   assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.includes('Do not mention DiamondPlaza'), 'Directions prompt received project Don\'t from DB');
 
-  // 3) Hooks (caller omits guardrails; backend injects from DB)
+  // The project's Do's and Don'ts reach every later stage inside brief.json (Brief Spine, Section 1d → dos_donts),
+  // which is on the project once the Creative Spine has read it (Section 7 is produced after Checkpoint 1).
+  const savedBrief = (await db.getProjectById(projId, userAId)).aiUnderstanding.brief_json;
+  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Include 916 BIS Hallmark certification' && d.strength === 'must' && d.source === 'user'));
+  assert.ok(savedBrief.dos_donts.some((d) => d.rule === 'Do not mention DiamondPlaza' && d.type === 'Must not include'));
+
+  // 3) Hooks → Creative Spine Checkpoint 3 (angles)
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J([
-    { id: 'h1', archetype: 'Visual', hookLine: 'Look closely at this 916 BIS Hallmark stamp!', visualAction: 'Macro shot of gold ring stamp', recommended: true },
-  ]));
+  anthropicQueue.push(J(spineAnswers.angles));
   const hookRes = await api('POST', '/api/creative/hooks', {
     businessName: 'Alankar Jewels',
     businessType: 'Jewellery Store',
     brief: briefText,
     language: 'English',
+    direction: dirRes.body[0],
     projectId: projId,
   });
   assert.strictEqual(hookRes.status, 200);
   assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.includes('916 BIS Hallmark certification'), 'Hooks prompt received project Do from DB');
 
-  // 4) Plots
+  // 4) Plots → Creative Spine Section 4 (framing)
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J([
-    { id: 'p1', title: 'Purity Check', coreIdea: 'Bride checks hallmark', hookBeat: 'Close up', conflictBeat: 'Doubt', payoffBeat: '916 stamp reveals trust', recommended: true },
-  ]));
+  anthropicQueue.push(J({ framings: [{ framing: 'A bride checks the hallmark', why: 'trust' }, { framing: 'Purity you can see', why: 'proof' }] }));
   const plotRes = await api('POST', '/api/creative/plots', {
     businessName: 'Alankar Jewels',
     businessType: 'Jewellery Store',
     brief: briefText,
+    direction: dirRes.body[0],
     projectId: projId,
   });
   assert.strictEqual(plotRes.status, 200);
   assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.includes('DiamondPlaza'), 'Plots prompt received project Don\'t from DB');
 
-  // 5) Story World
+  // 5) Story → Creative Spine Checkpoint 4 (concept.json)
   recordedAnthropicRequests = [];
-  anthropicQueue.push(J({
-    format: 'Storytelling',
-    setting: 'Plush sunlit Alankar Jewels showroom in Pune.',
-    beats: [
-      { beat: 'HOOK', title: 'Scene 1', action: 'Zoom in on ring with 916 BIS Hallmark', dialogue: 'Look at this purity!' },
-      { beat: 'BUILD', title: 'Scene 2', action: 'Show festive bangles', dialogue: 'Certified gold craftsmanship.' },
-      { beat: 'TURN', title: 'Scene 3', action: 'Family smiles at transparent receipt', dialogue: 'No hidden surprises.' },
-      { beat: 'PAYOFF', title: 'Scene 4', action: 'Happy bride chooses her set', dialogue: 'Celebrate with Alankar.' },
-    ],
-  }));
+  anthropicQueue.push(J(spineAnswers.concept));
   const storyRes = await api('POST', '/api/creative/story', {
     businessName: 'Alankar Jewels',
     businessType: 'Jewellery Store',
     brief: briefText,
+    direction: dirRes.body[0],
+    hook: hookRes.body[0],
+    format: 'Storytelling',
     projectId: projId,
   });
   assert.strictEqual(storyRes.status, 200);
+  assert.ok(storyRes.body.concept && storyRes.body.concept.concept.format === 'Storytelling');
   assert.ok(storyRes.body.guardrailReport, 'Story stage attaches guardrailReport');
   assert.strictEqual(storyRes.body.guardrailReport.hasCriticalViolation, false);
 
-  // 6) Script Synthesis
-  const compliantScript = GOOD_SCRIPT.replace(
-    'Same setting: wide shot from inside the counter.',
-    'Same setting: wide shot from inside the counter showing a 916 BIS Hallmark certification card.'
-  );
+  // 6) Script Synthesis → Script & Storyboard Spine (reads concept.json + the brief fields its rules name)
+  const scriptAnswer = JSON.parse(spineAnswers.scriptFor({ format: 'Storytelling', script: 'Latin' }) /* the brief was approved in English (brief.language), so the script follows it (S-M2) */.replace(/^@@JSON@@\n|\n@@END@@$/g, ''));
+  scriptAnswer.scenes[2].edit_notes = 'Must include: the 916 BIS Hallmark certification card on the counter.';
+  scriptAnswer.scenes[2].callout = 'none'; // no reasons-to-believe in this brief, so no callout claim (S-M10)
   recordedAnthropicRequests = [];
-  anthropicQueue.push(compliantScript);
+  anthropicQueue.push(J(scriptAnswer));
   const synRes = await api('POST', '/api/creative/synthesize-script', {
-    form: { businessName: 'Alankar Jewels', businessType: 'Jewellery Store', town: 'Pune', language: 'Hindi', brief: briefText },
-    creativeDNA: { format: 'Storytelling' },
+    form: { businessName: 'Alankar Jewels', businessType: 'Jewellery Store', town: 'Pune', language: 'Hindi', brief: briefText, creativeStyle: 'Storytelling' },
+    creativeDNA: { format: 'Storytelling', story: storyRes.body },
     projectId: projId,
   });
-  assert.strictEqual(synRes.status, 200);
+  assert.strictEqual(synRes.status, 200, JSON.stringify(synRes.body.failures || synRes.body));
   assert.ok(synRes.body.guardrailReport);
-  assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.at(-1).text.includes('916 BIS Hallmark certification'));
+  assert.ok(synRes.body.script_json && synRes.body.gate.passed);
+  assert.ok(recordedAnthropicRequests.at(-1).messages[0].content.includes('916 BIS Hallmark certification'));
 
   // 7) Scene Rewriter preserves guardrails
   recordedAnthropicRequests = [];

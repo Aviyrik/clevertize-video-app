@@ -13,6 +13,7 @@ import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject, bri
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
 import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
 import { hasActiveClientEventContext } from './utils/eventContext.js';
+import { CREATIVE_STYLE_OPTIONS, normalizeCreativeStyle, creativeStyleShortLabel } from './utils/creativeStyle.js';
 import {
   createDefaultOnboardingState,
   normalizeOnboardingState,
@@ -234,29 +235,8 @@ const PLATFORM_PRESETS = [
   { id: 'Multi-platform', label: 'Multi-platform', sub: 'Universal' },
 ];
 
-// Creative Format & Style Options
-const CREATIVE_STYLE_PRESETS = [
-  {
-    id: 'UGC / Creator-style',
-    label: 'UGC / Creator-style',
-    desc: 'Relatable phone camera, conversational spoken hook & authentic reactions',
-  },
-  {
-    id: 'Storytelling',
-    label: 'Storytelling',
-    desc: 'Engaging mini-drama with everyday dilemma, conflict & emotional resolution',
-  },
-  {
-    id: 'Product-focused',
-    label: 'Product-focused',
-    desc: 'Sensory close-ups, craftsmanship, textures & fresh quality proof',
-  },
-  {
-    id: 'Offer / Promotion',
-    label: 'Offer / Promotion',
-    desc: 'High-urgency festive discount, value proposition & clear store CTA',
-  },
-];
+// Creative Format & Style Options: exactly three (UGC / Creator-style, VO-led, Storytelling), shared in utils/creativeStyle.js
+const CREATIVE_STYLE_PRESETS = CREATIVE_STYLE_OPTIONS;
 
 // Set in this browser once someone has logged in; picks Log in over Sign up on the auth screen
 const RETURNING_USER_KEY = 'clevertize_returning_user';
@@ -603,6 +583,13 @@ export default function App() {
   // Initializes cleanly empty — user businesses are always loaded from their authenticated database profile
   const [userContext, setUserContext] = useState(() => createEmptyUserContext());
 
+  useEffect(() => {
+    const raw = userContext.creativeStyle;
+    if (raw && normalizeCreativeStyle(raw) !== raw) {
+      setUserContext((prev) => ({ ...prev, creativeStyle: normalizeCreativeStyle(prev.creativeStyle) }));
+    }
+  }, [userContext.creativeStyle]);
+
   const updateUserContext = (key, val) => {
     if (key === 'language') {
       try {
@@ -723,8 +710,8 @@ export default function App() {
 
   const handleApplyUpdate = async () => {
     setHasStaleWarning(false);
-    await loadStoryWorld(true);
-    await handleSynthesizeMasterScript();
+    const rebuilt = await loadStoryWorld(true);
+    await handleSynthesizeMasterScript(false, rebuilt);
     setStudioStage('script');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -3002,6 +2989,13 @@ export default function App() {
           brandTone: userContext.brandTone,
           occasion: userContext.occasion,
           websiteUrl: userContext.websiteUrl,
+          area: userContext.area || '',
+          contact: userContext.contact || '',
+          offer: userContext.offer || '',
+          targetAudience: userContext.targetAudience || '',
+          productName: userContext.specialty || '',
+          scriptMode: userContext.scriptMode === 'roman' ? 'roman' : 'devanagari',
+          research: researchData || null,
           projectId: targetProjId,
           userCorrections: effectiveCorrections,
           previousUnderstanding: aiUnderstanding,
@@ -3134,7 +3128,7 @@ export default function App() {
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
           aiUnderstanding: aiUnderstanding && aiUnderstanding.approval_status === 'approved' ? aiUnderstanding : null,
         }),
       });
@@ -3251,7 +3245,7 @@ export default function App() {
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
         }),
       });
       if (res.ok) {
@@ -3301,7 +3295,7 @@ export default function App() {
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
         }),
       });
       if (res.ok) {
@@ -3320,7 +3314,7 @@ export default function App() {
 
   // 5. Fetching Story & World
   const loadStoryWorld = async (force = false, overrideLang = null, overrideFormat = null, overrideHook = null, overrideDirection = null) => {
-    if (storyWorldData && !force && !overrideFormat) return;
+    if (storyWorldData && !force && !overrideFormat) return storyWorldData;
     const brand = userContext.businessName.trim();
     const bType = userContext.businessType === 'Other' && userContext.customBusinessType.trim()
       ? userContext.customBusinessType.trim()
@@ -3336,6 +3330,7 @@ export default function App() {
     const activeHk = overrideHook || selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended) || hooksList[0] || { hookLine: '' });
 
     setIsLoadingStory(true);
+    let builtStory = null;
     try {
       const res = await fetch('/api/creative/story', {
         method: 'POST',
@@ -3354,11 +3349,12 @@ export default function App() {
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
         }),
       });
       if (res.ok) {
         const data = await res.json();
+        builtStory = data;
         setStoryWorldData(data);
         setCreativeDNA((prev) => ({ ...prev, story: data, format: data.format || activeFormat }));
         if (data.characters?.character1 && !userContext.leadCharacter) {
@@ -3376,6 +3372,7 @@ export default function App() {
     } finally {
       setIsLoadingStory(false);
     }
+    return builtStory;
   };
 
   const handleFormatChange = async (newFormat) => {
@@ -3433,7 +3430,8 @@ export default function App() {
   };
 
   // 6. Master Script Synthesis via /api/creative/synthesize-script
-  const handleSynthesizeMasterScript = async () => {
+  const handleSynthesizeMasterScript = async (retriedConcept = false, storyOverride = null) => {
+    const activeStory = (storyOverride && typeof storyOverride === 'object' && storyOverride.concept) ? storyOverride : storyWorldData;
     if (!userContext.businessName.trim()) {
       setValidationError('Please enter your business or brand name.');
       return;
@@ -3460,7 +3458,7 @@ export default function App() {
       customDirection: ideaSel.customDirection,
       hook: selectedHook || (customHook ? { hookLine: customHook } : hooksList.find((h) => h.recommended)),
       plot: selectedPlot || (customPlot ? { title: customPlot } : plotsList.find((p) => p.recommended)),
-      story: storyWorldData || { format: userContext.creativeStyle || 'Storytelling' },
+      story: activeStory || { format: userContext.creativeStyle || 'Storytelling' },
       character1: storyWorldData?.character1 || userContext.leadCharacter || undefined,
       character2: storyWorldData?.character2 || userContext.supportingCharacter || undefined,
       location: storyWorldData?.location || (storyWorldData?.setting ? { name: storyWorldData.setting } : undefined),
@@ -3479,12 +3477,16 @@ export default function App() {
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
         }),
       });
       const data = await res.json();
 
       if (!res.ok || data.error) {
+        if (res.status === 409 && (data.code === 'CONCEPT_MISSING' || data.code === 'CONCEPT_INCOMPLETE') && !retriedConcept) {
+          const rebuilt = await loadStoryWorld(true);
+          return handleSynthesizeMasterScript(true, rebuilt);
+        }
         if (res.status === 422 && data.failures) {
           setQualityFailures(data.failures);
         }
@@ -3533,10 +3535,12 @@ export default function App() {
           form: buildSessionPayload(),
           characters: `${character1} | ${character2}`,
           setting,
+          scriptJson: generatedScript?.script_json || null,
+          scriptHeader: generatedScript?.header || null,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
-        eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          briefJson: aiUnderstanding?.brief_json || null,
         }),
       });
       const data = await res.json();
@@ -3547,6 +3551,14 @@ export default function App() {
         const updated = [...scenes];
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
+        if (data.script_json) {
+          // keep script.json in step with the edited scene (the next edit and the draft read it)
+          setGeneratedScript((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated, notices: data.notices || prev.notices } : prev));
+          setScriptPayloadData((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated } : prev));
+        }
+        if (Array.isArray(data.failures) && data.failures.length) {
+          setQualityFailures(data.failures);
+        }
         if (data.guardrailReport !== undefined) {
           setScriptGuardrailReport(data.guardrailReport);
         }
@@ -4840,7 +4852,9 @@ export default function App() {
           creativeStyle: 'UGC / Creator-style',
           language: 'English',
           platform: 'Instagram Reels / 9:16',
-          duration: '15s',
+          // same as a fresh context: a 15s duration under a 20s target made every new Director film's approval look outdated
+          duration: '20s',
+          targetDuration: '20s',
           specialty: '',
           offer: '',
           creativeGuardrails: null,
@@ -5407,7 +5421,9 @@ export default function App() {
       supportingCharacter: '',
       environment: '',
       websiteUrl: '',
-      duration: '15s',
+      // same as a fresh context: a 15s duration under a 20s target made every new Director film's approval look outdated
+      duration: '20s',
+      targetDuration: '20s',
       platform: 'Instagram Reels / 9:16',
       creativeStyle: 'UGC / Creator-style',
       language: 'English',
@@ -6365,7 +6381,7 @@ export default function App() {
               handleLanguageChange(lang);
             }}
             onStyleChange={(stId, stLabel) => {
-              const cleanLabel = stLabel || (stId.includes('UGC') ? 'UGC' : stId.includes('Story') ? 'Story' : stId.includes('Demo') ? 'Product Demo' : 'Funny');
+              const cleanLabel = stLabel || creativeStyleShortLabel(stId);
               setExplicitChoices((prev) => ({ ...prev, style: cleanLabel }));
               handleFormatChange(stId);
             }}
@@ -6611,10 +6627,8 @@ export default function App() {
 
               // Automatically ensure story world exists in background, then synthesize master script
               try {
-                if (!storyWorldData) {
-                  await loadStoryWorld(true, null, null, activeH);
-                }
-                await handleSynthesizeMasterScript();
+                const story = storyWorldData || await loadStoryWorld(true, null, null, activeH);
+                await handleSynthesizeMasterScript(false, story);
               } catch (err) {
                 setIsBusy(false);
                 stopTimer();
@@ -6671,6 +6685,7 @@ export default function App() {
             isSavingProject={isSavingProject}
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             guardrailReport={scriptGuardrailReport}
+            scriptNotices={(generatedScript && generatedScript.notices) || []}
             onboardingState={onboardingState}
             onDismissTip={handleDismissTip}
             onBehaviorEvent={handleBehaviorEvent}

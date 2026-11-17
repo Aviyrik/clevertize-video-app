@@ -75,6 +75,7 @@ import CreativeInstructionsSection from './v2/CreativeInstructionsSection.jsx';
 import OccasionEventSection from './v2/OccasionEventSection.jsx';
 import ProductPhotoSection from './v2/ProductPhotoSection.jsx';
 import TargetAudienceSection from './v2/TargetAudienceSection.jsx';
+import { CREATIVE_STYLE_OPTIONS, normalizeCreativeStyle, creativeStyleShortLabel } from '../utils/creativeStyle.js';
 
 /**
  * 6 STREAMLINED STAGES FOR GUIDED CREATIVE STUDIO
@@ -1264,16 +1265,12 @@ export function Screen03Settings({
     { id: '30s', label: '30s' },
   ];
 
-  const STYLES = [
-    { id: 'Conversational / Dialogue', label: 'Conversational' },
-    { id: 'UGC / Creator-style', label: 'UGC' },
-    { id: 'Product Demo', label: 'Product Demo' },
-    { id: 'Storytelling', label: 'Story' },
-  ];
+  // The three Creative Style options; the choice drives every spine (format rules + dialogue rules)
+  const STYLES = CREATIVE_STYLE_OPTIONS.map((o) => ({ id: o.id, label: o.shortLabel, desc: o.desc }));
 
   const currentLang = userContext.language || 'English';
   const currentDuration = userContext.targetDuration || userContext.duration || '20s';
-  const currentStyle = userContext.creativeStyle || 'UGC / Creator-style';
+  const currentStyle = normalizeCreativeStyle(userContext.creativeStyle);
   const currentDimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
 
   const bType = String(userContext.businessType || '').toLowerCase();
@@ -1493,9 +1490,7 @@ export function Screen03Settings({
             }}
           >
             {STYLES.map((st) => {
-              const isSelected = currentStyle === st.id ||
-                (st.id.includes('UGC') && currentStyle.includes('UGC')) ||
-                (st.id.includes('Comedy') && currentStyle.includes('Comedy'));
+              const isSelected = currentStyle === st.id;
 
               return (
                 <button
@@ -1525,7 +1520,7 @@ export function Screen03Settings({
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <span>{st.label}</span>
+                  <span title={st.desc}>{st.label}</span>
                   {isSelected && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}
                 </button>
               );
@@ -3233,6 +3228,7 @@ export function Screen07Script({
   isSavingProject = false,
   onOpenScriptModal,
   guardrailReport = null,
+  scriptNotices = [],
   onboardingState = null,
   onDismissTip,
   onBehaviorEvent,
@@ -3376,7 +3372,7 @@ export function Screen07Script({
   const resolvedSaveError = localSaveError || scriptSaveError || (draftStatus?.state === 'error' ? 'Save failed — check connection and retry.' : '');
   const hasUnsavedChanges = Boolean(localModified || hasPendingTyping || (!isProjectSaved && Object.keys(dirtyScenes).length > 0));
 
-  const cleanStyle = (userContext.creativeStyle || 'UGC').includes('UGC') ? 'UGC' : (userContext.creativeStyle || '').includes('Demo') ? 'Product Demo' : (userContext.creativeStyle || '').includes('Comedy') ? 'Funny' : 'Story';
+  const cleanStyle = creativeStyleShortLabel(userContext.creativeStyle);
   const duration = userContext.targetDuration || userContext.duration || '30s';
   const dimension = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
   const dimensionLabel = dimension === '16:9' ? '16:9 Landscape' : dimension === '1:1' ? '1:1 Square' : '9:16 Vertical';
@@ -3467,7 +3463,11 @@ export function Screen07Script({
   const parseSceneData = (rawText, idx) => {
     // Stage beat / dramatic role
     const beats = ['Hook / Pattern Interrupt', 'Problem & Relatability', 'Discovery & Climax', 'Call to Action & Offer'];
-    const beatRole = beats[idx] || `Scene ${idx + 1}`;
+    // Script & Storyboard Spine scenes carry their own beat and time in the heading: "SCENE 2 – REAL MOMENT – 0:05–0:10"
+    const spineHead = String(rawText || '').match(/^\s*SCENE\s*\d+\s*[–-]\s*([^–\n]+?)\s*[–-]\s*(\d+):(\d{2})\s*[–-]\s*(\d+):(\d{2})/i);
+    const spineBeat = spineHead ? spineHead[1].trim().toLowerCase() : '';
+    const beatRole = spineHead ? spineBeat.charAt(0).toUpperCase() + spineBeat.slice(1) : (beats[idx] || `Scene ${idx + 1}`);
+    const spineTiming = spineHead ? `${Number(spineHead[2]) * 60 + Number(spineHead[3])}–${Number(spineHead[4]) * 60 + Number(spineHead[5])}s` : '';
 
     const getSection = (text, startRegex, nextRegexes) => {
       const startMatch = text.match(startRegex);
@@ -3505,7 +3505,7 @@ export function Screen07Script({
     const soundSection = getSection(
       rawText,
       /(?:^|\n)\s*(?:Sound\s+Design|Sound|SFX|Music)\s*:\s*/i,
-      [/(?:^|\n)\s*Editing\s+Notes/i]
+      [/(?:^|\n)\s*Transition\s+out\s*:/i, /(?:^|\n)\s*Editing\s+Notes/i]
     );
 
     const defaultChar = cleanStyle === 'UGC' ? 'CREATOR' : 'ACTOR';
@@ -3519,7 +3519,9 @@ export function Screen07Script({
         if (speakerMatch) {
           let spk = speakerMatch[1].trim();
           let txt = speakerMatch[2].trim().replace(/^["']|["']$/g, '');
-          if (/^(?:Audio|Voiceover|VO|Dialogue)$/i.test(spk)) spk = defaultChar;
+          // a VO line (VO-led films) is narration, not a character speaking on screen
+          if (/^(?:Voiceover|VO|V\.O\.)$/i.test(spk)) spk = 'VO';
+          else if (/^(?:Audio|Dialogue)$/i.test(spk)) spk = defaultChar;
           if (txt) {
             dialogues.push({ speaker: spk, text: txt });
             continue;
@@ -3555,6 +3557,9 @@ export function Screen07Script({
     if (cameraSection) {
       const camLine = cameraSection.match(/(?:^|\n)\s*Camera\s*:\s*([^\n]+)/i);
       cameraText = camLine ? camLine[1].trim() : cameraSection.split('\n')[0].trim();
+      // spine scripts put shot and camera on one line: "Shot: medium · Camera: slow push-in"
+      const shotAndCamera = cameraText.match(/^(.+?)\s*·\s*Camera\s*:\s*(.+)$/i);
+      if (shotAndCamera) cameraText = `${shotAndCamera[1].trim()} shot, ${shotAndCamera[2].trim()}`;
     } else {
       const camMatch = rawText.match(/(?:Camera|Shot):\s*([^\n]+)/i);
       cameraText = camMatch ? camMatch[1].trim() : null;
@@ -3571,7 +3576,7 @@ export function Screen07Script({
 
     return {
       title: `SCENE ${idx + 1}`,
-      timing: idx === 0 ? '0–3s' : idx === 1 ? '3–8s' : idx === 2 ? '8–14s' : '14–20s',
+      timing: spineTiming || (idx === 0 ? '0–3s' : idx === 1 ? '3–8s' : idx === 2 ? '8–14s' : '14–20s'),
       beatRole,
       character: primaryChar,
       visual: visualText,
@@ -3804,6 +3809,18 @@ export function Screen07Script({
             )}
           </div>
         )
+      )}
+
+      {/* Script & Storyboard Spine notices: limits of the current render path (third character, VO track) */}
+      {Array.isArray(scriptNotices) && scriptNotices.length > 0 && (
+        <div data-testid="script-spine-notices" role="status" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 'var(--cc-radius-sm)', border: '1px solid var(--cc-line-2)', backgroundColor: 'var(--cc-raised)', fontSize: 12.5, color: 'var(--cc-text-2)' }}>
+          {scriptNotices.map((n) => (
+            <span key={n.code} data-testid={`script-notice-${n.code}`} style={{ display: 'flex', gap: 6 }}>
+              <span style={{ color: 'var(--cc-warning)', fontWeight: 600, flexShrink: 0 }}>Note</span>
+              <span>{n.message}</span>
+            </span>
+          ))}
+        </div>
       )}
 
       {/* Creative Guardrails Compliance Notice (automated text check + visual human review boundary) */}
@@ -4283,7 +4300,7 @@ export function Screen07Script({
                               }}>
                                 {d.speaker || s.character}
                               </span>
-                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{d.speaker === 'VO' ? 'Voiceover (off-screen)' : 'Saying (spoken dialogue)'}</span>
                             </div>
                             <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                               "{d.text}"
@@ -4315,7 +4332,7 @@ export function Screen07Script({
                             }}>
                               {s.character}
                             </span>
-                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Saying (spoken dialogue)</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{d.speaker === 'VO' ? 'Voiceover (off-screen)' : 'Saying (spoken dialogue)'}</span>
                           </div>
                           <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                             "{s.dialogue}"
