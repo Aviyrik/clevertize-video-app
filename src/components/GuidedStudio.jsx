@@ -3229,6 +3229,7 @@ export function Screen07Script({
   onOpenScriptModal,
   guardrailReport = null,
   scriptNotices = [],
+  storyboardFrames = [],
   onboardingState = null,
   onDismissTip,
   onBehaviorEvent,
@@ -4361,6 +4362,32 @@ export function Screen07Script({
                           <Volume2 size={12} style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
                           <span>Audio / SFX: {s.audio}</span>
                         </div>
+                      )}
+
+                      {/* Storyboard frame (Section 4): a written description, no image; text and logo are Production placeholders */}
+                      {storyboardFrames[idx] && (
+                        <details data-testid={`storyboard-frame-${idx + 1}`} style={{ fontSize: 12, color: 'var(--cc-text-2)', paddingLeft: 2 }}>
+                          <summary style={{ cursor: 'pointer', color: 'var(--cc-text-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Film size={12} aria-hidden="true" />
+                            <span>Storyboard frame</span>
+                          </summary>
+                          <dl style={{ margin: '8px 0 0', display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 12px', lineHeight: 1.45 }}>
+                            {[
+                              ['Frame', storyboardFrames[idx].frame],
+                              ['Composition', storyboardFrames[idx].composition],
+                              ['Subject', storyboardFrames[idx].subject],
+                              ['Product', storyboardFrames[idx].product],
+                              ['Setting & light', storyboardFrames[idx].setting_light],
+                              ['On-screen', storyboardFrames[idx].placeholders],
+                              ['Line', storyboardFrames[idx].line],
+                            ].filter(([, v]) => v).map(([k, v]) => (
+                              <React.Fragment key={k}>
+                                <dt style={{ color: 'var(--cc-text-3)' }}>{k}</dt>
+                                <dd style={{ margin: 0 }}>{v}</dd>
+                              </React.Fragment>
+                            ))}
+                          </dl>
+                        </details>
                       )}
                     </div>
                   )}

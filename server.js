@@ -98,7 +98,20 @@ function scriptResponse(written, form, activeGuardrails) {
     { scenes: written.scenes, setting: written.setting, character1: written.character1, character2: written.character2 },
     { ...form, targetDuration: `${len}s`, duration: `${len}s`, aspectRatio: ratio, creativeStyle: spineContracts.normalizeCreativeStyle(form.creativeStyle) }
   );
-  if (shotSpec) shotSpec.format = written.script.format;
+  if (shotSpec) {
+    shotSpec.format = written.script.format;
+    // The storyboard's consistency locks and frame descriptions travel with the shot spec into every scene prompt
+    // sent to Magnific: the same two characters, product, setting, style and palette in each one.
+    const locks = (written.storyboard && written.storyboard.locks) || {};
+    shotSpec.staticWorld = {
+      ...shotSpec.staticWorld,
+      product: locks.product || "",
+      style: locks.style || "",
+      palette: (locks.palette || []).join(", "),
+    };
+    const frames = (written.storyboard && written.storyboard.frames) || [];
+    shotSpec.shots = shotSpec.shots.map((sh, i) => ({ ...sh, frame: frames[i] || null }));
+  }
   const guardrailReport = guardrails.hasActiveGuardrails(activeGuardrails)
     ? guardrails.validateOutputAgainstGuardrails({ outputText: written.scenes.join(String.fromCharCode(10)), stage: "script", guardrails: activeGuardrails })
     : null;
@@ -109,7 +122,6 @@ function scriptResponse(written, form, activeGuardrails) {
     header: written.header,
     script_json: written.script,
     storyboard_json: written.storyboard,
-    storyboardStatus: written.storyboardStatus,
     gate: written.gate,
     notices: written.notices,
     record: written.record,
@@ -1630,7 +1642,7 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 // 7) Scene-Level AI Rewriter
 app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
   try {
-    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext, scriptJson, scriptHeader } = req.body || {};
+    const { sceneText, sceneIndex, totalScenes, instruction, form, characters, setting, brandTone, projectId, creativeGuardrails: bodyGuardrails, eventContext: bodyEventContext, scriptJson, scriptHeader, storyboardJson } = req.body || {};
     if (!instruction || (!sceneText && !scriptJson)) throw Object.assign(new Error("Scene text and instruction are required."), { status: 400 });
     if (scriptJson && typeof scriptJson === "object" && Array.isArray(scriptJson.scenes)) {
       // Script & Storyboard Spine, S-M12: revise only that scene and re-run the gate on it
@@ -1641,12 +1653,15 @@ app.post("/api/creative/rewrite-scene", authRequired, async (req, res) => {
         brief: briefJson ? spineContracts.briefForScript(briefJson) : null,
         sceneIndex: Number(sceneIndex) || 0,
         instruction,
+        storyboard: storyboardJson && typeof storyboardJson === "object" ? storyboardJson : null,
       });
       const { guardrails: g } = await guardrails.resolveProjectGuardrails({ db, projectId, userId: req.user.id, fallbackGuardrails: bodyGuardrails });
       return res.json({
         scene: edited.scene,
         sceneIndex: edited.sceneIndex,
         script_json: edited.script,
+        storyboard_json: edited.storyboard,
+        frame: edited.frame,
         failures: edited.failures,
         gate: edited.gate,
         notices: edited.notices,
@@ -1845,7 +1860,6 @@ app.post("/api/creative/simple-packages", authRequired, async (req, res) => {
 app.post("/api/run", authRequired, async (req, res) => {
   try {
     const {
-      scenes,
       character1,
       character2,
       setting,
@@ -1865,7 +1879,17 @@ app.post("/api/run", authRequired, async (req, res) => {
       projectId,
       creativeGuardrails: bodyGuardrails,
     } = req.body || {};
-    if (!Array.isArray(scenes) || !scenes.length) throw new Error("No scenes to send.");
+    if (!Array.isArray(req.body && req.body.scenes) || !req.body.scenes.length) throw new Error("No scenes to send.");
+    // Every scene is exactly 5 seconds and the end frame is added after generation by the logo flow — it is never
+    // a scene. Simple Studio packages saved before this change carry a generated "Outro & Logo" scene; it's left out
+    // so the video model isn't asked to draw a logo and the end frame isn't doubled. Story scenes are never dropped.
+    const LEGACY_OUTRO = /^\s*SCENE\s*\d+\s*[–-]\s*OUTRO\b|brand outro presenting the official/i;
+    const keepScene = req.body.scenes.map((s) => !LEGACY_OUTRO.test(String(s || "")));
+    const scenes = req.body.scenes.filter((_, i) => keepScene[i]);
+    if (!scenes.length) throw new Error("No scenes to send.");
+    const specShots = shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === keepScene.length
+      ? shotSpec.shots.filter((_, i) => keepScene[i])
+      : (shotSpec && shotSpec.shots) || null;
 
     const { guardrails: activeGuardrails } = await guardrails.resolveProjectGuardrails({
       db,
@@ -1919,17 +1943,23 @@ app.post("/api/run", authRequired, async (req, res) => {
 
     // Use structured shot spec prompt compilation if available (Separating STATIC WORLD from MOTION)
     let processedScenes;
-    if (shotSpec && Array.isArray(shotSpec.shots) && shotSpec.shots.length === scenes.length) {
-      // Synchronize staticWorld with latest continuity fields from request (continuity edits MUST take effect)
+    if (Array.isArray(specShots) && specShots.length === scenes.length) {
+      // Synchronize staticWorld with latest continuity fields from request (continuity edits MUST take effect).
+      // The storyboard locks (product, look, palette) come with the shot spec; the same static world goes into
+      // every scene prompt, so the room, light and people don't change between scenes.
+      const sw = shotSpec.staticWorld || {};
       const effectiveStaticWorld = {
         setting: resolvedSetting,
         characters: [resolvedChar1, resolvedChar2].filter(Boolean).join(" | "),
         businessType: businessType || shotSpec.project?.businessType || bCat,
         style: shotSpec.project?.style || req.body?.creativeStyle || "UGC / Creator-style",
+        product: sw.product || "",
+        look: sw.style || "",
+        palette: sw.palette || "",
         creativeGuardrails: activeGuardrails,
       };
 
-      processedScenes = shotSpec.shots.map((sh, idx) => {
+      processedScenes = specShots.map((sh, idx) => {
         const currentSceneText = scenes[idx] || "";
         const parts = extractSceneParts(currentSceneText);
         // Synchronize shot with latest scene text so manual scene edits and AI rewrites are NEVER ignored
@@ -1942,8 +1972,9 @@ app.post("/api/run", authRequired, async (req, res) => {
         };
 
         return compileShotPrompt(updatedShot, effectiveStaticWorld, {
-          duration: duration || "15s",
+          duration: duration || `${scenes.length * 5}s`,
           shotCount: scenes.length,
+          sceneIndex: idx,
           aspectRatio: ratio,
           platform: platform,
           style: shotSpec.project?.style || req.body?.creativeStyle,
@@ -1953,11 +1984,13 @@ app.post("/api/run", authRequired, async (req, res) => {
       });
     } else {
       // Robust fallback to continuous scene compilation
-      processedScenes = scenes.map((sc) => sceneForGeneration(sc, {
+      processedScenes = scenes.map((sc, idx) => sceneForGeneration(sc, {
         setting: resolvedSetting,
         character1: resolvedChar1,
         character2: resolvedChar2,
-        duration: duration || "15s",
+        duration: duration || `${scenes.length * 5}s`,
+        sceneIndex: idx,
+        sceneCount: scenes.length,
         aspectRatio: ratio,
         platform: platform,
         businessType: businessType || shotSpec?.project?.businessType || resolvedProduct,

@@ -83,7 +83,7 @@ function sceneForGeneration(scene, ctx = {}) {
     lock.push(`SETTING — IDENTICAL IN EVERY SCENE (same place, same layout, same props, same colours, same light, same time of day; only the camera angle changes): ${ctx.setting.replace(/\s*UIs needed:\s*none\.?/i, "").trim()}`);
   }
   if (ctx.character1 || ctx.character2) {
-    lock.push(`CHARACTERS — SAME LOOK AND CLOTHES IN EVERY SCENE: ${[ctx.character1, ctx.character2].filter(Boolean).join(" | ")}`);
+    lock.push(`CHARACTERS — SAME LOOK AND CLOTHES IN EVERY SCENE: ${[ctx.character1, ctx.character2].filter(Boolean).join(" | ")}. These are the only two people featured in this film; nobody else acts or is framed as a subject.`);
   }
   if (ctx.businessType) {
     lock.push(`BUSINESS DOMAIN: Authentic setting and merchandise for ${ctx.businessType}. Props, environment, and character actions must believably belong to this business.`);
@@ -94,10 +94,11 @@ function sceneForGeneration(scene, ctx = {}) {
   }
   lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person" + (isStoryFmt ? "." : " (only a UGC owner speaking to the viewer looks into the lens)."));
   lock.push("CAMERA: follow this scene's camera direction exactly (shot size, angle, movement) — smooth, motivated movement only, no whip pans or fast cuts.");
-  if (ctx.duration) {
-    const totalSec = parseInt(ctx.duration, 10) || 15;
-    const perScene = (totalSec / 4).toFixed(1);
-    lock.push(`PACING & DURATION: Total video target duration is ${ctx.duration} across 4 scenes (~${perScene}s per scene). Ensure fast, snappy pacing calibrated to ~${perScene} seconds.`);
+  if (ctx.duration || ctx.sceneCount) {
+    // every scene is exactly 5 seconds; the end frame is added after generation and is not part of any scene
+    const count = Number(ctx.sceneCount) || Math.max(1, Math.round((parseInt(ctx.duration, 10) || 20) / 5));
+    const which = Number.isInteger(ctx.sceneIndex) ? `scene ${ctx.sceneIndex + 1} of ${count}` : `one of ${count} scenes`;
+    lock.push(`PACING & DURATION: This scene is exactly 5 seconds (${which}; ${count * 5}s of generated video in all, with the end frame added afterwards). Fast, snappy pacing.`);
   }
   if (ctx.aspectRatio || ctx.dimension || ctx.platform) {
     const ar = ctx.aspectRatio || ctx.dimension || (String(ctx.platform).includes("16:9") ? "16:9" : String(ctx.platform).includes("1:1") ? "1:1" : "9:16");

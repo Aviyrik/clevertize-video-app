@@ -11,6 +11,8 @@
 
 const { dialogueOf } = require("./parse");
 const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
+const { framePromptText } = require("./spines/storyboard");
+const { SCENE_SECONDS } = require("./spines/contracts");
 
 const FRAMING_HIERARCHY = {
   HOOK: "Medium close-up (subject and hero product prominent in vertical frame)",
@@ -124,10 +126,10 @@ function compileShotSpecification(parsedScript, form = {}) {
  * Separates STATIC WORLD from MOTION and enforces composition rules.
  */
 function compileShotPrompt(shot, staticWorld, options = {}) {
-  const totalDuration = options.duration || options.targetDuration || "15s";
-  const totalSec = parseInt(totalDuration, 10) || 15;
+  // Every scene is exactly 5 seconds (S-M3); the scene count comes from the chosen length. The end frame is added
+  // after generation and is never part of a scene, so no scene gives up time for it.
   const shotCount = options.shotCount || 4;
-  const perShotSec = (totalSec / shotCount).toFixed(1);
+  const sceneNo = Number.isInteger(options.sceneIndex) ? options.sceneIndex + 1 : shot.shotNumber || null;
   const aspectRatio = options.aspectRatio || options.dimension || staticWorld.aspectRatio || (String(staticWorld.platform || options.platform).includes("16:9") ? "16:9" : String(staticWorld.platform || options.platform).includes("1:1") ? "1:1" : "9:16");
 
   // landscape (16:9) and square (1:1) shots must not still be described as "in vertical frame"
@@ -156,24 +158,29 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     ? `PRODUCT VISUAL REFERENCE: Render physical product matching reference photo ("${productPhoto.name || 'product packaging'}"), with accurate brand packaging, colors, and label details.`
     : null;
 
-  const isLogoOutro = Boolean(
-    (options.hasLogo && shot.shotNumber === (options.shotCount || 0)) ||
-    /outro|logo/i.test(shot.beat || "") ||
-    /logo end-card|logo reveal/i.test(shot.fullVisual || "")
-  );
-  const logoEndcardDirective = isLogoOutro
-    ? "BRAND OUTRO & LOGO END-CARD: 5-second closing brand outro. Centered, prominent brand logo presentation with crisp brand mark visibility, confident smiling payoff, and concluding call-to-action."
-    : null;
+  // The storyboard frame description for this scene (Section 4): framing, composition, who is doing what, where the
+  // product is. Placeholders are left out on purpose — text and logos are rendered by Production, never generated.
+  const frameText = shot.frame ? framePromptText(shot.frame) : "";
 
   const lines = [
     // 1. Framing & Composition (Prevents "subject too small in frame")
     `COMPOSITION & FRAMING: ${framing}. ${framingDirective} Hero product/service is clearly discernible. ${formatDirective}`,
 
     productVisualRef,
-    logoEndcardDirective,
 
-    // 2. Static World (Environment, Lighting, Wardrobe consistency)
-    `STATIC WORLD: Location: ${staticWorld.setting}. Characters: ${staticWorld.characters}.${staticWorld.businessType ? ` Business domain: ${staticWorld.businessType}.` : ""} Same lighting, color palette, and atmosphere throughout.`,
+    // 2. Static World — the same words in every scene prompt (Context Block + storyboard locks), so the room, the
+    //    light and the two people don't change between scenes
+    [
+      `STATIC WORLD (identical in every scene: the same location, time of day, light source and look):`,
+      `Setting: ${staticWorld.setting}.`,
+      `Characters (the only two people featured in this film; nobody else acts or is framed as a subject): ${staticWorld.characters}.`,
+      staticWorld.product ? `Product: ${staticWorld.product}.` : null,
+      staticWorld.look ? `Look: ${staticWorld.look}.` : null,
+      staticWorld.palette ? `Palette: ${staticWorld.palette}.` : null,
+      staticWorld.businessType ? `Business domain: ${staticWorld.businessType}.` : null,
+    ].filter(Boolean).join(" "),
+
+    frameText ? `STORYBOARD FRAME: ${frameText}` : null,
 
     // 3. Motion (Action, Camera, Physics & Physical Interaction)
     `MOTION & ACTION (Cause → Action → Reaction): ${shot.primaryAction} ${shot.fullVisual !== shot.primaryAction ? shot.fullVisual : ""}`,
@@ -185,7 +192,7 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     `PHYSICALITY: Natural body weight distribution, feet firmly grounded on the floor, realistic hand grip on objects with physical contact and resistance. Natural eye contact between interacting characters.`,
 
     // 6. Timing & Spacing
-    `TIMING: Shot duration ~${perShotSec}s (part of a ${totalDuration} commercial film). Fast, crisp, responsive pacing.`,
+    `TIMING: This scene is exactly ${SCENE_SECONDS} seconds${sceneNo ? ` (scene ${sceneNo} of ${shotCount}` : ` (one of ${shotCount} scenes`}; the film is ${shotCount * SCENE_SECONDS}s of generated video, and the end frame is added afterwards, outside every scene). Fast, crisp, responsive pacing.`,
 
     // 7. Audio Delivery (Voiceover vs. On-Screen Spoken Acting)
     (() => {

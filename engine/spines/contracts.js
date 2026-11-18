@@ -79,9 +79,10 @@ const SCRIPT_TEMPLATE = {
   scenes: [SCENE_TEMPLATE],
 };
 
+// Section 4 / Section 7: written frame descriptions, no images; locks are text plus the reference images the user uploaded
 const STORYBOARD_TEMPLATE = {
-  frames: [{ scene: 0, image_url: '', prompt: '', refs: [''], seed: '', approved: true }],
-  locks: { character_refs: [''], product_refs: [''], seed: '', style: {}, palette: [''] },
+  frames: [{ scene: 0, frame: '', composition: '', subject: '', product: '', setting_light: '', placeholders: '', line: '', approved: true }],
+  locks: { characters: [''], product: '', reference_images: [''], style: '', palette: [''] },
 };
 
 const SCRIPT_RECORD_TEMPLATE = {
@@ -255,12 +256,73 @@ function filmFormatFromBrief(brief) {
   return f.toLowerCase() === 'vo-led' ? 'VO-led' : f.toLowerCase() === 'ugc' ? 'UGC' : 'Storytelling';
 }
 
-// S-M3: scene count by length (the CTA/logo end card is added by Production and isn't counted)
+// S-M3: every scene is exactly 5 seconds, so the length sets the scene count and nothing else (15s → 3, 20s → 4,
+// 30s → 6). The CTA/logo end frame is added on top by Production after generation and isn't counted.
+const SCENE_SECONDS = 5;
 function scenePlan(lengthS) {
   const len = [15, 20, 30].includes(Number(lengthS)) ? Number(lengthS) : 20;
-  const count = len === 15 ? 3 : len === 30 ? 6 : 4;
-  const each = len / count;
-  return { length_s: len, count, each };
+  return { length_s: len, count: len / SCENE_SECONDS, each: SCENE_SECONDS };
+}
+
+// ---------- Two characters ----------
+// The app's production rule (the render flows have exactly two character inputs, and a third person is where
+// renders drift). It isn't in the spine documents, so the app adds it to the Creative and Script stages' run
+// instructions and checks it in code: the Creative Spine names its cast, the gate fails a third featured person.
+const TWO_CHARACTERS_RULE = 'Exactly two characters. Every film has two characters, both seen on screen, and the story plays out between them (not one on screen and one only a voice, a call or a message). No third featured person appears in any scene: nobody else acts, speaks or is framed as a subject. Any background activity stays unnamed, small and out of focus.';
+
+// Words for people. One that appears in a visual or plot but in neither character's description is a third featured
+// person. Sentences about the background are skipped (the Context Block allows background activity).
+const PEOPLE_WORDS = [
+  'mother', 'father', 'mom', 'mum', 'mummy', 'dad', 'daddy', 'husband', 'wife', 'son', 'daughter', 'brother', 'sister',
+  'grandmother', 'grandfather', 'grandma', 'grandpa', 'granny', 'aunt', 'aunty', 'auntie', 'uncle', 'cousin', 'niece', 'nephew',
+  'dadi', 'nani', 'dada', 'didi', 'bhaiya', 'bhabhi', 'chacha', 'chachi', 'mami', 'mausi', 'bua',
+  'friend', 'friends', 'neighbour', 'neighbor', 'neighbours', 'neighbors', 'colleague', 'colleagues', 'boss',
+  'customer', 'customers', 'shopkeeper', 'cashier', 'waiter', 'waitress', 'chef', 'guest', 'guests', 'stranger', 'passenger',
+  'child', 'children', 'kid', 'kids', 'baby', 'toddler', 'boy', 'girl', 'man', 'woman', 'lady', 'gentleman',
+  'rider', 'driver', 'doctor', 'nurse', 'teacher', 'student', 'salesman', 'saleswoman', 'salesperson', 'staff', 'owner', 'manager',
+  'priest', 'mechanic', 'technician', 'assistant', 'helper', 'maid', 'receptionist', 'crowd', 'couple', 'people',
+];
+const PEOPLE_RE = new RegExp(`\\b(${PEOPLE_WORDS.join('|')})\\b`, 'gi');
+const BACKGROUND_RE = /\b(background|blurred|out of focus|soft focus|distant|far behind|passers?-?by)\b/i;
+// "No other person is in the frame", "zero people in frame": a sentence that rules people out names nobody
+const NEGATED_RE = /\b(no|not|never|without|zero|nobody|none|no-one)\b/i;
+// Group words: in a concept or plot they usually describe the setting or the audience ("a room full of guests",
+// "people who…"), so the Creative stage checks only specific individuals; a scene's visual checks them all.
+const GROUP_WORDS = new Set(['people', 'crowd', 'couple', 'guests', 'customers', 'friends', 'children', 'kids', 'neighbours', 'neighbors', 'colleagues']);
+
+/** What each character can be called: its own words, plus the generic words its gender and age allow. */
+function castTerms(characters) {
+  return (characters || []).map((c) => {
+    const o = c && typeof c === 'object' ? c : { description: String(c || '') };
+    const own = Object.values(o).filter((v) => typeof v === 'string').join(' ').toLowerCase();
+    const extra = [];
+    if (/\b(female|woman|girl|lady|she|her)\b/.test(own)) extra.push('woman', 'lady', 'girl');
+    if (/\b(male|man|boy|gentleman|he|him)\b/.test(own)) extra.push('man', 'gentleman', 'boy');
+    const age = parseInt(String(o.age || (own.match(/\b(\d{1,2})\b/) || [])[1] || ''), 10);
+    if (age && age < 15) extra.push('child', 'kid', 'boy', 'girl');
+    return `${own} ${extra.join(' ')}`;
+  });
+}
+
+// Hands that belong to nobody in the cast ("anonymous hands only — not Priya or Ravi") are a third person doing the
+// action, whatever the sentence rules out.
+const ANONYMOUS_HANDS_RE = /\b(anonymous|unnamed|unidentified|faceless|someone's|somebody's|a stranger's|staff)\s+(pair of\s+)?hands?\b|\b(a|another) pair of hands\b|\bhands of (an? )?(anonymous|unnamed|unidentified|stranger)\b/i;
+
+/** People named in text who are neither of the two characters (lowercase words, deduplicated). */
+function extraPeople(text, characters, { individualsOnly = false } = {}) {
+  const terms = castTerms(characters).join(' ');
+  const found = new Set();
+  const hands = String(text || '').match(ANONYMOUS_HANDS_RE);
+  if (hands) found.add(hands[0].toLowerCase());
+  for (const sentence of String(text || '').split(/(?<=[.!?;])\s+/)) {
+    if (BACKGROUND_RE.test(sentence) || NEGATED_RE.test(sentence)) continue;
+    for (const m of sentence.matchAll(PEOPLE_RE)) {
+      const w = m[1].toLowerCase();
+      if (individualsOnly && GROUP_WORDS.has(w)) continue;
+      if (!new RegExp(`\\b${w}\\b`).test(terms)) found.add(w);
+    }
+  }
+  return [...found];
 }
 
 // VO word range: about 40–50 words for 20s, scaled to the film length
@@ -275,5 +337,6 @@ module.exports = {
   conform, normalizeBrief, normalizeConcept, normalizeScript, normalizeStoryboard, normalizeScriptRecord, contractId,
   briefForCreative, briefForScript, assertHandoff, SCRIPT_BRIEF_FIELDS,
   CREATIVE_STYLES, normalizeCreativeStyle, filmFormatOf, FORMAT_RULES, filmFormatRule, filmFormatFromBrief, FILM_FORMAT_RULE_RE,
-  scenePlan, voWordRange,
+  scenePlan, voWordRange, SCENE_SECONDS,
+  TWO_CHARACTERS_RULE, extraPeople, castTerms,
 };

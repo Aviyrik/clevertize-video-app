@@ -2791,7 +2791,8 @@ export default function App() {
     // Enrich specialty with all user inputs so Claude receives the entire creative brief
     const targetDur = userContext.targetDuration || userContext.duration || '30s';
     const durNum = parseInt(targetDur, 10) || 30;
-    const perSceneSec = (durNum / 4).toFixed(1);
+    // every scene is exactly 5s: 15s → 3 scenes, 20s → 4, 30s → 6 (the end frame is added on top)
+    const sceneCount = [15, 20, 30].includes(durNum) ? durNum / 5 : 4;
     const targetRatio = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
     const ratioLabel = targetRatio === '16:9' ? '16:9 Landscape' : targetRatio === '1:1' ? '1:1 Square' : '9:16 Vertical';
 
@@ -2804,7 +2805,7 @@ export default function App() {
       `Platform: ${userContext.platform || ratioLabel}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
       userContext.brandTone?.trim() ? `Brand Tone/Voice: ${userContext.brandTone.trim()}` : null,
-      `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
+      `Target Duration: ${targetDur} (${sceneCount} scenes of 5s each; the end frame is added after)`,
       userContext.offer?.trim() ? `Offer/USP: ${userContext.offer.trim()}` : null,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
       userContext.supportingCharacter?.trim() ? `Supporting Character: ${userContext.supportingCharacter.trim()}` : null,
@@ -3537,6 +3538,7 @@ export default function App() {
           setting,
           scriptJson: generatedScript?.script_json || null,
           scriptHeader: generatedScript?.header || null,
+          storyboardJson: generatedScript?.storyboard_json || null,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
@@ -3552,9 +3554,16 @@ export default function App() {
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
         if (data.script_json) {
-          // keep script.json in step with the edited scene (the next edit and the draft read it)
-          setGeneratedScript((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated, notices: data.notices || prev.notices } : prev));
-          setScriptPayloadData((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated } : prev));
+          // keep script.json and the storyboard in step with the edited scene (the next edit, the draft and the render read them)
+          const board = data.storyboard_json || null;
+          const withFrame = (spec) => {
+            if (!spec || !Array.isArray(spec.shots) || !data.frame) return spec;
+            const shots = spec.shots.map((sh, i) => (i === rewriteTargetSceneIndex ? { ...sh, frame: data.frame } : sh));
+            return { ...spec, shots };
+          };
+          setGeneratedScript((prev) => (prev ? { ...prev, script_json: data.script_json, ...(board ? { storyboard_json: board } : {}), scenes: updated, notices: data.notices || prev.notices } : prev));
+          setScriptPayloadData((prev) => (prev ? { ...prev, script_json: data.script_json, ...(board ? { storyboard_json: board } : {}), shotSpec: withFrame(prev.shotSpec), scenes: updated } : prev));
+          if (data.frame) setShotSpec((prev) => withFrame(prev));
         }
         if (Array.isArray(data.failures) && data.failures.length) {
           setQualityFailures(data.failures);
@@ -6686,6 +6695,7 @@ export default function App() {
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             guardrailReport={scriptGuardrailReport}
             scriptNotices={(generatedScript && generatedScript.notices) || []}
+            storyboardFrames={(generatedScript && generatedScript.storyboard_json && Array.isArray(generatedScript.storyboard_json.frames)) ? generatedScript.storyboard_json.frames : []}
             onboardingState={onboardingState}
             onDismissTip={handleDismissTip}
             onBehaviorEvent={handleBehaviorEvent}

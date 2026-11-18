@@ -58,6 +58,17 @@ async function runStage({ stage, instruction, input, call, maxTokens = 5000, isU
 const ALLOWED = ['brief', 'insight', 'framings', 'angle', 'angles', 'locked', 'correction'];
 const withCorrection = (input, correction) => (correction ? { ...input, 'GUARDRAIL CORRECTION (brief.dos_donts were broken; fix and answer again)': correction } : input);
 
+// ---------- Two characters (the app's production rule, not in the spine document) ----------
+const TWO_CHARACTERS_BLOCK = `TWO CHARACTERS (the app's production rule): ${contracts.TWO_CHARACTERS_RULE} Build every idea around exactly two people and name them in "cast" (role and a few words each).${'' /* the video flows have two character inputs */}`;
+const castOf = (x) => (Array.isArray(x && x.cast) ? x.cast.map((c) => String(c || '').trim()).filter(Boolean) : []);
+/** Why an angle or concept breaks the two-character rule ([] when it doesn't). */
+function twoCharacterProblems(label, cast, texts) {
+  if (cast.length !== 2) return [`${label} names ${cast.length} ${cast.length === 1 ? 'person' : 'people'} in "cast" — it must be exactly two.`];
+  const extra = contracts.extraPeople(texts.filter(Boolean).join('. '), cast, { individualsOnly: true });
+  return extra.length ? [`${label} features a third person (${extra.join(', ')}) — rebuild it around the two in "cast".`] : [];
+}
+const angleTexts = (a) => [a.plot, ...((a.hooks || []).flatMap((h) => [h && h.visual, h && h.payoff]))];
+
 // ---------- Checkpoint 2 – Insight (Section 1) ----------
 
 async function runInsight(input = {}, { call = callClaude } = {}) {
@@ -140,26 +151,47 @@ async function runAngles(input = {}, { call = callClaude } = {}) {
   const b = contracts.briefForCreative(brief);
   const format = contracts.filmFormatFromBrief(b);
   const ins = contracts.conform(contracts.CONCEPT_TEMPLATE.insight, insight);
-  const { parsed, version } = await runStage({
+  const ask = (twoCharacterCorrection) => runStage({
     stage: 'Checkpoint 3 – Angles',
     call,
     maxTokens: 7000,
     instruction: `Using INSIGHT, FRAMINGS, the routes (Section 2) and the HOOK LIBRARY (Section 3), run Section 5 and write 5–10 angles for BRIEF.
 ${formatBlock(format)}
+${TWO_CHARACTERS_BLOCK} Never propose a plot with a third person.
 Every angle uses this format. Run Prompt B (cliché check), C-M11 safety, C-M14 Do's and Don'ts, C-M15 occasion, then score with Section 8.
 Hooks are written in brief.language and its script. Record the pattern, the library and the date pulled.
 Return only JSON between @@JSON@@ and @@END@@:
-{"angles": [{"id": "a1", "name": "", "route": "", "plot": "one line that opens with a hook pattern and closes on its payoff",
+{"angles": [{"id": "a1", "name": "", "route": "", "cast": ["", ""], "plot": "one line that opens with a hook pattern and closes on its payoff",
   "hooks": [{"pattern": "", "library": "", "pulled": "YYYY-MM-DD", "line": "", "visual": "", "super": "", "payoff": ""}, {"pattern": "", "library": "", "pulled": "", "line": "", "visual": "", "super": "", "payoff": ""}],
   "format": "${format}", "mood": "", "rationale": "one line linking it to the primary KPI", "score": 0.0, "confidence": "High|Med|Low"}]}
 Best first. Never show raw scores to the user (the app shows the confidence label only).`,
-    input: withCorrection({ BRIEF: b, INSIGHT: ins, FRAMINGS: framings || 'none — write the framings internally (Section 4) first', 'HOOK LIBRARY': hookLibraryText() }, correction),
+    input: withCorrection({
+      BRIEF: b, INSIGHT: ins, FRAMINGS: framings || 'none — write the framings internally (Section 4) first', 'HOOK LIBRARY': hookLibraryText(),
+      ...(twoCharacterCorrection ? { 'TWO-CHARACTER CORRECTION (these angles broke the rule; answer again with every angle built around two people)': twoCharacterCorrection } : {}),
+    }, correction),
   });
-  const list = (parsed && Array.isArray(parsed.angles) ? parsed.angles : []).filter((a) => a && a.name).slice(0, 10);
-  if (!list.length) throw new Error('The Creative Spine returned no angles.');
-  const angles = list.map((a, i) => ({
+  const keep = (parsed) => {
+    const list = (parsed && Array.isArray(parsed.angles) ? parsed.angles : []).filter((a) => a && a.name).slice(0, 10);
+    const problems = [];
+    const ok = list.filter((a) => { const p = twoCharacterProblems(`Angle "${a.name}"`, castOf(a), angleTexts(a)); problems.push(...p); return !p.length; });
+    return { list, ok, problems };
+  };
+  let { parsed, version } = await ask(null);
+  let got = keep(parsed);
+  if (got.problems.length) console.log('[creative spine] angles dropped for the two-character rule:', got.problems);
+  // A three-person plot is never proposed: those angles are dropped. The stage is asked again (another full,
+  // ~75s call) only when fewer than three good angles are left to choose from.
+  if (got.problems.length && got.ok.length < 3) {
+    const again = keep((await ask(got.problems)).parsed);
+    if (again.problems.length) console.log('[creative spine] angles dropped on the second ask:', again.problems);
+    if (again.ok.length > got.ok.length) got = again;
+  }
+  if (!got.list.length) throw new Error('The Creative Spine returned no angles.');
+  if (!got.ok.length) throw Object.assign(new Error('Every angle had more than two people in it. Try again, or change the idea so it plays out between two people.'), { status: 422, code: 'TWO_CHARACTERS' });
+  const angles = got.ok.map((a, i) => ({
     ...contracts.conform(contracts.CONCEPT_TEMPLATE.angles[0], { ...a, id: a.id || `a${i + 1}` }),
     format,
+    cast: castOf(a),
     mood: String(a.mood || ''),
     rationale: String(a.rationale || ''),
   }));
@@ -197,16 +229,36 @@ async function runConcept(input = {}, { call = callClaude, ideaSource = 'engine'
   const ins = contracts.conform(contracts.CONCEPT_TEMPLATE.insight, insight);
   const chosen = contracts.conform(contracts.CONCEPT_TEMPLATE.angles[0], angle);
   if (!chosen.name && !chosen.hooks.length) throw new Error('Pick an angle first.');
-  const { parsed, version } = await runStage({
+  const angleCast = castOf(angle);
+  const ask = (twoCharacterCorrection) => runStage({
     stage: 'Checkpoint 4 – Story & format',
     call,
     instruction: `Build the concept for CHOSEN_ANGLE (Sections 7, 9 and 10) from BRIEF and INSIGHT.
 ${formatBlock(format)}
+${TWO_CHARACTERS_BLOCK}${angleCast.length === 2 ? ' Keep the two people in CHOSEN_ANGLE_CAST.' : ''} The core idea, beats and ending play out between them only.
 Lock the ending to the hook (Section 10). Use the length in brief.formats.lengths_s for the beats (Section 7).
 Check brief.dos_donts (C-M14) and record the result in dos_donts_check; record how any occasion is used (occasion_use).
-Return exactly concept.json (Section 12) between @@JSON@@ and @@END@@, with concept.format "${format}".`,
-    input: { BRIEF: b, INSIGHT: ins, CHOSEN_ANGLE: chosen },
+Return exactly concept.json (Section 12) between @@JSON@@ and @@END@@, with concept.format "${format}", plus one more top-level key "cast": ["", ""] (the app reads it to check the two-character rule).`,
+    input: {
+      BRIEF: b, INSIGHT: ins, CHOSEN_ANGLE: chosen,
+      ...(angleCast.length === 2 ? { CHOSEN_ANGLE_CAST: angleCast } : {}),
+      ...(twoCharacterCorrection ? { 'TWO-CHARACTER CORRECTION (answer again with the story built around two people)': twoCharacterCorrection } : {}),
+    },
   });
+  const conceptProblems = (p) => {
+    const c = (p && p.concept) || {};
+    return twoCharacterProblems('The concept', castOf(p), [c.core_idea, ...(Array.isArray(c.beats) ? c.beats : []), c.ending_payoff, c.hook && c.hook.visual]);
+  };
+  let { parsed, version } = await ask(null);
+  let problems = conceptProblems(parsed);
+  if (problems.length) {
+    console.log('[creative spine] concept asked again for the two-character rule:', problems);
+    const again = await ask(problems);
+    parsed = again.parsed;
+    version = again.version;
+    problems = conceptProblems(parsed);
+  }
+  if (problems.length) throw Object.assign(new Error(`The story couldn't be kept to two characters: ${problems.join(' ')} Go back and pick another opening.`), { status: 422, code: 'TWO_CHARACTERS' });
   const raw = parsed || {};
   const concept = contracts.normalizeConcept({
     ...raw,

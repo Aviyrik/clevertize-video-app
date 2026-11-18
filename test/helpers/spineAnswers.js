@@ -30,7 +30,9 @@ const insight = {
   ],
 };
 const hook = (n) => ({ pattern: 'Everyday crisis', library: 'TrueFan AI', pulled: '2026-10-05', line: n === 1 ? 'Oil khatam, tadka ready?' : 'Pan hot, bottle empty?', visual: 'She tilts an empty oil bottle over a hot pan', super: 'Oil ran out?', payoff: 'The tadka sizzles in the same pan' });
-const angles = { angles: [1, 2, 3, 4, 5].map((i) => ({ id: `a${i}`, name: `Mid-tadka rescue ${i}`, route: 'Problem → solution', plot: 'Oil runs out mid-tadka; one WhatsApp, the bottle arrives; the tadka sizzles.', hooks: [hook(1), hook(2)], format: 'X', mood: 'Light humour', rationale: 'Shows the 30-minute delivery that drives orders', score: 4.1, confidence: 'High' })) };
+// every angle and concept names its two people (the app's two-character rule)
+const CAST = ['Asha, 34, home cook (woman)', 'Ravi, 22, shop delivery boy (man)'];
+const angles = { angles: [1, 2, 3, 4, 5].map((i) => ({ id: `a${i}`, name: `Mid-tadka rescue ${i}`, route: 'Problem → solution', plot: 'Oil runs out mid-tadka; one WhatsApp, the bottle arrives; the tadka sizzles.', hooks: [hook(1), hook(2)], format: 'X', mood: 'Light humour', rationale: 'Shows the 30-minute delivery that drives orders', score: 4.1, confidence: 'High', cast: CAST })) };
 const concept = {
   concept: {
     core_idea: 'A home cook runs out of oil mid-tadka; the kirana delivers before the pan cools.',
@@ -41,6 +43,7 @@ const concept = {
   dos_donts_check: [{ rule: 'Film format', status: 'met' }],
   occasion_use: { event: '', how_shown: '', donts: [] },
   compliance_flags: [],
+  cast: CAST,
 };
 const char = (ref, name, role) => ({ ref, name, role, age: '34', gender: 'female', skin_tone: 'wheatish', hair: 'long braid', build: 'medium', wardrobe: 'cotton salwar kameez', accessories: 'glass bangles' });
 
@@ -74,13 +77,29 @@ function scenesFor(format, n, script) {
   }));
 }
 
+// Section 4 frame notes, one per scene (the app adds the rest of each frame description)
+const FRAME_SUBJECTS = [
+  'Asha tilts the empty bottle over the hot pan.',
+  'Asha taps a message on her phone at the counter.',
+  'Ravi holds out a new bottle. Asha takes it at the kitchen door.',
+  'Asha pours the oil into the same pan.',
+  'Asha stirs the tadka with a steel ladle.',
+  'Asha sets a bowl of dal on the table by the window.',
+];
+const frameNote = (i) => ({
+  scene: i + 1,
+  camera_angle: 'eye level',
+  composition: 'The steel counter fills the foreground; Asha stands centre-frame at the stove; the kitchen window sits behind her; the lower third stays clear for the super.',
+  subject: FRAME_SUBJECTS[i] || FRAME_SUBJECTS[0],
+  product: i === 1 ? 'not in frame' : 'the golden bottle in her right hand, label turned away from camera',
+});
+
 function scriptAnswer(system) {
   const format = (system.match(/FILM FORMAT: (UGC|VO-led|Storytelling)/) || [])[1] || 'UGC';
   const count = Number((system.match(/exactly (\d+) scenes/) || [])[1] || 4);
   const script = (system.match(/script (Devanagari|Latin)/) || [])[1] || 'Latin';
-  const chars = format === 'Storytelling'
-    ? [char('char_1', 'Asha', 'home cook'), { ...char('char_2', 'Ravi', 'shop delivery boy'), gender: 'male', age: '22' }, { ...char('char_3', 'Dadi', 'grandmother'), age: '70' }]
-    : [char('char_1', 'Asha', format === 'UGC' ? 'creator, disclosed' : 'home cook')];
+  // every film has exactly two characters (UGC: the creator is char_1)
+  const chars = [char('char_1', 'Asha', format === 'UGC' ? 'creator, disclosed' : 'home cook'), { ...char('char_2', 'Ravi', 'shop delivery boy'), gender: 'male', age: '22' }];
   return J({
     context_block: {
       characters: chars,
@@ -89,6 +108,7 @@ function scriptAnswer(system) {
       brand_elements: { logo_placement: 'end card', supers: 'Scene 1', callouts: 'Scene 3', cta: 'end card', disclaimers: 'none', captions: 'on' },
     },
     scenes: scenesFor(format, count, script),
+    frames: Array.from({ length: count }, (_, i) => frameNote(i)),
     header_hints: { hook_pattern: 'Everyday crisis', ending: 'The tadka sizzles', mood: 'Light humour' },
   });
 }
@@ -104,8 +124,8 @@ function answer({ system = '' }) {
   if (/revise scene \d+ only/.test(sys)) {
     const full = JSON.parse(scriptAnswer(sys).replace(/^@@JSON@@\n|\n@@END@@$/g, ''));
     const s = full.scenes[1];
-    s.visual = 'Asha grabs her phone from the steel counter and taps a quick message to the shop owner.';
-    return J({ scene: s });
+    s.visual = 'Asha grabs her phone from the steel counter and taps a quick message to the shop.';
+    return J({ scene: s, frame: { ...frameNote(1), subject: 'Asha grabs her phone from the steel counter.' } });
   }
   if (/=== RUN NOW \(CleverCut app\) — (write the script|repair pass|import)/.test(sys)) return scriptAnswer(sys);
   return '{}';

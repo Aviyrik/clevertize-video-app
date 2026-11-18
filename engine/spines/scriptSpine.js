@@ -3,11 +3,11 @@
  * Owns /api/creative/synthesize-script, /api/creative/rewrite-scene, /api/script/validate-and-import and the
  * quality gate (engine/gate.js runScriptGate, Annex B).
  *
- * Reads concept.json and the brief.json fields its rules name (contracts.briefForScript). Writes script.json
- * (+ storyboard.json, planned — see storyboard.js) and the script record. The header is built from
- * concept.json/brief.json, the scenes are rendered in the Section 3 scene format from script.json, and the
- * production inputs the app already uses (scenes, character1, character2, setting) are derived from it —
- * production itself is unchanged.
+ * Reads concept.json and the brief.json fields its rules name (contracts.briefForScript). Writes script.json,
+ * storyboard.json (written frame descriptions and the consistency locks — see storyboard.js) and the script
+ * record. The header is built from concept.json/brief.json, the scenes are rendered in the Section 3 scene format
+ * from script.json, and the production inputs (scenes, character1, character2, setting) are derived from it:
+ * one Context Block character per render character input.
  */
 
 const { callClaude } = require('../claude');
@@ -16,6 +16,8 @@ const { runScriptGate, SCRIPT_BEATS } = require('../gate');
 const { loadSpine } = require('./index');
 const contracts = require('./contracts');
 const storyboard = require('./storyboard');
+
+const { describe, characterLine, settingLine } = storyboard;
 
 const MAX_PASSES = 3; // Section 5: after 3 failed passes, go back to the Creative Spine's second-ranked angle
 
@@ -27,21 +29,6 @@ const BEATS_BY_COUNT = {
 };
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
-const text = (v) => (v == null ? '' : typeof v === 'string' ? v : JSON.stringify(v));
-
-function describe(obj, keys) {
-  if (!obj) return '';
-  if (typeof obj === 'string') return obj;
-  const entries = keys ? keys.map((k) => [k, obj[k]]) : Object.entries(obj);
-  return entries.filter(([k, v]) => k !== 'ref' && k !== 'id' && v && typeof v !== 'object').map(([, v]) => String(v)).join(', ');
-}
-const CHARACTER_KEYS = ['name', 'role', 'age', 'gender', 'skin_tone', 'hair', 'build', 'wardrobe', 'accessories'];
-function characterLine(c) {
-  if (!c) return '';
-  if (typeof c === 'string') return c;
-  const ref = c.ref || c.id;
-  return `${describe(c, CHARACTER_KEYS)}${ref ? ` [ref: ${ref}]` : ''}`;
-}
 
 /** Section 2 script header, from concept.json and the brief fields (never written by the model). */
 function buildHeader({ concept, brief }) {
@@ -86,7 +73,7 @@ function contextBlockText(cb) {
     'Context Block',
     `Characters: ${(cb.characters || []).map(characterLine).join(' | ')}`,
     `Product: ${describe(cb.product)}${cb.product && cb.product.ref ? ` [ref: ${cb.product.ref}]` : ''}`,
-    `Setting: ${describe(cb.setting)}`,
+    `Setting: ${settingLine(cb.setting)}`,
     `Brand elements (rendered by Production): ${describe(cb.brand_elements)}`,
   ].join('\n');
 }
@@ -125,25 +112,24 @@ function renderScene(sc) {
   ].join('\n');
 }
 
-/** What production already takes: scene texts, two character slots and a setting line. */
+/** What production takes: scene texts, the two characters (one per render character input) and the setting. */
 function productionFields(script) {
-  const chars = (script.context_block.characters || []).map(characterLine).filter(Boolean);
+  // The gate has already held the Context Block to exactly two characters; each maps to its own input.
+  const chars = (script.context_block.characters || []).slice(0, 2).map(characterLine);
   return {
     scenes: script.scenes.map(renderScene),
     character1: chars[0] || '',
-    // The render flows have exactly two character inputs. Characters 2+ share the second slot (see notices).
-    character2: chars.slice(1).join(' | '),
-    setting: describe(script.context_block.setting),
+    character2: chars[1] || '',
+    setting: settingLine(script.context_block.setting),
   };
 }
 
-function scriptNotices(script) {
+function scriptNotices(script, { flaggedFrames = [] } = {}) {
   const notices = [];
-  const n = (script.context_block.characters || []).length;
-  if (n > 2) {
+  if (flaggedFrames.length) {
     notices.push({
-      code: 'EXTRA_CHARACTERS',
-      message: `This script has ${n} characters, but the video engine has only two character slots. Characters 2–${n} are sent together in the second slot, so they may not look consistent from scene to scene.`,
+      code: 'FRAMES_FLAGGED',
+      message: `Some frame descriptions still need a look after two rewrites: ${flaggedFrames.join(' ')} Edit those frames, or change the scene and write it again.`,
     });
   }
   if (script.format === 'VO-led') {
@@ -168,8 +154,9 @@ function shapeScript(raw, { concept, brief, format, plan }) {
     ...sc,
     n: i + 1,
     beat: beats[i] || sc.beat,
-    start_s: Math.round(i * plan.each * 10) / 10,
-    duration_s: Math.round(plan.each * 10) / 10,
+    // S-M3: per scene 5 seconds only
+    start_s: i * contracts.SCENE_SECONDS,
+    duration_s: contracts.SCENE_SECONDS,
     dialogue: format === 'VO-led' ? sc.dialogue : sc.dialogue.filter((d) => d.line),
     vo: format === 'VO-led' ? sc.vo : sc.vo,
   }));
@@ -186,18 +173,21 @@ FILM FORMAT: ${format} (the user's Creative Style). Section 6 rules: ${r.generat
 Dialogue (S-M7): ${r.dialogue}${r.hasVo ? ` Total VO across all scenes: ${vo.min}–${vo.max} words. Leave "dialogue" empty in every scene.` : ' Leave "vo" empty.'}
 Length ${plan.length_s}s → exactly ${plan.count} scenes (S-M3), beats in order: ${beats.join(', ')} (Section 1).
 Language: ${brief.language.name}, script ${brief.language.script} (S-M2). Visual fields in English.
-Context Block: every character has "ref" (char_1, char_2, …); the product "ref" is "${productRef}".
+TWO CHARACTERS (the app's production rule): ${contracts.TWO_CHARACTERS_RULE} context_block.characters has exactly two entries, "char_1" and "char_2"${format === 'UGC' ? ' (in UGC the creator is char_1)' : ''}. Only they speak${r.hasVo ? ' (the VO is off-screen and is not a character)' : ''}, and every visual and frame shows only them.
+Context Block: each character has "ref" ("char_1", "char_2"); the product "ref" is "${productRef}". Give the product's colour, packaging and label side.
 Fill every on-screen element with its text or "none". Each "must include" from BRIEF.dos_donts that applies to the script is placed in a scene and noted in that scene's edit_notes as "Must include: <rule>" (S-M13).
+Storyboard (Section 4): in "frames", one note per scene — camera_angle; composition (foreground, middle and background, where the subject sits, safe zones kept clear); subject (who is in frame by their Context Block name and what they are doing: present tense, physical details, one action per sentence); product (where it is, which side faces camera, how it's held or used — or "not in frame"). The app adds the aspect ratio, shot, camera move, the Context Block descriptions word for word, the setting and light, the placeholders and the line. Never ask for text, logos or UI inside a frame.
 Run the Annex B checklist yourself before answering (S-M11).
 Return only JSON between @@JSON@@ and @@END@@:
-{"context_block": {"characters": [{"ref": "char_1", "name": "", "role": "", "age": "", "gender": "", "skin_tone": "", "hair": "", "build": "", "wardrobe": "", "accessories": ""}],
+{"context_block": {"characters": [{"ref": "char_1", "name": "", "role": "", "age": "", "gender": "", "skin_tone": "", "hair": "", "build": "", "wardrobe": "", "accessories": ""}, {"ref": "char_2", "name": "", "role": "", "age": "", "gender": "", "skin_tone": "", "hair": "", "build": "", "wardrobe": "", "accessories": ""}],
   "product": {"ref": "", "sku": "", "colour": "", "packaging": "", "size_in_hand": "", "label_side": "", "how_used": ""},
   "setting": {"location": "", "time_of_day": "", "light_source": "", "surfaces": "", "background_activity": "", "brand_colour_cues": ""},
   "brand_elements": {"logo_placement": "", "supers": "", "callouts": "", "cta": "", "disclaimers": "", "captions": "on|off"}},
  "scenes": [{"visual": "", "shot": "wide|medium|close-up|macro", "camera": "static|slow push-in|gentle pan|handheld drift|orbit",
    "dialogue": [{"speaker": "", "line": ""}], "vo": "",
    "super": "", "callout": "", "cta": "", "disclaimer": "", "ui_mockup": "", "logo": "corner bug|none",
-   "ambience": "", "sfx": "", "music_mood": "", "transition_out": "", "edit_notes": ""}]}`;
+   "ambience": "", "sfx": "", "music_mood": "", "transition_out": "", "edit_notes": ""}],
+ "frames": [{"scene": 1, "camera_angle": "", "composition": "", "subject": "", "product": ""}]}`;
 }
 
 async function callScript({ call, instruction, input, maxTokens = 7000 }) {
@@ -213,8 +203,62 @@ async function callScript({ call, instruction, input, maxTokens = 7000 }) {
   return { parsed, version: spine.version };
 }
 
-function finish({ script, header, concept, brief, gate, spineVersion }) {
-  const plannedBoard = storyboard.planStoryboard(script, { aspectRatio: script.aspect_ratios[0], palette: concept.concept.visual_world.palette });
+/** storyboard.json for a script: the writer's frame notes + the Context Block, with the locks (Section 4). */
+function boardFor(script, frameNotes, concept, brief) {
+  const vw = (concept && concept.concept && concept.concept.visual_world) || {};
+  return storyboard.buildStoryboard(script, frameNotes, {
+    aspectRatio: script.aspect_ratios[0] || '9:16',
+    style: [script.format, concept && concept.concept && concept.concept.mood, vw.light, vw.time].filter(Boolean).join(' · '),
+    palette: vw.palette ? [vw.palette] : [],
+    // the reference images the user actually uploaded (the app takes a product photo; there are no character uploads)
+    referenceImages: (brief.mandatories && brief.mandatories.product_images) || [],
+  });
+}
+
+// ---------- Section 5: "Rewrite only the parts that fail, then run the full checklist again." ----------
+/** The scenes (and frames) named in the gate failures, and whether the Context Block itself failed. */
+function failingParts(failures) {
+  const scenes = new Set();
+  let contextBlock = false;
+  for (const f of failures || []) {
+    const m = String(f).match(/^(Scene|Frame) (\d+)\b/);
+    if (m) scenes.add(Number(m[2]));
+    if (/^Context Block|^Consistency locks/.test(f)) contextBlock = true;
+  }
+  return { scenes: [...scenes].sort((a, b) => a - b), contextBlock };
+}
+/** Merge a repair answer (only the parts it rewrote) into the previous script: scenes by "n", frames by "scene". */
+function mergeRepair(prev, parsed, count) {
+  const p = parsed && typeof parsed === 'object' ? parsed : {};
+  const scenes = prev.scenes.map((s) => ({ ...s }));
+  const got = Array.isArray(p.scenes) ? p.scenes.filter((s) => s && typeof s === 'object') : [];
+  if (got.length === count && got.every((s) => !s.n)) got.forEach((s, i) => { scenes[i] = s; }); // a full answer after all
+  else got.forEach((s) => { const n = Number(s.n); if (n >= 1 && n <= count) scenes[n - 1] = { ...scenes[n - 1], ...s }; });
+  const frames = Array.from({ length: count }, (_, i) => (prev.frames || []).find((f) => f && Number(f.scene) === i + 1) || (prev.frames || [])[i] || { scene: i + 1 });
+  for (const f of Array.isArray(p.frames) ? p.frames : []) {
+    const n = Number(f && f.scene);
+    if (n >= 1 && n <= count) frames[n - 1] = { ...frames[n - 1], ...f, scene: n };
+  }
+  const cb = p.context_block && typeof p.context_block === 'object' && Object.keys(p.context_block).length ? p.context_block : prev.context_block;
+  return { context_block: cb, scenes, frames };
+}
+function repairInstruction(failures) {
+  const parts = failingParts(failures);
+  return `REPAIR (Section 5: rewrite only the parts that fail, then the full checklist runs again). PREVIOUS SCRIPT JSON is the script so far; QUALITY GATE FAILURES says what fails.
+Rewrite only ${parts.scenes.length ? `scene${parts.scenes.length > 1 ? 's' : ''} ${parts.scenes.join(', ')}` : 'the scenes these failures need'} (a failure that isn't about one scene — VO length, who speaks where, a disclaimer, a must-include — may need others; change as few as you can)${parts.contextBlock ? ', and the Context Block' : ''}.
+Return only those parts between @@JSON@@ and @@END@@: {"scenes": [each rewritten scene with its "n" and all its fields], "frames": [the frame note for each rewritten scene, with its "scene"]${parts.contextBlock ? ', "context_block": {…}' : ''}}. Everything you leave out stays as it is.`;
+}
+
+/** Section 4: a frame still failing after two rewrites is flagged to the user rather than blocking the script. */
+function flagFrames(gate) {
+  const failing = gate.checks.filter((ch) => ch.status === 'fail');
+  if (gate.passed || !failing.length || !failing.every((ch) => ch.id === 'frames')) return { gate, flaggedFrames: [] };
+  const flaggedFrames = failing.flatMap((ch) => ch.details);
+  return { gate: { ...gate, passed: true, failures: [], flagged: flaggedFrames }, flaggedFrames };
+}
+
+function finish({ script, frameNotes, header, concept, brief, gate, spineVersion, flaggedFrames = [] }) {
+  const board = boardFor(script, frameNotes, concept, brief);
   const angle = (concept.angles || []).find((a) => a.id === concept.chosen_angle_id) || (concept.angles || [])[0] || {};
   const hook = (angle.hooks || [])[0] || {};
   const kpi = (brief.kpis || []).find((k) => k.primary) || (brief.kpis || [])[0] || {};
@@ -228,15 +272,14 @@ function finish({ script, header, concept, brief, gate, spineVersion }) {
   const prod = productionFields(script);
   return {
     spine: 'script', spineVersion,
-    header, script, storyboard: plannedBoard,
-    storyboardStatus: storyboard.hasImageProvider() ? 'pending' : 'not_run',
-    gate, record, notices: scriptNotices(script),
+    header, script, storyboard: board,
+    gate, record, notices: scriptNotices(script, { flaggedFrames }),
     text: [headerText(header), contextBlockText(script.context_block), ...prod.scenes].join('\n\n'),
     ...prod,
   };
 }
 
-/** Writes script.json for concept.json, runs the gate and repairs (up to 3 passes). */
+/** Writes script.json + the frame descriptions for concept.json, runs the gate and repairs (up to 3 passes). */
 async function writeScript(input = {}, { call = callClaude } = {}) {
   contracts.assertHandoff('Script & Storyboard Spine', input, ['concept', 'brief']);
   const { concept, brief } = input;
@@ -257,20 +300,39 @@ async function writeScript(input = {}, { call = callClaude } = {}) {
   let previous = null;
   let gate = null;
   let script = null;
+  let frameNotes = [];
   let spineVersion = '';
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
     const input = { CONCEPT: c, BRIEF: b, SCRIPT_HEADER: headerText(header) };
-    if (previous) Object.assign(input, { 'PREVIOUS SCRIPT JSON': previous, 'QUALITY GATE FAILURES (rewrite only the parts that fail, return the full JSON)': gate.failures });
-    const { parsed, version } = await callScript({ call, instruction: runInstruction({ format, plan, brief: b, mode: pass === 1 ? 'write the script' : `repair pass ${pass}` }), input });
+    let instruction = runInstruction({ format, plan, brief: b, mode: pass === 1 ? 'write the script' : `repair pass ${pass}` });
+    if (previous) {
+      Object.assign(input, { 'PREVIOUS SCRIPT JSON': previous, 'QUALITY GATE FAILURES': gate.failures });
+      instruction = `${instruction}\n${repairInstruction(gate.failures)}`;
+    }
+    const { parsed, version } = await callScript({ call, instruction, input, maxTokens: previous ? 5000 : 7000 });
     spineVersion = version;
-    script = shapeScript(parsed, { concept: c, brief: b, format, plan });
-    gate = runScriptGate(script, { header, brief: b, concept: c, storyboardStatus: storyboard.hasImageProvider() ? 'pending' : 'not_run' });
+    // pass 1 is the whole script; a repair pass brings only what it rewrote, merged into the previous script
+    const raw = previous ? mergeRepair(previous, parsed, plan.count) : parsed;
+    script = shapeScript(raw, { concept: c, brief: b, format, plan });
+    frameNotes = Array.isArray(raw.frames) ? raw.frames : [];
+    gate = runScriptGate(script, { header, brief: b, concept: c, storyboard: boardFor(script, frameNotes, c, b) });
     gate.passes = pass;
     console.log(`[script spine] pass #${pass}: ${gate.passed ? 'passed' : `${gate.failures.length} failing checks`}`);
-    if (!gate.passed && process.env.SPINE_DEBUG) console.log('[script spine] failures:', gate.failures);
+    if (!gate.passed && process.env.SPINE_DEBUG) {
+      console.log('[script spine] failures:', gate.failures);
+      // the text behind each scene/frame failure, to tell a real problem from a misread
+      const board = boardFor(script, frameNotes, c, b);
+      for (const n of failingParts(gate.failures).scenes) {
+        const sc = script.scenes[n - 1] || {};
+        const fr = board.frames[n - 1] || {};
+        console.log(`[script spine] scene ${n} visual: ${sc.visual} || frame: ${fr.composition} || subject: ${fr.subject} || product: ${fr.product} || edit notes: ${sc.edit_notes}`);
+      }
+    }
     if (gate.passed) break;
-    previous = { context_block: script.context_block, scenes: script.scenes };
+    previous = { context_block: script.context_block, scenes: script.scenes, frames: frameNotes };
   }
+  const flagged = flagFrames(gate);
+  gate = flagged.gate;
   if (!gate.passed) {
     const err = new Error('The script could not pass the quality gate after 3 passes. Go back and pick the next angle, and the script will be rebuilt from it.');
     err.status = 422;
@@ -279,12 +341,12 @@ async function writeScript(input = {}, { call = callClaude } = {}) {
     err.gate = gate;
     throw err;
   }
-  return finish({ script, header, concept: c, brief: b, gate, spineVersion });
+  return finish({ script, frameNotes, header, concept: c, brief: b, gate, spineVersion, flaggedFrames: flagged.flaggedFrames });
 }
 
-/** S-M12: revise only the one scene, re-run the gate on it, keep everything else. Reads script.json. */
+/** S-M12: revise only the one scene (and its frame), re-run the gate on it, keep everything else. Reads script.json. */
 async function rewriteScene(input = {}, { call = callClaude } = {}) {
-  contracts.assertHandoff('Script & Storyboard Spine (scene edit)', input, ['script', 'header', 'brief', 'sceneIndex', 'instruction']);
+  contracts.assertHandoff('Script & Storyboard Spine (scene edit)', input, ['script', 'header', 'brief', 'sceneIndex', 'instruction', 'storyboard']);
   const { script, header, brief, sceneIndex, instruction } = input;
   const s = contracts.normalizeScript(script);
   const b = contracts.briefForScript(brief || {});
@@ -293,29 +355,38 @@ async function rewriteScene(input = {}, { call = callClaude } = {}) {
   const target = s.scenes[idx];
   if (!target) throw Object.assign(new Error('That scene does not exist.'), { status: 400 });
   const plan = contracts.scenePlan(s.length_s);
+  const aspect = s.aspect_ratios[0] || '9:16';
+  // the other frames stay as they are; without a storyboard (an older script) they're written from the scenes alone
+  let board = input.storyboard && Array.isArray(input.storyboard.frames) && input.storyboard.frames.length === s.scenes.length
+    ? contracts.normalizeStoryboard(input.storyboard)
+    : storyboard.buildStoryboard(s, [], { aspectRatio: aspect });
   let gate = null;
   let failuresForScene = [];
+  const mine = (f) => [`Scene ${target.n} `, `Scene ${target.n}:`, `Frame ${target.n} `, `Frame ${target.n}:`].some((p) => f.startsWith(p)) || /VO runs|UGC:|Storytelling:/.test(f);
   for (let pass = 1; pass <= 2; pass++) {
     const input = { 'SCRIPT JSON': s, BRIEF: b, SCENE_NUMBER: target.n, "USER'S CHANGE": instruction };
     if (failuresForScene.length) input['QUALITY GATE FAILURES FOR THIS SCENE'] = failuresForScene;
     const { parsed } = await callScript({
       call,
-      maxTokens: 2500,
+      maxTokens: 3000,
       input,
       instruction: `${runInstruction({ format: s.format, plan, brief: b, mode: `revise scene ${target.n} only (S-M12)` })}
-Revise only SCENE ${target.n} as the user asked. Do not change the angle, hook, ending or mood (S-M1) or any other scene.
-Instead of the full JSON, return only the one scene object between @@JSON@@ and @@END@@: {"scene": {…the scene fields above…}}`,
+Revise only SCENE ${target.n} and its frame as the user asked. Do not change the angle, hook, ending or mood (S-M1), the Context Block or any other scene.
+Instead of the full JSON, return only this between @@JSON@@ and @@END@@: {"scene": {…the scene fields above…}, "frame": {"camera_angle": "", "composition": "", "subject": "", "product": ""}}`,
     });
     const next = contracts.conform(contracts.SCENE_TEMPLATE, (parsed && parsed.scene) || parsed);
     s.scenes[idx] = { ...next, n: target.n, beat: target.beat, start_s: target.start_s, duration_s: target.duration_s };
-    gate = runScriptGate(s, { header: header || {}, brief: b });
-    failuresForScene = gate.failures.filter((f) => f.startsWith(`Scene ${target.n} `) || f.startsWith(`Scene ${target.n}:`) || /VO runs|UGC:|Storytelling:/.test(f));
+    const frames = [...board.frames];
+    frames[idx] = storyboard.buildFrame(s.scenes[idx], (parsed && parsed.frame) || {}, s.context_block, aspect);
+    board = contracts.normalizeStoryboard({ ...board, frames });
+    gate = runScriptGate(s, { header: header || {}, brief: b, storyboard: board });
+    failuresForScene = gate.failures.filter(mine);
     if (!failuresForScene.length) break;
   }
-  return { script: s, scene: renderScene(s.scenes[idx]), sceneIndex: idx, failures: failuresForScene, gate, notices: scriptNotices(s) };
+  return { script: s, scene: renderScene(s.scenes[idx]), sceneIndex: idx, frame: board.frames[idx], storyboard: board, failures: failuresForScene, gate, notices: scriptNotices(s) };
 }
 
-/** /api/script/validate-and-import: the user's own script → script.json, gated. The concept is the import's own. */
+/** /api/script/validate-and-import: the user's own script → script.json + frames, gated. The concept is the import's own. */
 async function importScript(input = {}, { call = callClaude } = {}) {
   contracts.assertHandoff('Script & Storyboard Spine (import)', input, ['rawScript', 'concept', 'brief']);
   const { rawScript, concept, brief } = input;
@@ -325,6 +396,7 @@ async function importScript(input = {}, { call = callClaude } = {}) {
   const plan = contracts.scenePlan((b.formats.lengths_s || [])[0]);
   let gate = null;
   let script = null;
+  let frameNotes = [];
   let previous = null;
   let hints = {};
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
@@ -334,24 +406,27 @@ async function importScript(input = {}, { call = callClaude } = {}) {
       call,
       input,
       instruction: `${runInstruction({ format, plan, brief: b, mode: 'import the user\'s own script' })}
-Turn the USER'S SCRIPT into this scene format. Keep the user's story, characters and lines where they meet the rules; change only what breaks a rule.
+Turn the USER'S SCRIPT into this scene format. Keep the user's story, characters and lines where they meet the rules; change only what breaks a rule (a third person in the user's script becomes one of the two characters or leaves the scene).
 Also add "header_hints": {"hook_pattern": "", "ending": "", "mood": ""} describing the user's script.`,
     });
     hints = (parsed && parsed.header_hints) || hints;
     const attempt = shapeScript(parsed, { concept: c, brief: b, format, plan });
+    const attemptNotes = Array.isArray(parsed.frames) ? parsed.frames : [];
     const header = importHeader(b, format, hints, plan);
-    const attemptGate = runScriptGate(attempt, { header, brief: b, concept: c });
+    const attemptGate = runScriptGate(attempt, { header, brief: b, concept: c, storyboard: boardFor(attempt, attemptNotes, c, b) });
     attemptGate.passes = pass;
     // keep the best attempt (fewest failing checks), so a failed repair never loses the user's script
-    if (!gate || attemptGate.failures.length < gate.failures.length) { script = attempt; gate = attemptGate; }
+    if (!gate || attemptGate.failures.length < gate.failures.length) { script = attempt; frameNotes = attemptNotes; gate = attemptGate; }
     gate.passes = pass;
     if (gate.passed) break;
-    previous = { context_block: script.context_block, scenes: script.scenes };
+    previous = { context_block: script.context_block, scenes: script.scenes, frames: frameNotes };
   }
+  const flagged = flagFrames(gate);
+  gate = flagged.gate;
   c.concept.mood = c.concept.mood || hints.mood || '';
   c.concept.ending_payoff = c.concept.ending_payoff || hints.ending || '';
   const header = importHeader(b, format, hints, plan);
-  return { ...finish({ script, header, concept: c, brief: b, gate, spineVersion: loadSpine('script').version }), passed: gate.passed };
+  return { ...finish({ script, frameNotes, header, concept: c, brief: b, gate, spineVersion: loadSpine('script').version, flaggedFrames: flagged.flaggedFrames }), passed: gate.passed };
 }
 
 function importHeader(b, format, hints, plan) {
@@ -370,4 +445,4 @@ function importHeader(b, format, hints, plan) {
   };
 }
 
-module.exports = { writeScript, rewriteScene, importScript, buildHeader, headerText, renderScene, productionFields, scriptNotices, contextBlockText, BEATS_BY_COUNT, MAX_PASSES, SCRIPT_BEATS };
+module.exports = { writeScript, rewriteScene, importScript, buildHeader, headerText, renderScene, productionFields, scriptNotices, contextBlockText, boardFor, BEATS_BY_COUNT, MAX_PASSES, SCRIPT_BEATS };
