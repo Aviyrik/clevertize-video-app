@@ -4465,22 +4465,37 @@ export default function App() {
       draftRenderRef.current = { runId, projectId: renderProjectId, startedAt: sameRun ? draftRenderRef.current.startedAt : new Date().toISOString() };
       scheduleDraftSave(true);
     }
-    const maxAttempts = 160;
-    for (let i = 1; i <= maxAttempts; i++) {
+    // A ceiling on waiting, in wall-clock time: after RENDER_POLL_MAX_MS the loop stops and reports the last status
+    // the render reported (the run itself isn't cancelled — the draft keeps it, so reopening the project picks it
+    // up again). Each status request has its own timeout, so one hung request can't hold the loop past the ceiling.
+    const RENDER_POLL_INTERVAL_MS = 15000;
+    const RENDER_POLL_MAX_MS = 40 * 60 * 1000;
+    const RENDER_STATUS_TIMEOUT_MS = 30000;
+    const deadline = Date.now() + RENDER_POLL_MAX_MS;
+    let lastStatus = null; // the last /api/status answer, exactly as it came back
+    let lastStatusAt = null;
+    for (let i = 1; Date.now() < deadline; i++) {
       // a resumed render may already be finished — check straight away
-      if (!(immediate && i === 1)) await new Promise((r) => setTimeout(r, 15000));
+      if (!(immediate && i === 1)) await new Promise((r) => setTimeout(r, RENDER_POLL_INTERVAL_MS));
       // Abort immediately if a newer render job in this same session superseded this polling loop.
       // A detached render keeps going: nothing else will save its video.
       if (isLive() && activeRunIdRef.current !== runId) {
         return;
       }
       try {
-        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`, { headers: getAuthHeaders() });
+        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`, {
+          headers: getAuthHeaders(),
+          signal: AbortSignal.timeout(RENDER_STATUS_TIMEOUT_MS),
+        });
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           continue; // Gateway response / proxy page during polling, keep waiting
         }
         const data = await res.json().catch(() => null);
+        if (data) {
+          lastStatus = data;
+          lastStatusAt = new Date();
+        }
         if (!data || data.error) continue;
 
         if (isLive() && activeRunIdRef.current !== runId) {
@@ -4643,7 +4658,8 @@ export default function App() {
         // Keep waiting despite transient network drops
       }
     }
-    // Polling attempts exhausted:
+    // The ceiling was reached: stop polling and say what the render last reported.
+    console.warn(`[render] stopped polling run ${runId} after ${RENDER_POLL_MAX_MS / 60000} min. Last status${lastStatusAt ? ` (${lastStatusAt.toISOString()})` : ''}:`, lastStatus ? JSON.stringify(lastStatus) : 'none received');
     // If run was superseded or video was already generated successfully, never show timeout error!
     if (!isLive() || activeRunIdRef.current !== runId) {
       return;
@@ -4658,7 +4674,10 @@ export default function App() {
     setIsRendering(false);
     setIsBusy(false);
     setCurrentStep('input');
-    setErrorMessage('Your video is taking longer than expected to render. It is still in progress: reopen this project from My Projects in a few minutes to pick it up.');
+    const lastReported = lastStatus
+      ? brandSafeMessage(String(lastStatus.status || lastStatus.error || 'unknown'), 'unknown')
+      : 'no status received';
+    setErrorMessage(`We stopped checking this video after ${RENDER_POLL_MAX_MS / 60000} minutes. Last status: "${lastReported}"${lastStatusAt ? ` at ${lastStatusAt.toLocaleTimeString()}` : ''}. The render may still finish: reopen this project from My Projects in a few minutes to check again.`);
   };
 
   // Video Share Action

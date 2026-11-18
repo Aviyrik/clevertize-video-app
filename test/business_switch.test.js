@@ -103,6 +103,17 @@ test("New Film opens the three-option hub while Restart Film reopens the selecte
   assert.ok(shell.includes("<span>Restart Film</span>"), "Restart Film remains available");
 });
 
+test("render polling has a wall-clock ceiling and reports the last status when it stops", () => {
+  const poll = fnBody("pollRenderStatus");
+  assert.ok(poll.includes("const RENDER_POLL_MAX_MS = 40 * 60 * 1000;"), "a maximum wait");
+  assert.ok(poll.includes("for (let i = 1; Date.now() < deadline; i++) {"), "the loop ends at the deadline, not after a count of attempts");
+  assert.ok(poll.includes("signal: AbortSignal.timeout(RENDER_STATUS_TIMEOUT_MS)"), "a hung status request can't hold the loop past the ceiling");
+  assert.ok(/if \(data\) \{\s*lastStatus = data;/.test(poll), "every status answer is kept, errors included");
+  assert.ok(poll.includes("We stopped checking this video after ${RENDER_POLL_MAX_MS / 60000} minutes. Last status:"), "the user is told the last status");
+  assert.ok(poll.includes("[render] stopped polling run ${runId}"), "the last status is logged as it came back");
+  assert.ok(!poll.includes("draftRenderRef.current = null;\n    scheduleDraftSave(true);\n  };"), "the draft keeps the run, so reopening picks it up");
+});
+
 test("a render running at switch time is detached: it saves to its own project and leaves the new studio alone", () => {
   const poll = fnBody("pollRenderStatus");
   assert.ok(poll.includes("session = studioSessionRef.current"), "the render remembers the session it started in");
