@@ -1274,7 +1274,7 @@ Follow all Product Spine Section 8 rules:
 - Exactly ${plan.totalScenes} scenes titled in sequence:
 ${plan.beats.map((b, i) => `  SCENE ${i + 1} – ${b.beat}: [Short scene title]`).join("\n")}
 - Scene 1 MUST open with the approved hook line and action.
-${plan.hasLogo ? `- Final Scene (${plan.totalScenes}) is a dedicated 5-second brand outro end-card presenting the brand logo with warm payoff and clear call-to-action.` : ""}
+${plan.endFrame ? `- The logo end frame is added by production after Scene ${plan.totalScenes}; it is not a scene.` : ""}
 - TARGET DURATION & PACING: Total film duration is ${plan.durationLabel} (${plan.totalSeconds}s runtime, calibrated to ~5s per scene across ${plan.totalScenes} scenes).
 - VIDEO FRAMING & ASPECT RATIO: Designed for ${ratioLabel}. Frame all visual descriptions, camera setups, and blocking for this display ratio.
 - BRAND TONE DIRECTIVE: ${toneGuidance}. Ensure spoken cadence, actor demeanor, eye contact warmth, and visual staging embody this brand voice.
@@ -1460,10 +1460,11 @@ Rewrite this scene now:`;
 }
 
 /**
- * Computes standard scene planning breakdown according to video duration and logo settings:
- * - 15s: 3 scenes (~5s/scene). If hasLogo: 4 scenes (20s final runtime with 5s logo outro).
- * - 20s: 4 scenes (~5s/scene). If hasLogo: 5 scenes (25s final runtime with 5s logo outro).
- * - 30s: 6 scenes (~5s/scene). If hasLogo: 7 scenes (35s final runtime with 5s logo outro).
+ * Scene plan for the chosen length. Every scene is exactly 5 seconds, so the length sets the scene count and
+ * nothing else: 15s → 3 scenes, 20s → 4, 30s → 6. A logo still brings the end frame (the logo flow appends it after
+ * generation), but the end frame is not a scene and isn't counted in the length — the user always gets the full
+ * scene count for the length they picked. (Before: a logo added a generated 5s "logo outro" scene, so a 20s film
+ * sent 5 scenes and each scene prompt was timed at 20 ÷ 5 = 4s.)
  */
 function computeScenePlan({ duration = "20s", hasLogo = false } = {}) {
   const durStr = String(duration || "20s").toLowerCase().trim();
@@ -1481,10 +1482,10 @@ function computeScenePlan({ duration = "20s", hasLogo = false } = {}) {
     baseDurationLabel = "30s";
   }
 
-  const logoOutro = Boolean(hasLogo);
-  const totalScenes = baseScenes + (logoOutro ? 1 : 0);
-  const totalSeconds = baseDurationSec + (logoOutro ? 5 : 0);
-  const durationLabel = `${totalSeconds}s`;
+  const endFrame = Boolean(hasLogo); // added after generation, outside the length
+  const totalScenes = baseScenes;
+  const totalSeconds = baseDurationSec;
+  const durationLabel = baseDurationLabel;
 
   let baseBeats = [];
   if (baseScenes === 3) {
@@ -1513,19 +1514,13 @@ function computeScenePlan({ duration = "20s", hasLogo = false } = {}) {
   }
 
   const beats = [...baseBeats];
-  if (logoOutro) {
-    beats.push({
-      beat: "OUTRO",
-      name: "Outro & Logo End-Card",
-      timing: `${baseDurationSec}-${totalSeconds}s`,
-    });
-  }
 
   return {
     baseDuration: baseDurationLabel,
     baseDurationSec,
     baseScenes,
-    hasLogo: logoOutro,
+    hasLogo: endFrame,
+    endFrame,
     totalScenes,
     totalSeconds,
     durationLabel,
@@ -1633,19 +1628,8 @@ function adaptPackageScenes(rawScenes = [], { duration = "20s", hasLogo = false,
     }));
   }
 
-  // If user chooses to add logo, append dedicated 5s brand outro scene
-  if (plan.hasLogo) {
-    const outroNum = plan.totalScenes;
-    adapted.push({
-      sceneNumber: outroNum,
-      beat: "Outro & Logo",
-      timing: `${plan.baseDurationSec}-${plan.totalSeconds}s`,
-      visual: `Centered brand outro presenting the official ${businessName} brand logo with clean aesthetic lighting, warm confident smile, and final payoff.`,
-      dialogue: callToAction || `Visit ${businessName} today!`,
-      isLogoOutro: true,
-    });
-  }
-
+  // With a logo, the end frame is appended after generation by the logo flow — it is not a scene (and the video
+  // model is never asked to draw the logo), so the package keeps exactly the scene count for its length.
   return adapted;
 }
 
@@ -1662,7 +1646,8 @@ function compileSimpleScriptText(pkg, businessName, options = {}) {
 
   return scenes.map((s, idx) => {
     const sceneNum = idx + 1;
-    const isOutro = Boolean(s.isLogoOutro || (idx === scenes.length - 1 && (/outro|logo/i.test(s.beat || "") || /outro|logo/i.test(s.visual || ""))));
+    // only a scene saved as the old generated logo outro; a story scene that mentions a logo is still a story scene
+    const isOutro = Boolean(s.isLogoOutro);
     let beatName = s.beat
       ? s.beat.replace(/^SCENE\s*\d+\s*[–-]\s*/i, "").toUpperCase().trim()
       : (isOutro ? "OUTRO & LOGO" : (idx === scenes.length - 1 ? "RESOLUTION" : defaultBeats[idx] || `BEAT ${sceneNum}`));
@@ -2456,7 +2441,8 @@ CATEGORY-SPECIFIC MANDATES FOR FASHION & APPAREL:
   const filmFormat = spineContracts.filmFormatOf(creativeStyle);
   const fr = spineContracts.FORMAT_RULES[filmFormat];
   const simpleFormatRules = `- FILM FORMAT: ${filmFormat}. ${fr.looks_like} ${fr.generation}
-- DIALOGUE: ${fr.dialogue}${fr.hasVo ? " Write each scene's \"dialogue\" as \"VO: <line>\"; on-screen people act but do not speak." : ""}`;
+- DIALOGUE: ${fr.dialogue}${fr.hasVo ? " Write each scene's \"dialogue\" as \"VO: <line>\"; on-screen people act but do not speak." : ""}
+- CHARACTERS: ${spineContracts.TWO_CHARACTERS_RULE} character1 and character2 are those two.`;
   const langLower = String(language || "English").toLowerCase().trim();
   const isHinglish = langLower.includes("hinglish");
   const isHin = langLower === "hindi";
@@ -2495,7 +2481,7 @@ CRITICAL SCRIPT CONSTRAINTS:
 - CRITICAL: Never infer or substitute a regional language based on brand headquarters city or location. The explicit language setting (${language}) is the sole authority.
 - Total Target Duration: ${plan.durationLabel} (${plan.totalSeconds}s total runtime, calibrated to ~5s per scene).
 - Video Aspect Ratio / Composition: ${arStr} (${arDesc}). Optimize all visual staging for this orientation.
-- Exactly ${plan.totalScenes} scenes per package (${plan.baseScenes} core story scenes${plan.hasLogo ? " + 1 dedicated 5-second brand outro scene with logo reveal" : ""}):
+- Exactly ${plan.totalScenes} scenes per package, each exactly 5 seconds${plan.endFrame ? " (the logo end frame is added by production after the scenes — never write it as a scene, never put the logo in a scene)" : ""}:
 ${plan.beats.map((b, i) => `  Scene ${i + 1}: ${b.name} (${b.timing})`).join("\n")}
 - Single continuous setting per ad package.
 ${simpleFormatRules}

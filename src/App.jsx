@@ -2791,7 +2791,8 @@ export default function App() {
     // Enrich specialty with all user inputs so Claude receives the entire creative brief
     const targetDur = userContext.targetDuration || userContext.duration || '30s';
     const durNum = parseInt(targetDur, 10) || 30;
-    const perSceneSec = (durNum / 4).toFixed(1);
+    // every scene is exactly 5s: 15s → 3 scenes, 20s → 4, 30s → 6 (the end frame is added on top)
+    const sceneCount = [15, 20, 30].includes(durNum) ? durNum / 5 : 4;
     const targetRatio = userContext.aspectRatio || userContext.dimension || (userContext.platform && userContext.platform.includes('16:9') ? '16:9' : userContext.platform && userContext.platform.includes('1:1') ? '1:1' : '9:16');
     const ratioLabel = targetRatio === '16:9' ? '16:9 Landscape' : targetRatio === '1:1' ? '1:1 Square' : '9:16 Vertical';
 
@@ -2804,7 +2805,7 @@ export default function App() {
       `Platform: ${userContext.platform || ratioLabel}`,
       `Creative Style: ${userContext.creativeStyle || 'UGC / Creator-style'}`,
       userContext.brandTone?.trim() ? `Brand Tone/Voice: ${userContext.brandTone.trim()}` : null,
-      `Target Duration: ${targetDur} (~${perSceneSec}s per scene across 4 scenes)`,
+      `Target Duration: ${targetDur} (${sceneCount} scenes of 5s each; the end frame is added after)`,
       userContext.offer?.trim() ? `Offer/USP: ${userContext.offer.trim()}` : null,
       userContext.leadCharacter?.trim() ? `Lead Character: ${userContext.leadCharacter.trim()}` : null,
       userContext.supportingCharacter?.trim() ? `Supporting Character: ${userContext.supportingCharacter.trim()}` : null,
@@ -3537,6 +3538,7 @@ export default function App() {
           setting,
           scriptJson: generatedScript?.script_json || null,
           scriptHeader: generatedScript?.header || null,
+          storyboardJson: generatedScript?.storyboard_json || null,
           projectId: activeProjectId,
           creativeGuardrails: userContext.creativeGuardrails || null,
           eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
@@ -3552,9 +3554,16 @@ export default function App() {
         updated[rewriteTargetSceneIndex] = data.scene;
         setScenes(updated);
         if (data.script_json) {
-          // keep script.json in step with the edited scene (the next edit and the draft read it)
-          setGeneratedScript((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated, notices: data.notices || prev.notices } : prev));
-          setScriptPayloadData((prev) => (prev ? { ...prev, script_json: data.script_json, scenes: updated } : prev));
+          // keep script.json and the storyboard in step with the edited scene (the next edit, the draft and the render read them)
+          const board = data.storyboard_json || null;
+          const withFrame = (spec) => {
+            if (!spec || !Array.isArray(spec.shots) || !data.frame) return spec;
+            const shots = spec.shots.map((sh, i) => (i === rewriteTargetSceneIndex ? { ...sh, frame: data.frame } : sh));
+            return { ...spec, shots };
+          };
+          setGeneratedScript((prev) => (prev ? { ...prev, script_json: data.script_json, ...(board ? { storyboard_json: board } : {}), scenes: updated, notices: data.notices || prev.notices } : prev));
+          setScriptPayloadData((prev) => (prev ? { ...prev, script_json: data.script_json, ...(board ? { storyboard_json: board } : {}), shotSpec: withFrame(prev.shotSpec), scenes: updated } : prev));
+          if (data.frame) setShotSpec((prev) => withFrame(prev));
         }
         if (Array.isArray(data.failures) && data.failures.length) {
           setQualityFailures(data.failures);
@@ -4456,22 +4465,37 @@ export default function App() {
       draftRenderRef.current = { runId, projectId: renderProjectId, startedAt: sameRun ? draftRenderRef.current.startedAt : new Date().toISOString() };
       scheduleDraftSave(true);
     }
-    const maxAttempts = 160;
-    for (let i = 1; i <= maxAttempts; i++) {
+    // A ceiling on waiting, in wall-clock time: after RENDER_POLL_MAX_MS the loop stops and reports the last status
+    // the render reported (the run itself isn't cancelled — the draft keeps it, so reopening the project picks it
+    // up again). Each status request has its own timeout, so one hung request can't hold the loop past the ceiling.
+    const RENDER_POLL_INTERVAL_MS = 15000;
+    const RENDER_POLL_MAX_MS = 40 * 60 * 1000;
+    const RENDER_STATUS_TIMEOUT_MS = 30000;
+    const deadline = Date.now() + RENDER_POLL_MAX_MS;
+    let lastStatus = null; // the last /api/status answer, exactly as it came back
+    let lastStatusAt = null;
+    for (let i = 1; Date.now() < deadline; i++) {
       // a resumed render may already be finished — check straight away
-      if (!(immediate && i === 1)) await new Promise((r) => setTimeout(r, 15000));
+      if (!(immediate && i === 1)) await new Promise((r) => setTimeout(r, RENDER_POLL_INTERVAL_MS));
       // Abort immediately if a newer render job in this same session superseded this polling loop.
       // A detached render keeps going: nothing else will save its video.
       if (isLive() && activeRunIdRef.current !== runId) {
         return;
       }
       try {
-        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`, { headers: getAuthHeaders() });
+        const res = await fetch(`/api/status/${encodeURIComponent(runId)}`, {
+          headers: getAuthHeaders(),
+          signal: AbortSignal.timeout(RENDER_STATUS_TIMEOUT_MS),
+        });
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           continue; // Gateway response / proxy page during polling, keep waiting
         }
         const data = await res.json().catch(() => null);
+        if (data) {
+          lastStatus = data;
+          lastStatusAt = new Date();
+        }
         if (!data || data.error) continue;
 
         if (isLive() && activeRunIdRef.current !== runId) {
@@ -4634,7 +4658,8 @@ export default function App() {
         // Keep waiting despite transient network drops
       }
     }
-    // Polling attempts exhausted:
+    // The ceiling was reached: stop polling and say what the render last reported.
+    console.warn(`[render] stopped polling run ${runId} after ${RENDER_POLL_MAX_MS / 60000} min. Last status${lastStatusAt ? ` (${lastStatusAt.toISOString()})` : ''}:`, lastStatus ? JSON.stringify(lastStatus) : 'none received');
     // If run was superseded or video was already generated successfully, never show timeout error!
     if (!isLive() || activeRunIdRef.current !== runId) {
       return;
@@ -4649,7 +4674,10 @@ export default function App() {
     setIsRendering(false);
     setIsBusy(false);
     setCurrentStep('input');
-    setErrorMessage('Your video is taking longer than expected to render. It is still in progress: reopen this project from My Projects in a few minutes to pick it up.');
+    const lastReported = lastStatus
+      ? brandSafeMessage(String(lastStatus.status || lastStatus.error || 'unknown'), 'unknown')
+      : 'no status received';
+    setErrorMessage(`We stopped checking this video after ${RENDER_POLL_MAX_MS / 60000} minutes. Last status: "${lastReported}"${lastStatusAt ? ` at ${lastStatusAt.toLocaleTimeString()}` : ''}. The render may still finish: reopen this project from My Projects in a few minutes to check again.`);
   };
 
   // Video Share Action
@@ -6686,6 +6714,7 @@ export default function App() {
             onOpenScriptModal={() => setIsScriptModalOpen(true)}
             guardrailReport={scriptGuardrailReport}
             scriptNotices={(generatedScript && generatedScript.notices) || []}
+            storyboardFrames={(generatedScript && generatedScript.storyboard_json && Array.isArray(generatedScript.storyboard_json.frames)) ? generatedScript.storyboard_json.frames : []}
             onboardingState={onboardingState}
             onDismissTip={handleDismissTip}
             onBehaviorEvent={handleBehaviorEvent}

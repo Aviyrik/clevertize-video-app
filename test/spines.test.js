@@ -56,9 +56,9 @@ async function chain(style, form = {}) {
 const shape = (o) => (Array.isArray(o) ? (o.length && typeof o[0] === "object" ? [shape(o[0])] : []) : o && typeof o === "object" ? Object.fromEntries(Object.keys(o).map((k) => [k, shape(o[k])])) : typeof o);
 
 test("each spine is its own versioned prompt file holding the document, and edits apply without a code change", () => {
-  for (const [name, title, owns] of [["brief", "CleverCut — Brief Spine", "/api/creative/ai-understanding"], ["creative", "CleverCut — Creative Spine", "/api/creative/directions"], ["script", "CleverCut — Script & Storyboard (4-Grid) Spine", "/api/creative/synthesize-script"]]) {
+  for (const [name, title, owns, version] of [["brief", "CleverCut — Brief Spine", "/api/creative/ai-understanding", "1.0.0"], ["creative", "CleverCut — Creative Spine", "/api/creative/directions", "1.0.0"], ["script", "CleverCut — Script & Storyboard Spine", "/api/creative/synthesize-script", "2.1.0"]]) {
     const sp = loadSpine(name);
-    assert.equal(sp.version, "1.0.0");
+    assert.equal(sp.version, version);
     assert.equal(sp.title, title);
     assert.ok(sp.owns.includes(owns), `${name} owns ${owns}`);
     assert.ok(sp.text.includes("## Section 0 – Master instructions"), `${name} holds the document`);
@@ -142,11 +142,15 @@ for (const [style, format] of [["UGC / Creator-style", "UGC"], ["VO-led", "VO-le
       assert.match(out.scenes[0], /\nVO: "/);
     }
     if (format === "UGC") assert.ok(out.script.scenes.some((s) => !s.dialogue.length), "one beat is B-roll");
-    if (format === "Storytelling") {
-      assert.ok(new Set(out.script.scenes.flatMap((s) => s.dialogue.map((d) => d.speaker))).size >= 2, "speakers rotate");
-      assert.ok(out.notices.some((n) => n.code === "EXTRA_CHARACTERS"), "3 characters flagged, not dropped");
-      assert.ok(out.character2.includes("Ravi") && out.character2.includes("Dadi"), "characters 2+ share the second render slot");
-    }
+    if (format === "Storytelling") assert.ok(new Set(out.script.scenes.flatMap((s) => s.dialogue.map((d) => d.speaker))).size >= 2, "speakers rotate");
+    // two characters, one per render character input; every scene exactly 5s; one frame description per scene
+    assert.equal(out.script.context_block.characters.length, 2);
+    assert.ok(out.character1.startsWith("Asha") && out.character2.startsWith("Ravi") && !out.character2.includes("|"), "one character per slot, nothing packed");
+    assert.ok(out.script.scenes.every((s, i) => s.duration_s === 5 && s.start_s === i * 5));
+    assert.equal(out.storyboard.frames.length, 4);
+    assert.ok(!out.notices.some((n) => n.code === "EXTRA_CHARACTERS"));
+    assert.ok(prompts.some((p) => p.includes("— write the script") && p.includes(C.TWO_CHARACTERS_RULE)), "the script writer gets the two-character rule");
+    assert.ok(prompts.some((p) => p.includes("— Checkpoint 3 – Angles") && p.includes(C.TWO_CHARACTERS_RULE)), "the angles get it too");
   });
 }
 
@@ -158,7 +162,7 @@ test("Annex B gate enforces S-M7 per format", () => {
     const s = C.normalizeScript({ ...base, format, length_s: 20, language: { name: "English", script: "Latin" } });
     s.scenes = s.scenes.map((x, i) => ({ ...x, n: i + 1, beat: ["Hook", "Real moment", "Turn", "Payoff"][i] }));
     mutate(s);
-    return runScriptGate(s, { header, brief });
+    return runScriptGate(s, { header, brief, storyboard: storyboard.buildStoryboard(s, base.frames) });
   };
   assert.ok(make("Storytelling", () => {}).passed);
   assert.ok(make("Storytelling", (s) => { s.scenes[0].dialogue.push({ speaker: "Asha", line: "And again." }); }).failures.some((f) => /max 1 line per character per scene/.test(f)));
@@ -171,8 +175,45 @@ test("Annex B gate enforces S-M7 per format", () => {
   assert.ok(make("Storytelling", (s) => { s.scenes[1].super = "one two three four five six seven"; }).failures.some((f) => /longer than 6 words/.test(f)));
   assert.ok(make("Storytelling", (s) => { s.scenes[1].visual = "Asha feels happy and relieved at the counter with the bottle in hand"; }).failures.some((f) => /emotion as direction/.test(f)));
   const g = make("Storytelling", () => {});
-  assert.equal(g.checks.find((c) => c.id === "storyboard").status, "not_run");
+  assert.equal(g.checks.find((c) => c.id === "frames").status, "pass", "the frame check runs on the descriptions");
+  assert.ok(!g.checks.some((c) => c.status === "not_run"), "no storyboard 'not run' state");
   assert.equal(g.checks.find((c) => c.id === "ending_payoff").status, "self-check");
+
+  // two characters: a third in the Context Block, a third speaker or a third person in a visual fails the gate
+  assert.ok(make("Storytelling", (s) => { s.context_block.characters.push({ ref: "char_3", name: "Dadi", role: "grandmother", age: "70", gender: "female", wardrobe: "white saree" }); }).failures.some((f) => /3 characters — every film has exactly two/.test(f)));
+  assert.ok(make("Storytelling", (s) => { s.scenes[1].dialogue = [{ speaker: "Dadi", line: "Where is the oil?" }]; }).failures.some((f) => /"Dadi" speaks but isn't one of the two characters/.test(f)));
+  assert.ok(make("Storytelling", (s) => { s.scenes[3].visual = "Asha pours the oil into the pan while her husband sets the table beside her."; }).failures.some((f) => /Scene 4 features a third person \("husband"\) — rewrite the visual with only Asha and Ravi/.test(f)));
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].visual = "Asha stirs the pan at the stove. Shoppers pass by in the blurred background of the window."; }).passed, "background activity is not a featured person");
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].visual = "Asha stirs the pan at the stove with a steel ladle. No other person is in the frame."; }).passed, "a sentence ruling people out names nobody");
+  // found live: "Anonymous hands only — not Priya or Ravi" stacked the boxes — a third person's hands doing the action
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Anonymous hands only — not Asha or Ravi, no face visible. The hands stack two sealed boxes on the counter."; }).failures.some((f) => /Scene 3 features a third person \("anonymous hands"\)/.test(f)));
+  assert.ok(!storyboard.mentions("Anonymous hands only — not Asha or Ravi.", { name: "Asha" }), "a character ruled out of the frame isn't in it");
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Two hands, no character named, tie a red ribbon around the sealed box on the counter."; }).failures.some((f) => /Scene 3 shows hands that belong to neither character — make them Asha's or Ravi's/.test(f)));
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Ravi sets the box down at the kitchen door. His hands tie a red ribbon around the sealed box."; }).passed, "a character's own hands are fine");
+  // found live: "Ravi's hands only, no face visible" — the "no" is about the face, the hands are Ravi's
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Close-up — Ravi's hands only, no face visible. Ravi ties a red ribbon around the sealed box at the kitchen door."; }).passed);
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Ravi folds the lid of the box closed at the door. He lifts the sealed box with both hands and passes it to Asha."; }).passed, "\"he … with both hands\" names whose hands they are");
+  assert.ok(make("Storytelling", (s) => { s.scenes[2].visual = "Asha's hands pack the sweets into the box on the counter. Ravi's hands lift the second box onto the stack. Both pairs of hands leave the frame."; }).passed, "\"both pairs of hands\" refers back to hands already named");
+  // S-M9: a note about what isn't generated isn't a generation instruction; "generate with a zoom effect" is
+  assert.ok(make("Storytelling", (s) => { s.scenes[3].edit_notes = "Hold 1s. The super is rendered by Production and is not in the generated frame."; }).passed);
+  assert.ok(make("Storytelling", (s) => { s.scenes[3].edit_notes = "Generate with a zoom effect on the bottle."; }).failures.some((f) => /Scene 4 Editing Notes contain generation instructions/.test(f)));
+  // the other character's Context Block line can name this one ("Asha's neighbour") — only the writer's note says who is in frame
+  assert.ok(make("Storytelling", (s) => { s.context_block.characters[1].role = "Asha's neighbourhood delivery boy"; }).passed);
+  assert.ok(make("Storytelling", (s) => { s.context_block.product.packaging = "white box with the brand logo on the top face"; }).passed, "the product's own packaging logo isn't a logo asked for in the frame");
+  assert.ok(make("Storytelling", (s) => { s.context_block.characters = s.context_block.characters.slice(0, 1); }).failures.some((f) => /1 character — every film has exactly two/.test(f)));
+  // found live: a UGC writer made the second character "voice on phone … not seen on screen"
+  assert.ok(make("Storytelling", (s) => { s.context_block.characters[1].wardrobe = "Not seen on screen — voice only"; }).failures.some((f) => /character 2 \(Ravi\) is never seen — both characters appear on screen/.test(f)));
+  // S-M5 (spine 2.1.0): writing and phone/app screens may be generated, spelled out word for word in "UI / in-scene text"
+  const phoneVisual = "Asha looks at her phone as the order screen lights up on the steel counter.";
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].visual = phoneVisual; }).failures.some((f) => /Scene 1 shows a screen or writing — give its exact words in "UI \/ in-scene text"/.test(f)), "a screen with no words given fails");
+  const spelled = make("Storytelling", (s) => { s.scenes[0].visual = phoneVisual; s.scenes[0].ui_mockup = 'Phone order screen: "Order placed" / "Arriving in 30 min"'; });
+  assert.ok(spelled.passed, spelled.failures.join(" | "));
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].ui_mockup = 'Shop sign: "Fresh oil, fresh atta, fresh dal, every single evening, right here in Palasia, open till late"'; }).failures.some((f) => /too long to read in a 5-second scene/.test(f)));
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].ui_mockup = 'Poster: "Flat 50% off today"'; }).failures.some((f) => /shows "50%", which isn't in the brief's offer or proof points/.test(f)), "a figure the brief doesn't back");
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].ui_mockup = 'Phone screen: "तेल खत्म"'; }).failures.some((f) => /in-scene text "तेल खत्म" is not in English/.test(f)), "in the brief's language");
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].ui_mockup = "Phone screen showing the order"; }).failures.some((f) => /doesn't give the exact words/.test(f)), "vague in-scene text");
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].ui_mockup = 'The brand logo glowing on the shop sign: "Sharma Store"'; }).failures.some((f) => /asks the model to draw a logo/.test(f)), "logos stay banned");
+  assert.ok(make("Storytelling", (s) => { s.scenes[0].visual = "Asha tilts the empty bottle over the pan while a caption appears across the bottom of the frame."; }).failures.some((f) => /asks for a caption or headline over the picture/.test(f)), "supers and captions stay Production's");
 
   // Don'ts: the user's own are word-checked; the Brief Spine's brand/category sentences are the writer's self-check
   // (found live: "no health claims about sweet products" failed every Kanti Sweets script for saying "sweet").
@@ -180,7 +221,7 @@ test("Annex B gate enforces S-M7 per format", () => {
     const s = C.normalizeScript({ ...base, format: "Storytelling", length_s: 20, language: { name: "English", script: "Latin" } });
     s.scenes = s.scenes.map((x, i) => ({ ...x, n: i + 1, beat: ["Hook", "Real moment", "Turn", "Payoff"][i] }));
     s.scenes[0].visual = `${s.scenes[0].visual} A box of sweets from DiamondPlaza sits on the counter.`;
-    return runScriptGate(s, { header, brief: { ...brief, dos_donts } });
+    return runScriptGate(s, { header, brief: { ...brief, dos_donts }, storyboard: storyboard.buildStoryboard(s, base.frames) });
   };
   const category = { rule: "Do not make specific health, nutrition or weight claims about sweet products", type: "Must not include", strength: "must", source: "category", applies_to: ["script"] };
   const userDont = { rule: "Do not mention DiamondPlaza", type: "Must not include", strength: "must", source: "user", applies_to: ["script"] };
@@ -207,19 +248,130 @@ test("Section 3 scenes still feed the unchanged render path (visual, camera, dia
   assert.deepEqual(dialogueOf(text).lines, [{ speaker: "Asha", text: "तेल खत्म!" }]);
   const gen = sceneForGeneration(text, {});
   assert.ok(!gen.includes("OIL RAN OUT") && !gen.includes("30-minute delivery") && !gen.includes("Transition out"), "on-screen elements are rendered by Production, never sent to the video model");
+  // S-M5 (spine 2.1.0): in-scene writing and phone UI the AI draws reach the video model word for word
+  const withUi = scriptSpine.renderScene({ ...sc, ui_mockup: 'Phone screen, WhatsApp chat: "Bhaiya, one bottle of oil please"' });
+  assert.match(withUi, /• UI \/ in-scene text: Phone screen, WhatsApp chat: "Bhaiya, one bottle of oil please"/);
+  assert.match(withUi, /On-screen elements \(supers, callouts, CTA, disclaimer and logo rendered by Production; in-scene writing and phone UI may be AI-generated\):/);
+  const genUi = sceneForGeneration(withUi, {});
+  assert.ok(genUi.includes('IN-SCENE TEXT — render exactly these words') && genUi.includes('"Bhaiya, one bottle of oil please"') && !genUi.includes("OIL RAN OUT"));
+  const { compileShotSpecification, compileShotPrompt } = require("../engine/compiler");
+  const spec = compileShotSpecification({ scenes: [withUi], setting: "kitchen", character1: "Asha", character2: "Ravi" }, { aspectRatio: "9:16" });
+  assert.equal(spec.shots[0].inSceneText, 'Phone screen, WhatsApp chat: "Bhaiya, one bottle of oil please"');
+  assert.match(compileShotPrompt(spec.shots[0], spec.staticWorld, { shotCount: 4, sceneIndex: 1 }), /IN-SCENE TEXT \(render exactly these words[^)]*\): Phone screen, WhatsApp chat: "Bhaiya, one bottle of oil please"/);
 });
 
-test("storyboard seam: frames planned per scene with refs; drawn only when an image provider is registered", async () => {
+test("storyboard: one written frame description per scene (Section 4), no images; text locks feed production", async () => {
   const { out } = await chain("Storytelling");
+  const sb = out.storyboard;
+  assert.deepEqual(Object.keys(sb.frames[0]), ["scene", "frame", "composition", "subject", "product", "setting_light", "placeholders", "line", "approved"]);
+  assert.deepEqual(Object.keys(sb.locks), ["characters", "product", "reference_images", "style", "palette"]);
+  assert.equal(sb.frames.length, 4);
+  assert.ok(!JSON.stringify(sb).includes("image_url"), "no images");
+  assert.equal(new Set(sb.frames.map((f) => f.setting_light)).size, 1, "the same setting and light in every frame");
+  assert.ok(sb.frames[0].frame.startsWith("9:16 · medium shot"));
+  const ravi = scriptSpine.productionFields(out.script).character2;
+  assert.ok(sb.frames[2].subject.includes(ravi), "a character in frame is described exactly as in the Context Block");
+  assert.match(sb.frames[0].placeholders, /Super "Oil ran out\?" — lower third/);
+  assert.equal(sb.frames[1].product, "Not in frame.");
+  assert.equal(sb.locks.characters.length, 2);
+  assert.ok(sb.locks.product.includes("golden"));
+  assert.ok(typeof storyboard.registerStoryboardImageProvider === "undefined", "the image provider seam is gone");
+
+  // the frame check runs on the descriptions (spine 2.1.0): in-scene writing is spelled out word for word, logos never
+  assert.ok(sb.frames[1].composition.includes(`${storyboard.IN_SCENE_MARK} ${out.script.scenes[1].ui_mockup}`), "the frame carries the scene's in-scene text word for word");
+  const header = { brand: "a", objective: "a", platform_format: "a", film_format: "a", angle: "a", lens: "a", hook: "a", ending: "a", mood: "a", moment: "a", language: "a" };
+  const hiBrief = C.briefForScript({ ...answers.brief, language: { name: "Hindi", script: "Devanagari" } });
+  const withScreen = JSON.parse(JSON.stringify(sb));
+  withScreen.frames[1].composition = `Asha holds the phone up; the screen shows the WhatsApp chat in close-up for the viewer. ${storyboard.IN_SCENE_MARK} ${out.script.scenes[1].ui_mockup}`;
+  assert.ok(!runScriptGate(out.script, { header, brief: hiBrief, storyboard: withScreen }).failures.some((f) => /^Frame 2/.test(f)), "a chat screen with its words spelled out is fine");
+  const vague = JSON.parse(JSON.stringify(out.script));
+  vague.scenes[2].ui_mockup = "none";
+  const vagueBoard = JSON.parse(JSON.stringify(sb));
+  vagueBoard.frames[2].composition = "Ravi holds up his phone; the screen shows the order confirmation for the viewer to read.";
+  assert.ok(runScriptGate(vague, { header, brief: hiBrief, storyboard: vagueBoard }).failures.some((f) => /Frame 3 shows a screen or writing without its exact words/.test(f)));
+  const logo = JSON.parse(JSON.stringify(sb));
+  logo.frames[0].composition = "Asha stands centre-frame at the stove; the shop logo is printed across the wall behind her.";
+  assert.ok(runScriptGate(out.script, { header, brief: hiBrief, storyboard: logo }).failures.some((f) => /Frame 1 asks for a logo inside the frame/.test(f)));
+});
+
+test("render prompts: every scene exactly 5s, the same static world in each, the frame description, no generated logo outro", () => {
+  const { compileShotPrompt } = require("../engine/compiler");
+  const sw = { setting: "small home kitchen, evening, tube light", characters: "Asha, home cook | Ravi, delivery boy", product: "Groundnut oil 1L, golden", look: "Storytelling · Light humour", palette: "turmeric yellow" };
+  const frame = { frame: "9:16 · medium shot · eye level · camera: static", composition: "Asha centre-frame at the stove.", subject: "Asha tilts the bottle.", product: "Groundnut oil 1L — in her hand", placeholders: 'Super "Oil ran out?" — lower third' };
+  const prompts = [0, 1, 2, 3].map((i) => compileShotPrompt({ shotNumber: i + 1, beat: i === 3 ? "OUTRO & LOGO" : "HOOK", framing: "Medium", primaryAction: "x.", fullVisual: "x.", cameraMovement: "static", dialogue: "None", frame }, sw, { shotCount: 4, sceneIndex: i, duration: "20s" }));
+  const staticLine = (p) => p.split("\n\n").find((l) => l.startsWith("STATIC WORLD"));
+  assert.equal(new Set(prompts.map(staticLine)).size, 1, "the static world is word for word the same in every scene");
+  assert.ok(prompts.every((p) => /This scene is exactly 5 seconds/.test(p) && /the film is 20s of generated video, and the end frame is added afterwards/.test(p)));
+  assert.ok(prompts[0].includes("STORYBOARD FRAME: Frame: 9:16 · medium shot") && !prompts[0].includes("Oil ran out?"), "the frame goes in, the placeholders (text) never do");
+  assert.ok(!prompts.some((p) => /LOGO END-CARD|logo presentation/i.test(p)), "the video model is never asked to draw a logo outro");
+  assert.ok(prompts[0].includes("the only two people featured in this film"));
+  // a composition sentence about where a super sits stays in the storyboard but never reaches the video model
+  const withSuper = compileShotPrompt({ shotNumber: 1, beat: "HOOK", framing: "Medium", primaryAction: "x.", fullVisual: "x.", cameraMovement: "static", dialogue: "None", frame: { ...frame, composition: "Asha centre-frame at the stove. Super 'Shaadi season. Two days.' sits in the upper-third safe zone." } }, sw, { shotCount: 4, sceneIndex: 0 });
+  assert.ok(withSuper.includes("Composition: Asha centre-frame at the stove.") && !/Shaadi season/.test(withSuper));
+});
+
+test("Section 5: a repair pass rewrites only the failing scene and frame; the rest of the script is kept", async () => {
+  const full = JSON.parse(answers.scriptFor({ format: "Storytelling", script: "Devanagari" }).replace(/^@@JSON@@\n|\n@@END@@$/g, ""));
+  full.scenes[1].super = "one two three four five six seven eight"; // fails: super longer than 6 words
+  const fixed = { ...full.scenes[1], n: 2, super: "Oil on its way" };
+  const seen = [];
+  const call = async (req) => {
+    seen.push(req);
+    if (/— write the script ===/.test(req.system)) return answers.J(full);
+    return answers.J({ scenes: [fixed], frames: [{ scene: 2, camera_angle: "eye level", composition: "Asha stands centre-frame at the counter; the window sits behind her; the lower third stays clear.", subject: "Asha taps a message on her phone.", product: "not in frame" }] });
+  };
+  const concept = { ...answers.concept, insight: { lens: "2, Everyday Moments", tension: "The oil runs out mid-tadka" }, angles: answers.angles.angles.slice(0, 1), chosen_angle_id: "a1" };
+  const brief = C.normalizeBrief({ ...answers.brief, company: { brand: "Sharma General Store", category: "Kirana" }, language: { name: "Hindi", script: "Devanagari" }, formats: { aspect_ratios: ["9:16"], lengths_s: [20] }, platforms: ["Meta Reels"], dos_donts: [C.filmFormatRule("Storytelling")] });
+  const out = await scriptSpine.writeScript({ concept, brief: C.briefForScript(brief) }, { call });
+  assert.ok(out.gate.passed, (out.gate.failures || []).join(" | "));
+  assert.equal(seen.length, 2);
+  assert.match(seen[1].system, /REPAIR \(Section 5: rewrite only the parts that fail/);
+  assert.match(seen[1].system, /Rewrite only scene 2\b/);
+  assert.equal(out.script.scenes[1].super, "Oil on its way");
+  assert.equal(out.script.scenes[0].visual, full.scenes[0].visual, "scenes that passed are kept as they were");
   assert.equal(out.storyboard.frames.length, 4);
-  assert.deepEqual(out.storyboard.locks.character_refs, ["char_1", "char_2", "char_3"]);
-  assert.equal(out.storyboard.frames[0].image_url, "");
-  assert.equal(out.storyboardStatus, "not_run");
-  storyboard.registerStoryboardImageProvider(async ({ prompt }) => ({ image_url: `https://img.test/${prompt.length}.png`, seed: "s1" }));
-  const drawn = await storyboard.generateFrames(JSON.parse(JSON.stringify(out.storyboard)), out.script);
-  assert.equal(drawn.status, "pass");
-  assert.ok(drawn.storyboard.frames.every((f) => f.image_url.startsWith("https://img.test/")));
-  storyboard.resetStoryboardImageProvider();
+});
+
+test("after three failed passes the user gets plain words and two ways forward, never rule codes", async () => {
+  const full = JSON.parse(answers.scriptFor({ format: "Storytelling", script: "Devanagari" }).replace(/^@@JSON@@\n|\n@@END@@$/g, ""));
+  full.scenes[1].super = "one two three four five six seven eight"; // fails every pass
+  full.scenes[2].visual = "Ravi hands the bottle to Asha while her husband watches from the doorway of the kitchen.";
+  const call = async () => answers.J(full);
+  const concept = { ...answers.concept, insight: { lens: "2, Everyday Moments", tension: "The oil runs out mid-tadka" }, angles: answers.angles.angles.slice(0, 1), chosen_angle_id: "a1" };
+  const brief = C.normalizeBrief({ ...answers.brief, company: { brand: "Sharma General Store", category: "Kirana" }, language: { name: "Hindi", script: "Devanagari" }, formats: { aspect_ratios: ["9:16"], lengths_s: [20] }, platforms: ["Meta Reels"], dos_donts: [C.filmFormatRule("Storytelling")] });
+  await assert.rejects(() => scriptSpine.writeScript({ concept, brief: C.briefForScript(brief) }, { call }), (e) => {
+    assert.equal(e.code, "SCRIPT_GATE_FAILED");
+    assert.equal(e.status, 422);
+    assert.equal(e.message, scriptSpine.GATE_FAILED_MESSAGE);
+    assert.match(e.message, /Retry Script Generation/);
+    assert.match(e.message, /Back to Hook/);
+    for (const text of [e.message, ...e.failures]) {
+      assert.doesNotMatch(text, /\b[SCB]-M\d|Annex|Section \d|quality gate|Context Block|brief\.\w+|pick the next angle/i, `no internal terms: ${text}`);
+    }
+    assert.ok(e.failures.includes(scriptSpine.PLAIN_PROBLEMS.on_screen));
+    assert.ok(e.failures.includes(scriptSpine.PLAIN_PROBLEMS.two_characters));
+    assert.ok(e.details.some((d) => /super is longer than 6 words/.test(d)), "the specifics stay available for the log");
+    return true;
+  });
+});
+
+test("scene plan: the length sets the scene count; the logo end frame is added on top, never a scene", () => {
+  const creative = require("../engine/creative");
+  for (const [d, n] of [["15s", 3], ["20s", 4], ["30s", 6]]) {
+    for (const hasLogo of [false, true]) {
+      const plan = creative.computeScenePlan({ duration: d, hasLogo });
+      assert.equal(plan.totalScenes, n, `${d} logo=${hasLogo}`);
+      assert.equal(plan.totalSeconds, n * 5);
+      assert.equal(plan.perSceneSec, 5);
+      assert.equal(plan.endFrame, hasLogo, "a logo still brings the end frame");
+      assert.ok(!plan.beats.some((b) => /outro/i.test(b.beat)));
+    }
+    assert.equal(C.scenePlan(parseInt(d, 10)).count, n);
+    assert.equal(C.scenePlan(parseInt(d, 10)).each, 5);
+  }
+  const { sceneForGeneration } = require("../engine/parse");
+  const gen = sceneForGeneration("SCENE 1 – HOOK – 0:00–0:05\n\nVisual:\nAsha tilts the bottle.", { duration: "30s", sceneIndex: 0, sceneCount: 6 });
+  assert.match(gen, /This scene is exactly 5 seconds \(scene 1 of 6; 30s of generated video in all/);
 });
 
 test("old Creative Style values map to the nearest of the three, the same way on server and client", () => {

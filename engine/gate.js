@@ -13,7 +13,7 @@ const CLAIM_TERMS = [
 ];
 const FREE_TERMS = [/\bfree\b/i, /फ्री/, /मुफ़्त/, /मुफ्त/];
 const ONSCREEN_TEXT = /\b(caption|subtitle|title card|text (reads|says|appears)|on-?screen text|lower[- ]third|written on screen)\b/i;
-const PHONE_UI = /\b(screen (shows|showing|displays)|app (interface|screen)|notification|whatsapp (chat|message) on screen)\b/i;
+const PHONE_UI = /\b(screen (shows|showing|displays)|app (interface|screen)|notification|whatsapp (chat|message) on screen|incoming call|call screen|caller id|video call screen)\b/i;
 const DEITY = /\b(idol|idols|deity|deities|goddess|murti)\b/i;
 const EMOTION_DIRECTION = /\b(feels?|feeling|felt)\s+(so\s+|very\s+)?(happy|sad|relieved|hopeful|proud|worried|nervous|confident|embarrassed|excited|anxious|grateful|satisfied|glad|upset|ashamed|shy|stressed|calm)\b/i;
 const STARE_OFF = /\b(stares?|staring|gazes?|gazing|looks?|looking)\s+(off|away|out|blankly|into (the )?(distance|space|nothing)|past (him|her|them))\b|\binto the distance\b|\bthousand-yard\b/i;
@@ -306,6 +306,7 @@ function runGate(parsed, f, { scriptMode = "devanagari", previous = [], approved
 // and are reported as "self-check".
 // =====================================================================================================
 const contracts = require("./spines/contracts");
+const storyboardLib = require("./spines/storyboard");
 
 const SCRIPT_BEATS = ["Hook", "Real moment", "Turn", "Payoff"];
 const BROCHURE = /\b(best quality|premium quality|best-in-class|100% natural|no\.?\s*1\b|number one|trusted by millions|world[- ]class|one-?stop shop|shop now!?$|download now!?$)\b|सर्वोत्तम गुणवत्ता|उत्तम गुणवत्ता|नंबर\s*(1|वन)/i;
@@ -314,12 +315,33 @@ const NAMED_TRACK = /\b(song|track)\s*[:"“]|"[^"]+"\s+by\s+[A-Z]|\bby (arijit|
 const FLAT_CUT = /^(hard\s+|flat\s+|straight\s+|plain\s+)?cut\.?$/i;
 const SUPPORTED_SCRIPTS = { Devanagari: /[ऀ-ॿ]/, Tamil: /[஀-௿]/, Telugu: /[ఀ-౿]/, Kannada: /[ಀ-೿]/, Malayalam: /[ഀ-ൿ]/, Bengali: /[ঀ-৿]/, Gujarati: /[઀-૿]/, Gurmukhi: /[਀-੿]/ };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean);
+// a frame sentence about keeping space clear, or about what to avoid, isn't asking for that thing
+// …and neither is a note on what Production adds later ("the callout will be placed by Production", "composited in post")
+const FRAME_CAUTION = /\b(clear|free|empty|kept|keep|keeps|reserved|space for|room for|leave|leaves|left open|no|not|never|without|avoid|avoids|nothing|none|production|in post|composit\w*|placed by|will be placed|will sit|overlay zones?)\b/i;
 const isNone = (s) => /^\s*(none|n\/a|-)?\s*$/i.test(String(s || ""));
 const filled = (s) => String(s || "").trim().length > 0;
 // "about 8 words (3 seconds) or fewer": one word of slack for "about"
 const MAX_LINE_WORDS = 9;
 
-function runScriptGate(script, { header = {}, brief = {}, concept = null, storyboardStatus = "not_run" } = {}) {
+// S-M5 (spine 2.1.0): the video model may draw writing and phone/app/website screens a scene needs, spelled out word
+// for word in the scene's "UI / in-scene text" bullet (script.json ui_mockup): short, legible, in brief.language and
+// consistent with brief.rtbs. Supers, callouts, CTA and disclaimers over the picture stay Production's, and logos are
+// never generated.
+const OVERLAY_TEXT = /\b(caption|captions|subtitle|subtitles|title card|on-?screen text|text overlay|overlay text|lower[- ]third (super|caption|graphic|title|text|banner))\b/i;
+const WRITING_CUE = /\b(phone|app|website|web ?page|laptop|tablet|order|checkout|payment|cart)\s+(screen|page|display)\b|\bscreen\s+(shows|showing|displays|reads|lights up with)\b|\b(app (interface|screen)|chat|whatsapp|message|messages|notification|incoming call|call screen|caller id|order confirmation|signboard|signage|shop sign|sign reads|banner|poster|handwritten|note|notes|checklist|menu card|menu board|receipt|bill|invoice|price tag|placard|text reads|text says|written on)\b/i;
+const NOT_SHOWN = /\b(dark|blank|black screen|turned off|switched off|screen off|face[- ]down|unreadable|not visible|no text|nothing on|out of focus)\b/i;
+const IN_SCENE_MAX_WORDS = 12; // "short and legible": one piece of text read in a 5-second scene
+/** Does this text show writing or a screen the viewer can read? */
+const showsWriting = (text) => String(text || "").split(/(?<=[.;!?])\s+/).some((sn) => WRITING_CUE.test(sn) && !NOT_SHOWN.test(sn));
+/** The exact words given for in-scene text: each piece in quotes. */
+function quotedPieces(text) {
+  const t = String(text || "");
+  const out = [];
+  for (const m of t.matchAll(/["“]([^"”]{1,240})["”]|‘([^’]{1,240})’|(?:^|[\s:(,—–-])'([^']{2,240})'(?=[\s.,;:)!?—–-]|$)/g)) out.push((m[1] || m[2] || m[3] || "").trim());
+  return out.filter(Boolean);
+}
+
+function runScriptGate(script, { header = {}, brief = {}, concept = null, storyboard = null } = {}) {
   const fails = [];
   const checks = [];
   const check = (id, text, problems, status) => {
@@ -340,7 +362,7 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   const cb = script.context_block || {};
   const cbProblems = [];
   const chars = Array.isArray(cb.characters) ? cb.characters : [];
-  if (!chars.length) cbProblems.push("Context Block has no characters.");
+  if (chars.length !== 2) cbProblems.push(`Context Block has ${chars.length} character${chars.length === 1 ? "" : "s"} — every film has exactly two, and the story plays out between them.`);
   chars.forEach((c, i) => {
     const o = c && typeof c === "object" ? c : { description: c };
     if (!filled(o.ref || o.reference || o.ref_id)) cbProblems.push(`Context Block character ${i + 1} has no reference image ID.`);
@@ -358,7 +380,8 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   scenes.forEach((sc, i) => {
     if (words(sc.visual).length < 8) visProblems.push(`${S(sc, i)} Visual is not a complete picture.`);
     if (EMOTION_DIRECTION.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual uses emotion as direction ("${(sc.visual.match(EMOTION_DIRECTION) || [""])[0]}") — physical actions only (S-M6).`);
-    if (ONSCREEN_TEXT.test(sc.visual) || PHONE_UI.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual asks for text or a phone/app screen — those are on-screen elements rendered by Production (S-M5).`);
+    // writing and screens in the scene are allowed (S-M5) and checked below; words laid over the picture are not
+    if (OVERLAY_TEXT.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual asks for a caption or headline over the picture — put those words in the Super or Callout bullet; Production adds them (S-M5).`);
     if (!filled(sc.shot) || !filled(sc.camera)) visProblems.push(`${S(sc, i)} is missing the shot size or camera move.`);
   });
   check("visual", "Visual fields are complete pictures, physical actions only, inside the safe zones", visProblems);
@@ -366,10 +389,10 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   // 4. On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo
   const osProblems = [];
   scenes.forEach((sc, i) => {
-    for (const k of ["super", "callout", "cta", "disclaimer", "ui_mockup", "logo"]) if (!filled(sc[k])) osProblems.push(`${S(sc, i)} on-screen element "${k}" is empty — write it, or "none".`);
+    for (const k of ["super", "callout", "cta", "disclaimer", "ui_mockup", "logo"]) if (!filled(sc[k])) osProblems.push(`${S(sc, i)} on-screen element "${k === "ui_mockup" ? "UI / in-scene text" : k}" is empty — write it, or "none".`);
     if (!isNone(sc.super) && words(sc.super).length > 6) osProblems.push(`${S(sc, i)} super is longer than 6 words.`);
   });
-  check("on_screen", "On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo", osProblems);
+  check("on_screen", "On-screen elements filled for every scene", osProblems);
 
   // 5. Dialogue rules (S-M7, per format)
   const dlgProblems = [];
@@ -400,6 +423,44 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   if (format === "Storytelling" && totalLines >= 3 && Object.keys(speakerScenes).length < 2) dlgProblems.push("Storytelling: every line comes from one character — rotate speakers across scenes (S-M7).");
   check("dialogue", "Dialogue ≤ 1 line per character per scene, about 8 words, spread across characters (UGC/Founder: speaker in ≤ 3 scenes)", dlgProblems);
 
+  // Two characters, everywhere (the app's production rule): only the Context Block's two people speak or are
+  // featured in a scene; anyone else in a visual is a third featured person (background activity excepted).
+  const twoProblems = [];
+  const castOf = chars.slice(0, 2);
+  const castNames = castOf.map((c) => (c && typeof c === "object" ? c.name || c.role : String(c || "")) || "the character").join(" and ") || "the two characters";
+  const isCast = (speaker) => castOf.some((c) => storyboardLib.mentions(speaker, c));
+  scenes.forEach((sc, i) => {
+    for (const d of (sc.dialogue || []).filter((x) => filled(x.line))) {
+      const who = String(d.speaker || "").trim();
+      if (/^(vo|v\.o\.|voiceover|narrator)$/i.test(who)) continue;
+      if (castOf.length === 2 && !isCast(who)) twoProblems.push(`${S(sc, i)}: "${who}" speaks but isn't one of the two characters — the story plays out between them.`);
+    }
+    const extra = contracts.extraPeople(sc.visual, castOf);
+    if (extra.length) twoProblems.push(`${S(sc, i)} features a third person (${extra.map((w) => `"${w}"`).join(", ")}) — rewrite the visual with only ${castNames} in it (or move anyone else to the unnamed, out-of-focus background).`);
+  });
+  // hands that belong to neither character ("two hands, no character named, tie the ribbon") are a third person:
+  // the video model invents whose hands they are, and they don't match either character
+  // Hands are stray when no sentence about hands says whose they are (a character's name, or "he/she/they/his/her/
+  // their"); a later "both pairs of hands" refers back to hands already named. Anonymous wording ("anonymous hands",
+  // "a pair of hands") is caught as a third person by contracts.extraPeople.
+  const strayHands = (text) => {
+    const withHands = String(text || "").split(/(?<=[.!?;])\s+/).filter((sn) => /\bhands?\b/i.test(sn));
+    const owned = (sn) => /\b(he|she|they|his|her|their|him|them)\b/i.test(sn) || castOf.some((c) => storyboardLib.mentions(sn, c, { ruleOut: false }));
+    return withHands.length > 0 && !withHands.some(owned);
+  };
+  scenes.forEach((sc, i) => {
+    if (castOf.length === 2 && strayHands(sc.visual)) twoProblems.push(`${S(sc, i)} shows hands that belong to neither character — make them ${castOf.map((c) => `${(c && c.name) || "a character"}'s`).join(" or ")} (no third person, not even hands).`);
+  });
+  // both characters are seen: the story plays out between two people on screen, not one person and a voice
+  castOf.forEach((c, i) => {
+    const o = c && typeof c === "object" ? c : { description: String(c || "") };
+    const desc = Object.values(o).filter((v) => typeof v === "string").join(" ");
+    const who = o.name || o.role || `Character ${i + 1}`;
+    if (/\b(not seen|unseen|never seen|voice[- ]only|only (a |as a )?voice|off-?screen|heard only|only heard)\b/i.test(desc)) twoProblems.push(`Context Block character ${i + 1} (${who}) is never seen — both characters appear on screen; the story plays out between them.`);
+    else if (castOf.length === 2 && !scenes.some((sc) => storyboardLib.mentions(sc.visual, c))) twoProblems.push(`${who} doesn't appear in any scene's visual — both characters appear on screen.`);
+  });
+  check("two_characters", "Exactly two characters; no third featured person in any scene", twoProblems);
+
   // 6. Dialogue in brief.language and its correct script
   const langProblems = [];
   const scriptName = (script.language && script.language.script) || "Latin";
@@ -421,6 +482,33 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   }
   check("language", "Dialogue in brief.language and its correct script", langProblems);
 
+  // 4b. In-scene text and phone UI written out exactly; nothing asks the model to generate a logo (S-M5, Annex B).
+  // A scene that shows writing or a screen gives its exact words in "UI / in-scene text", each piece in quotes:
+  // short, legible, in brief.language, and with no figure the brief doesn't back.
+  const inSceneProblems = [];
+  const backedText = [...((brief.rtbs || []).map((r) => `${r.claim} ${r.proof}`)), brief.mandatories && brief.mandatories.offer, brief.company && brief.company.offer].filter(Boolean).join(" ").toLowerCase().replace(/\s+/g, "");
+  const FIGURE = /(?:₹|rs\.?\s?|inr\s?)\s?\d[\d,]*|\d+(?:\.\d+)?\s?%|\d+\s?(?:%\s?)?off\b/gi;
+  scenes.forEach((sc, i) => {
+    const ui = String(sc.ui_mockup || "");
+    const pieces = isNone(ui) ? [] : quotedPieces(ui);
+    if (showsWriting(sc.visual) && !pieces.length) inSceneProblems.push(`${S(sc, i)} shows a screen or writing — give its exact words in "UI / in-scene text", each piece in quotes (S-M5).`);
+    else if (!isNone(ui) && !pieces.length) inSceneProblems.push(`${S(sc, i)} "UI / in-scene text" doesn't give the exact words — put each piece of text in quotes, or write "none" (S-M5).`);
+    if (/\b(logo|brand ?mark)\b/i.test(ui)) inSceneProblems.push(`${S(sc, i)} asks the model to draw a logo — Production adds the logo (S-M5).`);
+    for (const p of pieces) {
+      if (words(p).length > IN_SCENE_MAX_WORDS) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}…" is too long to read in a 5-second scene — ${IN_SCENE_MAX_WORDS} words at most per piece.`);
+      const text = brandRe ? p.replace(brandRe, "") : p;
+      const letters = text.replace(/[\d\s.,:;!?%₹₹+\-–—/()'"“”‘’@#&*]/g, "");
+      if (letters) {
+        if (scriptName === "Latin" && /[ऀ-ॿ஀-ൿঀ-੿]/.test(text)) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}" is not in ${(script.language && script.language.name) || "the film's language"} (Latin script).`);
+        else if (SUPPORTED_SCRIPTS[scriptName] && !SUPPORTED_SCRIPTS[scriptName].test(text)) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}" is not in ${(script.language && script.language.name) || scriptName} (${scriptName}).`);
+      }
+      for (const fig of p.match(FIGURE) || []) {
+        if (!backedText.includes(fig.toLowerCase().replace(/\s+/g, ""))) inSceneProblems.push(`${S(sc, i)} in-scene text shows "${fig.trim()}", which isn't in the brief's offer or proof points (S-M10).`);
+      }
+    }
+  });
+  check("in_scene_text", "In-scene text and phone UI written out exactly; nothing asks the model to generate a logo", inSceneProblems);
+
   // 7. Sound Design = ambience + SFX + music mood note; no named tracks
   const sndProblems = [];
   scenes.forEach((sc, i) => {
@@ -438,7 +526,10 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   check("transitions", "Transition out written for every scene; no flat hard cut after the hook", trProblems);
 
   // 9. Editing Notes = edit-step cues only
-  check("edit_notes", "Editing Notes = edit-step cues only", scenes.filter((sc) => /\bgenerat/i.test(sc.edit_notes || "")).map((sc, i) => `${S(sc, i)} Editing Notes contain generation instructions (S-M9).`));
+  // (a note about what Production adds or what is not generated — "the super is not in the generated frame" — isn't a
+  // generation instruction; "generate with a zoom effect" is)
+  const genInstruction = (notes) => String(notes || "").split(/(?<=[.;!?])\s+/).some((sn) => /\bgenerat/i.test(sn) && !FRAME_CAUTION.test(sn));
+  check("edit_notes", "Editing Notes = edit-step cues only", scenes.filter((sc) => genInstruction(sc.edit_notes)).map((sc, i) => `${S(sc, i)} Editing Notes contain generation instructions (S-M9).`));
 
   // 10. Scene count matches the length; VO-led within about 40–50 words per 20s
   const plan = contracts.scenePlan(script.length_s);
@@ -488,12 +579,57 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   });
   check("safety", "No fake testimonial, no deities, no named competitors, no copied hook lines or taglines", safety);
 
-  // 17. Storyboard frame check — the app has no image step yet (see engine/spines/storyboard.js)
-  check("storyboard", "Storyboard frame check passed on every frame; locks saved", [], storyboardStatus);
+  // 17. Frame check on every frame description (Section 4); locks saved
+  const frameProblems = [];
+  const frames = (storyboard && Array.isArray(storyboard.frames)) ? storyboard.frames : [];
+  if (!frames.length) frameProblems.push("No frame descriptions were written (Section 4).");
+  const prod = cb.product || {};
+  for (const f of frames) {
+    const F = `Frame ${f.scene}`;
+    // only what the writer composed for this frame: the Context Block lines the app inserts word for word (a
+    // product's own packaging can carry its logo) are the real product and people, not something asked for
+    const subjectNote = String(f.subject || "").split(" As in the Context Block: ")[0];
+    const productNote = String(f.product || "").includes(" — ") ? String(f.product).split(" — ").slice(1).join(" — ") : "";
+    const written = [f.composition, subjectNote, productNote].join(" ");
+    // the product is named and described exactly (shape, colour, label side)
+    if (f.product !== "Not in frame." && !["colour", "packaging", "label_side"].every((k) => filled(prod[k]))) frameProblems.push(`${F}: the product isn't described exactly — the Context Block product needs colour, packaging and label side.`);
+    // characters match the Context Block word for word
+    // (who is in frame is read from the writer's note, as the frame builder reads it — the appended Context Block
+    // lines can name the other character, e.g. "Priya's husband")
+    for (const c of castOf) if (storyboardLib.mentions(subjectNote, c) && !String(f.subject).includes(storyboardLib.characterLine(c))) frameProblems.push(`${F}: ${c.name || "a character"} isn't described exactly as in the Context Block.`);
+    // No logos asked for inside the frame, and no caption or headline laid over it (Production adds those); any
+    // in-scene writing or phone UI is spelled out word for word — the frame carries the scene's "UI / in-scene text".
+    // Sentences that keep a safe zone clear for a placeholder, or say what to avoid, aren't asking for anything.
+    const asking = (text) => String(text || "").split(/(?<=[.;!?])\s+/).filter((sn) => !FRAME_CAUTION.test(sn)).join(" ");
+    const asked = asking(written);
+    if (/\b(logo|brand ?mark)\b[^.]{0,40}\b(on|in|across|printed|appears|visible)\b/i.test(asked)) frameProblems.push(`${F} asks for a logo inside the frame — Production adds the logo (S-M5).`);
+    if (OVERLAY_TEXT.test(asked)) frameProblems.push(`${F} asks for a caption or headline over the picture — Production adds those (S-M5).`);
+    const frameScene = scenes.find((sc) => Number(sc.n) === Number(f.scene)) || {};
+    if (showsWriting(asked) && !quotedPieces(isNone(frameScene.ui_mockup) ? "" : frameScene.ui_mockup).length) frameProblems.push(`${F} shows a screen or writing without its exact words — spell them out in the scene's "UI / in-scene text" (S-M5).`);
+    // nothing breaks safety (Do's and Don'ts are checked with the script below)
+    if (DEITY.test(written) || TESTIMONIAL.test(written)) frameProblems.push(`${F} breaks safety (deities or a testimonial).`);
+    // a composition is written (foreground, middle, background, where the subject sits); whether it fits the safe
+    // zones is judgement (below) — the placeholder positions themselves are set inside the safe zones by the app
+    if (words(f.composition).length < 8) frameProblems.push(`${F} has no composition — foreground, middle, background and where the subject sits.`);
+    // two characters
+    const extra = contracts.extraPeople(`${subjectNote} ${f.composition}`, castOf);
+    if (extra.length) frameProblems.push(`${F} features a third person (${extra.join(", ")}).`);
+    if (castOf.length === 2 && strayHands(subjectNote)) frameProblems.push(`${F} shows hands that belong to neither character — name whose hands they are.`);
+  }
+  const locks = (storyboard && storyboard.locks) || {};
+  if (frames.length && (!Array.isArray(locks.characters) || locks.characters.length !== 2 || !filled(locks.product))) frameProblems.push("Consistency locks are incomplete — two character descriptions and the product description.");
+  check("frames", "Frame check passed on every frame description; locks saved", frameProblems);
+  // judgement items of the frame check: the setting looks real (S-M8) and each composition fits the safe zones
+  check("frames_real_setting", "Every frame's setting looks real (S-M8)", [], "self-check");
+  check("frames_safe_zones", "Every frame's composition fits the safe zones", [], "self-check");
 
   // 18. Do's and Don'ts that apply to the script
   const ddProblems = [];
-  const sceneText = scenes.map((sc) => [sc.visual, (sc.dialogue || []).map((d) => d.line).join(" "), sc.vo, sc.super, sc.callout].join(" ")).join("\n");
+  // the frame descriptions' written parts are checked too (Section 4: nothing breaks the Do's and Don'ts)
+  const sceneText = [
+    ...scenes.map((sc) => [sc.visual, (sc.dialogue || []).map((d) => d.line).join(" "), sc.vo, sc.super, sc.callout].join(" ")),
+    ...frames.map((f) => [f.composition, f.subject, f.product].join(" ")),
+  ].join("\n");
   const notes = scenes.map((sc) => String(sc.edit_notes || "").toLowerCase());
   const judgedDonts = [];
   for (const d of brief.dos_donts || []) {
