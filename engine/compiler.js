@@ -9,7 +9,7 @@
 // - Physics intelligence (body weight, foot grounding, natural object interaction)
 // - Cause -> Action -> Reaction sequencing
 
-const { dialogueOf } = require("./parse");
+const { dialogueOf, inSceneTextOf } = require("./parse");
 const { hasActiveGuardrails, formatGuardrailsPromptBlock } = require("./guardrails");
 const { framePromptText } = require("./spines/storyboard");
 const { SCENE_SECONDS } = require("./spines/contracts");
@@ -97,6 +97,8 @@ function compileShotSpecification(parsedScript, form = {}) {
       fullVisual: visual,
       cameraMovement: camera,
       dialogue: dialogue || "None",
+      // S-M5 (spine 2.1.0): writing and phone/app screens the AI draws in this scene, word for word
+      inSceneText: inSceneTextOf(sceneText),
     };
   });
 
@@ -159,7 +161,8 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     : null;
 
   // The storyboard frame description for this scene (Section 4): framing, composition, who is doing what, where the
-  // product is. Placeholders are left out on purpose — text and logos are rendered by Production, never generated.
+  // product is. Placeholders are left out on purpose — supers, callouts, CTA, disclaimers and the logo are rendered by
+  // Production, never generated; in-scene writing and phone UI go in through the IN-SCENE TEXT line below.
   const frameText = shot.frame ? framePromptText(shot.frame) : "";
 
   const lines = [
@@ -181,6 +184,9 @@ function compileShotPrompt(shot, staticWorld, options = {}) {
     ].filter(Boolean).join(" "),
 
     frameText ? `STORYBOARD FRAME: ${frameText}` : null,
+
+    // In-scene writing and phone/app screens the scene shows (S-M5): generated, exactly as written
+    shot.inSceneText ? `IN-SCENE TEXT (render exactly these words where the scene shows them — short, legible, nothing added; no logo): ${shot.inSceneText}` : null,
 
     // 3. Motion (Action, Camera, Physics & Physical Interaction)
     `MOTION & ACTION (Cause → Action → Reaction): ${shot.primaryAction} ${shot.fullVisual !== shot.primaryAction ? shot.fullVisual : ""}`,

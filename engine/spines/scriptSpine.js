@@ -91,12 +91,12 @@ function renderScene(sc) {
     '',
     `Shot: ${sc.shot} · Camera: ${sc.camera}`,
     '',
-    'On-screen elements (rendered by Production, never generated):',
+    'On-screen elements (supers, callouts, CTA, disclaimer and logo rendered by Production; in-scene writing and phone UI may be AI-generated):',
     `• Super: ${sc.super || 'none'}`,
     `• Callout: ${sc.callout || 'none'}`,
     `• CTA: ${sc.cta || 'none'}`,
     `• Disclaimer: ${sc.disclaimer || 'none'}`,
-    `• UI mock-up: ${sc.ui_mockup || 'none'}`,
+    `• UI / in-scene text: ${sc.ui_mockup || 'none'}`,
     `• Logo: ${sc.logo || 'none'}`,
     '',
     'Audio / Dialogue / Voiceover:',
@@ -176,7 +176,8 @@ Language: ${brief.language.name}, script ${brief.language.script} (S-M2). Visual
 TWO CHARACTERS (the app's production rule): ${contracts.TWO_CHARACTERS_RULE} context_block.characters has exactly two entries, "char_1" and "char_2"${format === 'UGC' ? ' (in UGC the creator is char_1)' : ''}. Only they speak${r.hasVo ? ' (the VO is off-screen and is not a character)' : ''}, and every visual and frame shows only them.
 Context Block: each character has "ref" ("char_1", "char_2"); the product "ref" is "${productRef}". Give the product's colour, packaging and label side.
 Fill every on-screen element with its text or "none". Each "must include" from BRIEF.dos_donts that applies to the script is placed in a scene and noted in that scene's edit_notes as "Must include: <rule>" (S-M13).
-Storyboard (Section 4): in "frames", one note per scene — camera_angle; composition (foreground, middle and background, where the subject sits, safe zones kept clear); subject (who is in frame by their Context Block name and what they are doing: present tense, physical details, one action per sentence); product (where it is, which side faces camera, how it's held or used — or "not in frame"). The app adds the aspect ratio, shot, camera move, the Context Block descriptions word for word, the setting and light, the placeholders and the line. Never ask for text, logos or UI inside a frame.
+UI / in-scene text ("ui_mockup", S-M5): the AI renders any writing or phone, app or website screen the scene needs — a chat or message, an order or payment screen, a handwritten note or checklist, a sign, packaging copy. Show it in the Visual if the story needs it, and give its exact words here, each piece in double quotes and where it appears (for example: Phone screen, WhatsApp chat: "1 box kaju katli please" / reply "Delivered in 30 min"). Keep each piece short (12 words at most) and legible, in ${brief.language.name} (${brief.language.script} script), and use only figures from BRIEF.rtbs and the offer. Write "none" if the scene shows no writing. Supers, callouts, CTA, disclaimer and the logo stay Production's: never ask the model to draw a logo or a caption over the picture.
+Storyboard (Section 4): in "frames", one note per scene — camera_angle; composition (foreground, middle and background, where the subject sits, safe zones kept clear); subject (who is in frame by their Context Block name and what they are doing: present tense, physical details, one action per sentence); product (where it is, which side faces camera, how it's held or used — or "not in frame"). The app adds the aspect ratio, shot, camera move, the Context Block descriptions word for word, the setting and light, the scene's in-scene text word for word, the placeholders and the line. Never ask for a logo inside a frame.
 Run the Annex B checklist yourself before answering (S-M11).
 Return only JSON between @@JSON@@ and @@END@@:
 {"context_block": {"characters": [{"ref": "char_1", "name": "", "role": "", "age": "", "gender": "", "skin_tone": "", "hair": "", "build": "", "wardrobe": "", "accessories": ""}, {"ref": "char_2", "name": "", "role": "", "age": "", "gender": "", "skin_tone": "", "hair": "", "build": "", "wardrobe": "", "accessories": ""}],
@@ -248,6 +249,35 @@ function repairInstruction(failures) {
 Rewrite only ${parts.scenes.length ? `scene${parts.scenes.length > 1 ? 's' : ''} ${parts.scenes.join(', ')}` : 'the scenes these failures need'} (a failure that isn't about one scene — VO length, who speaks where, a disclaimer, a must-include — may need others; change as few as you can)${parts.contextBlock ? ', and the Context Block' : ''}.
 Return only those parts between @@JSON@@ and @@END@@: {"scenes": [each rewritten scene with its "n" and all its fields], "frames": [the frame note for each rewritten scene, with its "scene"]${parts.contextBlock ? ', "context_block": {…}' : ''}}. Everything you leave out stays as it is.`;
 }
+
+// What a shop owner sees when the script still fails after three tries: one plain sentence per kind of problem,
+// no rule codes or checklist names (the detailed reasons go to the server log).
+const PLAIN_PROBLEMS = {
+  header: 'Some details of the story you approved were missing.',
+  context_block: 'The description of the two people, the product or the place wasn’t complete.',
+  visual: 'Some scenes weren’t described clearly enough to film.',
+  on_screen: 'Some of the words that go on screen were missing or too long.',
+  in_scene_text: 'A phone screen, sign or note in a scene didn’t have its exact words written out.',
+  dialogue: 'Some spoken lines were too long, or one person had too many lines.',
+  two_characters: 'The story kept bringing in a third person — every film has exactly two people.',
+  language: 'Some lines weren’t in the language you chose.',
+  sound: 'Some scenes were missing their sound notes.',
+  transitions: 'Some scenes didn’t lead smoothly into the next one.',
+  edit_notes: 'Some editing notes weren’t written the right way.',
+  scene_count: 'The number of scenes or the length of the voiceover didn’t fit the length you chose.',
+  mood: 'The mood wasn’t kept the same through the film.',
+  brochure: 'Some lines sounded like an advert brochure instead of real people talking.',
+  claims: 'A claim or a required line of small print didn’t match your brief.',
+  safety: 'Something in the script isn’t allowed in an ad (for example, a fake customer review).',
+  frames: 'Some storyboard pictures weren’t described clearly enough.',
+  dos_donts: 'One of your do’s and don’ts wasn’t followed.',
+};
+function plainProblems(gate) {
+  const ids = [...new Set((gate.checks || []).filter((ch) => ch.status === 'fail').map((ch) => ch.id))];
+  const list = ids.map((id) => PLAIN_PROBLEMS[id]).filter(Boolean);
+  return list.length ? list : ['Some parts of the script didn’t pass our checks.'];
+}
+const GATE_FAILED_MESSAGE = 'We couldn’t get this script right after three tries. Nothing is lost — your brief, idea and opening are all saved. Press “Retry Script Generation” to write it again, or “Back to Hook” to choose a different opening and we’ll write a new script from it.';
 
 /** Section 4: a frame still failing after two rewrites is flagged to the user rather than blocking the script. */
 function flagFrames(gate) {
@@ -334,10 +364,11 @@ async function writeScript(input = {}, { call = callClaude } = {}) {
   const flagged = flagFrames(gate);
   gate = flagged.gate;
   if (!gate.passed) {
-    const err = new Error('The script could not pass the quality gate after 3 passes. Go back and pick the next angle, and the script will be rebuilt from it.');
+    const err = new Error(GATE_FAILED_MESSAGE);
     err.status = 422;
     err.code = 'SCRIPT_GATE_FAILED';
-    err.failures = gate.failures;
+    err.failures = plainProblems(gate); // what the user sees
+    err.details = gate.failures; // what the checks found, for the server log
     err.gate = gate;
     throw err;
   }
@@ -445,4 +476,4 @@ function importHeader(b, format, hints, plan) {
   };
 }
 
-module.exports = { writeScript, rewriteScene, importScript, buildHeader, headerText, renderScene, productionFields, scriptNotices, contextBlockText, boardFor, BEATS_BY_COUNT, MAX_PASSES, SCRIPT_BEATS };
+module.exports = { writeScript, rewriteScene, importScript, buildHeader, headerText, renderScene, productionFields, scriptNotices, contextBlockText, boardFor, plainProblems, PLAIN_PROBLEMS, GATE_FAILED_MESSAGE, BEATS_BY_COUNT, MAX_PASSES, SCRIPT_BEATS };

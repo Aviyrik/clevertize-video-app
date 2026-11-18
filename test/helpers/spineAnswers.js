@@ -70,7 +70,8 @@ function scenesFor(format, n, script) {
     super: i === 0 ? 'Oil ran out?' : 'none',
     callout: i === 2 ? '30-minute delivery' : 'none',
     cta: i === n - 1 ? 'end card only' : 'none',
-    disclaimer: 'none', ui_mockup: 'none', logo: 'none',
+    // S-M5 (spine 2.1.0): the message she types is in-scene phone UI, spelled out word for word
+    disclaimer: 'none', ui_mockup: i === 1 ? (hi ? 'Phone screen, WhatsApp chat: "भैया, एक बोतल तेल भेजो"' : 'Phone screen, WhatsApp chat: "Bhaiya, one bottle of oil please"') : 'none', logo: 'none',
     ambience: 'kitchen hum', sfx: 'pan sizzle', music_mood: 'Playful, plucky',
     transition_out: i === n - 1 ? 'soft dissolve – to the end card' : 'match cut – the bottle',
     edit_notes: i === 2 ? 'Must include: show the offer. Hold on the bottle.' : 'Hold 1s.',

@@ -68,11 +68,21 @@ function parseOutput(text) {
 // so the video model never sees music or edit instructions.
 // Video models generate each scene on its own and "forget" the room between scenes, so every scene
 // sent to Magnific carries the SAME setting (and the two characters) word for word.
+// Section 3 "• UI / in-scene text:" — the exact words of any writing or phone/app screen the AI draws in the scene
+// (S-M5, spine 2.1.0). "" when the scene has none.
+function inSceneTextOf(scene) {
+  const m = String(scene || "").match(/^\s*•\s*UI\s*\/\s*in-scene text:\s*(.+)$/im);
+  const v = m ? m[1].trim() : "";
+  return /^(none|n\/a|-)?\.?$/i.test(v) ? "" : v;
+}
+
 function sceneForGeneration(scene, ctx = {}) {
+  const inSceneText = inSceneTextOf(scene);
   const body = scene
     .replace(/\n\s*Editing Notes[^\n]*:[\s\S]*$/i, "")
-    // Section 3 scenes (Script & Storyboard Spine): supers, callouts, CTA, disclaimers, UI and logo are rendered
-    // by Production, never generated (S-M5); the transition is an edit-step cue
+    // Section 3 scenes (Script & Storyboard Spine): supers, callouts, CTA, disclaimers and logo are rendered by
+    // Production, never generated (S-M5); the transition is an edit-step cue. In-scene writing and phone UI are
+    // generated: they come back below, word for word.
     .replace(/\n\s*On-screen elements[^\n]*:[\s\S]*?(?=\n\s*Audio\s*\/\s*Dialogue)/i, "")
     .replace(/^\s*Transition out:.*$/gim, "")
     .replace(/^.*Music mood note.*$/gim, "")
@@ -94,6 +104,9 @@ function sceneForGeneration(scene, ctx = {}) {
   }
   lock.push("PERFORMANCE: lively, natural, upbeat acting — real expressions and reactions (smiles, raised eyebrows, laughs, quick gestures), people move and behave like real neighbours, never stiff or posed. When the characters speak to each other they look at each other and keep natural eye contact; nobody stares into the distance or looks blankly past the other person" + (isStoryFmt ? "." : " (only a UGC owner speaking to the viewer looks into the lens)."));
   lock.push("CAMERA: follow this scene's camera direction exactly (shot size, angle, movement) — smooth, motivated movement only, no whip pans or fast cuts.");
+  if (inSceneText) {
+    lock.push(`IN-SCENE TEXT — render exactly these words where the scene shows them, short and legible, nothing added (no logo): ${inSceneText}`);
+  }
   if (ctx.duration || ctx.sceneCount) {
     // every scene is exactly 5 seconds; the end frame is added after generation and is not part of any scene
     const count = Number(ctx.sceneCount) || Math.max(1, Math.round((parseInt(ctx.duration, 10) || 20) / 5));
@@ -151,4 +164,4 @@ function parseJSONBlock(text) {
   return JSON.parse(body);
 }
 
-module.exports = { parseOutput, dialogueOf, sceneForGeneration, parseJSONBlock };
+module.exports = { parseOutput, dialogueOf, sceneForGeneration, inSceneTextOf, parseJSONBlock };

@@ -48,15 +48,16 @@ function settingLine(s) {
   return describe(s, SETTING_KEYS) || describe(s);
 }
 
-// Section 3 on-screen elements → where each placeholder sits, inside the platform safe zones (rendered by Production)
+// Section 3 on-screen elements Production renders → where each placeholder sits, inside the platform safe zones.
+// ("UI / in-scene text" isn't one: since spine 2.1.0 the AI generates it inside the scene — see buildFrame.)
 const PLACEHOLDERS = [
   ['super', 'Super', 'lower third, above the caption safe zone'],
   ['callout', 'Callout', 'upper third, right side'],
   ['cta', 'CTA', 'lower third, centred'],
   ['disclaimer', 'Disclaimer', 'small, bottom band above the platform UI'],
-  ['ui_mockup', 'UI mock-up', 'composited centre-frame by Production'],
   ['logo', 'Logo', 'top-right corner bug'],
 ];
+const IN_SCENE_MARK = 'In-scene text, word for word:';
 
 /**
  * Does this text name this character (by name, or by a role word)? By default a sentence that rules people out
@@ -85,7 +86,8 @@ function buildFrame(sc, note, cb, aspectRatio) {
   return {
     scene: sc.n,
     frame: `${aspectRatio} · ${clean(sc.shot) || 'medium'} shot · ${clean(n.camera_angle) || 'eye level'} · camera: ${clean(sc.camera) || 'static'}`,
-    composition: clean(n.composition),
+    // S-M5 / frame check: any writing or screen in the frame is spelled out word for word (the scene's UI / in-scene text)
+    composition: [clean(n.composition), isNone(sc.ui_mockup) ? '' : `${IN_SCENE_MARK} ${clean(sc.ui_mockup)}`].filter(Boolean).join(' '),
     subject: inFrame.length
       ? `${subjectNote || clean(sc.visual)} As in the Context Block: ${inFrame.map(characterLine).join(' | ')}.`
       : (subjectNote || 'No people in frame.'),
@@ -116,13 +118,15 @@ function buildStoryboard(script, frameNotes = [], { aspectRatio = '9:16', style 
 
 /**
  * The parts of a frame that go into the scene prompt sent to Magnific. Placeholders never go in, and neither does any
- * composition sentence about where a super, callout, CTA or logo sits: text and logos are rendered by Production, and
- * naming them to the video model invites it to draw them (S-M5).
+ * composition sentence about where a super, callout, CTA, disclaimer or logo sits: Production renders those, and
+ * naming them to the video model invites it to draw them (S-M5). In-scene writing and phone UI the AI does draw go in
+ * through the scene prompt's own IN-SCENE TEXT line (compiler.js), so the copy appended to the composition is left out.
  */
-const PLACEHOLDER_TALK = /\b(super|supers|callout|cta|caption|captions|logo|placeholder|placeholders|disclaimer|overlay|text|title)\b/i;
+const PLACEHOLDER_TALK = /\b(super|supers|callout|callouts|cta|caption|captions|logo|placeholder|placeholders|disclaimer|overlay)\b/i;
 function framePromptText(f) {
   if (!f) return '';
-  const composition = String(f.composition || '').split(/(?<=[.;!?])\s+/).filter((s) => s && !PLACEHOLDER_TALK.test(s)).join(' ');
+  const own = String(f.composition || '').split(IN_SCENE_MARK)[0];
+  const composition = own.split(/(?<=[.;!?])\s+/).filter((s) => s && !PLACEHOLDER_TALK.test(s)).join(' ');
   return [
     f.frame && `Frame: ${f.frame}.`,
     composition && `Composition: ${composition}`,
@@ -131,4 +135,4 @@ function framePromptText(f) {
   ].filter(Boolean).join(' ');
 }
 
-module.exports = { buildStoryboard, buildFrame, framePromptText, describe, characterLine, productLine, settingLine, mentions, PLACEHOLDERS, CHARACTER_KEYS, PRODUCT_KEYS, SETTING_KEYS };
+module.exports = { buildStoryboard, buildFrame, framePromptText, describe, characterLine, productLine, settingLine, mentions, PLACEHOLDERS, IN_SCENE_MARK, CHARACTER_KEYS, PRODUCT_KEYS, SETTING_KEYS };

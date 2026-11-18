@@ -312,9 +312,11 @@ const ANONYMOUS_HANDS_RE = /\b(anonymous|unnamed|unidentified|faceless|someone's
 function extraPeople(text, characters, { individualsOnly = false } = {}) {
   const terms = castTerms(characters).join(' ');
   const found = new Set();
-  const hands = String(text || '').match(ANONYMOUS_HANDS_RE);
+  // words in quotes are written or spoken ("Bhaiya, one bottle please" on a phone screen), not people in the scene
+  const unquoted = String(text || '').replace(/["“][^"”]*["”]|‘[^’]*’|(?:^|[\s:(,—–-])'[^']{2,240}'(?=[\s.,;:)!?—–-]|$)/g, ' ');
+  const hands = unquoted.match(ANONYMOUS_HANDS_RE);
   if (hands) found.add(hands[0].toLowerCase());
-  for (const sentence of String(text || '').split(/(?<=[.!?;])\s+/)) {
+  for (const sentence of unquoted.split(/(?<=[.!?;])\s+/)) {
     if (BACKGROUND_RE.test(sentence) || NEGATED_RE.test(sentence)) continue;
     for (const m of sentence.matchAll(PEOPLE_RE)) {
       const w = m[1].toLowerCase();

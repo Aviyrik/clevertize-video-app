@@ -1,8 +1,8 @@
 ---
 spine: script
-version: 2.0.0
+version: 2.1.0
 title: "CleverCut — Script & Storyboard Spine"
-source: "CleverCut — Script & Storyboard Spine.docx"
+source: "CleverCut - Script & Storyboard Spine.docx"
 owns: ["/api/creative/synthesize-script", "/api/creative/rewrite-scene", "/api/script/validate-and-import", "engine/gate.js quality gate"]
 reads: ["concept.json", "brief.json (language, platforms, formats, mandatories, rtbs, dos_donts, objective, kpis, company)"]
 output: script.json + storyboard.json
@@ -30,7 +30,7 @@ If two rules conflict, the lower-numbered rule wins.
 - The optional CTA/logo end card (2–5s) is added by Production and isn't counted.
 - The hook lands in the first 2–3 seconds of Scene 1.
 - S-M4 – Format. The script follows the scene format in Section 3, preceded by a completed script header and Context Block.
-- S-M5 – Never generated in the image or video model. No baked-in text, no generated phone or app UI, no music, no logo, no rapid or harsh camera moves. Supers, callouts, UI mock-ups, logo and music are all specified here and rendered by Production.
+- S-M5 – Never generated in the image or video model. No music, no logo, no rapid or harsh camera moves. The AI may generate any writing and phone or app UI a scene needs (handwritten notes, signage, packaging copy, chat or app screens, website pages), as long as the text is short, legible, in brief.language and consistent with brief.rtbs. Supers, callouts, logo and music are specified here and rendered by Production.
 - S-M6 – Visual field. Write a complete picture, as physical actions only, one action per sentence. No emotions as direction ("she feels happy"), no overloaded backgrounds. Keep key action and faces inside the platform safe zones.
 - S-M7 – Dialogue. Crisp and short: each character speaks at most one line per scene, about 8 words (3 seconds) or fewer. One speaker per moment; no one talks over another. Rotate speakers across scenes. In UGC or Founder-led films, the speaker talks in at most 3 of the 4 scenes. VO-led films run about 40–50 words for 20s.
 - S-M8 – Real-looking world. The setting, props, wardrobe and product use must look like this audience's real life and this brand's real product. Use brand_memory.product_images so the product is exactly right (colour, packaging, label side).
@@ -75,12 +75,12 @@ SCENE [N] – [BEAT: Hook | Real moment | Turn | Payoff] – [0:00–0:05]
 
  Shot: [wide / medium / close-up / macro] · Camera: [static / slow push-in / gentle pan / handheld drift / orbit]
 
- On-screen elements (rendered by Production, never generated):
+ On-screen elements (supers, callouts, CTA, disclaimer and logo rendered by Production; in-scene writing and phone UI may be AI-generated):
  • Super: [≤ 6 words, or "none"]
  • Callout: [feature / price / offer from brief, or "none"]
  • CTA: [scene 4 / end card only, or "none"]
  • Disclaimer: [required text, or "none"]
- • UI mock-up: [app/website screen to composite, or "none"]
+ • UI / in-scene text: [phone, app or website screen or written text the AI generates in the scene, with exact wording, or "none"]
  • Logo: [corner bug / none]
 
  Audio / Dialogue / Voiceover: (in brief.language and its script; VO-led uses "VO")
@@ -109,7 +109,7 @@ No storyboard images are generated. Each scene gets one written frame descriptio
 - Frame check on every description before the checkpoint:
 - the product is named and described exactly (shape, colour, label side);
 - characters match the Context Block word for word across frames;
-- no text, logos or UI asked for inside the frame;
+- no logos asked for inside the frame; any in-scene writing or phone UI is spelled out word for word;
 - nothing breaks safety or the Do's and Don'ts;
 - composition fits the safe zones;
 - the setting looks real (S-M8).
@@ -149,7 +149,7 @@ After Checkpoint 4 is approved, return exactly these parts, in this order, and n
 | Area | Do | Don't |
 | Context Block | Fill every column: characters, product, setting, brand elements, with reference IDs | "Woman, product, room." The model will invent the product and the person |
 | Visual field | A complete picture with physical actions: "She presses the pump twice and spreads the serum along her cheekbone." | Emotions ("she feels confident"), an overloaded frame, text inside the visual |
-| On-screen elements | Each on its own bullet, even if "none"; ≤ 6-word supers; claims from the brief | Asking the image or video model to draw text, logos or app UI |
+| On-screen elements | Each on its own bullet, even if "none"; ≤ 6-word supers; claims from the brief | Asking the image or video model to draw logos, or leaving in-scene text and phone UI vague |
 | Dialogue and voice | One speaker per moment, max 1 line per character per scene, speakers rotated, native script, words people actually say | One character with every line (except UGC/Founder), talking over each other, brochure lines |
 | Actions | One clear action per sentence; place, props and product use match the brand | "She opens the box while talking on the phone, smiling and waving." |
 | Product | The exact product from reference images, shown in use | A generic bottle, wrong colour or packaging |
@@ -164,7 +164,7 @@ After Checkpoint 4 is approved, return exactly these parts, in this order, and n
 - ☐ Script header complete: brand, objective + KPI, platform, format, angle, lens, hook with library and date, ending, mood, moment, language
 - ☐ Context Block fully filled, with product and character reference IDs
 - ☐ Visual fields are complete pictures, physical actions only, inside the safe zones
-- ☐ On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo
+- ☐ On-screen elements filled for every scene; in-scene text and phone UI written out exactly; nothing asks the model to generate a logo
 - ☐ Dialogue ≤ 1 line per character per scene, about 8 words, spread across characters (UGC/Founder: speaker in ≤ 3 scenes)
 - ☐ Dialogue in brief.language and its correct script
 - ☐ Sound Design = ambience + SFX + music mood note; no named tracks

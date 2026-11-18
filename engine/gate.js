@@ -323,6 +323,24 @@ const filled = (s) => String(s || "").trim().length > 0;
 // "about 8 words (3 seconds) or fewer": one word of slack for "about"
 const MAX_LINE_WORDS = 9;
 
+// S-M5 (spine 2.1.0): the video model may draw writing and phone/app/website screens a scene needs, spelled out word
+// for word in the scene's "UI / in-scene text" bullet (script.json ui_mockup): short, legible, in brief.language and
+// consistent with brief.rtbs. Supers, callouts, CTA and disclaimers over the picture stay Production's, and logos are
+// never generated.
+const OVERLAY_TEXT = /\b(caption|captions|subtitle|subtitles|title card|on-?screen text|text overlay|overlay text|lower[- ]third (super|caption|graphic|title|text|banner))\b/i;
+const WRITING_CUE = /\b(phone|app|website|web ?page|laptop|tablet|order|checkout|payment|cart)\s+(screen|page|display)\b|\bscreen\s+(shows|showing|displays|reads|lights up with)\b|\b(app (interface|screen)|chat|whatsapp|message|messages|notification|incoming call|call screen|caller id|order confirmation|signboard|signage|shop sign|sign reads|banner|poster|handwritten|note|notes|checklist|menu card|menu board|receipt|bill|invoice|price tag|placard|text reads|text says|written on)\b/i;
+const NOT_SHOWN = /\b(dark|blank|black screen|turned off|switched off|screen off|face[- ]down|unreadable|not visible|no text|nothing on|out of focus)\b/i;
+const IN_SCENE_MAX_WORDS = 12; // "short and legible": one piece of text read in a 5-second scene
+/** Does this text show writing or a screen the viewer can read? */
+const showsWriting = (text) => String(text || "").split(/(?<=[.;!?])\s+/).some((sn) => WRITING_CUE.test(sn) && !NOT_SHOWN.test(sn));
+/** The exact words given for in-scene text: each piece in quotes. */
+function quotedPieces(text) {
+  const t = String(text || "");
+  const out = [];
+  for (const m of t.matchAll(/["“]([^"”]{1,240})["”]|‘([^’]{1,240})’|(?:^|[\s:(,—–-])'([^']{2,240})'(?=[\s.,;:)!?—–-]|$)/g)) out.push((m[1] || m[2] || m[3] || "").trim());
+  return out.filter(Boolean);
+}
+
 function runScriptGate(script, { header = {}, brief = {}, concept = null, storyboard = null } = {}) {
   const fails = [];
   const checks = [];
@@ -362,7 +380,8 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   scenes.forEach((sc, i) => {
     if (words(sc.visual).length < 8) visProblems.push(`${S(sc, i)} Visual is not a complete picture.`);
     if (EMOTION_DIRECTION.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual uses emotion as direction ("${(sc.visual.match(EMOTION_DIRECTION) || [""])[0]}") — physical actions only (S-M6).`);
-    if (ONSCREEN_TEXT.test(sc.visual) || PHONE_UI.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual asks for text or a phone/app screen — those are on-screen elements rendered by Production (S-M5).`);
+    // writing and screens in the scene are allowed (S-M5) and checked below; words laid over the picture are not
+    if (OVERLAY_TEXT.test(sc.visual)) visProblems.push(`${S(sc, i)} Visual asks for a caption or headline over the picture — put those words in the Super or Callout bullet; Production adds them (S-M5).`);
     if (!filled(sc.shot) || !filled(sc.camera)) visProblems.push(`${S(sc, i)} is missing the shot size or camera move.`);
   });
   check("visual", "Visual fields are complete pictures, physical actions only, inside the safe zones", visProblems);
@@ -370,10 +389,10 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   // 4. On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo
   const osProblems = [];
   scenes.forEach((sc, i) => {
-    for (const k of ["super", "callout", "cta", "disclaimer", "ui_mockup", "logo"]) if (!filled(sc[k])) osProblems.push(`${S(sc, i)} on-screen element "${k}" is empty — write it, or "none".`);
+    for (const k of ["super", "callout", "cta", "disclaimer", "ui_mockup", "logo"]) if (!filled(sc[k])) osProblems.push(`${S(sc, i)} on-screen element "${k === "ui_mockup" ? "UI / in-scene text" : k}" is empty — write it, or "none".`);
     if (!isNone(sc.super) && words(sc.super).length > 6) osProblems.push(`${S(sc, i)} super is longer than 6 words.`);
   });
-  check("on_screen", "On-screen elements filled for every scene; nothing asks the model to generate text, UI or logo", osProblems);
+  check("on_screen", "On-screen elements filled for every scene", osProblems);
 
   // 5. Dialogue rules (S-M7, per format)
   const dlgProblems = [];
@@ -463,6 +482,33 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   }
   check("language", "Dialogue in brief.language and its correct script", langProblems);
 
+  // 4b. In-scene text and phone UI written out exactly; nothing asks the model to generate a logo (S-M5, Annex B).
+  // A scene that shows writing or a screen gives its exact words in "UI / in-scene text", each piece in quotes:
+  // short, legible, in brief.language, and with no figure the brief doesn't back.
+  const inSceneProblems = [];
+  const backedText = [...((brief.rtbs || []).map((r) => `${r.claim} ${r.proof}`)), brief.mandatories && brief.mandatories.offer, brief.company && brief.company.offer].filter(Boolean).join(" ").toLowerCase().replace(/\s+/g, "");
+  const FIGURE = /(?:₹|rs\.?\s?|inr\s?)\s?\d[\d,]*|\d+(?:\.\d+)?\s?%|\d+\s?(?:%\s?)?off\b/gi;
+  scenes.forEach((sc, i) => {
+    const ui = String(sc.ui_mockup || "");
+    const pieces = isNone(ui) ? [] : quotedPieces(ui);
+    if (showsWriting(sc.visual) && !pieces.length) inSceneProblems.push(`${S(sc, i)} shows a screen or writing — give its exact words in "UI / in-scene text", each piece in quotes (S-M5).`);
+    else if (!isNone(ui) && !pieces.length) inSceneProblems.push(`${S(sc, i)} "UI / in-scene text" doesn't give the exact words — put each piece of text in quotes, or write "none" (S-M5).`);
+    if (/\b(logo|brand ?mark)\b/i.test(ui)) inSceneProblems.push(`${S(sc, i)} asks the model to draw a logo — Production adds the logo (S-M5).`);
+    for (const p of pieces) {
+      if (words(p).length > IN_SCENE_MAX_WORDS) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}…" is too long to read in a 5-second scene — ${IN_SCENE_MAX_WORDS} words at most per piece.`);
+      const text = brandRe ? p.replace(brandRe, "") : p;
+      const letters = text.replace(/[\d\s.,:;!?%₹₹+\-–—/()'"“”‘’@#&*]/g, "");
+      if (letters) {
+        if (scriptName === "Latin" && /[ऀ-ॿ஀-ൿঀ-੿]/.test(text)) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}" is not in ${(script.language && script.language.name) || "the film's language"} (Latin script).`);
+        else if (SUPPORTED_SCRIPTS[scriptName] && !SUPPORTED_SCRIPTS[scriptName].test(text)) inSceneProblems.push(`${S(sc, i)} in-scene text "${p.slice(0, 40)}" is not in ${(script.language && script.language.name) || scriptName} (${scriptName}).`);
+      }
+      for (const fig of p.match(FIGURE) || []) {
+        if (!backedText.includes(fig.toLowerCase().replace(/\s+/g, ""))) inSceneProblems.push(`${S(sc, i)} in-scene text shows "${fig.trim()}", which isn't in the brief's offer or proof points (S-M10).`);
+      }
+    }
+  });
+  check("in_scene_text", "In-scene text and phone UI written out exactly; nothing asks the model to generate a logo", inSceneProblems);
+
   // 7. Sound Design = ambience + SFX + music mood note; no named tracks
   const sndProblems = [];
   scenes.forEach((sc, i) => {
@@ -551,11 +597,15 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
     // (who is in frame is read from the writer's note, as the frame builder reads it — the appended Context Block
     // lines can name the other character, e.g. "Priya's husband")
     for (const c of castOf) if (storyboardLib.mentions(subjectNote, c) && !String(f.subject).includes(storyboardLib.characterLine(c))) frameProblems.push(`${F}: ${c.name || "a character"} isn't described exactly as in the Context Block.`);
-    // no text, logos or UI asked for inside the frame. Sentences that keep a safe zone clear for a placeholder, or say
-    // what to avoid ("no on-screen text", "nothing cut off at the edge"), aren't asking for anything.
+    // No logos asked for inside the frame, and no caption or headline laid over it (Production adds those); any
+    // in-scene writing or phone UI is spelled out word for word — the frame carries the scene's "UI / in-scene text".
+    // Sentences that keep a safe zone clear for a placeholder, or say what to avoid, aren't asking for anything.
     const asking = (text) => String(text || "").split(/(?<=[.;!?])\s+/).filter((sn) => !FRAME_CAUTION.test(sn)).join(" ");
     const asked = asking(written);
-    if (ONSCREEN_TEXT.test(asked) || PHONE_UI.test(asked) || /\b(logo|brand ?mark)\b[^.]{0,40}\b(on|in|across|printed|appears|visible)\b/i.test(asked)) frameProblems.push(`${F} asks for text, a logo or UI inside the frame — those are placeholders rendered by Production (S-M5).`);
+    if (/\b(logo|brand ?mark)\b[^.]{0,40}\b(on|in|across|printed|appears|visible)\b/i.test(asked)) frameProblems.push(`${F} asks for a logo inside the frame — Production adds the logo (S-M5).`);
+    if (OVERLAY_TEXT.test(asked)) frameProblems.push(`${F} asks for a caption or headline over the picture — Production adds those (S-M5).`);
+    const frameScene = scenes.find((sc) => Number(sc.n) === Number(f.scene)) || {};
+    if (showsWriting(asked) && !quotedPieces(isNone(frameScene.ui_mockup) ? "" : frameScene.ui_mockup).length) frameProblems.push(`${F} shows a screen or writing without its exact words — spell them out in the scene's "UI / in-scene text" (S-M5).`);
     // nothing breaks safety (Do's and Don'ts are checked with the script below)
     if (DEITY.test(written) || TESTIMONIAL.test(written)) frameProblems.push(`${F} breaks safety (deities or a testimonial).`);
     // a composition is written (foreground, middle, background, where the subject sits); whether it fits the safe

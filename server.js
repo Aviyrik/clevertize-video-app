@@ -8,7 +8,7 @@ require("dotenv").config();
 const { callClaude } = require("./engine/claude");
 const crypto = require("crypto");
 const { buildSystem, buildUserContent, stageInstruction, buildRepairContent, festivalOf, HOOKS_PULLED } = require("./engine/prompt");
-const { parseOutput, sceneForGeneration, parseJSONBlock } = require("./engine/parse");
+const { parseOutput, sceneForGeneration, inSceneTextOf, parseJSONBlock } = require("./engine/parse");
 const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
@@ -1635,6 +1635,8 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
     res.json(scriptResponse(written, validated, activeGuardrails));
   } catch (e) {
     console.error("[api/creative/synthesize-script]", e.message);
+    // the user gets plain sentences (e.failures); what the checks actually found stays in the server log
+    if (e.details) console.error("[api/creative/synthesize-script] gate failures:", e.details);
     res.status(e.status || 500).json({ error: e.message, failures: e.failures || [], code: e.code });
   }
 });
@@ -1969,6 +1971,8 @@ app.post("/api/run", authRequired, async (req, res) => {
           fullVisual: parts.visual || sh.fullVisual,
           cameraMovement: (parts.camera && parts.camera !== "smooth subtle push-in") ? parts.camera : (sh.cameraMovement || parts.camera),
           dialogue: parts.dialogue !== "None" ? parts.dialogue : (sh.dialogue || "None"),
+          // in-scene writing / phone UI from the scene as it stands now (an edit to that bullet takes effect)
+          inSceneText: /UI\s*\/\s*in-scene text:/i.test(currentSceneText) ? inSceneTextOf(currentSceneText) : (sh.inSceneText || ""),
         };
 
         return compileShotPrompt(updatedShot, effectiveStaticWorld, {
