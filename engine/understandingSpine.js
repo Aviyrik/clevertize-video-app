@@ -18,7 +18,9 @@ const {
   normalizeCreativeGuardrails,
   hashGuardrails,
   hasActiveGuardrails,
+  guardrailsContentSignature,
 } = require('./guardrails');
+const { normalizeCreativeStyle } = require('./spines/contracts');
 const {
   normalizeEventContext,
   hasActiveEventContext,
@@ -74,11 +76,13 @@ function normalizeUnderstandingSettings(raw = {}) {
   const language = String(src.language || 'English').trim();
   const creativeStyle = String(src.creativeStyle || src.format || 'UGC / Creator-style').trim();
   const platform = String(src.platform || '').trim();
-  const rawDim = String(src.dimension || src.aspectRatio || '').trim();
+  // Same precedence as the client's getCurrentProductionSettings: the Settings screen sets aspectRatio and
+  // targetDuration (with dimension and duration), and a draft can carry an older duration beside a newer target.
+  const rawDim = String(src.aspectRatio || src.dimension || '').trim();
   const dimension = rawDim || (
     platform.includes('16:9') ? '16:9' : platform.includes('1:1') ? '1:1' : '9:16'
   );
-  const duration = String(src.duration || src.targetDuration || '20s').trim();
+  const duration = String(src.targetDuration || src.duration || '20s').trim();
   const hasLogo = Boolean(
     src.hasLogo === true ||
     src.videoLogo ||
@@ -98,73 +102,125 @@ function normalizeUnderstandingSettings(raw = {}) {
   };
 }
 
+const SETTINGS_FINGERPRINT_FIELDS = ['language', 'creativeStyle', 'dimension', 'duration', 'hasLogo'];
+
+/**
+ * The production settings an AI Understanding is made from: only what the user picks on the Settings screen
+ * (language, style, dimension, duration) and whether a logo is uploaded. The style goes through the legacy-label
+ * mapping, so an older stored label and today's name for the same choice are not a change.
+ */
+function settingsFingerprint(settings = {}) {
+  const n = normalizeUnderstandingSettings(settings);
+  return {
+    language: n.language,
+    creativeStyle: normalizeCreativeStyle(n.creativeStyle),
+    dimension: n.dimension,
+    duration: n.duration,
+    hasLogo: n.hasLogo,
+  };
+}
+
 /**
  * Deterministic hash of campaign production settings (language, dimension, duration, style, logo).
  */
 function hashSettings(settings = {}) {
-  const n = normalizeUnderstandingSettings(settings);
-  const sig = JSON.stringify({
-    language: n.language,
-    creativeStyle: n.creativeStyle,
-    dimension: n.dimension,
-    duration: n.duration,
-    hasLogo: n.hasLogo,
-  });
-  return crypto.createHash('sha256').update(sig).digest('hex').slice(0, 16);
+  return crypto.createHash('sha256').update(JSON.stringify(settingsFingerprint(settings))).digest('hex').slice(0, 16);
 }
 
 /**
- * Check if an existing interpretation is outdated compared to the current brief,
- * Creative Guardrails version/content, and/or Production Settings.
+ * Which inputs differ from the ones this interpretation was made from: [] when it's current. Each reason names the
+ * part, the value stored with the understanding and the value now, so the outdated banner (and the server log) can
+ * say what actually changed.
  */
-function isUnderstandingOutdated(
+function explainUnderstandingOutdated(
   understanding,
   currentBrief,
   currentGuardrails = null,
   currentSettings = null,
   currentEventContext = undefined
 ) {
-  if (!understanding) return false;
-  if (understanding.approval_status === 'outdated') return true;
-  const currentHash = hashBrief(currentBrief);
+  // Only what the user edits counts: brief text, Do's and Don'ts content, the Settings screen's choices, an uploaded
+  // logo, the occasion they typed. Never a counter, a date, a version number or the stored status label.
+  const reasons = [];
+  if (!understanding) return reasons;
   const recordedHash = understanding.source_brief_hash;
-  if (recordedHash && recordedHash !== currentHash) return true;
+  if (recordedHash && recordedHash !== hashBrief(currentBrief)) {
+    reasons.push({ part: 'brief', stored: String(understanding.source_brief || '').trim(), current: String(currentBrief || '').trim() });
+  }
 
   if (currentGuardrails !== null && currentGuardrails !== undefined) {
+    // By content. The version is a counter: it moves on an add-then-remove, or when a save re-normalises the list.
     const norm = normalizeCreativeGuardrails(currentGuardrails);
-    const currentGHash = hashGuardrails(norm);
-    const hasCurrent = hasActiveGuardrails(norm);
-
-    // If guardrails existed or exist now, compare version and hash
-    if (typeof understanding.source_guardrails_version === 'number') {
-      if ((norm.version || 0) !== understanding.source_guardrails_version) {
-        return true;
-      }
-    } else if (hasCurrent) {
-      // Understanding was generated before guardrails were added
-      return true;
-    }
-
-    if (understanding.source_guardrails_hash && understanding.source_guardrails_hash !== currentGHash) {
-      return true;
+    const changed = understanding.source_guardrails_hash
+      ? understanding.source_guardrails_hash !== hashGuardrails(norm)
+      : hasActiveGuardrails(norm); // made before there were any Do's and Don'ts
+    if (changed) {
+      reasons.push({ part: 'guardrails', stored: understanding.source_guardrails_signature || null, current: guardrailsContentSignature(norm) });
     }
   }
 
   if (currentSettings !== null && currentSettings !== undefined) {
-    const currentSHash = hashSettings(currentSettings);
-    if (understanding.source_settings_hash && understanding.source_settings_hash !== currentSHash) {
-      return true;
+    const cur = settingsFingerprint(currentSettings);
+    if (understanding.source_settings && typeof understanding.source_settings === 'object') {
+      const rec = settingsFingerprint(understanding.source_settings);
+      for (const k of SETTINGS_FINGERPRINT_FIELDS) {
+        if (rec[k] !== cur[k]) reasons.push({ part: `settings.${k}`, stored: rec[k], current: cur[k] });
+      }
+    } else if (understanding.source_settings_hash && understanding.source_settings_hash !== hashSettings(currentSettings)) {
+      reasons.push({ part: 'settings', stored: understanding.source_settings_hash, current: cur });
     }
   }
 
   if (currentEventContext !== undefined) {
-    const currentEHash = hashEventContext(currentEventContext);
-    if (understanding.source_event_hash && understanding.source_event_hash !== currentEHash) {
-      return true;
+    if (understanding.source_event_hash && understanding.source_event_hash !== hashEventContext(currentEventContext)) {
+      reasons.push({ part: 'event', stored: understanding.source_event || null, current: currentEventContext || null });
     }
   }
 
-  return false;
+  return reasons;
+}
+
+const SETTING_NAMES = { language: 'language', creativeStyle: 'creative style', dimension: 'video size', duration: 'duration', hasLogo: 'logo' };
+
+/** One plain sentence for the outdated notice: "Your duration changed (20s → 15s)." */
+function describeOutdatedReasons(reasons = []) {
+  const bits = [];
+  for (const r of reasons) {
+    if (r.part === 'brief') bits.push('your brief');
+    else if (r.part === 'guardrails') bits.push("your Do's and Don'ts");
+    else if (r.part === 'event') bits.push('the occasion');
+    else if (r.part === 'settings.hasLogo') bits.push(r.current ? 'a logo was added' : 'the logo was removed');
+    else if (r.part.startsWith('settings.')) bits.push(`${SETTING_NAMES[r.part.slice(9)]} (${r.stored} → ${r.current})`);
+    else if (r.part === 'settings') bits.push('your settings');
+  }
+  const uniq = [...new Set(bits)];
+  return uniq.length ? `Changed since this version was made: ${uniq.join(', ')}.` : '';
+}
+
+/**
+ * Check if an existing interpretation is outdated compared to the current brief,
+ * Creative Guardrails content, and/or Production Settings.
+ */
+function isUnderstandingOutdated(understanding, currentBrief, currentGuardrails = null, currentSettings = null, currentEventContext = undefined) {
+  if (!understanding) return false;
+  if (understanding.approval_status === 'outdated') return true;
+  return explainUnderstandingOutdated(understanding, currentBrief, currentGuardrails, currentSettings, currentEventContext).length > 0;
+}
+
+/**
+ * The approval status that holds for the inputs as they are now. An approval made from these exact inputs stands;
+ * one made from different inputs is outdated. A stored "outdated" is checked again rather than trusted, so an
+ * approval that a save marked outdated by mistake (or whose inputs were changed back) counts as approved again.
+ */
+function reconcileApproval(understanding, currentBrief, currentGuardrails = null, currentSettings = null, currentEventContext = undefined) {
+  if (!understanding || typeof understanding !== 'object') return understanding;
+  const status = understanding.approval_status;
+  const reasons = explainUnderstandingOutdated(understanding, currentBrief, currentGuardrails, currentSettings, currentEventContext);
+  if (reasons.length) {
+    return status === 'approved' || status === 'auto_approved' ? { ...understanding, approval_status: 'outdated' } : understanding;
+  }
+  if (status === 'outdated') return { ...understanding, approval_status: understanding.approved_at ? 'approved' : 'pending' };
+  return understanding;
 }
 
 function buildVerifiedFacts({
@@ -268,6 +324,7 @@ function createEmptyUnderstanding(brief = '') {
     source_brief_hash: hashBrief(brief),
     source_guardrails_version: 0,
     source_guardrails_hash: hashGuardrails(null),
+    source_guardrails_signature: guardrailsContentSignature(normalizeCreativeGuardrails(null)),
     source_settings: defaultSettings,
     source_settings_hash: hashSettings(defaultSettings),
     source_event: null,
@@ -392,6 +449,7 @@ function generateLabelledMockUnderstanding({
     source_brief_hash: hashBrief(cleanBrief),
     source_guardrails_version: normGuardrails.version || 0,
     source_guardrails_hash: hashGuardrails(normGuardrails),
+    source_guardrails_signature: guardrailsContentSignature(normGuardrails),
     source_settings: normSettings,
     source_settings_hash: hashSettings(normSettings),
     source_event: hasEvent ? normEvent : null,
@@ -607,6 +665,9 @@ async function generateAiUnderstanding({
       settings: normSettings,
       eventContext: hasEvent ? normEvent : null,
     });
+    // numbered like the live spine's versions, so a regenerate reads as a new version in test mode too
+    if (previousUnderstanding) mock.version = (previousUnderstanding.version || 1) + 1;
+    if (userCorrections) mock.user_notes = userCorrections;
     return mock;
   }
 
@@ -685,6 +746,7 @@ async function generateAiUnderstanding({
       source_brief_hash: hashBrief(cleanBrief),
       source_guardrails_version: normGuardrails.version || 0,
       source_guardrails_hash: hashGuardrails(normGuardrails),
+      source_guardrails_signature: guardrailsContentSignature(normGuardrails),
       source_settings: normSettings,
       source_settings_hash: hashSettings(normSettings),
       source_event: hasEvent ? normEvent : null,
@@ -729,6 +791,11 @@ module.exports = {
   hashBrief,
   hashSettings,
   isUnderstandingOutdated,
+  explainUnderstandingOutdated,
+  describeOutdatedReasons,
+  reconcileApproval,
+  settingsFingerprint,
+  SETTINGS_FINGERPRINT_FIELDS,
   sanitizeMissingInformation,
   buildVerifiedFacts,
   VALID_APPROVAL_STATUSES,

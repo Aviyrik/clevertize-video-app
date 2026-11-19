@@ -355,6 +355,103 @@ test("after three failed passes the user gets plain words and two ways forward, 
   });
 });
 
+// Found live (Kanti Sweets): the Brief Spine wrote guidance into mandatories.disclaimers, and the gate looked for that
+// whole sentence in the script, so no repair pass could ever pass it.
+const GHEE_GUIDANCE = "If 'pure desi ghee' is used as an on-screen super or VO claim, add: 'Made with desi ghee' — omit 'pure' unless the brand holds a verifiable quality certification.";
+
+test("disclaimers hold the words to show; guidance about a disclaimer becomes a category rule", () => {
+  const saved = [
+    GHEE_GUIDANCE,
+    "Ad disclosure: 'Paid promotion' or 'Ad' label required (Meta / ASCI)",
+    "Any 'pure ghee' or 'no preservatives' claims require FSSAI label substantiation before use",
+    "Offer validity and terms to be added by client before publishing.",
+    "FSSAI licence number to be shown if any food-quality claim is made.",
+  ];
+  const literal = ["T&C apply", "Made with desi ghee", "Do not drink and drive", "If symptoms persist, consult your doctor", "Use only as directed", "Prescription required", "Mutual fund investments are subject to market risks, read all scheme related documents carefully.", "Claims based on internal lab tests"];
+  for (const t of saved) assert.ok(C.isDisclaimerGuidance(t), `guidance: ${t}`);
+  for (const t of literal) assert.ok(!C.isDisclaimerGuidance(t), `words to show: ${t}`);
+  assert.equal(C.disclaimerWordsIn(GHEE_GUIDANCE), "Made with desi ghee");
+  assert.equal(C.disclaimerWordsIn(GHEE_GUIDANCE.replace(/'/g, "‘").replace(/‘ /g, "’ ")), "Made with desi ghee", "curly quotes too");
+
+  const b = C.normalizeBrief({ mandatories: { disclaimers: [GHEE_GUIDANCE, saved[3], "T&C apply"] }, dos_donts: [] });
+  assert.deepEqual(b.mandatories.disclaimers, ["Made with desi ghee", "T&C apply"]);
+  assert.deepEqual(b.dos_donts.map((d) => [d.rule, d.type, d.strength, d.source, d.applies_to.join(",")]), [
+    [GHEE_GUIDANCE, "Legal / category", "must", "category", "script,video"],
+    [saved[3], "Legal / category", "must", "category", "script,video"],
+  ]);
+  assert.deepEqual(C.normalizeBrief(b), b, "normalising again changes nothing");
+  assert.match(briefSpine.RUN_BRIEF, /disclaimers: only the exact words the viewer must read on screen/, "the Brief Spine is told so at the source");
+});
+
+test("the gate matches disclaimer words, never guidance: a saved brief with guidance can still pass", () => {
+  const base = JSON.parse(answers.scriptFor({ format: "Storytelling", script: "Latin" }).replace(/^@@JSON@@\n|\n@@END@@$/g, ""));
+  const header = { brand: "a", objective: "a", platform_format: "a", film_format: "a", angle: "a", lens: "a", hook: "a", ending: "a", mood: "a", moment: "a", language: "a" };
+  const make = (brief, disclaimer) => {
+    const s = C.normalizeScript({ ...base, format: "Storytelling", length_s: 20, language: { name: "English", script: "Latin" } });
+    s.scenes = s.scenes.map((x, i) => ({ ...x, n: i + 1, beat: ["Hook", "Real moment", "Turn", "Payoff"][i], disclaimer: i === 3 ? disclaimer : "none" }));
+    return runScriptGate(s, { header, brief, storyboard: storyboard.buildStoryboard(s, base.frames) });
+  };
+  const briefFields = { ...answers.brief, language: { name: "English", script: "Latin" }, rtbs: [{ claim: "30-minute delivery", proof: "x" }] };
+  // as saved before the fix: not normalised, guidance sitting in mandatories.disclaimers
+  const raw = { ...C.briefForScript(briefFields), mandatories: { ...C.briefForScript(briefFields).mandatories, disclaimers: [GHEE_GUIDANCE] } };
+  const withWords = make(raw, "Made with desi ghee");
+  assert.ok(withWords.passed, withWords.failures.join(" | "));
+  assert.equal(withWords.checks.find((c) => c.id === "disclaimer_guidance").status, "self-check");
+  assert.deepEqual(make(raw, "none").failures.filter((f) => /disclaimer/i.test(f)), ['Required disclaimer missing: "Made with desi ghee".']);
+  // the same brief as the spines now hand it over: words in disclaimers, guidance as a judged category rule
+  const normal = C.briefForScript({ ...briefFields, mandatories: { disclaimers: [GHEE_GUIDANCE] } });
+  assert.deepEqual(normal.mandatories.disclaimers, ["Made with desi ghee"]);
+  const passes = make(normal, "Made with desi ghee");
+  assert.ok(passes.passed, passes.failures.join(" | "));
+  assert.ok(passes.checks.find((c) => c.id === "dos_donts_judged").details.includes(GHEE_GUIDANCE), "the condition is the writer's self-check, not a must-include");
+});
+
+test("the concept names its two people first time: the cast is in the answer's shape, and a missing one doesn't cost a call", async () => {
+  const b = C.normalizeBrief({ ...answers.brief, dos_donts: [C.filmFormatRule("Storytelling")] });
+  const angle = answers.angles.angles[0];
+  const asked = [];
+  const run = (answer) => creativeSpine.runConcept({ brief: b, insight: answers.insight.tensions ? answers.insight.tensions[0].insight : {}, angle, angles: [angle] }, { call: async (req) => { asked.push(req); return answers.J(answer); } });
+  await run(answers.concept);
+  assert.equal(asked.length, 1, "no correction pass");
+  assert.match(asked[0].system, /\{"cast": \["", ""\], "dos_donts_check"/, "the shape asked for starts with cast");
+  assert.match(asked[0].system, /one key Section 12 doesn't list, "cast"/);
+
+  asked.length = 0;
+  const { cast, ...noCast } = answers.concept;
+  const res = await run(noCast);
+  assert.equal(asked.length, 1, "no cast in the answer: checked against the chosen angle's two people, no second call");
+  assert.ok(res.concept.concept.beats.length);
+  assert.ok(cast.length === 2);
+
+  asked.length = 0;
+  const third = { ...noCast, concept: { ...noCast.concept, beats: [...noCast.concept.beats.slice(0, 3), "Her neighbour Meena walks in and joins them."] } };
+  await assert.rejects(() => run(third), (e) => e.code === "TWO_CHARACTERS");
+  assert.equal(asked.length, 2, "a third person is still caught and asked about once");
+});
+
+test("a script pass isn't lost to unescaped quotes or to characters written as char_1 / char_2", async () => {
+  const { parseJSONBlock } = require("../engine/parse");
+  // found live (Kanti Sweets): quoted speech left unescaped lost a whole 6k-token first pass
+  assert.deepEqual(parseJSONBlock('@@JSON@@\n{"scenes": [{"line": "Maker: "You can\'t taste the ghee through the packaging.""\n}], "n": 1}\n@@END@@'),
+    { scenes: [{ line: "Maker: \"You can't taste the ghee through the packaging.\"" }], n: 1 });
+  assert.deepEqual(parseJSONBlock('{"a": "She says "wait", then "go"", "b": [1, "x \\"y\\" z", true]}'), { a: 'She says "wait", then "go"', b: [1, 'x "y" z', true] });
+
+  // found live: the second pass wrote speakers and visuals as char_1 / char_2, and the gate read them as strangers
+  const full = JSON.parse(answers.scriptFor({ format: "Storytelling", script: "Devanagari" }).replace(/^@@JSON@@\n|\n@@END@@$/g, ""));
+  const [c1, c2] = full.context_block.characters;
+  const asRefs = (t) => String(t || "").split(c1.name).join(c1.ref).split(c2.name).join(c2.ref);
+  full.scenes = full.scenes.map((sc) => ({ ...sc, visual: asRefs(sc.visual), dialogue: (sc.dialogue || []).map((d) => ({ ...d, speaker: asRefs(d.speaker) })) }));
+  assert.ok(full.scenes.some((sc) => sc.dialogue.some((d) => d.speaker === c1.ref)), "the answer uses refs");
+  const asked = [];
+  const concept = { ...answers.concept, insight: { lens: "2, Everyday Moments", tension: "The oil runs out mid-tadka" }, angles: answers.angles.angles.slice(0, 1), chosen_angle_id: "a1" };
+  const brief = C.normalizeBrief({ ...answers.brief, company: { brand: "Sharma General Store", category: "Kirana" }, language: { name: "Hindi", script: "Devanagari" }, formats: { aspect_ratios: ["9:16"], lengths_s: [20] }, platforms: ["Meta Reels"], dos_donts: [C.filmFormatRule("Storytelling")] });
+  const out = await scriptSpine.writeScript({ concept, brief: C.briefForScript(brief) }, { call: async (req) => { asked.push(req); return answers.J(full); } });
+  assert.equal(asked.length, 1, "passes on the first pass");
+  assert.ok(out.script.scenes.every((sc) => !/\bchar_\d\b/.test(sc.visual) && sc.dialogue.every((d) => !/\bchar_\d\b/.test(d.speaker))), "names, not refs, reach the render prompt");
+  assert.ok(out.script.scenes.some((sc) => sc.dialogue.some((d) => d.speaker === c1.name)));
+  assert.match(asked[0].system, /Refs are for the Context Block: speakers and visuals use each character's name/);
+});
+
 test("scene plan: the length sets the scene count; the logo end frame is added on top, never a scene", () => {
   const creative = require("../engine/creative");
   for (const [d, n] of [["15s", 3], ["20s", 4], ["30s", 6]]) {

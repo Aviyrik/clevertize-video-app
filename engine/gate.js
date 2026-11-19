@@ -568,8 +568,13 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
     }
   });
   const disclaimersText = scenes.map((sc) => sc.disclaimer).join(" ").toLowerCase();
-  for (const d of (brief.mandatories && brief.mandatories.disclaimers) || []) if (d && !disclaimersText.includes(String(d).toLowerCase().slice(0, 24))) claimProblems.push(`Required disclaimer missing: "${d}".`);
+  // Only the words to show are matched. An entry that is guidance about a disclaimer (a brief.json saved before the
+  // Brief Spine kept these apart) is never matched word for word — it couldn't appear in any script: the words it
+  // names are, and the guidance itself goes to the writer's self-check below.
+  const { disclaimers: requiredDisclaimers, guidance: disclaimerGuidance } = contracts.splitDisclaimers((brief.mandatories && brief.mandatories.disclaimers) || []);
+  for (const d of requiredDisclaimers) if (!disclaimersText.includes(String(d).toLowerCase().slice(0, 24))) claimProblems.push(`Required disclaimer missing: "${d}".`);
   check("claims", "Every claim and callout comes from brief.rtbs or the offer; all required disclaimers present", claimProblems);
+  if (disclaimerGuidance.length) check("disclaimer_guidance", "Disclaimer guidance in the brief is followed (the writer's self-check: it is guidance, not words to show)", disclaimerGuidance, "self-check");
 
   // 16. No fake testimonial, no deities, no named competitors, no copied lines
   const safety = [];
@@ -635,6 +640,9 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
   for (const d of brief.dos_donts || []) {
     if (d.strength !== "must" || !(d.applies_to || []).includes("script") || contracts.FILM_FORMAT_RULE_RE.test(d.rule)) continue;
     const key = tokens(d.rule).filter((t) => !["must", "include", "never", "don't", "dont", "the", "and", "with"].includes(t));
+    // Brand and category legal rules are claim limits and conditions ("omit 'pure' unless certified", "FSSAI number
+    // if a quality claim is made"), not words to place: the writer self-checks them; their words to show are disclaimers.
+    if (d.source !== "user" && /\b(legal|claims?|compliance|regulat\w*|disclaimers?)\b/i.test(d.type)) { judgedDonts.push(d.rule); continue; }
     if (/not include|never|don'?t/i.test(`${d.type} ${d.rule}`)) {
       // The word check is built for the user's own Don'ts ("Do not mention DiamondPlaza" → "DiamondPlaza"). Brand
       // and category Don'ts (B-M11) are sentences ("no health claims about sweet products"); matching their words
@@ -647,7 +655,7 @@ function runScriptGate(script, { header = {}, brief = {}, concept = null, storyb
     }
   }
   check("dos_donts", "Every Do and Don't that applies to the script is met; each \"must include\" is placed in a named scene", ddProblems);
-  if (judgedDonts.length) check("dos_donts_judged", "Brand and category Don'ts are respected (the writer's self-check; a word match can't judge them)", judgedDonts, "self-check");
+  if (judgedDonts.length) check("dos_donts_judged", "Brand and category Don'ts and legal rules are respected (the writer's self-check; a word match can't judge them)", judgedDonts, "self-check");
 
   // 19. Occasion as the concept specified — judgement
   check("occasion", "The occasion (if any) appears only as the concept specified, with its don'ts respected", [], "self-check");

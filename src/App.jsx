@@ -11,7 +11,7 @@ import { videoLogoPayload } from './utils/videoLogo.js';
 import { newProjectId, projectIdForRender, projectIdForVideoUrl, hasProjectForVideo } from './utils/projectIds.js';
 import { draftOf, resumeTargetOf, sortProjectsForLibrary, buildDraftProject, briefSnippet } from './utils/drafts.js';
 import { businessContextOf, findProjectBusiness } from './utils/businessContext.js';
-import { isUnderstandingOutdatedClient } from './utils/guardrails.js';
+import { isUnderstandingOutdatedClient, understandingApprovalState, describeOutdatedReasons } from './utils/guardrails.js';
 import { hasActiveClientEventContext } from './utils/eventContext.js';
 import { CREATIVE_STYLE_OPTIONS, normalizeCreativeStyle, creativeStyleShortLabel } from './utils/creativeStyle.js';
 import {
@@ -689,15 +689,13 @@ export default function App() {
     if (['idea', 'opening', 'story', 'script', 'video'].includes(targetStage) && aiUnderstanding) {
       const cleanBrief = userContext.brief || userContext.specialty || userContext.offer || '';
       const dim = userContext.aspectRatio || userContext.dimension || '9:16';
-      const staleOrUnapproved =
-        aiUnderstanding.approval_status !== 'approved' ||
-        isUnderstandingOutdatedClient(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, {
-          language: userContext.language || 'English',
-          creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
-          dimension: dim,
-          duration: userContext.targetDuration || userContext.duration || '20s',
-          hasLogo: Boolean(userContext.videoLogo !== undefined ? userContext.videoLogo : userContext.logo),
-        }, hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null);
+      const staleOrUnapproved = understandingApprovalState(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, {
+        language: userContext.language || 'English',
+        creativeStyle: userContext.creativeStyle || 'UGC / Creator-style',
+        dimension: dim,
+        duration: userContext.targetDuration || userContext.duration || '20s',
+        hasLogo: Boolean(userContext.videoLogo !== undefined ? userContext.videoLogo : userContext.logo),
+      }, hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null).status !== 'approved';
       if (staleOrUnapproved) {
         setStudioStage('understanding');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -921,6 +919,10 @@ export default function App() {
   const [newFilmAction, setNewFilmAction] = useState('new');
   const [selectedCreationEntry, setSelectedCreationEntry] = useState(null);
   const [aiUnderstanding, setAiUnderstanding] = useState(null);
+  // What the server said about this version when it refused to go on (approval or Ideas): shown on the
+  // Understanding screen with the control that resolves it. { kind: 'not_approved' | 'outdated' | 'not_saved', message }
+  const [understandingNotice, setUnderstandingNotice] = useState(null);
+  const [isApprovingUnderstanding, setIsApprovingUnderstanding] = useState(false);
   const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
   const [understandingError, setUnderstandingError] = useState('');
   const [scriptGuardrailReport, setScriptGuardrailReport] = useState(null);
@@ -2239,6 +2241,23 @@ export default function App() {
       if (proj.brief) updateUserContext('brief', proj.brief);
     }
 
+    // The project's own Settings-screen choices (what its AI Understanding was made from), not whatever the film
+    // open before it left behind: otherwise a finished project reopens at another duration or size and its
+    // approval reads as outdated with nothing edited. A resumed draft's saved context, restored below, still wins.
+    const savedSettings = (proj.creativeDNA && proj.creativeDNA.productionSettings)
+      || (proj.aiUnderstanding && proj.aiUnderstanding.source_settings)
+      || null;
+    if (savedSettings && typeof savedSettings === 'object') {
+      setUserContext((prev) => ({
+        ...prev,
+        ...(savedSettings.language ? { language: savedSettings.language } : {}),
+        ...(savedSettings.creativeStyle ? { creativeStyle: savedSettings.creativeStyle } : {}),
+        ...(savedSettings.dimension ? { aspectRatio: savedSettings.dimension, dimension: savedSettings.dimension } : {}),
+        ...(savedSettings.duration ? { targetDuration: savedSettings.duration, duration: savedSettings.duration } : {}),
+        ...(savedSettings.platform ? { platform: savedSettings.platform } : {}),
+      }));
+    }
+
     if (proj.scenes && Array.isArray(proj.scenes) && proj.scenes.length > 0) {
       setScenes(proj.scenes);
     }
@@ -2310,6 +2329,7 @@ export default function App() {
     setModeSelectionContext(null);
     const restoredUnderstanding = proj.aiUnderstanding || proj.stages?.aiUnderstanding || proj.creativeDNA?.aiUnderstanding || (draft && draft.guided && draft.guided.aiUnderstanding) || null;
     setAiUnderstanding(restoredUnderstanding);
+    setUnderstandingNotice(null);
     const restoredGuardrails = proj.creativeGuardrails || proj.creativeDNA?.creativeGuardrails || proj.stages?.creativeGuardrails || (draft && draft.guided && draft.guided.creativeGuardrails) || null;
     updateUserContext('creativeGuardrails', restoredGuardrails);
     const restoredEventContext = proj.eventContext || proj.creativeDNA?.eventContext || proj.stages?.eventContext || (draft && draft.guided && draft.guided.eventContext) || null;
@@ -3015,6 +3035,7 @@ export default function App() {
         updateUserContext('creativeGuardrails', data.creativeGuardrails);
       }
       setAiUnderstanding(data.understanding);
+      setUnderstandingNotice(null);
       setCreativeDNA((prev) => ({
         ...prev,
         aiUnderstanding: data.understanding,
@@ -3043,14 +3064,13 @@ export default function App() {
   };
 
   const handleApproveUnderstanding = async (approvedData) => {
+    if (isApprovingUnderstanding) return;
     try {
       const updated = {
         ...approvedData,
         approval_status: 'approved',
         approved_at: new Date().toISOString(),
       };
-      setAiUnderstanding(updated);
-      setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
 
       let targetProjId = activeProjectId || currentSavingProjectIdRef.current || draftIdRef.current;
       if (!targetProjId && authToken) {
@@ -3058,16 +3078,44 @@ export default function App() {
         targetProjId = activeProjectId || currentSavingProjectIdRef.current || draftIdRef.current;
       }
       if (targetProjId) {
+        // Approved only once the server has recorded it, checked against the inputs on screen now. Until then the
+        // badge keeps saying "Needs approval"; a refusal stays on this screen and says why.
+        setIsApprovingUnderstanding(true);
         const token = authToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null);
-        await fetch(`/api/creative/ai-understanding/${encodeURIComponent(targetProjId)}`, {
+        const res = await fetch(`/api/creative/ai-understanding/${encodeURIComponent(targetProjId)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ understanding: updated, approvalStatus: 'approved' }),
-        }).catch((err) => console.warn('[AIUnderstanding] backend save warning:', err));
+          body: JSON.stringify({
+            understanding: updated,
+            approvalStatus: 'approved',
+            brief: (userContext.brief || userContext.specialty || userContext.offer || '').trim(),
+            productionSettings: getCurrentProductionSettings(),
+            creativeGuardrails: userContext.creativeGuardrails || null,
+            eventContext: hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null,
+          }),
+        }).catch((err) => {
+          console.warn('[AIUnderstanding] backend save warning:', err);
+          return null;
+        });
+        const data = res ? await res.json().catch(() => null) : null;
+        setIsApprovingUnderstanding(false);
+        if (!res || !res.ok) {
+          setUnderstandingNotice(
+            res && res.status === 409 && data?.code === 'UNDERSTANDING_OUTDATED'
+              ? { kind: 'outdated', message: data.detail || describeOutdatedReasons(data.reasons) }
+              : { kind: 'not_saved', message: (data && data.error) || 'Could not reach the server.' }
+          );
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+        if (data?.understanding?.approved_at) updated.approved_at = data.understanding.approved_at;
       }
+      setAiUnderstanding(updated);
+      setCreativeDNA((prev) => ({ ...prev, aiUnderstanding: updated }));
+      setUnderstandingNotice(null);
 
       handleBehaviorEvent('aiUnderstandingApprovedCount');
       markStageComplete('understanding');
@@ -3082,6 +3130,7 @@ export default function App() {
         await loadCreativeDirections(true, currentFormat, currentLang);
       }
     } catch (err) {
+      setIsApprovingUnderstanding(false);
       console.error('[AIUnderstanding] approval error:', err);
     }
   };
@@ -3143,7 +3192,14 @@ export default function App() {
       } else if (res.status === 409) {
         const errData = await res.json().catch(() => null);
         if (errData?.code === 'UNDERSTANDING_OUTDATED' || errData?.code === 'UNDERSTANDING_NOT_APPROVED') {
-          setErrorMessage(errData.error || 'Please review and approve AI Understanding first.');
+          // Shown on the Understanding screen next to the control that resolves it (Approve, or Update analysis),
+          // and the badge follows what the server holds instead of an approval it never recorded.
+          if (errData.code === 'UNDERSTANDING_NOT_APPROVED') {
+            setAiUnderstanding((prev) => (prev && prev.approval_status === 'approved' ? { ...prev, approval_status: 'pending', approved_at: null } : prev));
+            setUnderstandingNotice({ kind: 'not_approved', message: '' });
+          } else {
+            setUnderstandingNotice({ kind: 'outdated', message: errData.detail || describeOutdatedReasons(errData.reasons) });
+          }
           setStudioStage('understanding');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -4195,6 +4251,9 @@ export default function App() {
     return buildDraftProject({
       ...base,
       studio: 'guided',
+      // the settings exactly as the AI Understanding read them (business-profile logo included), so the server
+      // compares the approval with these instead of rebuilding them from the draft's context
+      productionSettings: getCurrentProductionSettings(),
       guided: {
         currentStage: studioStage,
         completedStages,
@@ -4836,6 +4895,7 @@ export default function App() {
       setGeneratedScript(null);
       setCreativeDNA({ direction: null, hook: null, plot: null, story: null });
       setAiUnderstanding(null);
+      setUnderstandingNotice(null);
       setIsAnalyzingBrief(false);
       setUnderstandingError('');
       setScriptGuardrailReport(null);
@@ -5173,8 +5233,7 @@ export default function App() {
     const eventCtx = hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null;
     const understandingIsCurrent = Boolean(
       aiUnderstanding &&
-      aiUnderstanding.approval_status === 'approved' &&
-      !isUnderstandingOutdatedClient(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, prodSettings, eventCtx)
+      understandingApprovalState(aiUnderstanding, cleanBrief, userContext.creativeGuardrails, prodSettings, eventCtx).status === 'approved'
     );
 
     setCreativeDNA((prev) => ({
@@ -6479,18 +6538,27 @@ export default function App() {
             settingsContext={getCurrentProductionSettings()}
             onRegenerate={handleGenerateAiUnderstanding}
             isRegenerating={isAnalyzingBrief}
-            isSaving={isSavingProject}
+            isSaving={isSavingProject || isApprovingUnderstanding}
             originalBrief={userContext.brief || userContext.specialty || userContext.offer || ''}
             businessName={userContext.businessName}
             businessType={userContext.businessType}
             town={userContext.town}
-            isOutdated={isUnderstandingOutdatedClient(
-              aiUnderstanding,
-              userContext.brief || userContext.specialty || userContext.offer || '',
-              userContext.creativeGuardrails,
-              getCurrentProductionSettings(),
-              hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null
-            )}
+            {...(() => {
+              const state = understandingApprovalState(
+                aiUnderstanding,
+                userContext.brief || userContext.specialty || userContext.offer || '',
+                userContext.creativeGuardrails,
+                getCurrentProductionSettings(),
+                hasActiveClientEventContext(userContext.eventContext) ? userContext.eventContext : null
+              );
+              const serverSaysOutdated = understandingNotice?.kind === 'outdated';
+              return {
+                approvalStatus: serverSaysOutdated ? 'outdated' : state.status,
+                isOutdated: serverSaysOutdated || state.status === 'outdated',
+                outdatedDetail: (serverSaysOutdated && understandingNotice.message) || describeOutdatedReasons(state.reasons),
+              };
+            })()}
+            notice={understandingNotice}
             userGuardrails={userContext.creativeGuardrails}
             userEventContext={userContext.eventContext}
             onboardingState={onboardingState}

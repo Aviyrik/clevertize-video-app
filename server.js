@@ -1154,14 +1154,9 @@ app.put("/api/projects/:id/guardrails", authRequired, async (req, res) => {
     const normalized = guardrails.normalizeCreativeGuardrails(incoming, existing.creativeGuardrails);
     let updatedUnderstanding = existing.aiUnderstanding || (existing.creativeDNA && existing.creativeDNA.aiUnderstanding) || null;
 
-    if (
-      updatedUnderstanding &&
-      understandingSpine.isUnderstandingOutdated(updatedUnderstanding, existing.brief || "", normalized)
-    ) {
-      updatedUnderstanding = {
-        ...updatedUnderstanding,
-        approval_status: "outdated",
-      };
+    if (updatedUnderstanding) {
+      // an approval made from other Do's and Don'ts becomes outdated; a pending version stays pending
+      updatedUnderstanding = understandingSpine.reconcileApproval(updatedUnderstanding, existing.brief || updatedUnderstanding.source_brief || "", normalized);
     }
 
     const saved = await db.saveProject(
@@ -1322,7 +1317,9 @@ app.post("/api/creative/ai-understanding", authRequired, async (req, res) => {
 app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { understanding, approvalStatus } = req.body || {};
+    // brief / productionSettings / creativeGuardrails / eventContext: what the studio shows next to this version.
+    // The approval is checked against those (the saved project can lag behind an autosave) and saved with them.
+    const { understanding, approvalStatus, brief: bodyBrief, productionSettings: bodySettings, creativeGuardrails: bodyGuardrails, eventContext: bodyEvent } = req.body || {};
 
     if (!understanding || typeof understanding !== "object") {
       return res.status(400).json({ error: "Structured understanding object is required." });
@@ -1333,15 +1330,28 @@ app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, r
       return res.status(404).json({ error: "Project not found or not owned by user." });
     }
 
+    const inputs = {};
+    if (typeof bodyBrief === "string" && bodyBrief.trim()) inputs.brief = bodyBrief.trim();
+    if (bodySettings && typeof bodySettings === "object") inputs.productionSettings = understandingSpine.normalizeUnderstandingSettings(bodySettings);
+    if (bodyGuardrails !== undefined) inputs.creativeGuardrails = guardrails.normalizeCreativeGuardrails(bodyGuardrails, existing.creativeGuardrails);
+    if (bodyEvent !== undefined) {
+      const ev = bodyEvent ? eventContextUtil.normalizeEventContext(bodyEvent, existing.eventContext) : null;
+      inputs.eventContext = ev && eventContextUtil.hasActiveEventContext(ev) ? ev : null;
+    }
+
     if (approvalStatus === "approved") {
-      const activeBrief = existing.brief || understanding.source_brief || "";
-      const activeGuardrails = existing.creativeGuardrails || null;
-      const activeSettings = (existing.creativeDNA && existing.creativeDNA.productionSettings) || null;
-      const activeEvent = existing.eventContext || null;
-      if (understandingSpine.isUnderstandingOutdated(understanding, activeBrief, activeGuardrails, activeSettings, activeEvent)) {
+      const activeBrief = inputs.brief || existing.brief || understanding.source_brief || "";
+      const activeGuardrails = inputs.creativeGuardrails || existing.creativeGuardrails || null;
+      const activeSettings = inputs.productionSettings || (existing.creativeDNA && existing.creativeDNA.productionSettings) || null;
+      const activeEvent = "eventContext" in inputs ? inputs.eventContext : existing.eventContext || null;
+      const reasons = understandingSpine.explainUnderstandingOutdated(understanding, activeBrief, activeGuardrails, activeSettings, activeEvent);
+      if (reasons.length) {
+        console.warn("[ai-understanding] approval refused, inputs changed:", JSON.stringify(reasons));
         return res.status(409).json({
-          error: "Cannot approve outdated AI Understanding. Please regenerate with your latest brief, guardrails, event context, and settings.",
+          error: "This version was made from different inputs. Update the analysis, then approve.",
           code: "UNDERSTANDING_OUTDATED",
+          reasons,
+          detail: understandingSpine.describeOutdatedReasons(reasons),
         });
       }
     }
@@ -1359,12 +1369,13 @@ app.put("/api/creative/ai-understanding/:projectId", authRequired, async (req, r
     const saved = await db.saveProject(
       {
         ...existing,
+        ...inputs,
         aiUnderstanding: updated,
       },
       req.user.id
     );
 
-    res.json({ ok: true, status: "success", understanding: updated, project: saved });
+    res.json({ ok: true, status: "success", understanding: saved.aiUnderstanding || updated, project: saved });
   } catch (err) {
     console.error("[api/creative/ai-understanding/:projectId]", err.message);
     res.status(500).json({ error: err.message || "Failed to update AI Understanding." });
@@ -1443,28 +1454,28 @@ app.post("/api/creative/directions", authRequired, async (req, res) => {
             ? { hasLogo: Boolean(hasLogo || videoLogo || brandLogo || logoDataUrl) }
             : {}),
         });
-        const isOutdated =
-          understandingSpine.isUnderstandingOutdated(saved, currentBrief) ||
-          understandingSpine.isUnderstandingOutdated(
-            saved,
-            currentBrief,
-            activeGuardrails,
-            activeSettings,
-            eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null
-          );
-        if (isOutdated || saved.approval_status === "outdated") {
-          console.warn("[directions] Project understanding is outdated compared to active brief, guardrails, event, or settings");
+        const activeEvent = eventContextUtil.hasActiveEventContext(activeEventContext) ? activeEventContext : null;
+        // a stored "outdated" is re-checked against the inputs, not trusted (see reconcileApproval)
+        const current = understandingSpine.reconcileApproval(saved, currentBrief, activeGuardrails, activeSettings, activeEvent);
+        const reasons = understandingSpine.explainUnderstandingOutdated(saved, currentBrief, activeGuardrails, activeSettings, activeEvent);
+        if (reasons.length) {
+          console.warn("[directions] understanding outdated:", JSON.stringify(reasons));
           return res.status(409).json({
             error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating ideas.",
             code: "UNDERSTANDING_OUTDATED",
+            reasons,
+            detail: understandingSpine.describeOutdatedReasons(reasons),
+            approvalStatus: current.approval_status,
           });
         }
-        if (saved.approval_status === "approved" || saved.approval_status === "auto_approved") {
-          verifiedUnderstanding = saved;
+        if (current.approval_status === "approved" || current.approval_status === "auto_approved") {
+          verifiedUnderstanding = current;
         } else {
           return res.status(409).json({
             error: "AI Understanding must be approved before generating creative ideas.",
             code: "UNDERSTANDING_NOT_APPROVED",
+            approvalStatus: current.approval_status,
+            version: current.version || 1,
           });
         }
       }
@@ -1599,20 +1610,19 @@ app.post("/api/creative/synthesize-script", authRequired, async (req, res) => {
 
     if (project && project.aiUnderstanding) {
       const savedSettings = (project.creativeDNA && project.creativeDNA.productionSettings) || null;
-      const isOutdated = understandingSpine.isUnderstandingOutdated(
-        project.aiUnderstanding,
-        validated.brief || project.brief || "",
-        activeGuardrails,
-        savedSettings,
-        hasEvent ? activeEventContext : null
-      );
-      if (isOutdated || project.aiUnderstanding.approval_status === "outdated") {
+      const scriptInputs = [validated.brief || project.brief || "", activeGuardrails, savedSettings, hasEvent ? activeEventContext : null];
+      const reasons = understandingSpine.explainUnderstandingOutdated(project.aiUnderstanding, ...scriptInputs);
+      const current = understandingSpine.reconcileApproval(project.aiUnderstanding, ...scriptInputs);
+      if (reasons.length) {
+        console.warn("[synthesize-script] understanding outdated:", JSON.stringify(reasons));
         return res.status(409).json({
           error: "AI Understanding is outdated because your brief, creative guardrails, event context, or settings changed. Please review and re-approve before generating script.",
           code: "UNDERSTANDING_OUTDATED",
+          reasons,
+          detail: understandingSpine.describeOutdatedReasons(reasons),
         });
       }
-      if (project.aiUnderstanding.approval_status !== "approved" && project.aiUnderstanding.approval_status !== "auto_approved") {
+      if (current.approval_status !== "approved" && current.approval_status !== "auto_approved") {
         return res.status(409).json({
           error: "AI Understanding must be approved before generating script.",
           code: "UNDERSTANDING_NOT_APPROVED",

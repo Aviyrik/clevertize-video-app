@@ -2,6 +2,7 @@
  * Client & shared utility helpers for Creative Guardrails (Do's & Don'ts).
  * Maintains stable instruction IDs, clean version increments, and stale checks.
  */
+import { normalizeCreativeStyle } from './creativeStyle.js';
 
 export const EMPTY_CREATIVE_GUARDRAILS = {
   dos: [],
@@ -120,16 +121,19 @@ export function removeGuardrailInstruction(guardrails, type, id) {
   };
 }
 
+// The production settings an AI Understanding is made from, read the same way as the server's settingsFingerprint
+// (engine/understandingSpine.js) and the studio's getCurrentProductionSettings: aspectRatio and targetDuration first,
+// the style through the legacy-label mapping.
 export function normalizeClientSettings(raw = {}) {
   const src = raw && typeof raw === 'object' ? raw : {};
   const language = String(src.language || 'English').trim();
-  const creativeStyle = String(src.creativeStyle || src.format || 'UGC / Creator-style').trim();
+  const creativeStyle = normalizeCreativeStyle(String(src.creativeStyle || src.format || 'UGC / Creator-style').trim());
   const platform = String(src.platform || '').trim();
-  const rawDim = String(src.dimension || src.aspectRatio || '').trim();
+  const rawDim = String(src.aspectRatio || src.dimension || '').trim();
   const dimension = rawDim || (
     platform.includes('16:9') ? '16:9' : platform.includes('1:1') ? '1:1' : '9:16'
   );
-  const duration = String(src.duration || src.targetDuration || '20s').trim();
+  const duration = String(src.targetDuration || src.duration || '20s').trim();
   const hasLogo = Boolean(
     src.hasLogo === true ||
     src.videoLogo ||
@@ -140,54 +144,125 @@ export function normalizeClientSettings(raw = {}) {
   return { language, creativeStyle, dimension, duration, hasLogo };
 }
 
-export function isUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings = null, currentEventContext = undefined) {
-  if (!understanding) return false;
-  if (understanding.approval_status === 'outdated') return true;
-  if (String(understanding.source_brief || '').trim() !== String(currentBrief || '').trim()) {
-    return true;
-  }
-  const g = normalizeClientGuardrails(currentGuardrails);
-  const recVer = typeof understanding.source_guardrails_version === 'number'
-    ? understanding.source_guardrails_version
-    : null;
-  if (recVer !== null) {
-    if ((g.version || 0) !== recVer) return true;
-  } else if (g.dos.length > 0 || g.donts.length > 0) {
-    return true;
+const SETTINGS_FIELDS = ['language', 'creativeStyle', 'dimension', 'duration', 'hasLogo'];
+
+// Do's and Don'ts by content, exactly as engine/guardrails.js guardrailsContentSignature reads them (ids and the
+// version counter left out).
+export function guardrailsContentSignatureClient(raw) {
+  const list = (items) => {
+    const seen = new Set();
+    const out = [];
+    for (const item of Array.isArray(items) ? items : []) {
+      let text = '';
+      let priority = 'critical';
+      if (typeof item === 'string') text = item.trim();
+      else if (item && typeof item === 'object') {
+        text = String(item.text || item.instruction || item.rule || item.label || '').trim();
+        priority = typeof item.priority === 'string' && item.priority.trim().toLowerCase() === 'preference' ? 'preference' : 'critical';
+      }
+      if (!text) continue;
+      const key = `${text.toLowerCase()}::${priority}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(`${priority}:${text}`);
+    }
+    return out;
+  };
+  const g = raw && typeof raw === 'object' ? raw : {};
+  return JSON.stringify({ dos: list(g.dos), donts: list(g.donts) });
+}
+
+// An occasion by content, as engine/eventContext.js eventContentSignature reads its normalised form.
+const EVENT_CATEGORY_IDS = ['Festivals', 'Occasions', 'Sports & Events', 'Other'];
+function eventSignatureClient(raw) {
+  if (!raw || typeof raw !== 'object') return '';
+  const name = String(raw.name || '').trim();
+  const timing = String(raw.timing || '').trim();
+  const additionalContext = String(raw.additionalContext || '').trim();
+  const rawCategory = String(raw.category || '').trim();
+  if (!name && !timing && !additionalContext && !rawCategory) return '';
+  const category = rawCategory ? (EVENT_CATEGORY_IDS.find((c) => c.toLowerCase() === rawCategory.toLowerCase()) || 'Other') : '';
+  const inf = String(raw.creativeInfluence || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const creativeInfluence = inf === 'strongly' || inf === 'strong' ? 'Strongly'
+    : inf === 'subtly' || inf === 'subtle' ? 'Subtly'
+    : inf === 'reference_only' || inf === 'reference' ? 'Reference only'
+    : name ? 'Subtly' : '';
+  return JSON.stringify({ category, name, timing, creativeInfluence, additionalContext });
+}
+
+/**
+ * Which inputs differ from the ones this AI Understanding was made from ([] when it is current). Only what the user
+ * edits counts: brief text, Do's and Don'ts content, the Settings screen's choices, an uploaded logo, the occasion.
+ * Never a version counter, a date or the stored status label. Mirrors engine/understandingSpine.js.
+ */
+export function explainUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings = null, currentEventContext = undefined) {
+  const reasons = [];
+  if (!understanding) return reasons;
+  const storedBrief = String(understanding.source_brief || '').trim();
+  const brief = String(currentBrief || '').trim();
+  if (storedBrief !== brief) reasons.push({ part: 'brief', stored: storedBrief, current: brief });
+
+  if (typeof understanding.source_guardrails_signature === 'string') {
+    const cur = guardrailsContentSignatureClient(currentGuardrails);
+    if (cur !== understanding.source_guardrails_signature) {
+      reasons.push({ part: 'guardrails', stored: understanding.source_guardrails_signature, current: cur });
+    }
+  } else {
+    // made before the content was recorded: the version is all there is to go on
+    const g = normalizeClientGuardrails(currentGuardrails);
+    const recVer = typeof understanding.source_guardrails_version === 'number' ? understanding.source_guardrails_version : null;
+    if (recVer !== null ? (g.version || 0) !== recVer : g.dos.length > 0 || g.donts.length > 0) {
+      reasons.push({ part: 'guardrails', stored: recVer, current: g.version || 0 });
+    }
   }
 
   if (currentSettings && understanding.source_settings && typeof understanding.source_settings === 'object') {
     const cur = normalizeClientSettings(currentSettings);
-    const rec = understanding.source_settings;
-    if (
-      String(rec.language || '') !== cur.language ||
-      String(rec.creativeStyle || '') !== cur.creativeStyle ||
-      String(rec.dimension || '') !== cur.dimension ||
-      String(rec.duration || '') !== cur.duration ||
-      Boolean(rec.hasLogo) !== cur.hasLogo
-    ) {
-      return true;
+    const rec = normalizeClientSettings(understanding.source_settings);
+    for (const k of SETTINGS_FIELDS) {
+      if (rec[k] !== cur[k]) reasons.push({ part: `settings.${k}`, stored: rec[k], current: cur[k] });
     }
   }
 
   if (currentEventContext !== undefined) {
-    const recEvt = understanding.source_event && typeof understanding.source_event === 'object' ? understanding.source_event : null;
-    const curEvtRaw = currentEventContext && typeof currentEventContext === 'object' ? currentEventContext : null;
-    const normStr = (e) => {
-      if (!e) return '';
-      const cat = String(e.category || '').trim();
-      const name = String(e.name || '').trim();
-      const tim = String(e.timing || '').trim();
-      const inf = String(e.creativeInfluence || '').trim();
-      const ctx = String(e.additionalContext || '').trim();
-      if (!cat && !name && !tim && !ctx) return '';
-      return JSON.stringify({ cat, name, tim, inf, ctx });
-    };
-    const recSig = normStr(recEvt);
-    const curSig = normStr(curEvtRaw);
-    if (recSig !== curSig) {
-      return true;
-    }
+    const stored = eventSignatureClient(understanding.source_event);
+    const cur = eventSignatureClient(currentEventContext);
+    if (stored !== cur) reasons.push({ part: 'event', stored: understanding.source_event || null, current: currentEventContext || null });
   }
-  return false;
+  return reasons;
+}
+
+export function isUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings = null, currentEventContext = undefined) {
+  return explainUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings, currentEventContext).length > 0;
+}
+
+const SETTING_NAMES = { language: 'language', creativeStyle: 'creative style', dimension: 'video size', duration: 'duration', hasLogo: 'logo' };
+
+/** One plain sentence for the outdated notice, e.g. "Changed since this version was made: duration (20s → 15s)." */
+export function describeOutdatedReasons(reasons = []) {
+  const bits = [];
+  for (const r of reasons || []) {
+    if (r.part === 'brief') bits.push('your brief');
+    else if (r.part === 'guardrails') bits.push("your Do's and Don'ts");
+    else if (r.part === 'event') bits.push('the occasion');
+    else if (r.part === 'settings.hasLogo') bits.push(r.current ? 'a logo was added' : 'the logo was removed');
+    else if (String(r.part).startsWith('settings.')) bits.push(`${SETTING_NAMES[r.part.slice(9)] || r.part.slice(9)} (${r.stored} → ${r.current})`);
+    else if (r.part === 'settings') bits.push('your settings');
+  }
+  const uniq = [...new Set(bits)];
+  return uniq.length ? `Changed since this version was made: ${uniq.join(', ')}.` : '';
+}
+
+/**
+ * What the Understanding screen shows: 'outdated' when the inputs changed since this version was made, 'approved'
+ * when the user approved this version (a stored "outdated" whose inputs match again counts, as on the server's
+ * reconcileApproval), otherwise 'pending'.
+ */
+export function understandingApprovalState(understanding, currentBrief, currentGuardrails, currentSettings = null, currentEventContext = undefined) {
+  if (!understanding) return { status: 'pending', reasons: [] };
+  const reasons = explainUnderstandingOutdatedClient(understanding, currentBrief, currentGuardrails, currentSettings, currentEventContext);
+  if (reasons.length) return { status: 'outdated', reasons };
+  const s = understanding.approval_status;
+  const approved = s === 'approved' || s === 'auto_approved' || (s === 'outdated' && Boolean(understanding.approved_at));
+  return { status: approved ? 'approved' : 'pending', reasons };
 }

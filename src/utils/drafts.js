@@ -72,7 +72,7 @@ function draftPhoto(photo) {
 // simple: Simple Studio's state { step, brief, language, creativeStyle, duration, aspectRatio, productPhoto, packages, selectedPackageId }
 // guided: { currentStage, completedStages, context, stages, scenes, character1, character2, setting, shotSpec }
 // render: { runId, startedAt } while a render is running
-function buildDraftProject({ id, businessId = null, businessName = '', businessType = '', town = '', brandContext = null, studio, simple = null, guided = null, render = null }) {
+function buildDraftProject({ id, businessId = null, businessName = '', businessType = '', town = '', brandContext = null, studio, simple = null, guided = null, render = null, productionSettings = null }) {
   const isSimple = studio === 'simple';
   // Simple Studio's produce step only means something while a render runs; otherwise resume on script choice
   const simpleStep = isSimple && simple ? (simple.step === 3 && !(render && render.runId) ? 2 : (simple.step || 1)) : 1;
@@ -128,6 +128,7 @@ function buildDraftProject({ id, businessId = null, businessName = '', businessT
     eventContext: isSimple ? ((simple && simple.eventContext) || null) : ((guided && guided.eventContext) || null),
     creativeDNA: { draft },
     brandContext,
+    ...(productionSettings && !isSimple ? { productionSettings } : {}),
   };
 }
 

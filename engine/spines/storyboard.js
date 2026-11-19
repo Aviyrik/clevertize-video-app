@@ -69,7 +69,8 @@ function mentions(text, c, { ruleOut = true } = {}) {
   const t = (ruleOut ? sentences.filter((s) => !/\b(not|no|never|without|nor)\b/i.test(s)) : sentences).join(' ').toLowerCase();
   if (!t || !c) return false;
   const o = typeof c === 'object' ? c : { name: String(c) };
-  const names = [o.name, ...(String(o.role || '').split(/[\s,]+/))].map((x) => clean(x).toLowerCase()).filter((x) => x.length >= 3);
+  // a character's Context Block ref ("char_1") names them too
+  const names = [o.name, o.ref, ...(String(o.role || '').split(/[\s,]+/))].map((x) => clean(x).toLowerCase()).filter((x) => x.length >= 3);
   return names.some((n) => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(t));
 }
 
