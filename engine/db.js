@@ -327,6 +327,8 @@ function mapProjectRow(row) {
     qualityGatePassed: Boolean(row.quality_gate_passed),
     status: row.status,
     videoUrl: row.video_url,
+    // our stored copy (engine/videoStorage.js); only present once projects.video_storage_key exists
+    videoStorageKey: row.video_storage_key || null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   };
@@ -1213,6 +1215,14 @@ async function saveProject(projectData, userId) {
     createdAt: existingIndex >= 0 ? projects[existingIndex].createdAt : now,
     updatedAt: now,
   };
+  // Our stored copy is set only by setProjectVideoStorage after an upload, never from a save request; it is
+  // dropped when the project's video changes (the copy would be of the old one).
+  const prevRecord = existingIndex >= 0 ? projects[existingIndex] : null;
+  if (prevRecord && prevRecord.videoStorageKey && prevRecord.videoUrl === record.videoUrl) {
+    record.videoStorageKey = prevRecord.videoStorageKey;
+    record.videoStoredAt = prevRecord.videoStoredAt || null;
+    record.videoStorageBytes = prevRecord.videoStorageBytes || null;
+  }
 
   if (existingIndex >= 0) {
     projects[existingIndex] = record;
@@ -1389,6 +1399,50 @@ async function userOwnsVideoUrl(userId, videoUrl) {
   if (projects.some((p) => p.userId === userId && p.videoUrl === videoUrl)) return true;
   const runs = readJsonFile('video_runs.json', []);
   return runs.some((r) => r.userId === userId && r.videoUrl === videoUrl);
+}
+
+/** A render link this user's own video run produced (video_runs only: a project row can be written by its owner). */
+async function userRenderedVideoUrl(userId, videoUrl) {
+  if (!userId || !videoUrl) return false;
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    const res = await pool.query('SELECT 1 FROM video_runs WHERE user_id = $1 AND video_url = $2 LIMIT 1', [userId, videoUrl]);
+    return (res.rowCount || 0) > 0;
+  }
+  return readJsonFile('video_runs.json', []).some((r) => r.userId === userId && r.videoUrl === videoUrl);
+}
+
+// projects.video_storage_key is added by hand once approved (it is the teammate's live database): until then the
+// stored copy is still made, but Postgres doesn't record it and the app plays the render link as before.
+let pgStorageColumn = null;
+async function pgHasVideoStorageColumn(pool) {
+  if (pgStorageColumn !== null) return pgStorageColumn;
+  const res = await pool.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'video_storage_key' LIMIT 1"
+  );
+  pgStorageColumn = (res.rowCount || 0) > 0;
+  if (!pgStorageColumn) console.warn('[video storage] projects.video_storage_key does not exist yet: stored copies are made but not recorded');
+  return pgStorageColumn;
+}
+
+/** Record where this project's video copy went. Server-side only: called after a successful upload. */
+async function setProjectVideoStorage(projectId, userId, { key, bytes = null } = {}) {
+  if (!projectId || !userId || !key) return false;
+  const now = new Date().toISOString();
+  const pool = getPgPool();
+  if (pool) {
+    await ensurePgTables();
+    if (!(await pgHasVideoStorageColumn(pool))) return false;
+    const res = await pool.query('UPDATE projects SET video_storage_key = $3 WHERE id = $1 AND user_id = $2', [projectId, userId, key]);
+    return (res.rowCount || 0) > 0;
+  }
+  const projects = readJsonFile('projects.json', []);
+  const idx = projects.findIndex((p) => p.id === projectId && p.userId === userId);
+  if (idx < 0) return false;
+  projects[idx] = { ...projects[idx], videoStorageKey: key, videoStoredAt: now, videoStorageBytes: bytes };
+  writeJsonFile('projects.json', projects);
+  return true;
 }
 
 async function isVideoUrlRegistered(videoUrl) {
@@ -1933,6 +1987,8 @@ module.exports = {
   updateUserProfile,
   updateUserOnboarding,
   userOwnsVideoUrl,
+  userRenderedVideoUrl,
+  setProjectVideoStorage,
   isVideoUrlRegistered,
   saveVideoRun,
   getVideoRun,

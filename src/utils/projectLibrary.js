@@ -25,7 +25,8 @@ function resolveStageLabel(proj = {}) {
 function classifyProjectStatus(proj = {}, unplayableIds = {}) {
   const hasScenes = Array.isArray(proj.scenes) && proj.scenes.length > 0;
   const hasVideo = Boolean(proj.videoUrl);
-  const videoExpired = hasVideo && isVideoLinkExpired(proj.videoUrl);
+  // our stored copy doesn't expire; only a project that has nothing but the render link can lose its video
+  const videoExpired = hasVideo && !proj.videoStored && isVideoLinkExpired(proj.videoUrl);
   const unplayable = hasVideo && Boolean(unplayableIds && unplayableIds[proj.id]);
   const rendering = !hasVideo && isRenderingDraft(proj);
   const inProgressDraft = !hasVideo && isDraft(proj);

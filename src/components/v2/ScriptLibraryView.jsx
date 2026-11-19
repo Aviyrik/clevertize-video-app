@@ -1,6 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { downloadVideoWithTicket } from '../../utils/downloadVideo.js';
 import { isVideoLinkExpired } from '../../utils/videoLink.js';
+import { useVideoSource } from '../../utils/storedVideo.js';
+
+// Plays our stored copy when the project has one (a fresh signed link, fetched once more if it lapses), else
+// the render link.
+function ProjectVideoPlayer({ project, onUnplayable }) {
+  const { src, retry } = useVideoSource(project.id, Boolean(project.videoStored), project.videoUrl);
+  if (!src) {
+    return <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--cc-text-3)' }}>Loading video…</div>;
+  }
+  return (
+    <video
+      src={src}
+      controls
+      autoPlay
+      playsInline
+      onError={() => { if (!retry()) onUnplayable(); }}
+      style={{ width: '100%', maxHeight: 360, display: 'block', objectFit: 'contain' }}
+    />
+  );
+}
 import { isDraft, isRenderingDraft } from '../../utils/drafts.js';
 import {
   PROJECTS_PAGE_SIZE,
@@ -1149,7 +1169,8 @@ export default function ScriptLibraryView({
                           try {
                             await downloadVideoWithTicket(
                               proj.videoUrl,
-                              `${(proj.title || 'commercial_video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`
+                              `${(proj.title || 'commercial_video').replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`,
+                              { projectId: proj.id, stored: Boolean(proj.videoStored) }
                             );
                           } catch (err) {
                             alert(err.message || 'Download failed');
@@ -1189,16 +1210,12 @@ export default function ScriptLibraryView({
 
                     {isPlaying && (
                       <div onClick={(e) => e.stopPropagation()} style={{ margin: '-4px 0 12px', borderRadius: 8, overflow: 'hidden', backgroundColor: '#000000' }}>
-                        <video
-                          src={proj.videoUrl}
-                          controls
-                          autoPlay
-                          playsInline
-                          onError={() => {
+                        <ProjectVideoPlayer
+                          project={proj}
+                          onUnplayable={() => {
                             setUnplayableIds((prev) => ({ ...prev, [proj.id]: true }));
                             setPlayingVideoId(null);
                           }}
-                          style={{ width: '100%', maxHeight: 360, display: 'block', objectFit: 'contain' }}
                         />
                       </div>
                     )}

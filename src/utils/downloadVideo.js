@@ -5,8 +5,27 @@
  * browser history, and proxy logs.
  */
 import { brandSafeMessage } from './brandSafeText.js';
+import { storedVideoLink } from './storedVideo.js';
 
-export async function downloadVideoWithTicket(videoUrl, filename = 'commercial_video.mp4') {
+function clickDownload(href, filename) {
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}
+
+// A project with our stored copy downloads from it (a short-lived signed link the server issues after checking
+// ownership); anything else, or a copy that can't be reached, goes through the render-link ticket as before.
+export async function downloadVideoWithTicket(videoUrl, filename = 'commercial_video.mp4', { projectId = null, stored = false } = {}) {
+  if (stored && projectId) {
+    const link = await storedVideoLink(projectId, { download: true });
+    if (link) {
+      clickDownload(link.url, filename);
+      return;
+    }
+  }
   if (!videoUrl) return;
 
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('clevertize_token') : null;
@@ -35,11 +54,5 @@ export async function downloadVideoWithTicket(videoUrl, filename = 'commercial_v
     throw new Error('No download ticket returned from server.');
   }
 
-  const downloadUrl = `/api/download?ticket=${encodeURIComponent(ticket)}`;
-  const anchor = document.createElement('a');
-  anchor.href = downloadUrl;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
+  clickDownload(`/api/download?ticket=${encodeURIComponent(ticket)}`, filename);
 }
