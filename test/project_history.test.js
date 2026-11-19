@@ -68,3 +68,25 @@ test("expired Magnific links are recognised; permanent copies never expire", () 
   assert.equal(videoLinkExpiry(stored), null);
   assert.equal(isVideoLinkExpired(stored, Date.parse("2099-01-01")), false, "a stored copy still plays long after the Magnific link would have expired");
 });
+
+test("project persistence preserves videoStorageKey and handles null / omitted cleanly", async () => {
+  const db = require("../engine/db");
+  const userId = `usr_test_${Date.now()}`;
+  const proj = await db.saveProject({
+    title: "Permanent Video Test",
+    videoUrl: "https://abc.supabase.co/storage/v1/object/public/videos/u1/v1.mp4",
+    videoStorageKey: "u1/v1.mp4",
+  }, userId);
+  assert.equal(proj.videoStorageKey, "u1/v1.mp4");
+
+  const fetched = await db.getProjectById(proj.id, userId);
+  assert.equal(fetched.videoStorageKey, "u1/v1.mp4");
+
+  // Project without videoStorageKey returns null
+  const proj2 = await db.saveProject({
+    title: "No Video Test",
+  }, userId);
+  assert.equal(proj2.videoStorageKey, null);
+  const fetched2 = await db.getProjectById(proj2.id, userId);
+  assert.equal(fetched2.videoStorageKey, null);
+});

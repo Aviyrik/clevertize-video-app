@@ -121,12 +121,14 @@ async function ensurePgTables() {
         quality_gate_passed BOOLEAN DEFAULT FALSE,
         status TEXT,
         video_url TEXT,
+        video_storage_key TEXT,
         creative_guardrails JSONB DEFAULT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
 
       ALTER TABLE projects ADD COLUMN IF NOT EXISTS creative_guardrails JSONB DEFAULT NULL;
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS video_storage_key TEXT;
 
       CREATE TABLE IF NOT EXISTS email_verification_tokens (
         id VARCHAR(255) PRIMARY KEY,
@@ -327,6 +329,7 @@ function mapProjectRow(row) {
     qualityGatePassed: Boolean(row.quality_gate_passed),
     status: row.status,
     videoUrl: row.video_url,
+    videoStorageKey: row.video_storage_key || null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   };
@@ -961,12 +964,18 @@ async function saveProject(projectData, userId) {
     qualityGatePassed,
     status,
     videoUrl,
+    videoStorageKey: incomingVideoStorageKey,
+    video_storage_key: incomingVideoStorageKeySnake,
     shotSpec,
     stages,
     aiUnderstanding,
     creativeGuardrails: incomingGuardrails,
     eventContext: incomingEventContext,
   } = projectData || {};
+
+  const videoStorageKey = incomingVideoStorageKey !== undefined
+    ? incomingVideoStorageKey
+    : (incomingVideoStorageKeySnake !== undefined ? incomingVideoStorageKeySnake : null);
 
   const now = new Date().toISOString();
   const targetId = id || (projectData && projectData.idempotencyKey) || null;
@@ -1073,9 +1082,9 @@ async function saveProject(projectData, userId) {
         id, user_id, business_id, title, business_name, business_type, town, brief,
         entry_point, current_stage, completed_stages, explicit_choices, creative_dna,
         scenes, character1, character2, setting, quality_gate_passed, status, video_url,
-        creative_guardrails, created_at, updated_at
+        video_storage_key, creative_guardrails, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $22
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23
       )
       ON CONFLICT (id) DO UPDATE SET
         business_id = EXCLUDED.business_id,
@@ -1097,6 +1106,7 @@ async function saveProject(projectData, userId) {
         -- a save without a video (e.g. a late draft autosave) never takes a finished video away
         status = CASE WHEN EXCLUDED.video_url IS NULL AND projects.video_url IS NOT NULL THEN projects.status ELSE EXCLUDED.status END,
         video_url = COALESCE(EXCLUDED.video_url, projects.video_url),
+        video_storage_key = COALESCE(EXCLUDED.video_storage_key, projects.video_storage_key),
         creative_guardrails = COALESCE(EXCLUDED.creative_guardrails, projects.creative_guardrails),
         updated_at = EXCLUDED.updated_at
       WHERE projects.user_id = EXCLUDED.user_id
@@ -1122,6 +1132,7 @@ async function saveProject(projectData, userId) {
         Boolean(qualityGatePassed),
         pStatus,
         videoUrl || null,
+        videoStorageKey || null,
         resolvedGuardrails ? JSON.stringify(resolvedGuardrails) : null,
         now,
       ]
@@ -1210,6 +1221,7 @@ async function saveProject(projectData, userId) {
     // a save without a video (e.g. a late draft autosave) never takes a finished video away
     status: !videoUrl && existingIndex >= 0 && projects[existingIndex].videoUrl ? projects[existingIndex].status : pStatus,
     videoUrl: videoUrl || (existingIndex >= 0 ? projects[existingIndex].videoUrl : null) || null,
+    videoStorageKey: videoStorageKey || (existingIndex >= 0 ? projects[existingIndex].videoStorageKey : null) || null,
     createdAt: existingIndex >= 0 ? projects[existingIndex].createdAt : now,
     updatedAt: now,
   };

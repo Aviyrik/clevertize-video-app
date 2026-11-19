@@ -32,6 +32,14 @@ function isStoredUrl(url) {
   return Boolean(prefix && typeof url === "string" && url.startsWith(prefix));
 }
 
+function storageKeyFromUrl(url) {
+  const prefix = publicPrefix();
+  if (prefix && typeof url === "string" && url.startsWith(prefix)) {
+    return decodeURIComponent(url.slice(prefix.length));
+  }
+  return null;
+}
+
 function storageHost() {
   try { return new URL(config().url).hostname.toLowerCase(); } catch { return null; }
 }
@@ -64,4 +72,4 @@ async function archiveVideo({ sourceUrl, userId, runId }) {
   return `${publicPrefix()}${objectPath}`;
 }
 
-module.exports = { archiveVideo, isConfigured, isStoredUrl, storageHost };
+module.exports = { archiveVideo, isConfigured, isStoredUrl, storageHost, storageKeyFromUrl, publicPrefix };
