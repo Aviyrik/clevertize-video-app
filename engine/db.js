@@ -7,11 +7,9 @@ const path = require('path');
 const crypto = require('crypto');
 const {
   normalizeCreativeGuardrails,
-  hashGuardrails,
-  hasActiveGuardrails,
 } = require('./guardrails');
 const {
-  isUnderstandingOutdated,
+  reconcileApproval,
   normalizeUnderstandingSettings,
 } = require('./understandingSpine');
 const {
@@ -895,29 +893,15 @@ async function projectExists(projectId) {
   return projects.some((p) => p.id === projectId || (p.idempotencyKey && p.idempotencyKey === projectId));
 }
 
+// Keep the stored approval honest on every save: an approval made from different inputs than the project now holds
+// becomes "outdated", and one marked outdated whose inputs match again (a revert, or a save that misread them)
+// is approved again. Only what the user edits is compared (see explainUnderstandingOutdated).
 function invalidateStaleUnderstanding(aiUnder, normalizedGuardrails, currentBrief = null, currentSettings = null, currentEventContext = undefined) {
   if (!aiUnder || typeof aiUnder !== 'object') return aiUnder;
-  if (aiUnder.approval_status !== 'approved') return aiUnder;
-  const gVersion = normalizedGuardrails ? Number(normalizedGuardrails.version || 0) : 0;
-  const gHash = normalizedGuardrails ? hashGuardrails(normalizedGuardrails) : null;
-  const recordedVer = typeof aiUnder.source_guardrails_version === 'number' ? aiUnder.source_guardrails_version : null;
-
-  const versionMismatch = recordedVer !== null
-    ? gVersion !== recordedVer
-    : hasActiveGuardrails(normalizedGuardrails);
-  const hashMismatch = Boolean(aiUnder.source_guardrails_hash && gHash && aiUnder.source_guardrails_hash !== gHash);
-  const briefOrSettingsMismatch = Boolean(
-    (currentBrief && String(currentBrief).trim() && isUnderstandingOutdated(aiUnder, String(currentBrief).trim(), normalizedGuardrails, currentSettings, currentEventContext)) ||
-    (!currentBrief && (currentSettings || currentEventContext !== undefined) && isUnderstandingOutdated(aiUnder, aiUnder.source_brief || '', normalizedGuardrails, currentSettings, currentEventContext))
-  );
-
-  if (versionMismatch || hashMismatch || briefOrSettingsMismatch) {
-    return {
-      ...aiUnder,
-      approval_status: 'outdated',
-    };
-  }
-  return aiUnder;
+  if (!['approved', 'auto_approved', 'outdated'].includes(aiUnder.approval_status)) return aiUnder;
+  // a save without a brief (some drafts keep it under specialty/offer) says nothing about the brief
+  const brief = currentBrief && String(currentBrief).trim() ? String(currentBrief).trim() : (aiUnder.source_brief || '');
+  return reconcileApproval(aiUnder, brief, normalizedGuardrails, currentSettings, currentEventContext);
 }
 
 function extractProjectSettingsForSave(projectData, cDNA, existingSettings = null) {
@@ -927,7 +911,13 @@ function extractProjectSettingsForSave(projectData, cDNA, existingSettings = nul
     return normalizeUnderstandingSettings(explicit);
   }
   if (guidedCtx && typeof guidedCtx === 'object') {
-    return normalizeUnderstandingSettings(guidedCtx);
+    const settings = normalizeUnderstandingSettings(guidedCtx);
+    // A draft leaves videoLogo out while the video uses the business-profile logo, which isn't in the draft:
+    // "no logo" here would only mean "not in this payload", so keep what was known.
+    if (guidedCtx.videoLogo === undefined && guidedCtx.hasLogo === undefined && existingSettings && typeof existingSettings === 'object') {
+      settings.hasLogo = normalizeUnderstandingSettings(existingSettings).hasLogo;
+    }
+    return settings;
   }
   if (existingSettings && typeof existingSettings === 'object') {
     const merged = {
@@ -1072,7 +1062,7 @@ async function saveProject(projectData, userId) {
       resolvedGuardrails,
       brief ? String(brief).trim() : null,
       resolvedPgSettings,
-      hasExplicitEventContext ? activePgEvent : undefined
+      activePgEvent
     );
     if (aiUnder) {
       cDNA.aiUnderstanding = aiUnder;
@@ -1186,7 +1176,7 @@ async function saveProject(projectData, userId) {
     resolvedGuardrails,
     brief ? String(brief).trim() : null,
     resolvedFileSettings,
-    hasExplicitEventContext ? activeFileEvent : undefined
+    activeFileEvent
   );
   if (aiUnder) {
     cDNA.aiUnderstanding = aiUnder;

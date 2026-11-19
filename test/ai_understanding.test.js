@@ -215,11 +215,13 @@ test('Review Point 3: Backend enforces saved approval status & project ownership
     'Backend must fetch project using authenticated user ID');
   assert.ok(serverSrc.includes('Project not found or not owned by authenticated user'),
     'Backend must reject projects not owned by authenticated user');
-  // Backend must check saved approval_status from DB record
-  assert.ok(serverSrc.includes('saved.approval_status === "approved" || saved.approval_status === "auto_approved"'),
+  // Backend must check saved approval_status from DB record (re-checked against the current inputs)
+  assert.ok(serverSrc.includes('understandingSpine.reconcileApproval(saved, currentBrief'),
+    'Backend must derive the approval status from the saved DB record');
+  assert.ok(serverSrc.includes('current.approval_status === "approved" || current.approval_status === "auto_approved"'),
     'Backend must check saved approval status from DB record');
   // Backend must check for outdated state
-  assert.ok(serverSrc.includes('understandingSpine.isUnderstandingOutdated(saved, currentBrief)'),
+  assert.ok(serverSrc.includes('understandingSpine.explainUnderstandingOutdated(saved, currentBrief'),
     'Backend must verify saved understanding is not outdated before passing downstream');
 });
 

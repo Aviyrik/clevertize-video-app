@@ -46,6 +46,12 @@ export default function ScreenUnderstanding({
   businessType = '',
   town = '',
   isOutdated = false,
+  // 'approved' | 'pending' | 'outdated' as it holds for the inputs now (App's understandingApprovalState)
+  approvalStatus = null,
+  // what changed since this version was made, in plain words
+  outdatedDetail = '',
+  // what the server said when it refused to go on: { kind: 'not_approved' | 'outdated' | 'not_saved', message }
+  notice = null,
   error = '',
   userGuardrails = null,
   userEventContext = null,
@@ -156,13 +162,26 @@ export default function ScreenUnderstanding({
     );
   }
 
-  const isApproved = draftData.approval_status === 'approved' && !isOutdated;
+  const isApproved = !isOutdated && (approvalStatus ? approvalStatus === 'approved' : draftData.approval_status === 'approved');
+  const versionNumber = draftData.version || 1;
+  // A version that isn't approved says so next to the control that approves it: after the server refused to go on
+  // to Ideas, after a regenerate (a new version starts unapproved), or when an approval didn't save.
+  const approvalAsk = isOutdated || isApproved
+    ? null
+    : notice && notice.kind === 'not_saved'
+    ? `Your approval wasn't saved${notice.message ? ` (${notice.message})` : ''}. Approve again to continue.`
+    : notice && notice.kind === 'not_approved'
+    ? `Version ${versionNumber} isn't approved yet, so ideas can't be made from it. Approve it to continue.`
+    : versionNumber > 1
+    ? `Version ${versionNumber} is new and needs your approval before ideas are made from it.`
+    : null;
 
   const handleSaveSection = (sectionKey, value) => {
     const updated = {
       ...draftData,
       [sectionKey]: value,
       approval_status: 'pending', // editing resets approval
+      approved_at: null,
     };
     setDraftData(updated);
     setEditingSection(null);
@@ -175,6 +194,7 @@ export default function ScreenUnderstanding({
       assumptions: Array.isArray(assumptions) ? assumptions : [],
       missing_information: Array.isArray(missing) ? missing : [],
       approval_status: 'pending',
+      approved_at: null,
     };
     setDraftData(updated);
     setEditingSection(null);
@@ -233,10 +253,10 @@ export default function ScreenUnderstanding({
                       ? 'var(--error, var(--cc-danger))'
                       : isApproved
                       ? 'var(--success, var(--cc-success))'
-                      : 'var(--accent-primary, var(--cc-text-2))',
+                      : 'var(--cc-text-2)',
                   }}
                 >
-                  {isOutdated ? 'Outdated Context' : isApproved ? 'Approved' : 'Pending Review'}
+                  {isOutdated ? 'Outdated' : isApproved ? 'Approved' : 'Needs approval'}
                 </span>
                 {draftData.is_mock && (
                   <span
@@ -426,14 +446,15 @@ export default function ScreenUnderstanding({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertTriangle size={16} />
+              <AlertTriangle size={16} style={{ flexShrink: 0 }} />
               <span>
-                Brief, instructions, or settings changed. Update before continuing.
+                This version was made from different inputs. {outdatedDetail || 'Brief, instructions, or settings changed.'} Update the analysis, then approve it.
               </span>
             </div>
             <button
               type="button"
               onClick={() => onRegenerate && onRegenerate('')}
+              disabled={isRegenerating}
               style={{
                 backgroundColor: 'var(--error, var(--cc-danger))',
                 border: 'none',
@@ -443,9 +464,45 @@ export default function ScreenUnderstanding({
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
-              Update Analysis
+              Update analysis
+            </button>
+          </div>
+        )}
+
+        {/* Needs-approval notice: the ask and the control that does it, together */}
+        {approvalAsk && !isRegenerating && (
+          <div
+            role="status"
+            style={{
+              marginTop: 12,
+              padding: '10px 14px',
+              borderRadius: 'var(--cc-radius-sm)',
+              backgroundColor: 'var(--cc-raised)',
+              border: '1px solid var(--cc-line-2)',
+              color: 'var(--cc-text-1)',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ShieldCheck size={16} style={{ color: 'var(--cc-text-2)', flexShrink: 0 }} />
+              <span>{approvalAsk}</span>
+            </div>
+            <button
+              type="button"
+              className="cc-btn cc-btn--secondary cc-btn--sm"
+              onClick={() => onApproveAndContinue && onApproveAndContinue(draftData)}
+              disabled={isSaving || isRegenerating}
+            >
+              <Check size={14} />
+              <span>{isSaving ? 'Saving approval…' : `Approve version ${versionNumber}`}</span>
             </button>
           </div>
         )}
@@ -655,6 +712,8 @@ export default function ScreenUnderstanding({
                 ? 'Inputs changed — update before continuing'
                 : isApproved
                 ? 'Approved'
+                : versionNumber > 1
+                ? `Version ${versionNumber} needs approval`
                 : 'Ready for Creative Ideas?'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -689,7 +748,7 @@ export default function ScreenUnderstanding({
             type="button"
             onClick={() => onApproveAndContinue && onApproveAndContinue(draftData)}
             disabled={isSaving || isRegenerating || isOutdated}
-            title={isOutdated ? 'Click Update Analysis above before approving changed inputs' : ''}
+            title={isOutdated ? 'Click Update analysis above before approving changed inputs' : ''}
             style={{
               backgroundColor: 'var(--cc-action)',
               border: 'none',
