@@ -145,23 +145,46 @@ function parseJSONBlock(text) {
     return JSON.parse(body);
   } catch {}
 
-  // If body is an array: match from first [ to last ]
+  // The answer is an object or an array, whichever opens first (an array inside a broken object is not the answer)
   const arrayMatch = body.match(/\[[\s\S]*\]/);
-  if (arrayMatch) {
-    try {
-      return JSON.parse(arrayMatch[0]);
-    } catch {}
-  }
-
-  // If body is an object: match from first { to last }
   const objMatch = body.match(/\{[\s\S]*\}/);
-  if (objMatch) {
+  const candidates = [arrayMatch, objMatch].filter(Boolean).sort((a, b) => a.index - b.index).map((x) => x[0]);
+  for (const c of candidates) {
     try {
-      return JSON.parse(objMatch[0]);
+      return JSON.parse(c);
+    } catch {}
+    // quoted speech left unescaped inside a string ("line": "Maker: "You can't…"") loses the whole answer
+    try {
+      return JSON.parse(escapeStrayQuotes(c));
     } catch {}
   }
 
   return JSON.parse(body);
+}
+
+/**
+ * Escape the quotes a model left unescaped inside a JSON string. Inside a string, a quote ends it only when what
+ * follows is JSON structure (":" , "}" or "]", or a comma before the next key or value); any other quote is part of
+ * the text. Raw line breaks inside a string are escaped too. Used only when strict parsing has already failed.
+ */
+function escapeStrayQuotes(json) {
+  const s = String(json);
+  const nextNonSpace = (from) => { let j = from; while (j < s.length && /\s/.test(s[j])) j++; return j; };
+  let out = "";
+  let inStr = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!inStr) { if (ch === '"') inStr = true; out += ch; continue; }
+    if (ch === "\\") { out += ch + (s[i + 1] || ""); i++; continue; }
+    if (ch === "\n" || ch === "\r") { out += ch === "\n" ? "\\n" : ""; continue; }
+    if (ch !== '"') { out += ch; continue; }
+    const j = nextNonSpace(i + 1);
+    const next = s[j];
+    let closes = next === undefined || next === ":" || next === "}" || next === "]";
+    if (next === ",") { const k = nextNonSpace(j + 1); closes = k >= s.length || /^(?:["{[\]}]|-?\d|true\b|false\b|null\b)/.test(s.slice(k, k + 6)); }
+    if (closes) { inStr = false; out += ch; } else out += '\\"';
+  }
+  return out;
 }
 
 module.exports = { parseOutput, dialogueOf, sceneForGeneration, inSceneTextOf, parseJSONBlock };

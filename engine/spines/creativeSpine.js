@@ -238,16 +238,27 @@ ${formatBlock(format)}
 ${TWO_CHARACTERS_BLOCK}${angleCast.length === 2 ? ' Keep the two people in CHOSEN_ANGLE_CAST.' : ''} The core idea, beats and ending play out between them only.
 Lock the ending to the hook (Section 10). Use the length in brief.formats.lengths_s for the beats (Section 7).
 Check brief.dos_donts (C-M14) and record the result in dos_donts_check; record how any occasion is used (occasion_use).
-Return exactly concept.json (Section 12) between @@JSON@@ and @@END@@, with concept.format "${format}", plus one more top-level key "cast": ["", ""] (the app reads it to check the two-character rule).`,
+Return concept.json (Section 12) between @@JSON@@ and @@END@@ in exactly this shape. In this app the contract has one key Section 12 doesn't list, "cast": the two people (role and a few words each) the app checks against the two-character rule. The app fills brief_id, insight, angles, chosen_angle_id and idea_source itself, so leave them out.
+{"cast": ["", ""], "dos_donts_check": [{"rule": "", "status": "met|broken|n/a"}], "occasion_use": {"event": "", "how_shown": "", "donts": []}, "concept": {"core_idea": "", "format": "${format}", "beats": ["", "", "", ""], "hook": {}, "ending_payoff": "", "mood": "", "visual_world": {"time": "", "light": "", "palette": "", "setting": ""}}, "ab_angle_id": null, "compliance_flags": []}`,
     input: {
       BRIEF: b, INSIGHT: ins, CHOSEN_ANGLE: chosen,
       ...(angleCast.length === 2 ? { CHOSEN_ANGLE_CAST: angleCast } : {}),
       ...(twoCharacterCorrection ? { 'TWO-CHARACTER CORRECTION (answer again with the story built around two people)': twoCharacterCorrection } : {}),
     },
   });
+  // The concept's own cast, wherever it put it; with none, the chosen angle's two people it was told to keep (a
+  // third person in the story is still caught against them).
+  const conceptCast = (p) => {
+    const own = castOf(p).length ? castOf(p) : castOf(p && p.concept);
+    if (own.length || angleCast.length !== 2) return own;
+    console.log('[creative spine] concept returned no "cast"; checked against the chosen angle\'s two people');
+    return angleCast;
+  };
   const conceptProblems = (p) => {
     const c = (p && p.concept) || {};
-    return twoCharacterProblems('The concept', castOf(p), [c.core_idea, ...(Array.isArray(c.beats) ? c.beats : []), c.ending_payoff, c.hook && c.hook.visual]);
+    // an answer that couldn't be read has no cast either; say so rather than "names 0 people"
+    if (!Array.isArray(c.beats) || !c.beats.length) return ['The concept answer could not be read (no beats) — answer again in the shape given.'];
+    return twoCharacterProblems('The concept', conceptCast(p), [c.core_idea, ...c.beats, c.ending_payoff, c.hook && c.hook.visual]);
   };
   let { parsed, version } = await ask(null);
   let problems = conceptProblems(parsed);

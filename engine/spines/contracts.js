@@ -129,10 +129,64 @@ function conform(template, value) {
 
 const oneOf = (v, list, dflt = '') => (list.includes(v) ? v : (list.find((x) => x.toLowerCase() === String(v || '').toLowerCase()) || dflt));
 
+// ---------- disclaimers: the words on screen, not guidance about them ----------
+// brief.mandatories.disclaimers holds the literal words Production puts on screen ("T&C apply", "Made with desi
+// ghee"); the script gate looks for each one in the scenes. Guidance about a disclaimer or a claim ("If 'pure desi
+// ghee' is used as a super or VO claim, add: 'Made with desi ghee' — omit 'pure' unless…") is a category Do/Don't:
+// read as words to show, it could never appear in a script. Literal disclaimers are often imperatives themselves
+// ("Do not drink and drive", "If symptoms persist, consult your doctor"), so an entry counts as guidance only when it
+// talks about the ad (claims, supers, VO, on-screen, disclosure…) or about the process (to be added, by the client).
+const GUIDANCE_ALONE = [
+  /\b(add|show|display|use|state|write|include|print)\s*:?\s*['"‘“]/i, // add: 'Made with desi ghee'
+  /\bto be (added|shown|included|displayed|confirmed|provided|placed|mentioned)\b/i,
+  /\bby (the )?client\b/i,
+];
+const GUIDANCE_SIGNS = [
+  /\bclaims?\b/i, /\bsupers?\b/i, /\bon-?screen\b/i, /\b(vo|voice-?over)\b/i, /\bdisclaimers?\b/i, /\bdisclosure\b/i,
+  /\blabel (is )?(required|substantiation)\b/i, /\bsubstantiat/i, /\bverifiable\b/i, /\bomit\b/i, /\bunless\b/i,
+  /\bbefore (publishing|going live|launch|use)\b/i, /\bif any\b|\b(is|are) used\b|\bif used\b/i,
+];
+function isDisclaimerGuidance(text) {
+  const t = String(text || '');
+  return GUIDANCE_ALONE.some((re) => re.test(t)) || GUIDANCE_SIGNS.filter((re) => re.test(t)).length >= 2;
+}
+/** The words to show when guidance names them: "…add: 'Made with desi ghee' — …" → "Made with desi ghee". */
+function disclaimerWordsIn(text) {
+  const m = String(text || '').match(/\b(add|show|display|use|state|write|include|print|reads?|says?)\s*:?\s*(?:the (?:line|words|text|disclaimer)\s*:?\s*)?['"‘“]([^'"‘“’”]{2,120})['"’”]/i);
+  return m ? m[2].trim() : '';
+}
+/**
+ * Split brief.mandatories.disclaimers into the literal words to show and the guidance written there by mistake.
+ * Guidance keeps the words it names as a disclaimer and goes to dos_donts itself.
+ */
+function splitDisclaimers(list) {
+  const disclaimers = [];
+  const guidance = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    const text = String(raw || '').trim();
+    if (!text) continue;
+    if (!isDisclaimerGuidance(text)) { disclaimers.push(text); continue; }
+    guidance.push(text);
+    const words = disclaimerWordsIn(text);
+    if (words) disclaimers.push(words);
+  }
+  const seen = new Set();
+  return { disclaimers: disclaimers.filter((d) => !seen.has(d.toLowerCase()) && seen.add(d.toLowerCase())), guidance };
+}
+const DISCLAIMER_GUIDANCE_TYPE = 'Legal / category';
+
 function normalizeBrief(raw) {
   const b = conform(BRIEF_TEMPLATE, raw);
   b.objective.stage = oneOf(b.objective.stage, ['Awareness', 'Consideration', 'Conversion', 'Retention', 'Launch'], '');
   for (const k of b.kpis) k.benchmark.confidence = oneOf(k.benchmark.confidence, ['High', 'Med', 'Low'], '');
+  // only words to show stay in mandatories.disclaimers; guidance becomes a category rule (Brief Spine Section 1d)
+  const { disclaimers, guidance } = splitDisclaimers(b.mandatories.disclaimers);
+  b.mandatories.disclaimers = disclaimers;
+  for (const rule of guidance) {
+    if (!b.dos_donts.some((d) => String(d.rule).trim().toLowerCase() === rule.toLowerCase())) {
+      b.dos_donts.push({ rule, type: DISCLAIMER_GUIDANCE_TYPE, strength: 'must', source: 'category', applies_to: ['script', 'video'] });
+    }
+  }
   for (const d of b.dos_donts) {
     d.strength = oneOf(d.strength, ['must', 'prefer'], 'must');
     d.source = oneOf(d.source, ['user', 'brand', 'category'], 'user');
@@ -337,6 +391,7 @@ module.exports = {
   ANY,
   BRIEF_TEMPLATE, CONCEPT_TEMPLATE, SCRIPT_TEMPLATE, SCENE_TEMPLATE, STORYBOARD_TEMPLATE, SCRIPT_RECORD_TEMPLATE, HOOK_TEMPLATE,
   conform, normalizeBrief, normalizeConcept, normalizeScript, normalizeStoryboard, normalizeScriptRecord, contractId,
+  splitDisclaimers, isDisclaimerGuidance, disclaimerWordsIn, DISCLAIMER_GUIDANCE_TYPE,
   briefForCreative, briefForScript, assertHandoff, SCRIPT_BRIEF_FIELDS,
   CREATIVE_STYLES, normalizeCreativeStyle, filmFormatOf, FORMAT_RULES, filmFormatRule, filmFormatFromBrief, FILM_FORMAT_RULE_RE,
   scenePlan, voWordRange, SCENE_SECONDS,

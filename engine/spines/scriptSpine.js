@@ -150,6 +150,12 @@ function shapeScript(raw, { concept, brief, format, plan }) {
   s.language = { ...brief.language };
   s.aspect_ratios = [...(brief.formats.aspect_ratios || ['9:16'])];
   const beats = BEATS_BY_COUNT[plan.count];
+  // Speakers and visuals name the people, not their Context Block refs ("char_1 stands at the counter"): the render
+  // prompt and the voice read names, and a ref there reads as a stranger.
+  const byRef = new Map((s.context_block.characters || [])
+    .filter((c) => c && typeof c === 'object' && c.ref && c.name)
+    .map((c) => [String(c.ref).trim().toLowerCase(), String(c.name).trim()]));
+  const named = (text) => (byRef.size ? String(text || '').replace(/\bchar_\d\b/gi, (r) => byRef.get(r.toLowerCase()) || r) : text);
   s.scenes = s.scenes.map((sc, i) => ({
     ...sc,
     n: i + 1,
@@ -157,7 +163,8 @@ function shapeScript(raw, { concept, brief, format, plan }) {
     // S-M3: per scene 5 seconds only
     start_s: i * contracts.SCENE_SECONDS,
     duration_s: contracts.SCENE_SECONDS,
-    dialogue: format === 'VO-led' ? sc.dialogue : sc.dialogue.filter((d) => d.line),
+    visual: named(sc.visual),
+    dialogue: (format === 'VO-led' ? sc.dialogue : sc.dialogue.filter((d) => d.line)).map((d) => ({ ...d, speaker: named(d.speaker) })),
     vo: format === 'VO-led' ? sc.vo : sc.vo,
   }));
   return s;
@@ -174,7 +181,7 @@ Dialogue (S-M7): ${r.dialogue}${r.hasVo ? ` Total VO across all scenes: ${vo.min
 Length ${plan.length_s}s → exactly ${plan.count} scenes (S-M3), beats in order: ${beats.join(', ')} (Section 1).
 Language: ${brief.language.name}, script ${brief.language.script} (S-M2). Visual fields in English.
 TWO CHARACTERS (the app's production rule): ${contracts.TWO_CHARACTERS_RULE} context_block.characters has exactly two entries, "char_1" and "char_2"${format === 'UGC' ? ' (in UGC the creator is char_1)' : ''}. Only they speak${r.hasVo ? ' (the VO is off-screen and is not a character)' : ''}, and every visual and frame shows only them.
-Context Block: each character has "ref" ("char_1", "char_2"); the product "ref" is "${productRef}". Give the product's colour, packaging and label side.
+Context Block: each character has "ref" ("char_1", "char_2"); the product "ref" is "${productRef}". Give the product's colour, packaging and label side. Refs are for the Context Block: speakers and visuals use each character's name.
 Fill every on-screen element with its text or "none". Each "must include" from BRIEF.dos_donts that applies to the script is placed in a scene and noted in that scene's edit_notes as "Must include: <rule>" (S-M13).
 UI / in-scene text ("ui_mockup", S-M5): the AI renders any writing or phone, app or website screen the scene needs — a chat or message, an order or payment screen, a handwritten note or checklist, a sign, packaging copy. Show it in the Visual if the story needs it, and give its exact words here, each piece in double quotes and where it appears (for example: Phone screen, WhatsApp chat: "1 box kaju katli please" / reply "Delivered in 30 min"). Keep each piece short (12 words at most) and legible, in ${brief.language.name} (${brief.language.script} script), and use only figures from BRIEF.rtbs and the offer. Write "none" if the scene shows no writing. Supers, callouts, CTA, disclaimer and the logo stay Production's: never ask the model to draw a logo or a caption over the picture.
 Storyboard (Section 4): in "frames", one note per scene — camera_angle; composition (foreground, middle and background, where the subject sits, safe zones kept clear); subject (who is in frame by their Context Block name and what they are doing: present tense, physical details, one action per sentence); product (where it is, which side faces camera, how it's held or used — or "not in frame"). The app adds the aspect ratio, shot, camera move, the Context Block descriptions word for word, the setting and light, the scene's in-scene text word for word, the placeholders and the line. Never ask for a logo inside a frame.

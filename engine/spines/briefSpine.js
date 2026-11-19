@@ -159,7 +159,8 @@ Return only this JSON between @@JSON@@ and @@END@@, and nothing else. Write it e
 "polished_brief": {"problem": "", "human_problem": "", "think_feel_do": [], "assumptions": []},
 "compliance_flags": []
 }
-KPIs: one primary and up to two secondary, each with a target; where no benchmark exists, the target is a suggested starting target marked for learning (Section 5). extra_dos_donts: only brand or category rules (B-M11) that are not already in DOS_DONTS. occasion: the top moment, or {"event": "everyday"}.`;
+KPIs: one primary and up to two secondary, each with a target; where no benchmark exists, the target is a suggested starting target marked for learning (Section 5). extra_dos_donts: only brand or category rules (B-M11) that are not already in DOS_DONTS. occasion: the top moment, or {"event": "everyday"}.
+disclaimers: only the exact words the viewer must read on screen, each one as it will appear (e.g. "T&C apply", "Made with desi ghee"), or [] when none is needed. The script is checked for these words, so never put an instruction, a condition or a note there ("if X is claimed, add …", "to be added by the client", "requires substantiation"). Any condition, caveat or limit on a claim is an extra_dos_donts item: {"rule": "<the condition>", "type": "Legal / category", "strength": "must", "source": "category", "applies_to": ["script", "video"]}; the words it asks for, if any, go in disclaimers.`;
 
 function mergeDosDonts(forcedList, llmList) {
   const out = [...forcedList];
