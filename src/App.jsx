@@ -6811,6 +6811,7 @@ export default function App() {
             elapsedTime={elapsedTime}
             videoUrl={videoUrl}
             projectId={activeProjectId}
+            videoStored={Boolean(activeProjectId && videoUrl && (userProjects.find((p) => p.id === activeProjectId && p.videoUrl === videoUrl) || {}).videoStored)}
             userId={currentUser?.id}
             onboardingState={onboardingState}
             onDismissTip={handleDismissTip}

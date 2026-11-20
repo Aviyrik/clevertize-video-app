@@ -13,7 +13,8 @@ const { runGate } = require("./engine/gate");
 const { getFestivals, todayIST } = require("./engine/festivals");
 const store = require("./engine/store");
 const magnific = require("./engine/magnific");
-const videoStore = require("./engine/videoStore");
+const videoStore = require("./engine/videoStore"); // legacy Supabase copies: only recognised now, no new ones
+const videoStorage = require("./engine/videoStorage"); // our copy of every video (R2), signed URLs only
 const { extractSceneParts, compileShotSpecification, compileShotPrompt } = require("./engine/compiler");
 const creative = require("./engine/creative");
 const db = require("./engine/db");
@@ -2075,23 +2076,44 @@ function isApprovedVideoHost(urlString) {
   }
 }
 
-// Copy a finished video to permanent storage once per run. Concurrent polls share one upload, and a run
-// already archived (its record holds a stored URL) is never copied again, even after a restart.
-// If storage isn't configured or the copy fails, the Magnific URL is used as before.
-const archiving = new Map(); // runId -> Promise<string|null>
-function permanentVideoUrl(runId, runRecord, sourceUrl) {
-  if (videoStore.isStoredUrl(runRecord.videoUrl)) return Promise.resolve(runRecord.videoUrl);
-  if (!videoStore.isConfigured()) return Promise.resolve(null);
-  if (!archiving.has(runId)) {
-    const job = videoStore.archiveVideo({ sourceUrl, userId: runRecord.userId, runId })
-      .catch((e) => {
-        console.error(`[archive] run ${runId}: ${e.message} — keeping the Magnific URL`);
-        return null;
-      })
-      .finally(() => setTimeout(() => archiving.delete(runId), 60 * 1000).unref());
-    archiving.set(runId, job);
-  }
-  return archiving.get(runId);
+// ---- our copy of each finished video (engine/videoStorage.js) ----
+// When a project is saved with its finished video, the server downloads that video and stores it at
+// videos/<userId>/<projectId>.mp4: the user id is the session's, the project id the one just saved under that user,
+// and the video must be a render link from that user's own run. Nothing in a request names a path. A failed
+// download or upload is logged and the project keeps its render link: the render still succeeded. The next save
+// of the project tries again.
+const MAX_VIDEO_COPY_BYTES = 200 * 1024 * 1024;
+const VIDEO_COPY_TIMEOUT_MS = 180000;
+const videoCopies = new Map(); // projectId -> Promise
+function scheduleVideoCopy(project, userId) {
+  if (!project || !project.id || !project.videoUrl || project.videoStorageKey || !userId) return null;
+  if (!videoStorage.isConfigured() || videoCopies.has(project.id)) return videoCopies.get(project.id) || null;
+  const started = Date.now();
+  const job = (async () => {
+    if (!(await db.userRenderedVideoUrl(userId, project.videoUrl))) return null; // not this user's render
+    if (!isApprovedVideoHost(project.videoUrl)) throw new Error("render link is not on an approved video host");
+    const src = await netguard.safeFetch(project.videoUrl, { timeoutMs: VIDEO_COPY_TIMEOUT_MS, maxBytes: MAX_VIDEO_COPY_BYTES, headers: { Accept: "video/*,*/*" } });
+    if (!src.ok || !src.body || !src.body.length) throw new Error(`download failed (HTTP ${src.status})`);
+    const type = String((src.headers && src.headers["content-type"]) || "").split(";")[0].trim();
+    const stored = await videoStorage.storeVideo({ userId, projectId: project.id, body: src.body, contentType: /^video\/[\w.+-]+$/.test(type) ? type : "video/mp4" });
+    const recorded = await db.setProjectVideoStorage(project.id, userId, stored);
+    console.log(`[video copy] project ${project.id}: ${stored.bytes} bytes stored in ${Math.round((Date.now() - started) / 100) / 10}s${recorded ? "" : " (not recorded: no storage column)"}`);
+    return stored;
+  })()
+    .catch((e) => {
+      console.error(`[video copy] project ${project.id}: ${e.message} — keeping the render link`);
+      return null;
+    })
+    .finally(() => videoCopies.delete(project.id));
+  videoCopies.set(project.id, job);
+  return job;
+}
+
+// What the browser sees of a project: whether our copy exists, never where it is
+function publicProject(p) {
+  if (!p || typeof p !== "object") return p;
+  const { videoStorageKey, videoStoredAt, videoStorageBytes, ...rest } = p;
+  return { ...rest, videoStored: Boolean(videoStorageKey) };
 }
 
 app.get("/api/status/:runId", authRequired, async (req, res) => {
@@ -2106,19 +2128,13 @@ app.get("/api/status/:runId", authRequired, async (req, res) => {
 
     const s = await magnific.runStatus(req.params.runId);
     if (s.videoUrl) {
-      // Magnific's URL expires — hand back (and let the app save) the permanent copy when there is one
-      const stored = await permanentVideoUrl(req.params.runId, runRecord, s.videoUrl);
-      const videoUrl = stored || s.videoUrl;
-      for (const url of new Set([s.videoUrl, videoUrl])) {
-        videoUrls.add(url);
-        videoOwnership.set(url, {
-          userId: runRecord.userId,
-          runId: req.params.runId,
-          createdAt: Date.now(),
-        });
-      }
+      // The render link is recorded as it came (projects keep it untouched as the fallback). Our own copy is made
+      // when the finished video is saved to its project (scheduleVideoCopy), under that user's and project's path.
+      const videoUrl = s.videoUrl;
+      videoUrls.add(videoUrl);
+      videoOwnership.set(videoUrl, { userId: runRecord.userId, runId: req.params.runId, createdAt: Date.now() });
       await db.updateVideoRun(req.params.runId, { videoUrl, status: s.status });
-      return res.json({ ...s, videoUrl, sourceVideoUrl: s.videoUrl, archived: Boolean(stored) });
+      return res.json({ ...s, videoUrl, sourceVideoUrl: s.videoUrl, archived: false });
     }
     res.json(s);
   } catch (e) {
@@ -2755,7 +2771,7 @@ app.get("/api/businesses/:id", authRequired, async (req, res) => {
 app.get("/api/projects", authRequired, async (req, res) => {
   try {
     const projects = await db.getProjectsForUser(req.user.id);
-    res.json({ success: true, status: "success", projects });
+    res.json({ success: true, status: "success", projects: projects.map(publicProject) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2764,7 +2780,8 @@ app.get("/api/projects", authRequired, async (req, res) => {
 app.post("/api/projects", authRequired, async (req, res) => {
   try {
     const saved = await db.saveProject(req.body, req.user.id);
-    res.json({ success: true, status: "success", project: saved });
+    scheduleVideoCopy(saved, req.user.id); // in the background: the save answers now
+    res.json({ success: true, status: "success", project: publicProject(saved) });
   } catch (err) {
     const statusCode = err.status || 400;
     res.status(statusCode).json({ error: err.message || "Failed to save project." });
@@ -2775,16 +2792,43 @@ app.get("/api/projects/:id", authRequired, async (req, res) => {
   try {
     const p = await db.getProjectById(req.params.id, req.user.id);
     if (!p) return res.status(404).json({ error: "Project not found." });
-    res.json({ status: "success", project: p });
+    res.json({ status: "success", project: publicProject(p) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// A short-lived signed link to our copy of this project's video, for playback (or ?download=1 to save it).
+// The project must belong to the logged-in user (the existing ownership check); the object key is rebuilt from the
+// session's user id and that project id and must equal the recorded one. Nothing from the request becomes a path.
+app.get("/api/projects/:id/video", authRequired, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const p = await db.getProjectById(req.params.id, req.user.id);
+    if (!p) return res.status(404).json({ error: "Project not found." });
+    let expected = null;
+    try { expected = videoStorage.videoKey(req.user.id, p.id); } catch { expected = null; }
+    if (!expected || !p.videoStorageKey || p.videoStorageKey !== expected || !videoStorage.keyBelongsTo(p.videoStorageKey, req.user.id)) {
+      return res.status(404).json({ error: "No stored copy of this video yet.", code: "NO_STORED_COPY", hasRenderLink: Boolean(p.videoUrl) });
+    }
+    const download = req.query.download === "1";
+    const name = `${String(p.title || "commercial_video").replace(/[^A-Za-z0-9_-]+/g, "_").slice(0, 80) || "commercial_video"}.mp4`;
+    const signed = videoStorage.signedVideoUrl(p.videoStorageKey, { expiresInSeconds: download ? 120 : 15 * 60, downloadName: download ? name : null });
+    res.json({ url: signed.url, expiresInSeconds: signed.expiresInSeconds, source: "storage" });
+  } catch (err) {
+    console.error("[projects/:id/video]", err.message);
+    res.status(500).json({ error: "Could not prepare the video link." });
+  }
+});
+
 app.delete("/api/projects/:id", authRequired, async (req, res) => {
   try {
+    const owned = await db.getProjectById(req.params.id, req.user.id);
     const ok = await db.deleteProject(req.params.id, req.user.id);
     if (!ok) return res.status(404).json({ error: "Project not found." });
+    if (owned && owned.videoStorageKey && videoStorage.keyBelongsTo(owned.videoStorageKey, req.user.id)) {
+      videoStorage.deleteVideo(owned.videoStorageKey).catch((e) => console.error(`[video copy] delete for ${owned.id}: ${e.message}`));
+    }
     res.json({ status: "success", message: "Project deleted." });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2811,7 +2855,13 @@ app.post("/api/projects/bulk-delete", authRequired, async (req, res) => {
       return res.status(400).json({ error: "Cannot delete more than 200 projects in a single request." });
     }
 
+    const storedKeys = new Map((await db.getProjectsForUser(req.user.id))
+      .filter((p) => cleanIds.includes(p.id) && p.videoStorageKey && videoStorage.keyBelongsTo(p.videoStorageKey, req.user.id))
+      .map((p) => [p.id, p.videoStorageKey]));
     const { deletedIds, notDeletedIds } = await db.deleteProjects(cleanIds, req.user.id);
+    for (const id of deletedIds) {
+      if (storedKeys.has(id)) videoStorage.deleteVideo(storedKeys.get(id)).catch((e) => console.error(`[video copy] delete for ${id}: ${e.message}`));
+    }
     if (deletedIds.length === 0) {
       return res.status(404).json({
         error: "No matching projects found.",
@@ -2963,6 +3013,13 @@ app.get("*", (req, res) => {
 });
 
 if (require.main === module) {
+  // Every finished video is copied to our storage: refuse to start without it rather than fail at render time
+  try {
+    videoStorage.assertConfigured();
+  } catch (e) {
+    console.error(`\n  [startup] ${e.message}\n  The server will not start until they are set.\n`);
+    process.exit(1);
+  }
   app.listen(PORT, () => console.log(`\n  Dashboard running -> http://localhost:${PORT}\n`));
 }
 

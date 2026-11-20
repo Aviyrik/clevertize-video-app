@@ -57,6 +57,7 @@ import {
 import { getSuggestedAudiences } from './v2/BusinessOnboardingModal.jsx';
 import { videoLogoOf, profileLogoOf, toImageFile } from '../utils/videoLogo.js';
 import { isVideoLinkExpired } from '../utils/videoLink.js';
+import { useVideoSource } from '../utils/storedVideo.js';
 import { filterReachedChoices } from '../utils/choicesVisibility.js';
 import VideoFormatFields from './v2/VideoFormatFields.jsx';
 import OptionalFieldDisclosure from './v2/OptionalFieldDisclosure.jsx';
@@ -4542,6 +4543,7 @@ export function Screen08Video({
   onStartNewBrief,
   errorMessage = '',
   projectId = null,
+  videoStored = false, // the project has our own copy of this video: play and download that
   userId = null,
   onboardingState = null,
   onDismissTip,
@@ -4553,7 +4555,9 @@ export function Screen08Video({
   // Older projects may hold an expired rendering-provider link: show that plainly instead of a broken player
   const [playbackFailed, setPlaybackFailed] = useState(false);
   useEffect(() => { setPlaybackFailed(false); }, [videoUrl]);
-  const videoUnavailable = Boolean(videoUrl) && (playbackFailed || isVideoLinkExpired(videoUrl));
+  // our stored copy (a signed link) when the project has one, else the render link
+  const { src: playbackSrc, retry: retryPlayback } = useVideoSource(projectId, Boolean(videoStored), videoUrl);
+  const videoUnavailable = Boolean(videoUrl) && (playbackFailed || (!videoStored && isVideoLinkExpired(videoUrl)));
 
   const handleShareVideo = async () => {
     if (!videoUrl) return;
@@ -4936,11 +4940,11 @@ export function Screen08Video({
             </div>
           ) : (
             <video
-              src={videoUrl}
+              src={playbackSrc || undefined}
               controls
               autoPlay
               loop
-              onError={() => setPlaybackFailed(true)}
+              onError={() => { if (playbackSrc && !retryPlayback()) setPlaybackFailed(true); }}
               style={{ maxHeight: 480, width: '100%', objectFit: 'contain' }}
             />
           )}
@@ -5072,7 +5076,7 @@ export function Screen08Video({
                 type="button"
                 onClick={async () => {
                   try {
-                    await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`);
+                    await downloadVideoWithTicket(videoUrl, `${userContext.businessName || 'clevertize'}-video.mp4`, { projectId, stored: Boolean(videoStored) });
                   } catch (err) {
                     alert(err.message || 'Download failed');
                   }

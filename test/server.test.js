@@ -1042,49 +1042,27 @@ test("My Projects keeps every video across logout/login, and editing a project u
   assert.equal(after.find((p) => p.id === "proj_hist_1").videoUrl, "https://cdn.example.com/history-1.mp4", "other videos untouched");
 });
 
-test("a finished video is copied to permanent storage once, and the permanent link is what the app gets", async () => {
-  const netguard = require("../engine/netguard");
+test("a finished render keeps its render link untouched; the status poll makes no Supabase copy (our copy is R2, on save)", async () => {
   const me = await db.getUserBySessionToken(testToken);
   await db.saveVideoRun("run_archive_1", me.id, { status: "PENDING" });
-  await db.saveVideoRun("run_archive_2", me.id, { status: "PENDING" });
   const poll = async (runId) => (await realFetch(base + "/api/status/" + runId, { headers: { authorization: `Bearer ${testToken}` } })).json();
-
-  const realSafeFetch = netguard.safeFetch;
-  const downloaded = [];
-  netguard.safeFetch = async (url) => {
-    downloaded.push(url);
-    return { ok: true, status: 200, headers: { "content-type": "video/mp4" }, body: Buffer.from("fake mp4 bytes") };
-  };
+  const uploadsBefore = calls.storageUploads.length;
   process.env.SUPABASE_URL = "https://proj.supabase.test";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
   try {
     const first = await poll("run_archive_1");
-    assert.equal(first.archived, true);
+    assert.equal(first.archived, false);
+    assert.equal(first.videoUrl, "https://cdn.example.com/out.mp4");
     assert.equal(first.sourceVideoUrl, "https://cdn.example.com/out.mp4");
-    assert.match(first.videoUrl, /^https:\/\/proj\.supabase\.test\/storage\/v1\/object\/public\/videos\/usr_[\w-]+\/run_archive_1-[0-9a-f]{16}\.mp4$/);
-    assert.deepEqual(downloaded, ["https://cdn.example.com/out.mp4"]);
-    const upload = calls.storageUploads.at(-1);
-    assert.equal(upload.headers.Authorization, "Bearer service-role-test-key");
-    assert.equal(upload.bytes.toString(), "fake mp4 bytes");
-
-    // polled again (or after a restart): the same permanent link, no second upload
-    const uploads = calls.storageUploads.length;
-    assert.equal((await poll("run_archive_1")).videoUrl, first.videoUrl);
-    assert.equal(calls.storageUploads.length, uploads);
-
-    // the owner can download the permanent copy
+    assert.equal(calls.storageUploads.length, uploadsBefore, "nothing goes to Supabase Storage");
+    assert.equal((await db.getVideoRun("run_archive_1")).videoUrl, "https://cdn.example.com/out.mp4");
+    // the owner can still download through the render link
     const ticket = await post("/api/download/ticket", { url: first.videoUrl });
     assert.equal(ticket.status, 200, JSON.stringify(ticket.body));
   } finally {
-    netguard.safeFetch = realSafeFetch;
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   }
-
-  // storage not configured: nothing is copied and the Magnific URL comes back, as before
-  const plain = await poll("run_archive_2");
-  assert.equal(plain.archived, false);
-  assert.equal(plain.videoUrl, "https://cdn.example.com/out.mp4");
 });
 
 test("drafts: an in-progress project keeps its stage and render run id, and a late draft save never removes a finished video", async () => {

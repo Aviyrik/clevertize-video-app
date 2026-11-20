@@ -12,8 +12,12 @@ test("the video area toggles an inline player and never opens the project", () =
   const block = lib.slice(lib.indexOf("{/* Video Section (if generated)"), lib.indexOf("{/* Creative Video Rating"));
   assert.ok(block.includes("onClick={(e) => e.stopPropagation()} // the video area plays the video"), "clicks in the video area stay there");
   assert.ok(block.includes("onClick={togglePlay}"), "the play area toggles the player");
-  assert.ok(/<video\s[\s\S]*src=\{proj\.videoUrl\}/.test(block), "an inline player plays the project's video");
-  assert.ok(block.includes("onError="), "a video that can't load shows a message instead of a broken player");
+  // the inline player plays our stored copy (a signed link) when the project has one, else its render link
+  assert.ok(/<ProjectVideoPlayer\s[\s\S]*project=\{proj\}/.test(block), "an inline player plays the project's video");
+  const player = lib.slice(lib.indexOf("function ProjectVideoPlayer"), lib.indexOf("export default function"));
+  assert.ok(player.includes("useVideoSource(project.id, Boolean(project.videoStored), project.videoUrl)"), "stored copy first, render link otherwise");
+  assert.ok(/<video\s[\s\S]*src=\{src\}/.test(player));
+  assert.ok(block.includes("onUnplayable=") && player.includes("onError="), "a video that can't load shows a message instead of a broken player");
   assert.ok(lib.includes("e.stopPropagation();\n              if (canPlay) setPlayingVideoId") || lib.includes("e.stopPropagation();\r\n              if (canPlay) setPlayingVideoId"), "toggling stops the card's open-project click");
 });
 
