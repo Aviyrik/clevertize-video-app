@@ -93,11 +93,13 @@ export const STUDIO_STAGES = [
 
 /**
  * 1. LIGHTWEIGHT PROGRESS INDICATOR
+ * Display only: it shows where the user is and what's done, and nothing in it can be
+ * clicked or focused. Moving between stages goes through Back and each screen's forward action,
+ * so the pipeline's state is always the one the stage expects.
  */
 export function StudioProgressHeader({
   currentStage,
   completedStages = [],
-  onNavigateStage,
 }) {
   const currentIdx = STUDIO_STAGES.findIndex((s) => s.id === currentStage);
   const progressRef = useRef(null);
@@ -111,7 +113,7 @@ export function StudioProgressHeader({
   }, [currentStage]);
 
   return (
-    <div ref={progressRef} className="studio-progress" style={{
+    <ol ref={progressRef} className="studio-progress" aria-label="Stages" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -120,27 +122,25 @@ export function StudioProgressHeader({
       backgroundColor: 'var(--bg-surface)',
       border: '1px solid var(--border-subtle)',
       borderRadius: 12,
-      marginBottom: 20,
+      margin: '0 0 20px',
+      listStyle: 'none',
       flexWrap: 'wrap',
     }}>
       {STUDIO_STAGES.map((st, idx) => {
         const isCurrent = st.id === currentStage;
         const isCompleted = completedStages.includes(st.id) || idx < currentIdx;
-        const isNavigable = isCompleted && !isCurrent;
 
         return (
           <React.Fragment key={st.id}>
-            <button
-              type="button"
-              disabled={!isNavigable}
+            <li
+              className="studio-progress-step"
               data-current-stage={isCurrent ? 'true' : undefined}
-              onClick={() => isNavigable && onNavigateStage(st.id)}
+              aria-current={isCurrent ? 'step' : undefined}
               style={{
-                background: 'none',
-                border: 'none',
                 padding: '4px 8px',
                 borderRadius: 6,
-                cursor: isNavigable ? 'pointer' : 'default',
+                cursor: 'default',
+                userSelect: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
@@ -152,9 +152,7 @@ export function StudioProgressHeader({
                   ? 'var(--text-primary)'
                   : 'var(--text-tertiary)',
                 backgroundColor: isCurrent ? 'var(--bg-active)' : 'transparent',
-                transition: 'all 0.15s ease',
               }}
-              title={isNavigable ? `Back to ${st.label}` : st.label}
             >
               <span style={{
                 width: 18,
@@ -176,18 +174,18 @@ export function StudioProgressHeader({
                 fontSize: 12,
                 fontWeight: 600,
               }}>
-                {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : st.num}
+                {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} role="img" aria-label="Done" /> : st.num}
               </span>
               <span>{st.label}</span>
-            </button>
+            </li>
 
             {idx < STUDIO_STAGES.length - 1 && (
-              <span aria-hidden="true" style={{ color: 'var(--border-subtle)', fontSize: 12, flexShrink: 0 }}>→</span>
+              <li className="studio-progress-sep" aria-hidden="true" style={{ color: 'var(--border-subtle)', fontSize: 12, flexShrink: 0 }}>→</li>
             )}
           </React.Fragment>
         );
       })}
-    </div>
+    </ol>
   );
 }
 

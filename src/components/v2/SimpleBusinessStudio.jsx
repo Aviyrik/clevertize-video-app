@@ -344,9 +344,10 @@ export default function SimpleBusinessStudio({
 
   return (
     <div style={{ maxWidth: 860, margin: '16px auto 0', width: '100%', padding: '0 20px 80px' }}>
-      {/* 3-STEP GUIDED PROGRESS HEADER */}
-      <div
+      {/* 3-STEP GUIDED PROGRESS HEADER — display only; Back and each step's own button move between steps */}
+      <ol
         className="studio-progress studio-progress--compact"
+        aria-label="Steps"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -356,7 +357,8 @@ export default function SimpleBusinessStudio({
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
           borderRadius: 12,
-          marginBottom: 16,
+          margin: '0 0 16px',
+          listStyle: 'none',
           flexWrap: 'wrap',
         }}
       >
@@ -367,22 +369,19 @@ export default function SimpleBusinessStudio({
         ].map((s, idx) => {
           const isCurrent = step === s.stepNum;
           const isCompleted = step > s.stepNum;
-          const isNavigable = isCompleted && !isCurrent;
 
           return (
             <React.Fragment key={s.stepNum}>
-              <button
-                type="button"
-                disabled={!isNavigable}
+              <li
+                className="studio-progress-step"
                 data-step-state={isCurrent ? 'current' : 'other'}
-                aria-label={`Step ${s.stepNum}: ${s.label}`}
-                onClick={() => isNavigable && setStep(s.stepNum)}
+                aria-current={isCurrent ? 'step' : undefined}
+                aria-label={`Step ${s.stepNum}: ${s.label}${isCompleted ? ' (done)' : ''}`}
                 style={{
-                  background: 'none',
-                  border: 'none',
                   padding: '4px 10px',
                   borderRadius: 6,
-                  cursor: isNavigable ? 'pointer' : 'default',
+                  cursor: 'default',
+                  userSelect: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
@@ -394,9 +393,7 @@ export default function SimpleBusinessStudio({
                     ? 'var(--text-primary)'
                     : 'var(--text-tertiary)',
                   backgroundColor: isCurrent ? 'var(--bg-active)' : 'transparent',
-                  transition: 'all 0.15s ease',
                 }}
-                title={isNavigable ? `Back to ${s.label}` : s.label}
               >
                 <span
                   style={{
@@ -423,14 +420,14 @@ export default function SimpleBusinessStudio({
                   {isCompleted && !isCurrent ? <Check size={10} strokeWidth={3} /> : s.num}
                 </span>
                 <span className="step-label">{s.label}</span>
-              </button>
+              </li>
               {idx < 2 && (
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>›</span>
+                <li className="studio-progress-sep" aria-hidden="true" style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>›</li>
               )}
             </React.Fragment>
           );
         })}
-      </div>
+      </ol>
 
       {/* COMPACT CAMPAIGN IDENTITY */}
       {businessName && (

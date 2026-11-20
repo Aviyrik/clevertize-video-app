@@ -605,7 +605,7 @@ button:not(:disabled):active { transform: translateY(0.5px); }
     -webkit-overflow-scrolling: touch;
   }
   .studio-progress::-webkit-scrollbar { display: none; }
-  .studio-progress > button { flex-shrink: 0; white-space: nowrap; }
+  .studio-progress > .studio-progress-step { flex-shrink: 0; white-space: nowrap; }
 
   /* Paste Script modal: the "Step 1 of 2" badge already says where you are */
   .script-modal-stepper { display: none !important; }
@@ -646,11 +646,11 @@ button:not(:disabled):active { transform: translateY(0.5px); }
 
   /* Step indicators: tighter so three steps fit on one row */
   .studio-progress { padding: 8px !important; gap: 2px !important; }
-  .studio-progress > span { display: none; }
-  .studio-progress > button { padding: 4px 6px !important; }
+  .studio-progress > .studio-progress-sep { display: none; }
+  .studio-progress > .studio-progress-step { padding: 4px 6px !important; }
   /* Simple Studio: name only the current step; others show their number or check */
   .studio-progress--compact { justify-content: center !important; }
-  .studio-progress--compact > button[data-step-state="other"] .step-label { display: none; }
+  .studio-progress--compact > [data-step-state="other"] .step-label { display: none; }
 
   /* Scan URL: button takes its own full-width row under the field */
   .url-scan-row > button { flex: 1 1 100%; }
