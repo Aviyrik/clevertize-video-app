@@ -6027,7 +6027,6 @@ export default function App() {
         <StudioProgressHeader
           currentStage={studioStage}
           completedStages={completedStages}
-          onNavigateStage={handleNavigateStage}
         />
         <StudioChoicesBar
           currentStage={studioStage}
